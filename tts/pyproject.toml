@@ -1,0 +1,64 @@
+[project]
+name = "radar-tts"
+version = "0.1.0"
+description = "Russian narration for Radar's short videos, built on Qwen3-TTS"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "fastapi>=0.142.2",
+    "numpy>=2.3",
+    "qwen-tts>=0.1.1",
+    "soundfile>=0.13.1",
+    # Named here only to take them from the CUDA index below; qwen-tts pulls them
+    # in. torchaudio stopped at 2.11 and pins torch to its own version.
+    "torch>=2.11.0",
+    "torchaudio>=2.11.0",
+    "uvicorn>=0.54.0",
+]
+
+[project.scripts]
+radar-tts = "radar_tts.app:main"
+
+[build-system]
+requires = ["uv_build>=0.12.15,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "radar_tts"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.16.9",
+    "mypy>=1.20.0",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+]
+
+# CUDA 13 wheels also run on a machine without a GPU, just slower, so one
+# image serves both.
+[tool.uv.sources]
+torch = { index = "pytorch-cu130" }
+torchaudio = { index = "pytorch-cu130" }
+
+[[tool.uv.index]]
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "C4", "S", "ASYNC", "RUF", "T20"]
+ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.mypy]
+strict = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
