@@ -74,4 +74,6 @@ async def meta(session: SessionDep, settings: SettingsDep) -> MetaOut:
             DOCLING_FORMATS if settings.docparser_url else (*BUILTIN_FORMATS, "html")
         ),
         resume_max_bytes=settings.resume_max_bytes,
+        shorts=bool(settings.shorts_url),
+        shorts_voice=bool(settings.shorts_url and settings.tts_url),
     )

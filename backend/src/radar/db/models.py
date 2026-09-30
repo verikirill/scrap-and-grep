@@ -317,3 +317,44 @@ class DigestItem(Base):
         Index("ix_digest_items_digest", "digest_id", "selected"),
         Index("ix_digest_items_article", "article_id"),
     )
+
+
+class Video(Base):
+    """The short video of a digest. One per digest: making it again replaces it.
+
+    The MP4 itself lives in the media directory under the row id; the row keeps
+    the script and the timeline it was rendered from.
+    """
+
+    __tablename__ = "videos"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid7)
+    digest_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("digests.id", ondelete="CASCADE"), unique=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    status: Mapped[str] = mapped_column(String(16), default="queued")
+    stage: Mapped[str | None] = mapped_column(String(16))
+    progress: Mapped[float] = mapped_column(Float, default=0.0, server_default="0")
+    error: Mapped[str | None] = mapped_column(Text)
+    script: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    # "qwen3-tts:<speaker>" or NULL for a silent video with captions only.
+    voice: Mapped[str | None] = mapped_column(String(80))
+    # False when the offline writer produced the script.
+    by_model: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    duration_ms: Mapped[int | None] = mapped_column(Integer)
+    size_bytes: Mapped[int | None] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        Index("ix_videos_user_created", "user_id", "created_at"),
+        Index("ix_videos_status", "status"),
+        # One video in the works per reader, however many requests race.
+        Index(
+            "uq_videos_user_active",
+            "user_id",
+            unique=True,
+            postgresql_where=text("status IN ('queued', 'running')"),
+        ),
+    )

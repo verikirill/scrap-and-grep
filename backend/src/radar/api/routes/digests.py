@@ -23,7 +23,7 @@ from radar.render.docx import render_docx
 from radar.render.markdown import render_markdown
 from radar.store import digests as digest_store
 from radar.views import DigestSummaryView, DigestView, digest_summary, digest_view
-from radar.worker.tasks import build_digest
+from radar.worker.tasks import build_digest, purge_short_files
 
 router = APIRouter(tags=["digests"])
 log = get_logger(__name__)
@@ -183,10 +183,22 @@ async def get_digest(digest_id: uuid.UUID, session: SessionDep, user: CurrentUse
     "/digests/{digest_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[_digest_limit]
 )
 async def delete_digest(
-    digest_id: uuid.UUID, session: SessionDep, cache: CacheDep, user: CurrentUser
+    digest_id: uuid.UUID,
+    session: SessionDep,
+    cache: CacheDep,
+    settings: SettingsDep,
+    user: CurrentUser,
 ) -> Response:
     await session.delete(await _load(session, user, digest_id))
+    await session.commit()
     await cache.delete(f"export:{digest_id}:md", f"export:{digest_id}:docx")
+    # The video row went with the digest; its file is removed by the media
+    # worker, the only one that may write to the media volume.
+    if settings.shorts_url:
+        try:
+            await purge_short_files.kiq()
+        except Exception as exc:
+            log.warning("short_purge_not_queued", error=type(exc).__name__)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

@@ -18,12 +18,16 @@ from radar.logging import get_logger
 from radar.pipeline.runner import report_failure, run_digest
 from radar.recsys import service as recsys_service
 from radar.resume import service as resume_service
+from radar.shorts import service as shorts_service
+from radar.shorts.renderer import RendererBusy
 from radar.store import digests as digest_store
 from radar.worker.brokers import (
     DIGEST_IDLE_TIMEOUT_MS,
+    MEDIA_IDLE_TIMEOUT_MS,
     PROFILE_IDLE_TIMEOUT_MS,
     digest_broker,
     ingest_broker,
+    media_broker,
     profile_broker,
 )
 
@@ -47,6 +51,12 @@ STALE_RESUME_AFTER = timedelta(milliseconds=3 * PROFILE_IDLE_TIMEOUT_MS)
 TASTE_LOCK_TTL = 60
 # Signals that keep arriving during a refresh can hold it for this many rounds.
 TASTE_MAX_ROUNDS = 3
+SHORT_LOCK_TTL = MEDIA_IDLE_TIMEOUT_MS // 1000 - 60
+SHORT_RUN_LIMIT = SHORT_LOCK_TTL - 30
+SHORT_ATTEMPTS = 2
+# A redelivered task resumes a video after the idle timeout and may run for
+# nearly as long again; only after that is the video given up on.
+STALE_SHORT_AFTER = timedelta(milliseconds=2 * MEDIA_IDLE_TIMEOUT_MS)
 
 
 @ingest_broker.task(task_name="ingest_all", schedule=[{"cron": get_settings().ingest_cron}])
@@ -170,17 +180,59 @@ async def refresh_taste(user_id: str) -> bool:
     return True
 
 
+@media_broker.task(task_name="make_short", retry_on_error=True, max_retries=SHORT_ATTEMPTS)
+async def make_short(video_id: str, context: Context = TaskiqDepends()) -> None:
+    """Write, voice and render the short video of a digest."""
+    async with get_cache().lock(f"short:{video_id}", SHORT_LOCK_TTL) as acquired:
+        if not acquired:
+            return
+        try:
+            async with asyncio.timeout(SHORT_RUN_LIMIT):
+                await shorts_service.process(uuid.UUID(video_id))
+        except Exception as exc:
+            attempt = int(context.message.labels.get("_retries", 0)) + 1
+            log.warning(
+                "short_attempt_failed", video_id=video_id, attempt=attempt, error=type(exc).__name__
+            )
+            if attempt >= SHORT_ATTEMPTS:
+                message = (
+                    "Видеосервис занят. Попробуйте через несколько минут."
+                    if isinstance(exc, RendererBusy)
+                    else shorts_service.GENERIC_FAILURE
+                )
+                await shorts_service.fail(uuid.UUID(video_id), message)
+            raise
+
+
+@media_broker.task(task_name="purge_short_files")
+async def purge_short_files() -> int:
+    """Delete video files whose digest or reader is gone. Runs on the media
+    worker, the only one that can write to the media volume."""
+    removed = await shorts_service.purge_files()
+    if removed:
+        log.info("short_files_purged", count=removed)
+    return removed
+
+
 @ingest_broker.task(task_name="housekeeping", schedule=[{"cron": "*/10 * * * *"}])
 async def housekeeping() -> dict[str, int]:
-    """Give up on resumes no worker finished, drop expired sessions and delete
-    guest accounts that have lived their day."""
+    """Give up on resumes and videos no worker finished, drop expired sessions
+    and delete guest accounts that have lived their day."""
     now = datetime.now(UTC)
+    settings = get_settings()
     async with session_scope() as session:
         resumes = await resume_service.fail_stale(session, now - STALE_RESUME_AFTER)
+        shorts = await shorts_service.fail_stale(session, now - STALE_SHORT_AFTER)
         sessions = await auth_sessions.purge_expired(session)
         guests = await auth_service.purge_guests(
-            session, now - timedelta(hours=get_settings().guest_ttl_hours)
+            session, now - timedelta(hours=settings.guest_ttl_hours)
         )
-    if resumes:
-        log.warning("stale_resumes_failed", count=resumes)
-    return {"resumes": resumes, "sessions": sessions, "guests": guests}
+    if resumes or shorts:
+        log.warning("stale_work_failed", resumes=resumes, shorts=shorts)
+    # Deleted guests and digests leave their video files behind.
+    if settings.shorts_url:
+        try:
+            await purge_short_files.kiq()
+        except Exception as exc:
+            log.warning("short_purge_not_queued", error=type(exc).__name__)
+    return {"resumes": resumes, "shorts": shorts, "sessions": sessions, "guests": guests}

@@ -107,6 +107,23 @@ class Settings(BaseSettings):
     feed_cache_seconds: int = 60
     feed_rate_limit_per_minute: int = 60
 
+    # Short videos of digests. An empty renderer URL turns the feature off; an
+    # empty voice URL gives silent videos that carry the story in captions.
+    shorts_url: str = ""
+    shorts_timeout_seconds: float = Field(default=600.0, ge=30)
+    tts_url: str = ""
+    # Empty means the voice service's own default speaker.
+    tts_voice: str = ""
+    tts_timeout_seconds: float = Field(default=300.0, ge=10)
+    # Finished videos, one MP4 per digest. Shared by the media worker, which
+    # writes, and the api, which serves.
+    media_dir: str = "data/media"
+    shorts_max_items: int = Field(default=4, ge=1, le=6)
+    short_rate_limit_per_minute: int = 4
+    # Videos queued or being made at once, across all readers: a safety cap,
+    # not a schedule. The media worker makes them one after another anyway.
+    max_active_shorts: int = 10
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def checkpoint_dsn(self) -> str:

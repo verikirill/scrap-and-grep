@@ -189,3 +189,6 @@ class MetaOut(BaseModel):
     resume_parser: str
     resume_formats: list[str]
     resume_max_bytes: int
+    # Short videos of digests can be ordered, and whether they get a voice.
+    shorts: bool = False
+    shorts_voice: bool = False

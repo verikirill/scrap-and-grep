@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse
 from prometheus_client import Counter, Histogram
 from starlette.routing import Match
 
-from radar.api.routes import auth, catalog, digests, feed, profiles, resume, system
+from radar.api.routes import auth, catalog, digests, feed, profiles, resume, shorts, system
 from radar.cache import get_redis
 from radar.config import get_settings
 from radar.db import get_engine
@@ -135,6 +135,7 @@ def create_app() -> FastAPI:
         profiles.router,
         digests.router,
         resume.router,
+        shorts.router,
         feed.router,
     ):
         app.include_router(router, prefix="/api/v1")

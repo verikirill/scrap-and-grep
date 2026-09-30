@@ -14,6 +14,8 @@ import uuid
 from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager, suppress
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
+from typing import Any
 from unittest.mock import AsyncMock
 
 import httpx
@@ -492,3 +494,188 @@ async def test_pages_come_from_one_ranking_even_after_a_reaction(api: str) -> No
     assert len(paged) == len(set(paged)) == first["total"]
     # Without the snapshot the reader gets a new ranking that knows the save.
     assert rebuilt["snapshot"] != first["snapshot"]
+
+
+# A few bytes that pass for an MP4: the service checks the "ftyp" box only.
+FAKE_MP4 = b"\x00\x00\x00\x20ftypisom" + bytes(range(200))
+
+
+@pytest.fixture
+def shorts_on(
+    api: str, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> Iterator[list[dict[str, Any]]]:
+    """Videos switched on, with a fake renderer and no voice. Returns the props
+    the renderer was called with."""
+    from radar.config import get_settings
+    from radar.shorts import service
+    from radar.worker import tasks
+
+    monkeypatch.setenv("RADAR_SHORTS_URL", "http://shorts.test")
+    monkeypatch.setenv("RADAR_TTS_URL", "")
+    monkeypatch.setenv("RADAR_MEDIA_DIR", str(tmp_path))
+    get_settings.cache_clear()
+    for task in (tasks.make_short, tasks.purge_short_files):
+        monkeypatch.setattr(task, "kiq", AsyncMock())
+    rendered: list[dict[str, Any]] = []
+
+    async def fake_render(
+        url: str, props: dict[str, Any], audio: bytes | None, *, request_timeout: float
+    ) -> bytes:
+        rendered.append(props)
+        return FAKE_MP4
+
+    monkeypatch.setattr(service, "render", fake_render)
+    yield rendered
+    get_settings.cache_clear()
+
+
+async def finished_digest(
+    owner: httpx.AsyncClient, ids: dict[str, int], *, status: str = "done"
+) -> str:
+    """A digest as a finished build leaves it: two topics over seeded articles."""
+    from radar.db import session_scope
+    from radar.db.models import Digest, DigestItem, DigestTopic
+
+    profile = (await owner.post("/profiles", json=profile_spec())).json()
+    now = datetime.now(UTC)
+    async with session_scope() as session:
+        digest = Digest(
+            user_id=uuid.UUID((await owner.get("/auth/me")).json()["id"]),
+            profile_id=uuid.UUID(profile["id"]),
+            profile_spec=profile["spec"],
+            profile_version=1,
+            period_start=now - timedelta(days=7),
+            period_end=now,
+            status=status,
+            title="Выпуск",
+            finished_at=now,
+        )
+        session.add(digest)
+        await session.flush()
+        layout = {"Уязвимости": ["vpn", "router"], "Настройка": ["router2"]}
+        position = 0
+        for topic_position, (title, keys) in enumerate(layout.items()):
+            topic = DigestTopic(digest_id=digest.id, position=topic_position, title=title)
+            session.add(topic)
+            await session.flush()
+            for rank, key in enumerate(keys):
+                session.add(
+                    DigestItem(
+                        digest_id=digest.id,
+                        topic_id=topic.id,
+                        article_id=ids[key],
+                        position=position,
+                        selected=True,
+                        score=0.9 - 0.1 * rank - 0.2 * topic_position,
+                        interest_id="net",
+                        summary="Уязвимость с оценкой CVSS 9.8 закрыта. Обновите прошивку.",
+                    )
+                )
+                position += 1
+    return str(digest.id)
+
+
+async def test_a_short_is_made_for_the_owner_of_a_finished_digest_only(
+    api: str, shorts_on: list[dict[str, Any]]
+) -> None:
+    from radar.db import session_scope
+    from radar.db.models import Video
+    from radar.shorts import service
+    from radar.worker import tasks
+
+    async with register(api, "olga") as owner, register(api, "petr") as other:
+        digest_id = await finished_digest(owner, await seed_articles())
+
+        assert (await other.post(f"/digests/{digest_id}/short")).status_code == 404
+        assert (await other.get(f"/digests/{digest_id}/short")).json() is None
+        ordered = await owner.post(f"/digests/{digest_id}/short")
+        again = await owner.post(f"/digests/{digest_id}/short")
+        assert ordered.status_code == again.status_code == 202
+        assert ordered.json()["status"] == again.json()["status"] == "queued"
+        # A second press while it is queued does not queue a second video.
+        tasks.make_short.kiq.assert_awaited_once()  # type: ignore[attr-defined]
+        video_id = uuid.UUID(tasks.make_short.kiq.await_args.args[0])  # type: ignore[attr-defined]
+
+        assert await service.process(video_id)
+
+        video = (await owner.get(f"/digests/{digest_id}/short")).json()
+        assert video["status"] == "done"
+        assert video["voice"] is None
+        assert video["size_bytes"] == len(FAKE_MP4)
+        played = await owner.get(video["url"].removeprefix("/api/v1"))
+        seek = await owner.get(video["url"].removeprefix("/api/v1"), headers={"Range": "bytes=0-7"})
+        stolen = await other.get(f"/digests/{digest_id}/short.mp4")
+
+        assert played.status_code == 200
+        assert played.headers["content-type"] == "video/mp4"
+        assert played.content == FAKE_MP4
+        assert seek.status_code == 206
+        assert seek.content == FAKE_MP4[:8]
+        assert stolen.status_code == 404
+
+        # The strongest item of each topic first, then the runner-up.
+        props = shorts_on[0]
+        assert [beat["fact"] for beat in props["beats"]] == ["CVSS 9.8"] * 3
+        assert props["audience"] == "Сети"
+        assert props["words"]
+        assert props["hookEndMs"] <= props["beats"][0]["startMs"]
+        assert props["outroStartMs"] >= props["beats"][-1]["endMs"]
+
+        assert (await owner.delete(f"/digests/{digest_id}")).status_code == 204
+        async with session_scope() as session:
+            assert await session.get(Video, video_id) is None
+        assert service.video_path(video_id).is_file()
+        assert await service.purge_files() == 1
+        assert not service.video_path(video_id).exists()
+
+
+async def test_a_short_needs_a_renderer_and_a_finished_digest(
+    api: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from radar.config import get_settings
+
+    async with register(api, "roman") as reader:
+        building = await finished_digest(reader, await seed_articles(), status="running")
+        without_renderer = await reader.post(f"/digests/{building}/short")
+        monkeypatch.setenv("RADAR_SHORTS_URL", "http://shorts.test")
+        get_settings.cache_clear()
+        try:
+            not_ready = await reader.post(f"/digests/{building}/short")
+        finally:
+            monkeypatch.delenv("RADAR_SHORTS_URL")
+            get_settings.cache_clear()
+
+    assert without_renderer.status_code == 503
+    assert not_ready.status_code == 409
+
+
+async def test_a_reader_makes_one_video_at_a_time_and_a_new_cut_replaces_the_old(
+    api: str, shorts_on: list[dict[str, Any]]
+) -> None:
+    from radar.shorts import service
+    from radar.worker import tasks
+
+    async with register(api, "sergei") as reader:
+        ids = await seed_articles()
+        first = await finished_digest(reader, ids)
+        second = await finished_digest(reader, ids)
+
+        ordered = await reader.post(f"/digests/{first}/short")
+        other_digest = await reader.post(f"/digests/{second}/short")
+        assert ordered.status_code == 202
+        # Enforced by a unique index, so racing requests are refused too.
+        assert other_digest.status_code == 429
+
+        old_id = uuid.UUID(tasks.make_short.kiq.await_args.args[0])  # type: ignore[attr-defined]
+        assert await service.process(old_id)
+        again = await reader.post(f"/digests/{first}/short")
+        new_id = uuid.UUID(tasks.make_short.kiq.await_args.args[0])  # type: ignore[attr-defined]
+
+        assert again.status_code == 202
+        assert new_id != old_id
+        # A task left over from the first cut finds nothing to do.
+        assert not await service.process(old_id)
+        assert await service.process(new_id)
+        assert await service.purge_files() == 1
+        assert not service.video_path(old_id).exists()
+        assert service.video_path(new_id).is_file()
