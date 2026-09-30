@@ -72,7 +72,7 @@ export function DigestPage() {
         title="Дайджест"
         subtitle="Выберите профиль и период. Ассистент найдёт публикации по интересам, уберёт повторы, сгруппирует по темам и напишет выжимки со ссылками на источники."
       />
-      <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_17rem]">
+      <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_17rem]">
         <div className="min-w-0 space-y-6">
           {profiles.data && (
             <BuildPanel

@@ -5,28 +5,44 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
+import type { QueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { api } from './api'
+import { ApiError, api } from './api'
 import type {
   Digest,
   DigestSummary,
+  FeedItem,
+  FeedPage,
+  Me,
   Profile,
   ProfileSpec,
   ProgressEvent,
+  ReactionKind,
+  Resume,
   Source,
   SourceCreate,
+  Video,
 } from './api'
 
 export const keys = {
   meta: ['meta'] as const,
+  me: ['me'] as const,
+  resume: ['resume'] as const,
+  feed: ['feed'] as const,
+  saved: ['saved'] as const,
+  taste: ['taste'] as const,
   profiles: ['profiles'] as const,
   sources: ['sources'] as const,
   digests: ['digests'] as const,
   digest: (id: string) => ['digest', id] as const,
+  short: (digestId: string) => ['short', digestId] as const,
 }
 
 const ARTICLES_PAGE = 30
+const FEED_PAGE = 20
 const ACTIVE_POLL_MS = 4_000
+const RESUME_POLL_MS = 1_200
+const SHORT_POLL_MS = 2_500
 
 const isBuilding = (digest: { status: string } | undefined) =>
   digest?.status === 'queued' || digest?.status === 'running'
@@ -72,6 +88,9 @@ export function useSaveProfile() {
           ? list.map((item) => (item.id === profile.id ? profile : item))
           : [...list, profile],
       )
+      // Interests are part of the reader's taste.
+      void client.invalidateQueries({ queryKey: keys.feed })
+      void client.invalidateQueries({ queryKey: keys.taste })
       return client.invalidateQueries({ queryKey: keys.profiles })
     },
   })
@@ -81,7 +100,11 @@ export function useDeleteProfile() {
   const client = useQueryClient()
   return useMutation({
     mutationFn: api.deleteProfile,
-    onSuccess: () => client.invalidateQueries({ queryKey: keys.profiles }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: keys.feed })
+      void client.invalidateQueries({ queryKey: keys.taste })
+      return client.invalidateQueries({ queryKey: keys.profiles })
+    },
   })
 }
 
@@ -101,6 +124,33 @@ export function useDeleteDigest() {
   return useMutation({
     mutationFn: api.deleteDigest,
     onSuccess: () => client.invalidateQueries({ queryKey: keys.digests }),
+  })
+}
+
+/** The digest's short video, polled while it is being made. The server gives
+ * up on a stuck video by itself, so the polling always ends. */
+export const useShort = (digestId: string, isEnabled: boolean) =>
+  useQuery({
+    queryKey: keys.short(digestId),
+    queryFn: () => api.short(digestId),
+    enabled: isEnabled,
+    refetchInterval: (query) =>
+      query.state.status !== 'error' && isBuilding(query.state.data ?? undefined)
+        ? SHORT_POLL_MS
+        : false,
+  })
+
+export function useCreateShort(digestId: string) {
+  const client = useQueryClient()
+  const key = keys.short(digestId)
+  return useMutation({
+    mutationFn: () => api.createShort(digestId),
+    // A poll that started before the order would bring back the old video
+    // and stop the polling of the new one.
+    onMutate: () => client.cancelQueries({ queryKey: key }),
+    onSuccess: (video) => client.setQueryData<Video | null>(key, video),
+    // Refused (another video is being made, say): show what the server has.
+    onSettled: () => client.invalidateQueries({ queryKey: key }),
   })
 }
 
@@ -241,4 +291,276 @@ export function useDigestProgress(
   // An event belongs to the digest it was received for; after switching to
   // another issue the old one must not leak into its progress bar.
   return active && latest !== null && latest.id === id ? latest.event : null
+}
+
+/** Drop everything cached for a reader; who is signed in is handled separately. */
+function forgetReaderData(client: QueryClient): void {
+  client.removeQueries({
+    predicate: (query) => query.queryKey[0] !== 'me' && query.queryKey[0] !== 'meta',
+  })
+}
+
+/**
+ * Who is signed in; `null` means nobody, and the app shows the sign-in page.
+ * Checked again when the tab regains focus: if another tab signed in as
+ * someone else, the data cached for the previous reader is dropped.
+ */
+export function useMe() {
+  const client = useQueryClient()
+  return useQuery({
+    queryKey: keys.me,
+    queryFn: async () => {
+      const previous = client.getQueryData<Me | null>(keys.me)
+      const current = await api.me()
+      if (previous && previous.id !== current?.id) forgetReaderData(client)
+      return current
+    },
+    staleTime: 60_000,
+    refetchOnWindowFocus: true,
+  })
+}
+
+/**
+ * Sign in, register or enter as a guest. Everything cached belongs to the
+ * previous reader (or to nobody), so it is dropped before the new one is
+ * looked up. If the session did not take (the browser refused the cookie),
+ * the sign-in fails loudly instead of leaving the form silently as it was.
+ */
+export function useSignIn() {
+  const client = useQueryClient()
+  const enter = async () => {
+    forgetReaderData(client)
+    const me = await client.fetchQuery({ queryKey: keys.me, queryFn: api.me, staleTime: 0 })
+    if (!me) {
+      throw new ApiError(401, 'Вход не сохранился: браузер не принял cookie сессии.')
+    }
+  }
+  return {
+    login: useMutation({
+      mutationFn: async ({ email, password }: { email: string; password: string }) => {
+        await api.login(email, password)
+        await enter()
+      },
+    }),
+    register: useMutation({
+      mutationFn: async (form: { email: string; password: string; displayName: string }) => {
+        await api.register(form.email, form.password, form.displayName)
+        await enter()
+      },
+    }),
+    demo: useMutation({
+      mutationFn: async () => {
+        await api.demoLogin()
+        await enter()
+      },
+    }),
+  }
+}
+
+export function useSignOut() {
+  const client = useQueryClient()
+  const leave = () => {
+    // Telling the route guard first: it unmounts the pages, and only then
+    // their data is removed.
+    client.setQueryData(keys.me, null)
+    forgetReaderData(client)
+  }
+  return {
+    logout: useMutation({ mutationFn: api.logout, onSuccess: leave }),
+    deleteAccount: useMutation({ mutationFn: api.deleteAccount, onSuccess: leave }),
+  }
+}
+
+/** The resume changed what the reader is: everything derived from it is stale. */
+function refreshReader(client: QueryClient): void {
+  void client.invalidateQueries({ queryKey: keys.me })
+  void client.invalidateQueries({ queryKey: keys.taste })
+  void client.invalidateQueries({ queryKey: keys.feed })
+}
+
+/** Give up polling after this long: the worker has its own, longer, timeout. */
+const RESUME_POLL_LIMIT_MS = 5 * 60_000
+
+export const isResumeStuck = (resume: Resume | null | undefined, now = Date.now()) =>
+  resume?.status === 'processing' &&
+  now - new Date(resume.created_at).getTime() > RESUME_POLL_LIMIT_MS
+
+/**
+ * The resume, polled while the worker is still reading it; `null` means none.
+ * When the analysis finishes, the feed and the taste are refreshed: they were
+ * built without it.
+ */
+export function useResume(isEnabled = true) {
+  const client = useQueryClient()
+  return useQuery({
+    queryKey: keys.resume,
+    queryFn: async () => {
+      const previous = client.getQueryData<Resume | null>(keys.resume)
+      const current = await api.resume()
+      if (previous?.status === 'processing' && current?.status !== 'processing') {
+        refreshReader(client)
+      }
+      return current
+    },
+    enabled: isEnabled,
+    refetchInterval: (query) =>
+      query.state.data?.status === 'processing' && !isResumeStuck(query.state.data)
+        ? RESUME_POLL_MS
+        : false,
+  })
+}
+
+export function useResumeMutations() {
+  const client = useQueryClient()
+  return {
+    upload: useMutation({
+      mutationFn: (file: File) => api.uploadResume(file),
+      onSuccess: (resume) => {
+        client.setQueryData(keys.resume, resume)
+        void client.invalidateQueries({ queryKey: keys.me })
+      },
+    }),
+    remove: useMutation({
+      mutationFn: api.deleteResume,
+      onSuccess: () => {
+        client.setQueryData(keys.resume, null)
+        refreshReader(client)
+      },
+    }),
+  }
+}
+
+type FeedCursor = { offset: number; snapshot?: string }
+
+const nextCursor = (last: FeedPage): FeedCursor | undefined => {
+  const next = last.offset + last.items.length
+  return next < last.total && last.items.length > 0
+    ? { offset: next, snapshot: last.snapshot ?? undefined }
+    : undefined
+}
+
+/**
+ * The personal feed. Every page after the first asks for the snapshot the
+ * first one was cut from, so reactions between pages do not reshuffle it.
+ * Rebuilding (a refetch) starts a new snapshot.
+ */
+export const useFeed = () =>
+  useInfiniteQuery({
+    queryKey: keys.feed,
+    queryFn: ({ pageParam }) => api.feed(FEED_PAGE, pageParam.offset, pageParam.snapshot),
+    initialPageParam: { offset: 0 } as FeedCursor,
+    getNextPageParam: nextCursor,
+    // The order changes only when the reader asks for it: a feed that
+    // reshuffles under the cursor after every like is unreadable.
+    staleTime: Infinity,
+  })
+
+export const useSaved = (isEnabled: boolean) =>
+  useInfiniteQuery({
+    queryKey: keys.saved,
+    queryFn: ({ pageParam }) => api.saved(FEED_PAGE, pageParam.offset),
+    initialPageParam: { offset: 0 } as FeedCursor,
+    getNextPageParam: nextCursor,
+    enabled: isEnabled,
+  })
+
+export const useTaste = () => useQuery({ queryKey: keys.taste, queryFn: api.taste })
+
+/** Reactions to a fixed set of articles, e.g. the items of an open digest. */
+export const useReactions = (articleIds: number[]) =>
+  useQuery({
+    queryKey: ['reactions', articleIds],
+    queryFn: () => api.reactions(articleIds),
+    enabled: articleIds.length > 0,
+    staleTime: 30_000,
+  })
+
+type Feedback = {
+  articleId: number
+  kind: ReactionKind
+  isActive: boolean
+  context: 'feed' | 'digest'
+}
+
+type FeedPages = { pages: FeedPage[]; pageParams: unknown[] }
+
+/** What the reaction list looks like after one signal is set or cleared. */
+export function applyReaction(
+  current: ReactionKind[],
+  kind: ReactionKind,
+  isActive: boolean,
+): ReactionKind[] {
+  const opposite = kind === 'like' ? 'dislike' : kind === 'dislike' ? 'like' : null
+  const rest = current.filter((item) => item !== kind && item !== opposite)
+  return isActive ? [...rest, kind] : rest
+}
+
+/** Set the reactions of one article wherever it is cached. */
+function writeReactions(
+  client: QueryClient,
+  articleId: number,
+  change: (current: ReactionKind[]) => ReactionKind[],
+): void {
+  const setItem = (item: FeedItem): FeedItem =>
+    item.article_id === articleId ? { ...item, reactions: change(item.reactions) } : item
+  for (const queryKey of [keys.feed, keys.saved]) {
+    client.setQueryData<FeedPages>(queryKey, (data) =>
+      data
+        ? {
+            ...data,
+            pages: data.pages.map((page) => ({ ...page, items: page.items.map(setItem) })),
+          }
+        : data,
+    )
+  }
+  client.setQueriesData<Record<string, ReactionKind[]>>(
+    { queryKey: ['reactions'] },
+    (data) => data && { ...data, [articleId]: change(data[articleId] ?? []) },
+  )
+}
+
+/** The reactions of one article as the screen shows them now. */
+function readReactions(client: QueryClient, articleId: number): ReactionKind[] {
+  for (const queryKey of [keys.feed, keys.saved]) {
+    const data = client.getQueryData<FeedPages>(queryKey)
+    const item = data?.pages.flatMap((page) => page.items).find((it) => it.article_id === articleId)
+    if (item) return item.reactions
+  }
+  for (const [, data] of client.getQueriesData<Record<string, ReactionKind[]>>({
+    queryKey: ['reactions'],
+  })) {
+    if (data?.[articleId]) return data[articleId]
+  }
+  return []
+}
+
+/**
+ * Send a reader signal. The button reflects it at once; if the request fails,
+ * only that article goes back to what it was, so other reactions made in the
+ * meantime stay. Signals are sent one after another: a like and an unlike
+ * clicked in quick succession reach the server in that order.
+ */
+export function useFeedback() {
+  const client = useQueryClient()
+  return useMutation({
+    scope: { id: 'feedback' },
+    mutationFn: ({ articleId, kind, isActive, context }: Feedback) =>
+      api.feedback(articleId, kind, isActive, context),
+    onMutate: async ({ articleId, kind, isActive }) => {
+      // A reactions request in flight would overwrite the optimistic state
+      // with an older answer. The feed itself is not cancelled: that would
+      // abort a "show more" or a rebuild the reader asked for.
+      await client.cancelQueries({ queryKey: ['reactions'] })
+      const previous = readReactions(client, articleId)
+      writeReactions(client, articleId, (current) => applyReaction(current, kind, isActive))
+      return { previous }
+    },
+    onError: (_error, { articleId }, context) => {
+      if (context) writeReactions(client, articleId, () => context.previous)
+    },
+    onSuccess: (_data, feedback) => {
+      void client.invalidateQueries({ queryKey: keys.taste })
+      if (feedback.kind === 'save') void client.invalidateQueries({ queryKey: keys.saved })
+    },
+  })
 }

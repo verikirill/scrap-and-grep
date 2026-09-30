@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from functools import lru_cache
+from typing import TYPE_CHECKING
 
 from radar.ai.embedder import Embedder, HashingEmbedder, OllamaEmbedder
 from radar.ai.heuristic import HeuristicIntelligence
@@ -9,6 +10,9 @@ from radar.ai.intelligence import Intelligence
 from radar.ai.resilient import CachedIntelligence, CircuitBreaker, ResilientIntelligence
 from radar.cache import get_cache
 from radar.config import EMBEDDING_DIM, get_settings
+
+if TYPE_CHECKING:
+    from radar.ai.ollama import OllamaChat
 
 
 @dataclass(frozen=True, slots=True)
@@ -74,15 +78,15 @@ def get_embedder() -> Embedder:
 
 
 @lru_cache
-def get_intelligence() -> Intelligence:
+def get_chat() -> OllamaChat | None:
+    """The model connection, or None in offline mode."""
     settings = get_settings()
-    fallback = HeuristicIntelligence()
     if settings.llm_provider != "ollama":
-        return fallback
+        return None
 
-    from radar.ai.ollama import OllamaIntelligence
+    from radar.ai.ollama import OllamaChat
 
-    primary = OllamaIntelligence(
+    return OllamaChat(
         settings.llm_model,
         settings.ollama_base_url,
         temperature=settings.llm_temperature,
@@ -91,5 +95,24 @@ def get_intelligence() -> Intelligence:
         concurrency=settings.llm_concurrency,
         timeout=settings.llm_timeout_seconds,
     )
-    breaker = CircuitBreaker(settings.breaker_failure_threshold, settings.breaker_reset_seconds)
-    return CachedIntelligence(ResilientIntelligence(primary, fallback, breaker), get_cache())
+
+
+@lru_cache
+def get_breaker() -> CircuitBreaker:
+    """One breaker per process: every step that calls the model shares the
+    knowledge that it is down."""
+    settings = get_settings()
+    return CircuitBreaker(settings.breaker_failure_threshold, settings.breaker_reset_seconds)
+
+
+@lru_cache
+def get_intelligence() -> Intelligence:
+    fallback = HeuristicIntelligence()
+    chat = get_chat()
+    if chat is None:
+        return fallback
+
+    from radar.ai.ollama import OllamaIntelligence
+
+    primary = OllamaIntelligence(chat)
+    return CachedIntelligence(ResilientIntelligence(primary, fallback, get_breaker()), get_cache())

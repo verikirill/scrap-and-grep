@@ -10,6 +10,7 @@ import numpy as np
 from radar.ai.embedder import Embedder
 from radar.ai.intelligence import Intelligence
 from radar.domain import Candidate, DigestOverview, GradedCandidate, ProfileSpec, Topic
+from radar.recsys.model import Personal
 from radar.selection.retrieval import Window
 
 
@@ -27,6 +28,12 @@ class PipelineStore(Protocol):
     ) -> tuple[list[Candidate], int]: ...
 
     async def vectors(self, article_ids: Sequence[int]) -> dict[int, np.ndarray]: ...
+
+    async def personal(
+        self, user_id: str, article_ids: Sequence[int], start: datetime, end: datetime
+    ) -> dict[int, Personal]:
+        """How the reader's likes and rejections move each candidate."""
+        ...
 
     async def save(
         self,

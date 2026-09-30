@@ -127,6 +127,43 @@ class Cache:
             return False
         return int(count) > limit
 
+    async def is_over_limit(self, bucket: str, limit: int) -> bool:
+        """Has `bucket` already passed `limit` in its current window? Does not count."""
+        try:
+            count = await self._redis.get(self._key(f"rl:{bucket}"))
+        except RedisError as exc:
+            log.warning("rate_limit_unavailable", error=str(exc))
+            return False
+        return count is not None and int(count) > limit
+
+    async def get_int(self, key: str) -> int:
+        """A counter; 0 when it is missing or the server is unreachable."""
+        try:
+            raw = await self._redis.get(self._key(key))
+        except RedisError as exc:
+            log.warning("cache_get_failed", key=key, error=str(exc))
+            return 0
+        return int(raw) if raw is not None else 0
+
+    async def incr(self, key: str, ttl: int | None = None) -> int | None:
+        """Increment a counter; None when the server is unreachable."""
+        try:
+            async with self._redis.pipeline(transaction=True) as pipe:
+                pipe.incr(self._key(key))
+                if ttl is not None:
+                    pipe.expire(self._key(key), ttl)
+                results = await pipe.execute()
+        except RedisError as exc:
+            log.warning("cache_incr_failed", key=key, error=str(exc))
+            return None
+        return int(results[0])
+
+    async def decr(self, key: str) -> None:
+        try:
+            await self._redis.decr(self._key(key))
+        except RedisError as exc:
+            log.warning("cache_decr_failed", key=key, error=str(exc))
+
     async def publish(self, channel: str, payload: dict[str, Any]) -> None:
         try:
             await self._redis.publish(self._key(channel), orjson.dumps(payload))

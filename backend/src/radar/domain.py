@@ -125,6 +125,11 @@ class GradedCandidate(BaseModel):
     candidate: Candidate
     grade: Grade
     score: float
+    # What the reader's own behaviour added to or took from the score.
+    personal: float = 0.0
+    personal_note: str = ""
+    # The reader disliked or hid this very article.
+    rejected_by_reader: bool = False
 
     @property
     def article(self) -> ArticleRef:

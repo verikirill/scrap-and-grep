@@ -12,6 +12,7 @@ from radar.cache import Cache
 from radar.db import session_scope
 from radar.domain import Candidate, DigestOverview, GradedCandidate, ProfileSpec, Topic
 from radar.ingest.service import embed_pending
+from radar.recsys.model import Personal
 from radar.selection.retrieval import Window, retrieve_candidates
 from radar.store import articles as article_store
 from radar.store import digests as digest_store
@@ -50,6 +51,14 @@ class SqlPipelineStore:
     async def vectors(self, article_ids: Sequence[int]) -> dict[int, np.ndarray]:
         async with session_scope() as session:
             return await article_store.load_vectors(session, self._embedder.model_id, article_ids)
+
+    async def personal(
+        self, user_id: str, article_ids: Sequence[int], start: datetime, end: datetime
+    ) -> dict[int, Personal]:
+        # Imported here: the recommender itself uses this module's query embedder.
+        from radar.recsys.service import personal_adjustments
+
+        return await personal_adjustments(uuid.UUID(user_id), article_ids, start, end)
 
     async def save(
         self,

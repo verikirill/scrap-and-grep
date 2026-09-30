@@ -21,8 +21,10 @@ dependencies = [
     "pgvector>=0.5.0",
     "prometheus-client>=0.26.0",
     "psycopg[binary,pool]>=3.3.6",
+    "pwdlib[argon2]>=0.3.1",
     "pydantic>=2.13.5",
     "pydantic-settings>=2.15.0",
+    "pypdf>=6.19.0",
     "python-docx>=1.2.0",
     "redis[hiredis]>=8.1.0",
     "scikit-learn>=1.9.1",
@@ -80,6 +82,7 @@ ignore = [
 "scripts/**" = ["T201", "ASYNC240"]  # one-off command-line tools that print their report
 "src/radar/migrations/**" = ["E501"]
 "src/radar/seed.py" = ["E501"]  # data tables read better on one line
+"src/radar/resume/taxonomy.py" = ["E501"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

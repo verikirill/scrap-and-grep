@@ -6,6 +6,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
+from radar.auth.passwords import PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH
 from radar.domain import ProfileSpec, SourceCategory
 from radar.views import ItemView
 
@@ -15,6 +16,35 @@ class Page[T](BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class RegisterIn(BaseModel):
+    email: str = Field(max_length=254)
+    password: str = Field(min_length=PASSWORD_MIN_LENGTH, max_length=PASSWORD_MAX_LENGTH)
+    display_name: str = Field(min_length=2, max_length=80)
+
+
+class LoginIn(BaseModel):
+    email: str = Field(max_length=254)
+    password: str = Field(max_length=PASSWORD_MAX_LENGTH)
+
+
+class PasswordIn(BaseModel):
+    password: str = Field(max_length=PASSWORD_MAX_LENGTH)
+
+
+class UserOut(BaseModel):
+    id: uuid.UUID
+    email: str
+    display_name: str
+    is_admin: bool
+    is_demo: bool
+
+
+class MeOut(UserOut):
+    # What the onboarding needs to know: is there anything to build a feed from.
+    profiles: int
+    resume_status: str | None
 
 
 class SourceOut(BaseModel):
@@ -154,3 +184,11 @@ class MetaOut(BaseModel):
     newest_article: datetime | None
     sources: int
     sources_failing: int
+    demo_login: bool
+    registration_open: bool
+    resume_parser: str
+    resume_formats: list[str]
+    resume_max_bytes: int
+    # Short videos of digests can be ordered, and whether they get a voice.
+    shorts: bool = False
+    shorts_voice: bool = False

@@ -24,8 +24,12 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # Runtime stage: the virtualenv and nothing else, run as an unprivileged user.
 FROM python:3.14-slim-trixie AS runtime
 
+# /data/media is where the media worker puts videos. A named volume mounted
+# there starts with this directory's owner, so the worker can write to it.
 RUN groupadd --system --gid 10001 radar \
-    && useradd --system --uid 10001 --gid radar --home-dir /app --no-create-home radar
+    && useradd --system --uid 10001 --gid radar --home-dir /app --no-create-home radar \
+    && mkdir -p /data/media \
+    && chown radar:radar /data/media
 
 COPY --from=build --chown=radar:radar /app/.venv /app/.venv
 

@@ -1,0 +1,120 @@
+{
+  "file": "soc-analyst-scan.png",
+  "status": "ready",
+  "error": null,
+  "parser": "docling",
+  "llm": "qwen3.5:9b",
+  "facts": {
+    "headline": "Аналитик SOC второй линии",
+    "seniority": "middle",
+    "summary": "Специалист по кибермониторингу в сфере информационной безопасности. Занимается расследованием инцидентов, анализом срабатываний систем SIEM и EDR, а также взаимодействием с государственными системами мониторинга. Отвечает за настройку правил корреляции, проведение threat hunting по техникам MITRE ATT&CK и реагирование на угрозы.",
+    "skills": [
+      "SIEM",
+      "EDR",
+      "SOAR",
+      "Suricata",
+      "Zeek",
+      "Wazuh",
+      "KUMA",
+      "MaxPatrol SIEM",
+      "форензика"
+    ],
+    "domains": [
+      "мониторинг безопасности",
+      "расследование инцидентов",
+      "анализ угроз",
+      "кибербезопасность АСУ ТП",
+      "защита от вредоносного ПО",
+      "государственный кибермониторинг"
+    ],
+    "by_model": true
+  },
+  "suggestion": {
+    "name": "Аналитик SOC второй линии",
+    "role": "Специалист по кибермониторингу в сфере информационной безопасности. Занимается расследованием инцидентов, анализом срабатываний систем SIEM и EDR, а также взаимодействием с государственными системами мониторинга. Отвечает за настройку правил корреляции, проведение threat hunting по техникам MITRE ATT&CK и реагирование на угрозы.",
+    "interests": [
+      {
+        "id": "resume-1",
+        "title": "Анализ инцидентов и расследования",
+        "description": "Публикации о методах расследования, сборе доказательств и работе с логами.",
+        "keywords": [
+          "forensics",
+          "incident response",
+          "log analysis",
+          "MITRE ATT&CK",
+          "threat hunting",
+          "IOC",
+          "TTP",
+          "SIEM alerting"
+        ],
+        "weight": 1.0
+      },
+      {
+        "id": "resume-2",
+        "title": "Системы обнаружения и реагирования",
+        "description": "Новости о новых функциях SIEM, EDR и платформах SOAR.",
+        "keywords": [
+          "Wazuh",
+          "Suricata",
+          "Zeek",
+          "EDR deployment",
+          "SOAR automation",
+          "MaxPatrol",
+          "KUMA rules"
+        ],
+        "weight": 1.0
+      },
+      {
+        "id": "resume-3",
+        "title": "Защита от фишинга и вредоносного ПО",
+        "description": "Материалы о методах атак, анализе фишинговых писем и антивирусных решениях.",
+        "keywords": [
+          "phishing analysis",
+          "malware detection",
+          "sandboxing",
+          "IOC sharing",
+          "threat intelligence",
+          "endpoint security"
+        ],
+        "weight": 1.0
+      },
+      {
+        "id": "resume-4",
+        "title": "Государственный кибермониторинг",
+        "description": "Информация о требованиях ГосСОПКА, обмене данными и регуляторике.",
+        "keywords": [
+          "GosSOPKA",
+          "FSTEC requirements",
+          "data exchange",
+          "compliance",
+          "Russian cyber law"
+        ],
+        "weight": 1.0
+      },
+      {
+        "id": "resume-5",
+        "title": "Управление уязвимостями и настройка правил",
+        "description": "Статьи о создании корреляционных правил и управлении конфигурациями.",
+        "keywords": [
+          "correlation rules",
+          "rule tuning",
+          "false positives",
+          "configuration management"
+        ],
+        "weight": 1.0
+      }
+    ],
+    "exclusions": [
+      "вакансии и карьера",
+      "обзор смартфона",
+      "игры и киберспорт"
+    ],
+    "min_score": 0.5,
+    "max_items": 20,
+    "languages": [
+      "ru",
+      "en"
+    ],
+    "categories": []
+  }
+}

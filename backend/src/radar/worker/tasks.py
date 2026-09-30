@@ -7,6 +7,8 @@ from datetime import UTC, datetime, timedelta
 from taskiq import Context, TaskiqDepends
 
 from radar.ai.factory import get_embedder
+from radar.auth import service as auth_service
+from radar.auth import sessions as auth_sessions
 from radar.cache import get_cache
 from radar.config import get_settings
 from radar.db import session_scope
@@ -14,8 +16,20 @@ from radar.ingest.net import build_client
 from radar.ingest.service import embed_pending, enabled_source_ids, ingest_source
 from radar.logging import get_logger
 from radar.pipeline.runner import report_failure, run_digest
+from radar.recsys import service as recsys_service
+from radar.resume import service as resume_service
+from radar.shorts import service as shorts_service
+from radar.shorts.renderer import RendererBusy
 from radar.store import digests as digest_store
-from radar.worker.brokers import DIGEST_IDLE_TIMEOUT_MS, digest_broker, ingest_broker
+from radar.worker.brokers import (
+    DIGEST_IDLE_TIMEOUT_MS,
+    MEDIA_IDLE_TIMEOUT_MS,
+    PROFILE_IDLE_TIMEOUT_MS,
+    digest_broker,
+    ingest_broker,
+    media_broker,
+    profile_broker,
+)
 
 log = get_logger(__name__)
 
@@ -28,6 +42,21 @@ DIGEST_RUN_LIMIT = DIGEST_LOCK_TTL - 30
 # Total attempts, the first one included (taskiq counts them this way).
 DIGEST_ATTEMPTS = 3
 STALE_DIGEST_AFTER = timedelta(milliseconds=3 * DIGEST_IDLE_TIMEOUT_MS)
+# Same reasoning as for digests: finish or give up before the message can be
+# handed to another worker.
+RESUME_LOCK_TTL = PROFILE_IDLE_TIMEOUT_MS // 1000 - 60
+RESUME_RUN_LIMIT = RESUME_LOCK_TTL - 30
+RESUME_ATTEMPTS = 3
+STALE_RESUME_AFTER = timedelta(milliseconds=3 * PROFILE_IDLE_TIMEOUT_MS)
+TASTE_LOCK_TTL = 60
+# Signals that keep arriving during a refresh can hold it for this many rounds.
+TASTE_MAX_ROUNDS = 3
+SHORT_LOCK_TTL = MEDIA_IDLE_TIMEOUT_MS // 1000 - 60
+SHORT_RUN_LIMIT = SHORT_LOCK_TTL - 30
+SHORT_ATTEMPTS = 2
+# A redelivered task resumes a video after the idle timeout and may run for
+# nearly as long again; only after that is the video given up on.
+STALE_SHORT_AFTER = timedelta(milliseconds=2 * MEDIA_IDLE_TIMEOUT_MS)
 
 
 @ingest_broker.task(task_name="ingest_all", schedule=[{"cron": get_settings().ingest_cron}])
@@ -91,3 +120,119 @@ async def build_digest(digest_id: str, context: Context = TaskiqDepends()) -> No
             else:
                 log.warning("digest_will_retry", digest_id=digest_id, attempt=attempt)
             raise
+
+
+@profile_broker.task(task_name="process_resume", retry_on_error=True, max_retries=RESUME_ATTEMPTS)
+async def process_resume(
+    user_id: str, uploaded_at: str, context: Context = TaskiqDepends()
+) -> None:
+    """Parse an uploaded resume and turn it into a suggested profile."""
+    owner, stamp = uuid.UUID(user_id), datetime.fromisoformat(uploaded_at)
+    cache = get_cache()
+    # One lock per upload, not per reader: a newer file must not be turned
+    # away because the previous one is still being read.
+    async with cache.lock(f"resume:{user_id}:{stamp.timestamp()}", RESUME_LOCK_TTL) as acquired:
+        if not acquired:
+            return
+        try:
+            async with asyncio.timeout(RESUME_RUN_LIMIT):
+                done = await resume_service.process(owner, stamp)
+        except Exception as exc:
+            attempt = int(context.message.labels.get("_retries", 0)) + 1
+            # The exception text may quote the document, so only its type is logged.
+            log.warning(
+                "resume_attempt_failed", user_id=user_id, attempt=attempt, error=type(exc).__name__
+            )
+            if attempt >= RESUME_ATTEMPTS:
+                await resume_service.fail(owner, stamp)
+                await recsys_service.forget_taste(cache, owner)
+            raise
+    if not done:
+        return
+    # The resume is one of the inputs of the reader's taste. The analysis is
+    # already saved, so a failure here must not send the task round again.
+    await recsys_service.forget_taste(cache, owner)
+    try:
+        await refresh_taste.kiq(user_id)
+    except Exception as exc:
+        log.warning("taste_refresh_not_queued", user_id=user_id, error=type(exc).__name__)
+
+
+@profile_broker.task(task_name="refresh_taste", retry_on_error=True, max_retries=2)
+async def refresh_taste(user_id: str) -> bool:
+    """Recompute a reader's taste vector, the one used to find readers alike.
+
+    Queued after every signal. A task that finds another one running leaves a
+    note and returns; the running one sees the note and goes round again, so
+    the last signal is always included and bursts collapse into a few runs.
+    """
+    cache = get_cache()
+    dirty = f"taste-dirty:{user_id}"
+    async with cache.lock(f"taste:{user_id}", TASTE_LOCK_TTL) as acquired:
+        if not acquired:
+            await cache.set_json(dirty, 1, TASTE_LOCK_TTL)
+            return False
+        for _ in range(TASTE_MAX_ROUNDS):
+            await cache.delete(dirty)
+            await recsys_service.store_taste_vector(uuid.UUID(user_id))
+            if await cache.get_json(dirty) is None:
+                break
+    return True
+
+
+@media_broker.task(task_name="make_short", retry_on_error=True, max_retries=SHORT_ATTEMPTS)
+async def make_short(video_id: str, context: Context = TaskiqDepends()) -> None:
+    """Write, voice and render the short video of a digest."""
+    async with get_cache().lock(f"short:{video_id}", SHORT_LOCK_TTL) as acquired:
+        if not acquired:
+            return
+        try:
+            async with asyncio.timeout(SHORT_RUN_LIMIT):
+                await shorts_service.process(uuid.UUID(video_id))
+        except Exception as exc:
+            attempt = int(context.message.labels.get("_retries", 0)) + 1
+            log.warning(
+                "short_attempt_failed", video_id=video_id, attempt=attempt, error=type(exc).__name__
+            )
+            if attempt >= SHORT_ATTEMPTS:
+                message = (
+                    "Видеосервис занят. Попробуйте через несколько минут."
+                    if isinstance(exc, RendererBusy)
+                    else shorts_service.GENERIC_FAILURE
+                )
+                await shorts_service.fail(uuid.UUID(video_id), message)
+            raise
+
+
+@media_broker.task(task_name="purge_short_files")
+async def purge_short_files() -> int:
+    """Delete video files whose digest or reader is gone. Runs on the media
+    worker, the only one that can write to the media volume."""
+    removed = await shorts_service.purge_files()
+    if removed:
+        log.info("short_files_purged", count=removed)
+    return removed
+
+
+@ingest_broker.task(task_name="housekeeping", schedule=[{"cron": "*/10 * * * *"}])
+async def housekeeping() -> dict[str, int]:
+    """Give up on resumes and videos no worker finished, drop expired sessions
+    and delete guest accounts that have lived their day."""
+    now = datetime.now(UTC)
+    settings = get_settings()
+    async with session_scope() as session:
+        resumes = await resume_service.fail_stale(session, now - STALE_RESUME_AFTER)
+        shorts = await shorts_service.fail_stale(session, now - STALE_SHORT_AFTER)
+        sessions = await auth_sessions.purge_expired(session)
+        guests = await auth_service.purge_guests(
+            session, now - timedelta(hours=settings.guest_ttl_hours)
+        )
+    if resumes or shorts:
+        log.warning("stale_work_failed", resumes=resumes, shorts=shorts)
+    # Deleted guests and digests leave their video files behind.
+    if settings.shorts_url:
+        try:
+            await purge_short_files.kiq()
+        except Exception as exc:
+            log.warning("short_purge_not_queued", error=type(exc).__name__)
+    return {"resumes": resumes, "shorts": shorts, "sessions": sessions, "guests": guests}

@@ -119,7 +119,13 @@ function AddSourceForm({ onDone }: { onDone: () => void }) {
   )
 }
 
-export function SourcesTable({ sources }: { sources: Source[] }) {
+type Props = {
+  sources: Source[]
+  /** The catalogue is shared; only an administrator may change it. */
+  canEdit: boolean
+}
+
+export function SourcesTable({ sources, canEdit }: Props) {
   const { toggle, remove, refreshOne, refreshAll } = useSourceMutations()
   const [adding, setAdding] = useState(false)
 
@@ -130,7 +136,7 @@ export function SourcesTable({ sources }: { sources: Source[] }) {
           <span className="font-semibold text-text">{sources.filter((s) => s.enabled).length}</span>{' '}
           из {sources.length} источников включено · опрос каждые 15 минут
         </p>
-        <div className="flex gap-2">
+        <div className={clsx('flex gap-2', !canEdit && 'hidden')}>
           <Button
             size="sm"
             icon={<RefreshCw size={14} className={clsx(refreshAll.isPending && 'animate-spin')} />}
@@ -212,7 +218,12 @@ export function SourcesTable({ sources }: { sources: Source[] }) {
                       <span className="ml-1.5 text-ok">+{source.articles_last_day}</span>
                     )}
                   </span>
-                  <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
+                  <div
+                    className={clsx(
+                      'flex items-center gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100',
+                      !canEdit && 'hidden',
+                    )}
+                  >
                     <button
                       type="button"
                       aria-label="Опросить источник"
@@ -237,6 +248,7 @@ export function SourcesTable({ sources }: { sources: Source[] }) {
                   <Toggle
                     label={`${source.enabled ? 'Отключить' : 'Включить'} ${source.name}`}
                     checked={source.enabled}
+                    disabled={!canEdit}
                     onChange={(enabled) => toggle.mutate({ id: source.id, enabled })}
                   />
                 </li>

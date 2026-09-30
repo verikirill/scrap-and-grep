@@ -38,6 +38,16 @@ export function formatPeriod(startIso: string, endIso: string): string {
   return `${formatDate(startIso)} - ${formatDate(endIso)}`
 }
 
+/** Video length as a player shows it: 42_300 -> "0:42". */
+export function formatDuration(ms: number): string {
+  const seconds = Math.round(ms / 1000)
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
+}
+
+/** File size in megabytes with one decimal: "5,4 МБ". */
+export const formatMegabytes = (bytes: number) =>
+  `${(bytes / 1_000_000).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} МБ`
+
 /** Russian plural form: plural(5, ['статья', 'статьи', 'статей']). */
 export function plural(count: number, forms: [string, string, string]): string {
   const mod10 = count % 10
@@ -60,6 +70,7 @@ export const REJECT_LABELS: Record<string, string> = {
   excluded: 'исключение',
   duplicate: 'повтор',
   over_limit: 'сверх лимита',
+  hidden: 'скрыто вами',
 }
 
 export const STAGE_LABELS: Record<string, string> = {

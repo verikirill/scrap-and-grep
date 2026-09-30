@@ -9,7 +9,8 @@ from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from radar.db.models import Article, Profile, Source
+from radar.auth import DEMO_EMAIL
+from radar.db.models import Article, Profile, Source, User
 from radar.domain import Interest, ProfileSpec
 from radar.text import content_hash
 
@@ -204,10 +205,14 @@ async def seed_defaults(session: AsyncSession) -> dict[str, int]:
     inserted = await session.execute(
         insert(Source).values(rows).on_conflict_do_nothing().returning(Source.id)
     )
+    # The example profiles belong to the demo account; a registered reader
+    # starts with their own, built from the resume or by hand.
     profiles_added = 0
-    if not await session.scalar(select(func.count()).select_from(Profile)):
+    demo_id = await session.scalar(select(User.id).where(User.email == DEMO_EMAIL))
+    owned = select(func.count()).select_from(Profile).where(Profile.user_id == demo_id)
+    if demo_id is not None and not await session.scalar(owned):
         for spec in DEFAULT_PROFILES:
-            session.add(Profile(name=spec.name, spec=spec.model_dump(mode="json")))
+            session.add(Profile(user_id=demo_id, name=spec.name, spec=spec.model_dump(mode="json")))
             profiles_added += 1
     return {"sources": len(inserted.all()), "profiles": profiles_added}
 

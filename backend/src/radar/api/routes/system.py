@@ -10,6 +10,8 @@ from radar.ai.factory import get_embedder
 from radar.api.deps import CacheDep, SessionDep, SettingsDep
 from radar.api.schemas import MetaOut
 from radar.db.models import Source
+from radar.resume.files import BUILTIN_FORMATS, DOCLING_FORMATS
+from radar.resume.parse import PARSER_BUILTIN, PARSER_DOCLING
 from radar.store.articles import corpus_stats
 
 router = APIRouter(tags=["system"])
@@ -65,4 +67,13 @@ async def meta(session: SessionDep, settings: SettingsDep) -> MetaOut:
         newest_article=stats["newest"],
         sources=int(sources or 0),
         sources_failing=int(failing or 0),
+        demo_login=settings.demo_login,
+        registration_open=settings.registration_open,
+        resume_parser=PARSER_DOCLING if settings.docparser_url else PARSER_BUILTIN,
+        resume_formats=list(
+            DOCLING_FORMATS if settings.docparser_url else (*BUILTIN_FORMATS, "html")
+        ),
+        resume_max_bytes=settings.resume_max_bytes,
+        shorts=bool(settings.shorts_url),
+        shorts_voice=bool(settings.shorts_url and settings.tts_url),
     )

@@ -32,6 +32,20 @@ x-backend: &backend
     RADAR_CANDIDATE_LIMIT: ${RADAR_CANDIDATE_LIMIT:-60}
     RADAR_RATE_LIMIT_PER_MINUTE: ${RADAR_RATE_LIMIT_PER_MINUTE:-120}
     RADAR_DIGEST_TASK_TIMEOUT_SECONDS: ${RADAR_DIGEST_TASK_TIMEOUT_SECONDS:-1200}
+    # Accounts. The demo sign-in is on by default so that the stack can be
+    # looked at without registering; turn it off outside a demonstration.
+    RADAR_DEMO_LOGIN: ${RADAR_DEMO_LOGIN:-true}
+    RADAR_REGISTRATION_OPEN: ${RADAR_REGISTRATION_OPEN:-true}
+    RADAR_COOKIE_SECURE: ${RADAR_COOKIE_SECURE:-false}
+    # Empty: resumes are read by the built-in parser. With the docling
+    # profile set it to http://docparser:8000.
+    RADAR_DOCPARSER_URL: ${RADAR_DOCPARSER_URL:-}
+    # Short videos. Empty turns them off; with the video profile set it to
+    # http://shorts:3000, and with the voice profile the voice to http://tts:8000.
+    RADAR_SHORTS_URL: ${RADAR_SHORTS_URL:-}
+    RADAR_TTS_URL: ${RADAR_TTS_URL:-}
+    RADAR_TTS_VOICE: ${RADAR_TTS_VOICE:-}
+    RADAR_MEDIA_DIR: /data/media
   depends_on: &backend-deps
     migrate:
       condition: service_completed_successfully
@@ -142,6 +156,9 @@ services:
     command: ["uvicorn", "radar.api.app:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
     deploy:
       replicas: ${API_REPLICAS:-2}
+    # Serves finished videos; only the media worker writes them.
+    volumes:
+      - media:/data/media:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health/live', timeout=3).status == 200 else 1)"]
       interval: 10s
@@ -164,6 +181,30 @@ services:
     deploy:
       replicas: ${DIGEST_WORKERS:-2}
 
+  # Work a reader is waiting for at the screen: resume analysis during
+  # sign-up and taste updates after a like. Its own queue, so neither feeds
+  # nor digests can hold it up.
+  worker-profile:
+    <<: *backend
+    command: ["taskiq", "worker", "radar.worker.brokers:profile_broker", "radar.worker.tasks", "--ack-type", "when_executed", "--max-async-tasks", "8", "--workers", "1"]
+    deploy:
+      replicas: ${PROFILE_WORKERS:-1}
+    networks:
+      - default
+      - parsing
+
+  # Short videos: writes the script, asks for the voice and the render, and
+  # stores the MP4. One video at a time: the renderer takes every core it has.
+  worker-media:
+    <<: *backend
+    profiles: ["video"]
+    command: ["taskiq", "worker", "radar.worker.brokers:media_broker", "radar.worker.tasks", "--ack-type", "when_executed", "--max-async-tasks", "1", "--workers", "1"]
+    volumes:
+      - media:/data/media
+    networks:
+      - default
+      - rendering
+
   scheduler:
     <<: *backend
     command: ["taskiq", "scheduler", "radar.worker.brokers:scheduler", "radar.worker.tasks"]
@@ -184,6 +225,114 @@ services:
       interval: 10s
       timeout: 3s
       retries: 6
+
+  # Resume parsing with docling: page layout, OCR of scans, slides and
+  # images. It receives untrusted files, so it holds no credentials, has
+  # no route to the database and no route to the internet: the models are
+  # baked into the image.
+  docparser:
+    profiles: ["docling"]
+    build:
+      context: ./docparser
+    image: radar-docparser:local
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    # A hostile document may try to eat the host; these caps keep the damage
+    # inside this container.
+    mem_limit: ${DOCPARSER_MEMORY:-3g}
+    cpus: ${DOCPARSER_CPUS:-4}
+    pids_limit: 256
+    environment:
+      DOCPARSER_THREADS: ${DOCPARSER_THREADS:-4}
+      DOCPARSER_OCR: ${DOCPARSER_OCR:-true}
+    networks:
+      - parsing
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).status == 200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+
+  # Remotion render service: props and narration in, MP4 out. Chrome draws
+  # the frames, so it gets its own memory cap and shared memory. No route to
+  # the internet: fonts and the browser are baked into the image.
+  shorts:
+    profiles: ["video"]
+    build:
+      context: ./shorts
+    image: radar-shorts:local
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=2g
+    shm_size: 1g
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: ${SHORTS_MEMORY:-4g}
+    cpus: ${SHORTS_CPUS:-4}
+    pids_limit: 512
+    environment:
+      # Browser tabs rendering frames in parallel. Empty is half of the cores
+      # the container gets (cpus above); Remotion refuses more than all of them.
+      RENDER_CONCURRENCY: ${SHORTS_CONCURRENCY:-}
+    networks:
+      - rendering
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/healthz').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+
+  # Qwen3-TTS voice. Measured on an NVIDIA GPU (-f docker-compose.gpu.yml);
+  # without one it falls back to the CPU, at a speed nobody has measured.
+  # The model is baked into the image.
+  tts:
+    profiles: ["voice"]
+    build:
+      context: ./tts
+    image: radar-tts:local
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    # A runaway generation stops at these caps instead of taking the host.
+    mem_limit: ${TTS_MEMORY:-8g}
+    cpus: ${TTS_CPUS:-4}
+    pids_limit: 256
+    environment:
+      TTS_SPEAKER: ${TTS_SPEAKER:-}
+      TTS_KEEP_ALIVE_SECONDS: ${TTS_KEEP_ALIVE_SECONDS:-600}
+      # PyTorch 2.14 replaces some CUDA ops with Triton kernels compiled on
+      # first use, which needs a C compiler and a writable cache that this
+      # image does not have. The plain CUDA kernels are what was measured.
+      TORCH_DISABLE_NATIVE_JIT: "1"
+      # librosa compiles with numba and caches the result next to itself;
+      # the image is read-only, so the caches go to /tmp.
+      NUMBA_CACHE_DIR: /tmp/numba
+      XDG_CACHE_HOME: /tmp/cache
+      MPLCONFIGDIR: /tmp/matplotlib
+    networks:
+      - rendering
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).status == 200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
 
   ollama:
     profiles: ["ollama"]
@@ -216,7 +365,16 @@ services:
       ollama:
         condition: service_healthy
 
+networks:
+  # No gateway: containers on it reach each other and nothing else.
+  parsing:
+    internal: true
+  # The media worker and the services that voice and render its videos.
+  rendering:
+    internal: true
+
 volumes:
   pgdata:
   valkeydata:
   ollama:
+  media:

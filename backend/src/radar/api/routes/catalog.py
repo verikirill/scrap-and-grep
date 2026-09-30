@@ -7,7 +7,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
 
-from radar.api.deps import SessionDep, SettingsDep, rate_limit
+from radar.api.deps import (
+    SessionDep,
+    SettingsDep,
+    admin_user,
+    current_user,
+    user_rate_limit,
+)
 from radar.api.schemas import ArticleOut, Page, SourceCreate, SourceOut, SourceUpdate
 from radar.db.models import Article, Source
 from radar.domain import Language, SourceCategory
@@ -16,9 +22,12 @@ from radar.store.articles import ArticleFilter, list_articles
 from radar.text import stable_hash
 from radar.worker.tasks import ingest_all, ingest_source_task
 
-router = APIRouter(tags=["catalog"])
+# The catalogue is shared by every reader: anyone signed in may read it, only
+# an administrator may change it.
+router = APIRouter(tags=["catalog"], dependencies=[Depends(current_user)])
 
-_write_limit = Depends(rate_limit("write", lambda settings: settings.rate_limit_per_minute))
+_write_limit = Depends(user_rate_limit("write", lambda settings: settings.rate_limit_per_minute))
+_admin = Depends(admin_user)
 
 
 def _article_out(article: Article) -> ArticleOut:
@@ -90,7 +99,7 @@ async def list_sources(session: SessionDep) -> list[SourceOut]:
     return result
 
 
-@router.post("/sources", status_code=status.HTTP_201_CREATED, dependencies=[_write_limit])
+@router.post("/sources", status_code=status.HTTP_201_CREATED, dependencies=[_admin, _write_limit])
 async def create_source(payload: SourceCreate, session: SessionDep) -> SourceOut:
     feed_url = str(payload.feed_url)
     try:
@@ -116,7 +125,7 @@ async def create_source(payload: SourceCreate, session: SessionDep) -> SourceOut
     return await _source_out(session, source)
 
 
-@router.patch("/sources/{source_id}", dependencies=[_write_limit])
+@router.patch("/sources/{source_id}", dependencies=[_admin, _write_limit])
 async def update_source(source_id: int, payload: SourceUpdate, session: SessionDep) -> SourceOut:
     source = await session.get(Source, source_id)
     if source is None:
@@ -128,7 +137,9 @@ async def update_source(source_id: int, payload: SourceUpdate, session: SessionD
 
 
 @router.delete(
-    "/sources/{source_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[_write_limit]
+    "/sources/{source_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[_admin, _write_limit],
 )
 async def delete_source(source_id: int, session: SessionDep) -> Response:
     source = await session.get(Source, source_id)
@@ -138,7 +149,9 @@ async def delete_source(source_id: int, session: SessionDep) -> Response:
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.post("/sources/refresh", status_code=status.HTTP_202_ACCEPTED, dependencies=[_write_limit])
+@router.post(
+    "/sources/refresh", status_code=status.HTTP_202_ACCEPTED, dependencies=[_admin, _write_limit]
+)
 async def refresh_sources() -> dict[str, str]:
     """Queue a fetch of every enabled source."""
     await ingest_all.kiq()
@@ -148,7 +161,7 @@ async def refresh_sources() -> dict[str, str]:
 @router.post(
     "/sources/{source_id}/refresh",
     status_code=status.HTTP_202_ACCEPTED,
-    dependencies=[_write_limit],
+    dependencies=[_admin, _write_limit],
 )
 async def refresh_source(source_id: int, session: SessionDep) -> dict[str, str]:
     if await session.get(Source, source_id) is None:

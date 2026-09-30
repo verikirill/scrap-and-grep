@@ -98,6 +98,7 @@ export interface DigestStats {
   graded_by_model?: number
   written_by_model?: number
   degraded?: boolean
+  personalized?: number
   duration_seconds?: number
 }
 
@@ -135,6 +136,9 @@ export interface DigestItem {
   published_at: string
   score: number
   retrieval_score: number
+  /** Part of the score that came from the reader's own likes and rejections. */
+  personal: number
+  personal_note: string
   relevance: number
   interest_id: string | null
   interest_title: string | null
@@ -216,6 +220,118 @@ export interface Meta {
   newest_article: string | null
   sources: number
   sources_failing: number
+  demo_login: boolean
+  registration_open: boolean
+  resume_parser: 'builtin' | 'docling'
+  resume_formats: string[]
+  resume_max_bytes: number
+  /** Short videos of digests can be ordered on this server. */
+  shorts: boolean
+  /** ...and they get a voice; without it captions carry the story. */
+  shorts_voice: boolean
+}
+
+export type VideoStage = 'script' | 'voice' | 'render'
+
+export interface Video {
+  status: DigestStatus
+  stage: VideoStage | null
+  progress: number
+  error: string | null
+  /** "qwen3-tts:<speaker>", or null for a silent video with captions. */
+  voice: string | null
+  by_model: boolean
+  duration_ms: number | null
+  size_bytes: number | null
+  created_at: string
+  finished_at: string | null
+  /** Where to watch it; set once it is done. */
+  url: string | null
+}
+
+export interface User {
+  id: string
+  email: string
+  display_name: string
+  is_admin: boolean
+  is_demo: boolean
+}
+
+export interface Me extends User {
+  profiles: number
+  resume_status: ResumeStatus | null
+}
+
+export type ResumeStatus = 'processing' | 'ready' | 'failed'
+
+export interface ResumeFacts {
+  headline: string
+  seniority: 'junior' | 'middle' | 'senior' | 'lead' | 'executive' | 'unknown'
+  summary: string
+  skills: string[]
+  domains: string[]
+  by_model: boolean
+}
+
+export interface Resume {
+  status: ResumeStatus
+  error: string | null
+  file_format: string
+  size_bytes: number
+  parser: 'builtin' | 'docling' | null
+  facts: ResumeFacts | null
+  suggestion: ProfileSpec | null
+  created_at: string
+  processed_at: string | null
+}
+
+export type ReactionKind = 'like' | 'dislike' | 'save' | 'hide' | 'open'
+
+export interface FeedReason {
+  kind: 'interest' | 'resume' | 'learned' | 'collab' | 'source' | 'explore'
+  text: string
+}
+
+export interface FeedItem {
+  article_id: number
+  url: string
+  title: string
+  summary: string
+  source_id: number
+  source_name: string
+  source_category: SourceCategory
+  language: string
+  published_at: string
+  score: number
+  explore: boolean
+  reasons: FeedReason[]
+  /** Contribution of each part of the evidence; empty for saved items. */
+  parts: Record<string, number>
+  reactions: ReactionKind[]
+}
+
+export interface FeedPage {
+  items: FeedItem[]
+  total: number
+  limit: number
+  offset: number
+  generated_at: string
+  /** Names the ranking the page was cut from; pass it back for the next page. */
+  snapshot: string | null
+}
+
+export interface TasteFacet {
+  kind: 'interest' | 'resume' | 'learned' | 'avoid'
+  label: string
+  weight: number
+}
+
+export interface Taste {
+  confidence: number
+  positives: number
+  negatives: number
+  facets: TasteFacet[]
+  sources: { source_id: number; name: string; affinity: number }[]
 }
 
 export interface ProgressEvent {
@@ -257,7 +373,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   try {
     response = await fetch(`${API_BASE}${path}`, {
       ...init,
-      headers: init?.body ? { 'Content-Type': 'application/json' } : undefined,
+      headers: init?.headers ?? (init?.body ? { 'Content-Type': 'application/json' } : undefined),
     })
   } catch {
     throw new ApiError(0, 'Сервис недоступен. Проверьте, что контейнеры запущены.')
@@ -287,6 +403,51 @@ function query(params: Record<string, string | number | string[] | undefined>): 
 
 export const api = {
   meta: () => request<Meta>('/meta'),
+
+  /** `null` when nobody is signed in. */
+  me: () => request<Me | null>('/auth/me'),
+  login: (email: string, password: string) =>
+    request<User>('/auth/login', json('POST', { email, password })),
+  register: (email: string, password: string, displayName: string) =>
+    request<User>('/auth/register', json('POST', { email, password, display_name: displayName })),
+  demoLogin: () => request<User>('/auth/demo', { method: 'POST' }),
+  logout: () => request<void>('/auth/logout', { method: 'POST' }),
+  deleteAccount: (password: string) => request<void>('/auth/me/delete', json('POST', { password })),
+
+  /** `null` when no resume has been uploaded. */
+  resume: () => request<Resume | null>('/resume'),
+  /** The file goes as the raw body; its name only helps to tell text formats apart. */
+  uploadResume: (file: File) =>
+    request<Resume>('/resume', {
+      method: 'POST',
+      body: file,
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'X-File-Name': encodeURIComponent(file.name),
+      },
+    }),
+  deleteResume: () => request<void>('/resume', { method: 'DELETE' }),
+
+  feed: (limit: number, offset: number, snapshot?: string) =>
+    request<FeedPage>(`/feed${query({ limit, offset, snapshot })}`),
+  saved: (limit: number, offset: number) =>
+    request<FeedPage>(`/feed/saved${query({ limit, offset })}`),
+  taste: () => request<Taste>('/taste'),
+  reactions: (articleIds: number[]) =>
+    request<Record<string, ReactionKind[]>>(
+      `/reactions${query({ article_id: articleIds.map(String) })}`,
+    ),
+  feedback: (
+    articleId: number,
+    kind: ReactionKind,
+    isActive: boolean,
+    context: 'feed' | 'digest',
+  ) =>
+    request<void>('/feedback', {
+      ...json('POST', { article_id: articleId, kind, active: isActive, context }),
+      // An opened link navigates away; the request must outlive the page.
+      keepalive: true,
+    }),
 
   profiles: () => request<Profile[]>('/profiles'),
   createProfile: (spec: ProfileSpec) => request<Profile>('/profiles', json('POST', spec)),
@@ -328,6 +489,11 @@ export const api = {
   deleteDigest: (id: string) => request<void>(`/digests/${id}`, { method: 'DELETE' }),
   compare: (base: string, other: string) =>
     request<Comparison>(`/digests/compare${query({ base, other })}`),
+
+  /** `null` when no video of the digest was ordered. */
+  short: (digestId: string) => request<Video | null>(`/digests/${digestId}/short`),
+  createShort: (digestId: string) =>
+    request<Video>(`/digests/${digestId}/short`, { method: 'POST' }),
 
   exportUrl: (id: string, format: 'md' | 'docx') => `${API_BASE}/digests/${id}/export.${format}`,
   eventsUrl: (id: string) => `${API_BASE}/digests/${id}/events`,

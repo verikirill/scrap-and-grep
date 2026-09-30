@@ -1,0 +1,231 @@
+import clsx from 'clsx'
+import { Eye, EyeOff, LogIn, Radar, UserPlus } from 'lucide-react'
+import { motion } from 'motion/react'
+import { useState } from 'react'
+import type { FormEvent } from 'react'
+import { Link, Navigate, useLocation } from 'react-router'
+import type { AuthRedirect } from '../components/RequireAuth'
+import { EASE, INPUT_CLASS } from '../components/tokens'
+import { Button, ErrorNote, Field } from '../components/ui'
+import { RadarVisual } from '../features/auth/RadarVisual'
+import { useMe, useMeta, useSignIn } from '../lib/queries'
+import { useMediaQuery } from '../lib/useMediaQuery'
+
+const PASSWORD_MIN = 10
+
+const TABS = [
+  { mode: 'login', to: '/login', label: 'Вход' },
+  { mode: 'register', to: '/register', label: 'Регистрация' },
+] as const
+
+type Props = {
+  mode: 'login' | 'register'
+}
+
+/** Only in-app paths are followed after sign-in, never an address from outside. */
+function safeTarget(state: unknown): string {
+  const from = (state as AuthRedirect | null)?.from
+  if (!from) return '/'
+  try {
+    // Parsing, not prefix checks: "/\\host" and similar tricks resolve to
+    // another origin here and are refused.
+    const url = new URL(from, window.location.origin)
+    return url.origin === window.location.origin ? url.pathname + url.search : '/'
+  } catch {
+    return '/'
+  }
+}
+
+export function AuthPage({ mode }: Props) {
+  const me = useMe()
+  const meta = useMeta()
+  const location = useLocation()
+  const { login, register, demo } = useSignIn()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [displayName, setDisplayName] = useState('')
+  const [isPasswordShown, setIsPasswordShown] = useState(false)
+  const isWide = useMediaQuery('(min-width: 1024px)')
+
+  const isRegister = mode === 'register'
+  const target = safeTarget(location.state)
+  const pending = login.isPending || register.isPending || demo.isPending
+  const error = (isRegister ? register.error : login.error) ?? demo.error
+
+  // Signed in, whether just now or before opening this page: move on. A new
+  // reader starts with the resume step, whatever page they came from.
+  if (me.data && !pending) {
+    return <Navigate to={register.isSuccess ? '/welcome' : target} replace />
+  }
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault()
+    if (isRegister) register.mutate({ email, password, displayName })
+    else login.mutate({ email, password })
+  }
+
+  return (
+    <div className="grid min-h-dvh lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
+      {/* The brand side keeps its dark look in both themes: it is a picture, not a surface. */}
+      <aside className="relative hidden overflow-hidden bg-[#0b0f17] px-12 py-10 text-white lg:flex lg:flex-col">
+        <div className="flex items-center gap-2.5">
+          <span className="grid size-8 place-items-center rounded-xl bg-[#7d9bff] text-[#0b0f17]">
+            <Radar size={18} strokeWidth={2.2} />
+          </span>
+          <span className="text-[15px] font-semibold tracking-tight">Радар</span>
+        </div>
+        <div className="flex flex-1 items-center justify-center py-10">
+          {/* Mounted only where it is visible: animations hidden by CSS still run. */}
+          {isWide && <RadarVisual />}
+        </div>
+        <div className="max-w-md">
+          <p className="font-serif text-[28px] leading-tight font-semibold text-balance">
+            Новости по вашей работе, а не по всей отрасли
+          </p>
+          <p className="mt-3 text-sm leading-relaxed text-white/60">
+            Ассистент читает три десятка источников по ИТ и информационной безопасности, отбирает
+            публикации под ваши интересы и собирает из них дайджест со ссылками. Резюме помогает
+            настроить отбор с первой минуты.
+          </p>
+        </div>
+      </aside>
+
+      <main className="flex items-center justify-center px-5 py-10">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: EASE }}
+          className="w-full max-w-sm"
+        >
+          <div className="mb-8 flex items-center gap-2.5 lg:hidden">
+            <span className="grid size-8 place-items-center rounded-xl bg-accent text-white dark:text-[#0b0f17]">
+              <Radar size={18} strokeWidth={2.2} />
+            </span>
+            <span className="text-[15px] font-semibold tracking-tight">Радар</span>
+          </div>
+
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {isRegister ? 'Новый аккаунт' : 'С возвращением'}
+          </h1>
+          <p className="mt-1 text-sm text-muted">
+            {isRegister
+              ? 'После регистрации можно загрузить резюме: по нему соберём профиль интересов.'
+              : 'Войдите, чтобы открыть свои дайджесты и ленту.'}
+          </p>
+
+          <nav
+            aria-label="Вход или регистрация"
+            className="mt-6 inline-flex gap-1 rounded-xl bg-sunken p-1"
+          >
+            {TABS.map((tab) => (
+              <Link
+                key={tab.mode}
+                to={tab.to}
+                state={location.state}
+                replace
+                aria-current={tab.mode === mode ? 'page' : undefined}
+                className={clsx(
+                  'relative rounded-lg px-4 py-1.5 text-sm font-medium transition-colors',
+                  tab.mode === mode ? 'text-text' : 'text-muted hover:text-text',
+                )}
+              >
+                {tab.mode === mode && (
+                  <motion.span
+                    layoutId="auth-tab"
+                    className="absolute inset-0 rounded-lg bg-surface shadow-sm"
+                    transition={{ type: 'spring', stiffness: 480, damping: 38 }}
+                  />
+                )}
+                <span className="relative">{tab.label}</span>
+              </Link>
+            ))}
+          </nav>
+
+          <form onSubmit={submit} className="mt-6 space-y-4">
+            {isRegister && (
+              <Field label="Как к вам обращаться">
+                <input
+                  required
+                  minLength={2}
+                  maxLength={80}
+                  autoComplete="name"
+                  className={INPUT_CLASS}
+                  value={displayName}
+                  onChange={(event) => setDisplayName(event.target.value)}
+                />
+              </Field>
+            )}
+            <Field label="Почта">
+              <input
+                required
+                type="email"
+                maxLength={254}
+                autoComplete="email"
+                className={INPUT_CLASS}
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
+            </Field>
+            {/* The toggle sits next to the label, not inside it: a button within
+                a <label> would become part of the field's name. */}
+            <div className="relative">
+              <Field
+                label="Пароль"
+                hint={isRegister ? `не короче ${PASSWORD_MIN} символов` : undefined}
+              >
+                <input
+                  required
+                  type={isPasswordShown ? 'text' : 'password'}
+                  minLength={isRegister ? PASSWORD_MIN : undefined}
+                  maxLength={128}
+                  autoComplete={isRegister ? 'new-password' : 'current-password'}
+                  className={clsx(INPUT_CLASS, 'pr-10')}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                />
+              </Field>
+              <button
+                type="button"
+                onClick={() => setIsPasswordShown((value) => !value)}
+                aria-label="Показать пароль"
+                aria-pressed={isPasswordShown}
+                className="absolute right-0 bottom-0 grid h-[38px] w-10 place-items-center rounded-lg text-faint hover:text-text"
+              >
+                {isPasswordShown ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+
+            <ErrorNote error={error} />
+
+            <Button
+              type="submit"
+              variant="primary"
+              className="w-full"
+              isBusy={login.isPending || register.isPending}
+              disabled={pending || (isRegister && meta.data?.registration_open === false)}
+              icon={isRegister ? <UserPlus size={16} /> : <LogIn size={16} />}
+            >
+              {isRegister ? 'Зарегистрироваться' : 'Войти'}
+            </Button>
+          </form>
+
+          {meta.data?.demo_login && (
+            <div className="mt-6 border-t border-line pt-5">
+              <Button
+                className="w-full"
+                isBusy={demo.isPending}
+                disabled={pending}
+                onClick={() => demo.mutate()}
+              >
+                Войти без регистрации
+              </Button>
+              <p className="mt-2 text-center text-xs text-faint">
+                Временный аккаунт с примерами профилей. Он только ваш и удалится через сутки.
+              </p>
+            </div>
+          )}
+        </motion.div>
+      </main>
+    </div>
+  )
+}
