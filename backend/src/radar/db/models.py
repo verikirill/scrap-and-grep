@@ -15,10 +15,12 @@ from sqlalchemy import (
     Identity,
     Index,
     Integer,
+    LargeBinary,
     String,
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, TSVECTOR, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -107,10 +109,113 @@ class ArticleEmbedding(Base):
     )
 
 
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid7)
+    # Stored lowercased; the unique index is what makes registration race-free.
+    email: Mapped[str] = mapped_column(String(254), unique=True)
+    # NULL for the demo account: it has no password and cannot be signed in to
+    # with one.
+    password_hash: Mapped[str | None] = mapped_column(Text)
+    display_name: Mapped[str] = mapped_column(String(80))
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    is_demo: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class UserSession(Base):
+    """A signed-in browser. Only a hash of the cookie value is stored."""
+
+    __tablename__ = "sessions"
+
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        Index("ix_sessions_user", "user_id"),
+        Index("ix_sessions_expires", "expires_at"),
+    )
+
+
+class Resume(Base):
+    """What was learned from a reader's resume. One per user.
+
+    The uploaded file lives in `payload` only until it is parsed; after that
+    the row keeps the extracted facts and nothing of the original text.
+    """
+
+    __tablename__ = "resumes"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    status: Mapped[str] = mapped_column(String(16), default="processing")
+    error: Mapped[str | None] = mapped_column(Text)
+    file_format: Mapped[str] = mapped_column(String(16))
+    size_bytes: Mapped[int] = mapped_column(Integer)
+    # Deferred: the file is read only by the worker that parses it, never
+    # by the status polls.
+    payload: Mapped[bytes | None] = mapped_column(LargeBinary, deferred=True)
+    parser: Mapped[str | None] = mapped_column(String(32))
+    facts: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    suggestion: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class Interaction(Base):
+    """One reader signal about one article: a like, a save, an opened link."""
+
+    __tablename__ = "interactions"
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    article_id: Mapped[int] = mapped_column(ForeignKey("articles.id", ondelete="CASCADE"))
+    kind: Mapped[str] = mapped_column(String(16))
+    # Where the signal came from: the personal feed or a digest.
+    context: Mapped[str] = mapped_column(String(16), default="feed", server_default="feed")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "article_id", "kind", name="uq_interactions_user_article_kind"),
+        # A like and a dislike of one article cannot both exist, even when
+        # two requests race.
+        Index(
+            "uq_interactions_verdict",
+            "user_id",
+            "article_id",
+            unique=True,
+            postgresql_where=text("kind IN ('like', 'dislike')"),
+        ),
+        Index("ix_interactions_user_created", "user_id", "created_at"),
+        Index("ix_interactions_article", "article_id"),
+    )
+
+
+class UserVector(Base):
+    """A reader's taste as one vector per embedding model, for finding readers alike."""
+
+    __tablename__ = "user_vectors"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    model: Mapped[str] = mapped_column(String(120), primary_key=True)
+    embedding: Mapped[Any] = mapped_column(Vector(EMBEDDING_DIM))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
 class Profile(Base):
     __tablename__ = "profiles"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid7)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     name: Mapped[str] = mapped_column(String(120))
     spec: Mapped[dict[str, Any]] = mapped_column(JSONB)
     version: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
@@ -119,11 +224,14 @@ class Profile(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
+    __table_args__ = (Index("ix_profiles_user_created", "user_id", "created_at"),)
+
 
 class Digest(Base):
     __tablename__ = "digests"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid7)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     profile_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("profiles.id", ondelete="SET NULL")
     )
@@ -152,7 +260,10 @@ class Digest(Base):
         back_populates="digest", cascade="all, delete-orphan", order_by="DigestItem.position"
     )
 
-    __table_args__ = (Index("ix_digests_profile_created", "profile_id", "created_at"),)
+    __table_args__ = (
+        Index("ix_digests_profile_created", "profile_id", "created_at"),
+        Index("ix_digests_user_created", "user_id", "created_at"),
+    )
 
 
 class DigestTopic(Base):
@@ -184,6 +295,9 @@ class DigestItem(Base):
     selected: Mapped[bool] = mapped_column(Boolean, default=False)
     score: Mapped[float] = mapped_column(Float)
     retrieval_score: Mapped[float] = mapped_column(Float, default=0.0)
+    # Part of `score` that came from the reader's likes and rejections.
+    personal: Mapped[float] = mapped_column(Float, default=0.0, server_default="0")
+    personal_note: Mapped[str] = mapped_column(Text, default="", server_default="")
     relevance: Mapped[int] = mapped_column(Integer, default=0)
     interest_id: Mapped[str | None] = mapped_column(String(64))
     reason: Mapped[str] = mapped_column(Text, default="")

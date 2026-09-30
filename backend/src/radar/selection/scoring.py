@@ -30,6 +30,7 @@ REJECT_LOW_SCORE = "low_score"
 REJECT_EXCLUDED = "excluded"
 REJECT_DUPLICATE = "duplicate"
 REJECT_OVER_LIMIT = "over_limit"
+REJECT_HIDDEN = "hidden"
 
 
 def retrieval_score(z_score: float, lexical_hit: bool) -> float:
@@ -174,7 +175,9 @@ def select(
     rejected: dict[int, str] = {}
     passing: list[GradedCandidate] = []
     for item in graded:
-        if item.candidate.excluded_by is not None:
+        if item.rejected_by_reader:
+            rejected[item.article.id] = REJECT_HIDDEN
+        elif item.candidate.excluded_by is not None:
             rejected[item.article.id] = REJECT_EXCLUDED
         elif item.score < profile.min_score:
             rejected[item.article.id] = REJECT_LOW_SCORE

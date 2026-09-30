@@ -49,10 +49,13 @@ STATE_CONTENT_LIMIT = 4000
 # and falls back to the heuristic; this bounds a node that hangs elsewhere.
 MODEL_NODE_TIMEOUT = 900.0
 _IO_RETRY = RetryPolicy(max_attempts=3, initial_interval=1.0, backoff_factor=2.0)
+# Marks candidates the reader's behaviour could not be applied to.
+_UNPERSONALIZED = "без учёта оценок: сбой при расчёте"
 
 
 class DigestState(TypedDict, total=False):
     digest_id: str
+    user_id: str
     profile: dict[str, Any]
     period_start: str
     period_end: str
@@ -62,6 +65,7 @@ class DigestState(TypedDict, total=False):
     window_total: int
     candidates: list[dict[str, Any]]
     graded: Annotated[list[dict[str, Any]], operator.add]
+    personalized: list[dict[str, Any]]
     selected: list[dict[str, Any]]
     rejected: dict[str, str]
     groups: list[list[int]]
@@ -193,14 +197,58 @@ class DigestNodes:
         _emit("select")
         profile = _profile(state)
         graded = [GradedCandidate.model_validate(item) for item in state.get("graded", [])]
+        graded = await self._personalize(state, graded)
         vectors = await self._deps.store.vectors([item.article.id for item in graded])
         selected, rejected = select(
             graded, profile, vectors, self._deps.embedder.duplicate_threshold
         )
         return {
+            # Replaces the list the grading tasks accumulated: from here on
+            # every candidate carries its personal adjustment.
+            "personalized": [item.model_dump(mode="json") for item in graded],
             "selected": [item.model_dump(mode="json") for item in selected],
             "rejected": {str(article_id): reason for article_id, reason in rejected.items()},
         }
+
+    async def _personalize(
+        self, state: DigestState, graded: list[GradedCandidate]
+    ) -> list[GradedCandidate]:
+        """Let the reader's likes and rejections move the scores.
+
+        Best effort: a digest built on stated interests alone is still a
+        digest, so a failure here is logged and skipped.
+        """
+        user_id = state.get("user_id")
+        if not user_id or not graded:
+            return graded
+        try:
+            personal = await self._deps.store.personal(
+                user_id,
+                [item.article.id for item in graded],
+                datetime.fromisoformat(state["period_start"]),
+                datetime.fromisoformat(state["period_end"]),
+            )
+        except Exception as exc:
+            log.warning("personalization_failed", error=f"{type(exc).__name__}: {exc}"[:300])
+            # Recorded in the stats: the reader's hidden articles may be back.
+            return [item.model_copy(update={"personal_note": _UNPERSONALIZED}) for item in graded]
+        adjusted = []
+        for item in graded:
+            change = personal.get(item.article.id)
+            if change is None:
+                adjusted.append(item)
+                continue
+            adjusted.append(
+                item.model_copy(
+                    update={
+                        "score": float(min(1.0, max(0.0, item.score + change.delta))),
+                        "personal": change.delta,
+                        "personal_note": change.note,
+                        "rejected_by_reader": change.rejected,
+                    }
+                )
+            )
+        return adjusted
 
     async def cluster(self, state: DigestState) -> dict[str, Any]:
         selected = [SelectedItem.model_validate(item) for item in state["selected"]]
@@ -280,7 +328,10 @@ class DigestNodes:
 
     async def persist(self, state: DigestState) -> dict[str, Any]:
         _emit("persist")
-        graded = [GradedCandidate.model_validate(item) for item in state.get("graded", [])]
+        graded = [
+            GradedCandidate.model_validate(item)
+            for item in state.get("personalized", state.get("graded", []))
+        ]
         topics = [Topic.model_validate(topic) for topic in state["topics"]]
         overview = DigestOverview.model_validate(state["overview"])
         await self._deps.store.save(
@@ -369,5 +420,8 @@ def _stats(
         "graded_by_model": graded_by_model,
         "written_by_model": written_by_model,
         "degraded": degraded,
+        # Candidates whose score the reader's own behaviour moved.
+        "personalized": sum(1 for item in graded if item.personal),
+        "personalization_failed": any(item.personal_note == _UNPERSONALIZED for item in graded),
         "duration_seconds": round(time.time() - state.get("started_at", time.time()), 1),
     }

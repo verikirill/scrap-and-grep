@@ -156,14 +156,18 @@ def embed() -> None:
 @app.command()
 def digest(
     profile: Annotated[str, typer.Option(help="Profile name (exact match).")],
+    email: Annotated[
+        str | None, typer.Option(help="Owner of the profile; the demo account if omitted.")
+    ] = None,
     days: Annotated[int, typer.Option(min=1, max=90)] = 7,
     out: Annotated[Path, typer.Option(help="Directory for the .md and .docx files.")] = Path("."),
 ) -> None:
     """Build a digest in this process and write it as Markdown and DOCX."""
 
     async def run() -> None:
+        from radar.auth import DEMO_EMAIL
         from radar.db import session_scope
-        from radar.db.models import Profile
+        from radar.db.models import Profile, User
         from radar.domain import ProfileSpec
         from radar.pipeline.runner import report_failure, run_digest
         from radar.render.docx import render_docx
@@ -173,11 +177,16 @@ def digest(
 
         now = datetime.now(UTC)
         async with session_scope() as session:
-            row = await session.scalar(select(Profile).where(Profile.name == profile))
+            row = await session.scalar(
+                select(Profile)
+                .join(User, User.id == Profile.user_id)
+                .where(Profile.name == profile, User.email == (email or DEMO_EMAIL).lower())
+            )
             if row is None:
                 raise typer.BadParameter(f"unknown profile: {profile}")
             created = await digest_store.create(
                 session,
+                user_id=row.user_id,
                 profile_id=row.id,
                 profile=ProfileSpec.model_validate(row.spec),
                 profile_version=row.version,
@@ -202,6 +211,30 @@ def digest(
         (out / f"{stem}.md").write_text(render_markdown(view), encoding="utf-8", newline="\n")
         (out / f"{stem}.docx").write_bytes(render_docx(view))
         typer.echo(f"digest={digest_id} items={view.stats.get('selected')} -> {out / stem}.md")
+
+    aio.run(run())
+
+
+@app.command("grant-admin")
+def grant_admin(
+    email: str,
+    revoke: Annotated[bool, typer.Option(help="Take the role away instead.")] = False,
+) -> None:
+    """Let an account manage the source catalogue, or stop it from doing so.
+
+    The role is granted here, by someone with access to the server, never by
+    registering with a particular address.
+    """
+
+    async def run() -> None:
+        from radar.auth.service import set_admin
+        from radar.db import session_scope
+
+        async with session_scope() as session:
+            found = await set_admin(session, email, is_admin=not revoke)
+        if not found:
+            raise typer.BadParameter(f"no registered account {email}")
+        typer.echo(f"{email}: {'not ' if revoke else ''}admin")
 
     aio.run(run())
 

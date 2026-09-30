@@ -4,22 +4,29 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from radar.ai.factory import get_embedder
-from radar.api.deps import CacheDep, SessionDep, SettingsDep, rate_limit
+from radar.api.deps import CacheDep, CurrentUser, SessionDep, SettingsDep, user_rate_limit
 from radar.api.schemas import PreviewItem, PreviewOut, PreviewRequest, ProfileOut
 from radar.db.models import Profile
 from radar.domain import ProfileSpec
+from radar.logging import get_logger
 from radar.pipeline.sql_store import CachedQueryEmbedder
+from radar.recsys.service import forget_taste
 from radar.selection.preview import build_preview
+from radar.worker.tasks import refresh_taste
 
 router = APIRouter(tags=["profiles"])
+log = get_logger(__name__)
 
-_write_limit = Depends(rate_limit("write", lambda settings: settings.rate_limit_per_minute))
+_write_limit = Depends(user_rate_limit("write", lambda settings: settings.rate_limit_per_minute))
 _preview_limit = Depends(
-    rate_limit("preview", lambda settings: settings.preview_rate_limit_per_minute)
+    user_rate_limit("preview", lambda settings: settings.preview_rate_limit_per_minute)
 )
+# A reader needs a handful of profiles; the cap keeps one account from
+# filling the table.
+MAX_PROFILES_PER_USER = 30
 
 PREVIEW_ITEMS = 60
 # Round the window to this many minutes so that repeated previews of the same
@@ -38,39 +45,74 @@ def _out(profile: Profile) -> ProfileOut:
     )
 
 
-async def _get(session: SessionDep, profile_id: uuid.UUID) -> Profile:
-    profile = await session.get(Profile, profile_id)
+async def _get(session: SessionDep, user: CurrentUser, profile_id: uuid.UUID) -> Profile:
+    """The reader's own profile. Someone else's is reported as missing, so the
+    answer does not confirm that the id exists."""
+    profile = (
+        await session.execute(
+            select(Profile).where(Profile.id == profile_id, Profile.user_id == user.id)
+        )
+    ).scalar_one_or_none()
     if profile is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Профиль не найден.")
     return profile
 
 
+async def _taste_changed(session: SessionDep, cache: CacheDep, user_id: uuid.UUID) -> None:
+    """Interests are part of the taste. Commit first, then let caches go:
+    the other way round, a request in between would cache the old version.
+    """
+    await session.commit()
+    await forget_taste(cache, user_id)
+    try:
+        await refresh_taste.kiq(str(user_id))
+    except Exception as exc:
+        # Only the "readers alike" vector lags behind until the next signal.
+        log.warning("taste_refresh_not_queued", error=type(exc).__name__)
+
+
 @router.get("/profiles")
-async def list_profiles(session: SessionDep) -> list[ProfileOut]:
-    rows = await session.execute(select(Profile).order_by(Profile.created_at))
+async def list_profiles(session: SessionDep, user: CurrentUser) -> list[ProfileOut]:
+    rows = await session.execute(
+        select(Profile).where(Profile.user_id == user.id).order_by(Profile.created_at)
+    )
     return [_out(profile) for profile in rows.scalars()]
 
 
 @router.post("/profiles", status_code=status.HTTP_201_CREATED, dependencies=[_write_limit])
-async def create_profile(spec: ProfileSpec, session: SessionDep) -> ProfileOut:
-    profile = Profile(name=spec.name, spec=spec.model_dump(mode="json"))
+async def create_profile(
+    spec: ProfileSpec, session: SessionDep, user: CurrentUser, cache: CacheDep
+) -> ProfileOut:
+    owned = await session.scalar(
+        select(func.count()).select_from(Profile).where(Profile.user_id == user.id)
+    )
+    if int(owned or 0) >= MAX_PROFILES_PER_USER:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, detail="Слишком много профилей, удалите лишние."
+        )
+    profile = Profile(user_id=user.id, name=spec.name, spec=spec.model_dump(mode="json"))
     session.add(profile)
     await session.flush()
     await session.refresh(profile)
+    await _taste_changed(session, cache, user.id)
     return _out(profile)
 
 
 @router.get("/profiles/{profile_id}")
-async def get_profile(profile_id: uuid.UUID, session: SessionDep) -> ProfileOut:
-    return _out(await _get(session, profile_id))
+async def get_profile(profile_id: uuid.UUID, session: SessionDep, user: CurrentUser) -> ProfileOut:
+    return _out(await _get(session, user, profile_id))
 
 
 @router.put("/profiles/{profile_id}", dependencies=[_write_limit])
 async def update_profile(
-    profile_id: uuid.UUID, spec: ProfileSpec, session: SessionDep
+    profile_id: uuid.UUID,
+    spec: ProfileSpec,
+    session: SessionDep,
+    user: CurrentUser,
+    cache: CacheDep,
 ) -> ProfileOut:
     """Replace the profile. The version grows only when the content changed."""
-    profile = await _get(session, profile_id)
+    profile = await _get(session, user, profile_id)
     new_spec = spec.model_dump(mode="json")
     if new_spec != profile.spec:
         profile.name = spec.name
@@ -78,14 +120,18 @@ async def update_profile(
         profile.version += 1
         await session.flush()
         await session.refresh(profile)
+        await _taste_changed(session, cache, user.id)
     return _out(profile)
 
 
 @router.delete(
     "/profiles/{profile_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[_write_limit]
 )
-async def delete_profile(profile_id: uuid.UUID, session: SessionDep) -> Response:
-    await session.delete(await _get(session, profile_id))
+async def delete_profile(
+    profile_id: uuid.UUID, session: SessionDep, user: CurrentUser, cache: CacheDep
+) -> Response:
+    await session.delete(await _get(session, user, profile_id))
+    await _taste_changed(session, cache, user.id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

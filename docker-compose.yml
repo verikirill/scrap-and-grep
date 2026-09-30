@@ -32,6 +32,14 @@ x-backend: &backend
     RADAR_CANDIDATE_LIMIT: ${RADAR_CANDIDATE_LIMIT:-60}
     RADAR_RATE_LIMIT_PER_MINUTE: ${RADAR_RATE_LIMIT_PER_MINUTE:-120}
     RADAR_DIGEST_TASK_TIMEOUT_SECONDS: ${RADAR_DIGEST_TASK_TIMEOUT_SECONDS:-1200}
+    # Accounts. The demo sign-in is on by default so that the stack can be
+    # looked at without registering; turn it off outside a demonstration.
+    RADAR_DEMO_LOGIN: ${RADAR_DEMO_LOGIN:-true}
+    RADAR_REGISTRATION_OPEN: ${RADAR_REGISTRATION_OPEN:-true}
+    RADAR_COOKIE_SECURE: ${RADAR_COOKIE_SECURE:-false}
+    # Empty: resumes are read by the built-in parser. With the docling
+    # profile set it to http://docparser:8000.
+    RADAR_DOCPARSER_URL: ${RADAR_DOCPARSER_URL:-}
   depends_on: &backend-deps
     migrate:
       condition: service_completed_successfully
@@ -164,6 +172,18 @@ services:
     deploy:
       replicas: ${DIGEST_WORKERS:-2}
 
+  # Work a reader is waiting for at the screen: resume analysis during
+  # sign-up and taste updates after a like. Its own queue, so neither feeds
+  # nor digests can hold it up.
+  worker-profile:
+    <<: *backend
+    command: ["taskiq", "worker", "radar.worker.brokers:profile_broker", "radar.worker.tasks", "--ack-type", "when_executed", "--max-async-tasks", "8", "--workers", "1"]
+    deploy:
+      replicas: ${PROFILE_WORKERS:-1}
+    networks:
+      - default
+      - parsing
+
   scheduler:
     <<: *backend
     command: ["taskiq", "scheduler", "radar.worker.brokers:scheduler", "radar.worker.tasks"]
@@ -184,6 +204,40 @@ services:
       interval: 10s
       timeout: 3s
       retries: 6
+
+  # Resume parsing with docling: page layout, OCR of scans, slides and
+  # images. It receives untrusted files, so it holds no credentials, has
+  # no route to the database and no route to the internet: the models are
+  # baked into the image.
+  docparser:
+    profiles: ["docling"]
+    build:
+      context: ./docparser
+    image: radar-docparser:local
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    # A hostile document may try to eat the host; these caps keep the damage
+    # inside this container.
+    mem_limit: ${DOCPARSER_MEMORY:-3g}
+    cpus: ${DOCPARSER_CPUS:-4}
+    pids_limit: 256
+    environment:
+      DOCPARSER_THREADS: ${DOCPARSER_THREADS:-4}
+      DOCPARSER_OCR: ${DOCPARSER_OCR:-true}
+    networks:
+      - parsing
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).status == 200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
 
   ollama:
     profiles: ["ollama"]
@@ -215,6 +269,11 @@ services:
     depends_on:
       ollama:
         condition: service_healthy
+
+networks:
+  # No gateway: containers on it reach each other and nothing else.
+  parsing:
+    internal: true
 
 volumes:
   pgdata:

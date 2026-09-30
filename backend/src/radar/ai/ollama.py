@@ -22,7 +22,10 @@ from radar.domain import (
 )
 
 
-class OllamaIntelligence:
+class OllamaChat:
+    """One schema-constrained question to the model. Shared by every step that
+    talks to it, so the concurrency bound covers them all."""
+
     def __init__(
         self,
         model: str,
@@ -51,7 +54,7 @@ class OllamaIntelligence:
         self._slots = asyncio.Semaphore(concurrency)
         self._timeout = timeout
 
-    async def _ask[T: BaseModel](self, schema: type[T], system: str, user: str) -> T:
+    async def ask[T: BaseModel](self, schema: type[T], system: str, user: str) -> T:
         chain = self._llm.with_structured_output(schema, method="json_schema")
         # The clock starts once a slot is free: time spent queueing behind
         # other calls is not the model being slow and must not trip the breaker.
@@ -60,6 +63,12 @@ class OllamaIntelligence:
                 [SystemMessage(content=system), HumanMessage(content=user)]
             )
         return schema.model_validate(result)
+
+
+class OllamaIntelligence:
+    def __init__(self, chat: OllamaChat) -> None:
+        self.name = chat.name
+        self._ask = chat.ask
 
     async def grade(self, candidate: Candidate, profile: ProfileSpec) -> Grade:
         out = await self._ask(

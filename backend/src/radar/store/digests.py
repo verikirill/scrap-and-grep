@@ -21,6 +21,7 @@ STATUS_FAILED = "failed"
 async def create(
     session: AsyncSession,
     *,
+    user_id: uuid.UUID,
     profile_id: uuid.UUID | None,
     profile: ProfileSpec,
     profile_version: int,
@@ -28,6 +29,7 @@ async def create(
     period_end: datetime,
 ) -> Digest:
     digest = Digest(
+        user_id=user_id,
         profile_id=profile_id,
         profile_spec=profile.model_dump(mode="json"),
         profile_version=profile_version,
@@ -40,17 +42,32 @@ async def create(
     return digest
 
 
-async def get(session: AsyncSession, digest_id: uuid.UUID, *, full: bool = False) -> Digest | None:
+async def get(
+    session: AsyncSession,
+    digest_id: uuid.UUID,
+    *,
+    user_id: uuid.UUID | None = None,
+    full: bool = False,
+) -> Digest | None:
+    """Load a digest. With `user_id` only that reader's digest is returned;
+    workers, which act on behalf of the system, leave it out."""
     statement = select(Digest).where(Digest.id == digest_id)
+    if user_id is not None:
+        statement = statement.where(Digest.user_id == user_id)
     if full:
         statement = statement.options(selectinload(Digest.topics), selectinload(Digest.items))
     return (await session.execute(statement)).scalar_one_or_none()
 
 
 async def list_recent(
-    session: AsyncSession, profile_id: uuid.UUID | None, limit: int
+    session: AsyncSession, user_id: uuid.UUID, profile_id: uuid.UUID | None, limit: int
 ) -> list[Digest]:
-    statement = select(Digest).order_by(Digest.created_at.desc()).limit(limit)
+    statement = (
+        select(Digest)
+        .where(Digest.user_id == user_id)
+        .order_by(Digest.created_at.desc())
+        .limit(limit)
+    )
     if profile_id is not None:
         statement = statement.where(Digest.profile_id == profile_id)
     return list((await session.execute(statement)).scalars().all())
@@ -75,13 +92,16 @@ async def set_progress(
     )
 
 
-async def count_active(session: AsyncSession) -> int:
-    total = await session.scalar(
+async def count_active(session: AsyncSession, user_id: uuid.UUID | None = None) -> int:
+    """Builds queued or running, for everyone or for one reader."""
+    statement = (
         select(func.count())
         .select_from(Digest)
         .where(Digest.status.in_([STATUS_QUEUED, STATUS_RUNNING]))
     )
-    return int(total or 0)
+    if user_id is not None:
+        statement = statement.where(Digest.user_id == user_id)
+    return int(await session.scalar(statement) or 0)
 
 
 async def fail_stale(session: AsyncSession, older_than: datetime) -> int:
@@ -159,6 +179,8 @@ async def save_result(
                     selected=True,
                     score=graded_item.score,
                     retrieval_score=graded_item.candidate.retrieval_score,
+                    personal=graded_item.personal,
+                    personal_note=graded_item.personal_note,
                     relevance=graded_item.grade.relevance,
                     interest_id=graded_item.interest_id,
                     reason=graded_item.grade.reason,
@@ -181,6 +203,8 @@ async def save_result(
                 selected=False,
                 score=graded_item.score,
                 retrieval_score=graded_item.candidate.retrieval_score,
+                personal=graded_item.personal,
+                personal_note=graded_item.personal_note,
                 relevance=graded_item.grade.relevance,
                 interest_id=graded_item.interest_id,
                 reason=graded_item.grade.reason,

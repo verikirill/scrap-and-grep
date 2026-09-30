@@ -27,6 +27,8 @@ class ItemView(BaseModel):
     published_at: datetime
     score: float
     retrieval_score: float
+    personal: float = 0.0
+    personal_note: str = ""
     relevance: int
     interest_id: str | None
     interest_title: str | None
@@ -81,6 +83,8 @@ def _item_view(item: DigestItem, profile: ProfileSpec) -> ItemView:
         published_at=article.published_at,
         score=round(item.score, 3),
         retrieval_score=round(item.retrieval_score, 3),
+        personal=round(item.personal, 3),
+        personal_note=item.personal_note,
         relevance=item.relevance,
         interest_id=item.interest_id,
         interest_title=interest.title if interest else None,

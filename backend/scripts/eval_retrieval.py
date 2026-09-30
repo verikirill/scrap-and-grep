@@ -30,7 +30,7 @@ from sqlalchemy import select
 from radar import aio
 from radar.ai.embedder import Embedder, HashingEmbedder, OllamaEmbedder
 from radar.ai.factory import embedding_preset
-from radar.ai.ollama import OllamaIntelligence
+from radar.ai.ollama import OllamaChat, OllamaIntelligence
 from radar.ai.prompts import PROMPT_VERSION
 from radar.config import get_settings
 from radar.db import session_scope
@@ -78,7 +78,9 @@ async def grade_all(
         raise SystemExit(f"{cache_path} was made with {stored.get('origin')}; move it away first")
     cached: dict[str, int] = stored.get("grades", {})
     settings = get_settings()
-    judge = OllamaIntelligence(model, settings.ollama_base_url, temperature=0.0, concurrency=4)
+    judge = OllamaIntelligence(
+        OllamaChat(model, settings.ollama_base_url, temperature=0.0, concurrency=4)
+    )
     todo = [article for article in articles if article.url not in cached]
     print(f"grading {len(todo)} articles with {model} ({len(cached)} cached)", flush=True)
 

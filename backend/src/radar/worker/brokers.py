@@ -1,8 +1,9 @@
 """Task brokers on Redis Streams.
 
-Two queues, two worker pools: feed fetching is I/O-bound and cheap, digest
-building is bound by the model server. Keeping them apart means a burst of
-digest requests cannot delay ingestion, and each pool scales on its own.
+Three queues, three worker pools. Feed fetching is I/O-bound and cheap, digest
+building is bound by the model server, and the profile queue serves a reader
+who is waiting at the screen: a resume being analysed during sign-up must not
+stand behind a batch of feeds or a long digest. Each pool scales on its own.
 
 Streams with consumer groups give at-least-once delivery: a message is
 acknowledged after the task finishes, and a message whose worker died is
@@ -27,6 +28,7 @@ from radar.logging import configure_logging
 _settings = get_settings()
 
 INGEST_IDLE_TIMEOUT_MS = 5 * 60 * 1000
+PROFILE_IDLE_TIMEOUT_MS = 6 * 60 * 1000
 DIGEST_IDLE_TIMEOUT_MS = _settings.digest_task_timeout_seconds * 1000
 STREAM_MAX_LENGTH = 100_000
 RECLAIM_EVERY_SECONDS = 10.0
@@ -117,5 +119,6 @@ def _broker(queue: str, idle_timeout_ms: int) -> ReclaimingStreamBroker:
 
 ingest_broker = _broker("ingest", INGEST_IDLE_TIMEOUT_MS)
 digest_broker = _broker("digest", DIGEST_IDLE_TIMEOUT_MS)
+profile_broker = _broker("profile", PROFILE_IDLE_TIMEOUT_MS)
 
 scheduler = TaskiqScheduler(broker=ingest_broker, sources=[LabelScheduleSource(ingest_broker)])

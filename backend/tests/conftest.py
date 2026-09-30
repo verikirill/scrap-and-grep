@@ -1,5 +1,6 @@
 """Shared builders: tests state only what matters for the case at hand."""
 
+import asyncio
 from collections.abc import Callable
 from datetime import UTC, datetime
 
@@ -17,6 +18,17 @@ from radar.text import content_hash
 
 ArticleFactory = Callable[..., ArticleRef]
 GradedFactory = Callable[..., GradedCandidate]
+
+
+def pytest_asyncio_loop_factories(
+    config: pytest.Config, item: pytest.Item
+) -> dict[str, Callable[[], asyncio.AbstractEventLoop]]:
+    """Run every async test on a selector loop.
+
+    psycopg's async driver cannot use the proactor loop that Windows picks by
+    default; on Linux and macOS the selector loop is the default anyway.
+    """
+    return {"selector": asyncio.SelectorEventLoop}
 
 
 @pytest.fixture
