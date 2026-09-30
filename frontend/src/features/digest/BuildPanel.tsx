@@ -89,7 +89,7 @@ export function BuildPanel({ profiles, initialProfileId, onCreated }: Props) {
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
         <div
-          className="flex items-center gap-1 rounded-xl bg-sunken p-1"
+          className="flex max-w-full items-center gap-0.5 rounded-xl bg-sunken p-1 sm:gap-1"
           role="radiogroup"
           aria-label="Период"
         >
@@ -101,7 +101,7 @@ export function BuildPanel({ profiles, initialProfileId, onCreated }: Props) {
               onClick={() => setDays(period.days)}
               aria-checked={days === period.days}
               className={clsx(
-                'relative rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors',
+                'relative rounded-lg px-2 py-1.5 text-xs font-medium whitespace-nowrap transition-colors sm:px-3 sm:text-[13px]',
                 days === period.days ? 'text-text' : 'text-muted hover:text-text',
               )}
             >

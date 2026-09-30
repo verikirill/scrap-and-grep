@@ -4,6 +4,7 @@ Cache reads and writes never raise. A cache outage slows the system down but
 must not take it down, so every failure degrades to a miss.
 """
 
+import asyncio
 from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from functools import lru_cache
@@ -138,17 +139,38 @@ class Cache:
         The first value is always None and is produced as soon as the
         subscription is active, so a caller can subscribe, then read the
         current state from the database without missing an update in between.
+
+        If the server goes away, the generator keeps ticking without messages
+        instead of raising: callers poll the database as a backstop, and a
+        progress stream should degrade to slower updates, not break.
         """
         pubsub = self._redis.pubsub()
+        connected = True
         try:
-            await pubsub.subscribe(self._key(channel))
+            try:
+                await pubsub.subscribe(self._key(channel))
+            except RedisError as exc:
+                log.warning("subscribe_failed", channel=channel, error=str(exc))
+                connected = False
             yield None
             while True:
-                message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+                if not connected:
+                    await asyncio.sleep(1.0)
+                    yield None
+                    continue
+                try:
+                    message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+                except RedisError as exc:
+                    log.warning("subscription_lost", channel=channel, error=str(exc))
+                    connected = False
+                    continue
                 yield orjson.loads(message["data"]) if message else None
         finally:
-            await pubsub.unsubscribe()
-            await pubsub.aclose()  # type: ignore[no-untyped-call]
+            try:
+                await pubsub.unsubscribe()
+                await pubsub.aclose()  # type: ignore[no-untyped-call]
+            except RedisError as exc:
+                log.warning("unsubscribe_failed", channel=channel, error=str(exc))
 
     async def ping(self) -> bool:
         try:

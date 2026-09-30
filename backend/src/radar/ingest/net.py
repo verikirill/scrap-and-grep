@@ -23,7 +23,7 @@ MAX_REDIRECTS = 5
 # that trickles a byte at a time hold a worker slot for hours.
 TOTAL_TIMEOUT_SECONDS = 60.0
 _REDIRECT_CODES = frozenset({301, 302, 303, 307, 308})
-_DROPPED_HEADERS = frozenset({"content-encoding", "content-length", "transfer-encoding"})
+_DROPPED_HEADERS = frozenset({b"content-encoding", b"content-length", b"transfer-encoding"})
 
 
 class UnsafeUrlError(ValueError):
@@ -141,9 +141,11 @@ async def _get_once(
                 raise ResponseTooLargeError(f"{url} is larger than {limit} bytes")
         # The body is already decoded; keeping the encoding header would make
         # httpx try to decompress it a second time.
+        # Headers are copied as raw bytes: a redirect to a Cyrillic path arrives
+        # as non-ASCII bytes in Location, and re-encoding it as text fails.
         plain_headers = [
             (name, value)
-            for name, value in response.headers.items()
+            for name, value in response.headers.raw
             if name.lower() not in _DROPPED_HEADERS
         ]
         return httpx.Response(

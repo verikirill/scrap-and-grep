@@ -51,12 +51,14 @@ def lexical_score(rank_share: float, z_score: float, lexical_hit: bool) -> float
 
     Without semantic similarity a keyword match is the only trustworthy
     evidence, so an article with no match stays below any sensible threshold.
-    Among the matches, full-text rank leads and n-gram closeness breaks ties.
+    Among the matches, full-text rank decides and n-gram closeness only breaks
+    ties: given more weight it made the ranking worse than full-text search
+    alone (recall@60 0.27 against 0.34 on a week of articles, docs/eval).
     """
     closeness = min(4.0, max(0.0, z_score))
     if not lexical_hit:
         return float(min(NO_KEYWORD_CEILING, 0.2 + 0.06 * closeness))
-    return float(min(1.0, 0.5 + 0.3 * rank_share + 0.05 * closeness))
+    return float(min(1.0, 0.5 + 0.46 * rank_share + 0.01 * closeness))
 
 
 def relevance_from_score(score: float) -> int:

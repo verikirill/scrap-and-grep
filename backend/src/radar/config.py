@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     # AI providers. "hashing" and "heuristic" are the offline stand-ins that
     # keep the pipeline working when no model server is reachable.
     embedding_provider: Literal["hashing", "ollama"] = "hashing"
-    embedding_model: str = "qwen3-embedding:4b"
+    embedding_model: str = "embeddinggemma:300m"
     # Empty means "use the preset for the model family" (see ai/factory.py).
     embedding_query_prefix: str = ""
     embedding_document_prefix: str = ""
@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     llm_temperature: float = 0.1
     llm_num_ctx: int = 8192
     llm_timeout_seconds: float = 120.0
-    llm_concurrency: int = 4
+    llm_concurrency: int = 2
     ollama_base_url: str = "http://127.0.0.1:11434"
     ollama_keep_alive_seconds: int = 1800
     breaker_failure_threshold: int = 3

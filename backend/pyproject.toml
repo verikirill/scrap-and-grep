@@ -77,6 +77,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S105", "S106"]
+"scripts/**" = ["T201", "ASYNC240"]  # one-off command-line tools that print their report
 "src/radar/migrations/**" = ["E501"]
 "src/radar/seed.py" = ["E501"]  # data tables read better on one line
 

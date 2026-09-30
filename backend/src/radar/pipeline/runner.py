@@ -173,6 +173,13 @@ async def _execute(
     if not snapshot.next and snapshot.values:
         await saver.adelete_thread(str(digest_id))
     graph_input = None if snapshot.next else initial
+    log.info(
+        "digest_started",
+        digest_id=str(digest_id),
+        resumed=bool(snapshot.next),
+        next_nodes=sorted(set(snapshot.next)),
+        graded_before=len(snapshot.values.get("graded", [])) if snapshot.next else 0,
+    )
     tracker = ProgressTracker()
     last_written = -1.0
     async for part in graph.astream(graph_input, config, stream_mode="custom", version="v2"):

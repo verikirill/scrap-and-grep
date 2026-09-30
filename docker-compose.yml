@@ -24,11 +24,12 @@ x-backend: &backend
     RADAR_CACHE_URL: redis://valkey:6379/1
     RADAR_OLLAMA_BASE_URL: ${RADAR_OLLAMA_BASE_URL:-http://ollama:11434}
     RADAR_EMBEDDING_PROVIDER: ${RADAR_EMBEDDING_PROVIDER:-hashing}
-    RADAR_EMBEDDING_MODEL: ${RADAR_EMBEDDING_MODEL:-qwen3-embedding:4b}
+    RADAR_EMBEDDING_MODEL: ${RADAR_EMBEDDING_MODEL:-embeddinggemma:300m}
     RADAR_LLM_PROVIDER: ${RADAR_LLM_PROVIDER:-heuristic}
     RADAR_LLM_MODEL: ${RADAR_LLM_MODEL:-qwen3.5:9b}
-    RADAR_LLM_CONCURRENCY: ${RADAR_LLM_CONCURRENCY:-4}
+    RADAR_LLM_CONCURRENCY: ${RADAR_LLM_CONCURRENCY:-2}
     RADAR_INGEST_CRON: ${RADAR_INGEST_CRON:-*/15 * * * *}
+    RADAR_CANDIDATE_LIMIT: ${RADAR_CANDIDATE_LIMIT:-60}
     RADAR_RATE_LIMIT_PER_MINUTE: ${RADAR_RATE_LIMIT_PER_MINUTE:-120}
     RADAR_DIGEST_TASK_TIMEOUT_SECONDS: ${RADAR_DIGEST_TASK_TIMEOUT_SECONDS:-1200}
   depends_on: &backend-deps
@@ -189,7 +190,9 @@ services:
     image: ollama/ollama:0.35.0
     restart: unless-stopped
     environment:
-      OLLAMA_NUM_PARALLEL: ${OLLAMA_NUM_PARALLEL:-4}
+      # Parallel slots did not raise throughput on one GPU (76 vs 84 tokens/s
+      # in total), they only multiply the context memory. See docs/DECISIONS.md.
+      OLLAMA_NUM_PARALLEL: ${OLLAMA_NUM_PARALLEL:-2}
       OLLAMA_MAX_LOADED_MODELS: "2"
       OLLAMA_KEEP_ALIVE: 30m
     volumes:
@@ -208,7 +211,7 @@ services:
       OLLAMA_HOST: http://ollama:11434
     entrypoint: ["/bin/sh", "-c"]
     command:
-      - ollama pull ${RADAR_EMBEDDING_MODEL:-qwen3-embedding:4b} && ollama pull ${RADAR_LLM_MODEL:-qwen3.5:9b}
+      - ollama pull ${RADAR_EMBEDDING_MODEL:-embeddinggemma:300m} && ollama pull ${RADAR_LLM_MODEL:-qwen3.5:9b}
     depends_on:
       ollama:
         condition: service_healthy

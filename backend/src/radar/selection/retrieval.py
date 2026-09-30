@@ -87,6 +87,8 @@ class Hit:
     similarity: float
     z_score: float
     lexical_hit: bool
+    # Full-text rank relative to the best match of the query, 0 when no match.
+    rank_share: float
     score: float
 
 
@@ -182,6 +184,7 @@ async def search(
                 similarity=float(row.sim) if has_similarity else 0.0,
                 z_score=float(z_score),
                 lexical_hit=lexical_hit,
+                rank_share=float(share),
                 score=float(score),
             )
         )
