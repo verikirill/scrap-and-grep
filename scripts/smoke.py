@@ -9,7 +9,8 @@
 
 It walks the path the jury will walk: sources and articles are there, a
 profile selects something, a digest builds and reports progress, both exports
-download, and editing the interests changes the selection. Then a new reader
+download, a short video is made when the server has the video profile on, and
+editing the interests changes the selection. Then a new reader
 registers, uploads a resume, gets a profile suggested from it and a personal
 feed that reacts to a dislike, and deletes the account. Exit code 0 means every
 step passed.
@@ -31,6 +32,7 @@ BASE = (sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8080").rstrip("/
 API = f"{BASE}/api/v1"
 BUILD_TIMEOUT_SECONDS = 600
 RESUME_TIMEOUT_SECONDS = 180
+SHORT_TIMEOUT_SECONDS = 900
 RESUME = Path(__file__).resolve().parent.parent / "examples" / "resumes" / "ml-engineer.md"
 
 
@@ -63,6 +65,30 @@ def wait_for_digest(client: httpx.Client, digest_id: str) -> dict:
                     return client.get(f"{API}/digests/{digest_id}").raise_for_status().json()
     fail("digest did not finish in time")
     raise AssertionError  # unreachable
+
+
+def short_video(client: httpx.Client, digest_id: str) -> None:
+    """Order the video, wait for it and check that an MP4 comes back."""
+    started = time.monotonic()
+    video = client.post(f"{API}/digests/{digest_id}/short").raise_for_status().json()
+    stages: list[str] = []
+    while video["status"] in ("queued", "running"):
+        if time.monotonic() - started > SHORT_TIMEOUT_SECONDS:
+            fail("the video was not ready in time")
+        if video["stage"] and video["stage"] not in stages:
+            stages.append(video["stage"])
+        time.sleep(2)
+        video = client.get(f"{API}/digests/{digest_id}/short").raise_for_status().json()
+    if video["status"] != "done":
+        fail(f"video failed: {video['error']}")
+    mp4 = client.get(f"{BASE}{video['url']}").raise_for_status()
+    if mp4.content[4:8] != b"ftyp":
+        fail("the video is not an MP4")
+    print(
+        f"  stages seen: {' > '.join(stages)}; {video['duration_ms'] / 1000:.1f} s of video, "
+        f"voice={video['voice']}, {len(mp4.content) / 1e6:.1f} MB "
+        f"in {time.monotonic() - started:.0f} s"
+    )
 
 
 def selected_ids(digest: dict) -> set[int]:
@@ -165,6 +191,10 @@ def main() -> None:
         print(f"  markdown {len(markdown.content)} bytes, docx {len(docx.content)} bytes")
         if not markdown.text.startswith("# ") or docx.content[:2] != b"PK":
             fail("export format")
+
+        if ready.get("shorts"):
+            step("a short video of the digest")
+            short_video(client, first["id"])
 
         step("changing interests changes the selection")
         spec = profile["spec"]
