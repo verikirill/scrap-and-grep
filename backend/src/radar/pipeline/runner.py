@@ -178,7 +178,9 @@ async def _execute(
         digest_id=str(digest_id),
         resumed=bool(snapshot.next),
         next_nodes=sorted(set(snapshot.next)),
-        graded_before=len(snapshot.values.get("graded", [])) if snapshot.next else 0,
+        # Fan-out tasks whose result is already checkpointed are not run again.
+        tasks_pending=len(snapshot.tasks),
+        tasks_already_done=sum(1 for task in snapshot.tasks if task.result is not None),
     )
     tracker = ProgressTracker()
     last_written = -1.0

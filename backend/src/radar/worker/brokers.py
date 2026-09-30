@@ -9,7 +9,12 @@ acknowledged after the task finishes, and a message whose worker died is
 claimed by another worker once it has been idle for `idle_timeout`.
 """
 
-from taskiq import TaskiqEvents, TaskiqScheduler, TaskiqState
+import time
+from collections.abc import AsyncGenerator
+from typing import Any
+
+from redis.asyncio import Redis
+from taskiq import AckableMessage, TaskiqEvents, TaskiqScheduler, TaskiqState
 from taskiq.middlewares import SmartRetryMiddleware
 from taskiq.schedule_sources import LabelScheduleSource
 from taskiq_redis import RedisStreamBroker
@@ -24,15 +29,68 @@ _settings = get_settings()
 INGEST_IDLE_TIMEOUT_MS = 5 * 60 * 1000
 DIGEST_IDLE_TIMEOUT_MS = _settings.digest_task_timeout_seconds * 1000
 STREAM_MAX_LENGTH = 100_000
+RECLAIM_EVERY_SECONDS = 10.0
 
 
-def _broker(queue: str, idle_timeout_ms: int) -> RedisStreamBroker:
-    broker = RedisStreamBroker(
+class ReclaimingStreamBroker(RedisStreamBroker):
+    """Stream broker that takes over abandoned messages even on an idle queue.
+
+    taskiq-redis 1.2.4 looks for unacknowledged messages only right after it
+    has received a new one (`if not fetched: continue` in its `listen`). A task
+    whose worker died therefore waits until somebody happens to enqueue
+    another task, which on a quiet queue means indefinitely. Found by killing
+    a worker mid-digest: the message sat in the pending list well past its
+    idle timeout. Here the check runs on a timer, new messages or not.
+
+    XAUTOCLAIM is atomic, so several workers may call it at once: the first
+    one gets the message and resets its idle time.
+    """
+
+    async def listen(self) -> AsyncGenerator[AckableMessage]:
+        streams = {self.queue_name: ">", **self.additional_streams}
+        last_reclaim = 0.0
+        async with Redis(connection_pool=self.connection_pool) as connection:
+            while True:
+                # redis-py types stream replies loosely; the shape is
+                # [(stream, [(message_id, {field: value})])].
+                fetched: Any = await connection.xreadgroup(
+                    self.consumer_group_name,
+                    self.consumer_name,
+                    streams,  # type: ignore[arg-type]
+                    block=self.block,
+                    noack=False,
+                    count=self.count,
+                )
+                for stream, messages in fetched or []:
+                    for message_id, message in messages:
+                        yield AckableMessage(
+                            data=message[b"data"],
+                            ack=self._ack_generator(id=message_id, queue_name=stream),
+                        )
+                if time.monotonic() - last_reclaim < RECLAIM_EVERY_SECONDS:
+                    continue
+                last_reclaim = time.monotonic()
+                for stream in streams:
+                    claimed: Any = await connection.xautoclaim(
+                        name=stream,
+                        groupname=self.consumer_group_name,
+                        consumername=self.consumer_name,
+                        min_idle_time=self.idle_timeout,
+                        count=self.unacknowledged_batch_size,
+                    )
+                    for message_id, message in claimed[1]:
+                        yield AckableMessage(
+                            data=message[b"data"],
+                            ack=self._ack_generator(id=message_id, queue_name=stream),
+                        )
+
+
+def _broker(queue: str, idle_timeout_ms: int) -> ReclaimingStreamBroker:
+    broker = ReclaimingStreamBroker(
         url=_settings.broker_url,
         queue_name=f"radar:{queue}",
         consumer_group_name=f"radar-{queue}",
         idle_timeout=idle_timeout_ms,
-        unacknowledged_lock_timeout=60.0,
         maxlen=STREAM_MAX_LENGTH,
     ).with_middlewares(
         SmartRetryMiddleware(

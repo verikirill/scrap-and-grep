@@ -150,6 +150,9 @@ export function ComparePage() {
           </Card>
 
           <ErrorNote error={comparison.error} />
+          {base && base === other && (
+            <p className="text-sm text-muted">Выбран один и тот же выпуск. Выберите два разных.</p>
+          )}
 
           {comparison.data && (
             <motion.div
