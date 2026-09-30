@@ -1,0 +1,109 @@
+"""Outbound HTTP with a guard against server-side request forgery.
+
+Feed URLs come from users, and the service fetches them from inside the
+network, so every hop is checked: only http(s), and only hosts that resolve
+to public addresses. Redirects are followed by hand for the same reason.
+"""
+
+import asyncio
+import ipaddress
+import socket
+from urllib.parse import urljoin, urlsplit
+
+import httpx
+import stamina
+
+from radar.config import get_settings
+
+MAX_REDIRECTS = 5
+_REDIRECT_CODES = frozenset({301, 302, 303, 307, 308})
+
+
+class UnsafeUrlError(ValueError):
+    """The URL points somewhere the service must not connect to."""
+
+
+class ResponseTooLargeError(Exception):
+    pass
+
+
+async def ensure_public_url(url: str) -> None:
+    parts = urlsplit(url)
+    if parts.scheme not in {"http", "https"} or not parts.hostname:
+        raise UnsafeUrlError("only http and https URLs with a host are allowed")
+    if get_settings().allow_private_feed_hosts:
+        return
+    loop = asyncio.get_running_loop()
+    try:
+        infos = await loop.getaddrinfo(parts.hostname, parts.port or 443, type=socket.SOCK_STREAM)
+    except socket.gaierror as exc:
+        raise UnsafeUrlError(f"cannot resolve host {parts.hostname}") from exc
+    for info in infos:
+        address = ipaddress.ip_address(info[4][0])
+        if not address.is_global:
+            raise UnsafeUrlError(f"host {parts.hostname} resolves to a non-public address")
+
+
+def build_client() -> httpx.AsyncClient:
+    settings = get_settings()
+    return httpx.AsyncClient(
+        timeout=httpx.Timeout(settings.http_timeout_seconds, connect=10.0),
+        headers={"User-Agent": settings.http_user_agent, "Accept-Encoding": "gzip, deflate"},
+        limits=httpx.Limits(max_connections=20, max_keepalive_connections=10),
+        follow_redirects=False,
+    )
+
+
+async def safe_get(
+    client: httpx.AsyncClient,
+    url: str,
+    *,
+    headers: dict[str, str] | None = None,
+    max_bytes: int | None = None,
+) -> httpx.Response:
+    """GET with per-hop URL validation, a size cap and retries on transient errors."""
+    limit = max_bytes or get_settings().max_feed_bytes
+    current = url
+    for _ in range(MAX_REDIRECTS + 1):
+        await ensure_public_url(current)
+        response = await _get_once(client, current, headers or {}, limit)
+        if response.status_code not in _REDIRECT_CODES:
+            return response
+        location = response.headers.get("location")
+        if not location:
+            return response
+        current = urljoin(current, location)
+    raise httpx.TooManyRedirects(f"more than {MAX_REDIRECTS} redirects")
+
+
+def _is_transient(exc: Exception) -> bool:
+    if isinstance(exc, httpx.HTTPStatusError):
+        return exc.response.status_code >= 500 or exc.response.status_code == 429
+    return isinstance(exc, httpx.TransportError)
+
+
+@stamina.retry(on=_is_transient, attempts=3, timeout=45.0)
+async def _get_once(
+    client: httpx.AsyncClient, url: str, headers: dict[str, str], limit: int
+) -> httpx.Response:
+    async with client.stream("GET", url, headers=headers) as response:
+        if response.status_code >= 500 or response.status_code == 429:
+            response.raise_for_status()
+        body = bytearray()
+        async for chunk in response.aiter_bytes():
+            body.extend(chunk)
+            if len(body) > limit:
+                raise ResponseTooLargeError(f"{url} is larger than {limit} bytes")
+        # The body is already decoded; keeping the encoding header would make
+        # httpx try to decompress it a second time.
+        plain_headers = [
+            (name, value)
+            for name, value in response.headers.items()
+            if name.lower() not in {"content-encoding", "content-length", "transfer-encoding"}
+        ]
+        return httpx.Response(
+            status_code=response.status_code,
+            headers=plain_headers,
+            content=bytes(body),
+            request=response.request,
+        )
