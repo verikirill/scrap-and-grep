@@ -293,8 +293,9 @@ services:
       retries: 6
       start_period: 20s
 
-  # Qwen3-TTS voice. Runs on the CPU as is (slowly); on an NVIDIA GPU add
-  # -f docker-compose.gpu.yml. The model is baked into the image.
+  # Qwen3-TTS voice. Measured on an NVIDIA GPU (-f docker-compose.gpu.yml);
+  # without one it falls back to the CPU, at a speed nobody has measured.
+  # The model is baked into the image.
   tts:
     profiles: ["voice"]
     build:
