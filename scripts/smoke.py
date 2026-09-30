@@ -9,19 +9,29 @@
 
 It walks the path the jury will walk: sources and articles are there, a
 profile selects something, a digest builds and reports progress, both exports
-download, and editing the interests changes the selection. Exit code 0 means
-every step passed.
+download, and editing the interests changes the selection. Then a new reader
+registers, uploads a resume, gets a profile suggested from it and a personal
+feed that reacts to a dislike, and deletes the account. Exit code 0 means every
+step passed.
+
+The digest part runs in a guest account ("try without registering"), so that
+sign-in must be on (RADAR_DEMO_LOGIN=true, the default). The guest is deleted
+at the end.
 """
 
 import json
 import sys
 import time
+import uuid
+from pathlib import Path
 
 import httpx
 
 BASE = (sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8080").rstrip("/")
 API = f"{BASE}/api/v1"
 BUILD_TIMEOUT_SECONDS = 600
+RESUME_TIMEOUT_SECONDS = 180
+RESUME = Path(__file__).resolve().parent.parent / "examples" / "resumes" / "ml-engineer.md"
 
 
 def step(name: str) -> None:
@@ -59,6 +69,55 @@ def selected_ids(digest: dict) -> set[int]:
     return {item["article_id"] for topic in digest["topics"] for item in topic["items"]}
 
 
+def new_reader() -> None:
+    """Registration, resume, a suggested profile, the feed, account removal."""
+    with httpx.Client(timeout=30) as reader:
+        step("a new reader registers")
+        password = f"smoke-{uuid.uuid4().hex}"
+        email = f"smoke.{uuid.uuid4().hex[:10]}@example.org"
+        reader.post(
+            f"{API}/auth/register",
+            json={"email": email, "password": password, "display_name": "Smoke"},
+        ).raise_for_status()
+        if reader.get(f"{API}/auth/me").json()["email"] != email:
+            fail("the new session is not recognised")
+
+        step("the resume is read and a profile is suggested")
+        reader.post(
+            f"{API}/resume", content=RESUME.read_bytes(), headers={"X-File-Name": RESUME.name}
+        ).raise_for_status()
+        deadline = time.monotonic() + RESUME_TIMEOUT_SECONDS
+        resume = reader.get(f"{API}/resume").json()
+        while resume["status"] == "processing" and time.monotonic() < deadline:
+            time.sleep(1)
+            resume = reader.get(f"{API}/resume").json()
+        if resume["status"] != "ready":
+            fail(f"resume not processed: {resume['status']} {resume.get('error')}")
+        facts, suggestion = resume["facts"], resume["suggestion"]
+        print(f"  parser={resume['parser']}, headline '{facts['headline']}', {len(facts['skills'])} skills")
+        print(f"  suggested topics: {'; '.join(item['title'] for item in suggestion['interests'])}")
+        reader.post(f"{API}/profiles", json=suggestion).raise_for_status()
+
+        step("the personal feed explains itself and learns from a dislike")
+        feed = reader.get(f"{API}/feed", params={"limit": 10}).raise_for_status().json()["items"]
+        ranked = [item for item in feed if not item["explore"]]
+        if not ranked or not ranked[0]["reasons"]:
+            fail("the feed has no ranked items with reasons")
+        top = ranked[0]
+        print(f"  top: '{top['title'][:70]}' - {'; '.join(r['text'] for r in top['reasons'])}")
+        reader.post(
+            f"{API}/feedback", json={"article_id": top["article_id"], "kind": "dislike"}
+        ).raise_for_status()
+        after = reader.get(f"{API}/feed", params={"limit": 60}).raise_for_status().json()["items"]
+        if any(item["article_id"] == top["article_id"] for item in after):
+            fail("a disliked article is still in the feed")
+
+        step("the account is deleted with everything it owns")
+        reader.post(f"{API}/auth/me/delete", json={"password": password}).raise_for_status()
+        if reader.get(f"{API}/auth/me").json() is not None:
+            fail("the session survived account deletion")
+
+
 def main() -> None:
     with httpx.Client(timeout=30) as client:
         step("gateway and API are up")
@@ -68,6 +127,11 @@ def main() -> None:
         print(f"  {ready['articles']} articles, embedding={ready['embedding_model']}, llm={ready['llm_model']}")
         if ready["articles"] == 0:
             fail("no articles: neither the sample snapshot nor the feeds were loaded")
+
+        step("guest sign-in")
+        guest = client.post(f"{API}/auth/demo").raise_for_status().json()
+        if guest["is_admin"]:
+            fail("a guest must not manage the source catalogue")
 
         step("sources and full-text search")
         sources = client.get(f"{API}/sources").raise_for_status().json()
@@ -124,7 +188,9 @@ def main() -> None:
         finally:
             client.delete(f"{API}/profiles/{temporary['id']}")
             client.delete(f"{API}/digests/{first['id']}")
+        client.post(f"{API}/auth/me/delete", json={"password": ""}).raise_for_status()
 
+    new_reader()
     print("OK")
 
 

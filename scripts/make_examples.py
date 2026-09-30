@@ -122,6 +122,8 @@ def diff_markdown(before: dict, after: dict, diff: dict) -> str:
 
 def main() -> None:
     with httpx.Client(timeout=60) as client:
+        # A guest account starts with copies of the example profiles.
+        client.post(f"{API}/auth/demo").raise_for_status()
         profiles = client.get(f"{API}/profiles").raise_for_status().json()
         digests = {}
         print("building one digest per profile", flush=True)
