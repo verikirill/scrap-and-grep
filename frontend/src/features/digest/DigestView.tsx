@@ -14,7 +14,7 @@ import { Link } from 'react-router'
 import { buttonClass, EASE, rowMotion } from '../../components/tokens'
 import { AnimatedNumber, Card, Chip, ScoreBar } from '../../components/ui'
 import { api } from '../../lib/api'
-import type { Digest, DigestItem, Topic } from '../../lib/api'
+import type { Digest, DigestItem, ReactionKind, Topic } from '../../lib/api'
 import {
   externalHref,
   formatDate,
@@ -24,6 +24,8 @@ import {
   plural,
   REJECT_LABELS,
 } from '../../lib/format'
+import { useFeedback, useReactions } from '../../lib/queries'
+import { ReactionBar } from '../feed/ReactionBar'
 
 function Funnel({ digest }: { digest: Digest }) {
   const stats = digest.stats
@@ -57,8 +59,16 @@ function Funnel({ digest }: { digest: Digest }) {
   )
 }
 
-function ItemCard({ item, index }: { item: DigestItem; index: number }) {
+type ItemCardProps = {
+  item: DigestItem
+  index: number
+  reactions: ReactionKind[] | undefined
+  onReact: (kind: ReactionKind, isActive: boolean) => void
+}
+
+function ItemCard({ item, index, reactions, onReact }: ItemCardProps) {
   const translated = item.headline !== item.title
+  const personal = Math.abs(item.personal) >= 0.005 ? item.personal : 0
   return (
     <motion.article
       {...rowMotion(index)}
@@ -81,6 +91,24 @@ function ItemCard({ item, index }: { item: DigestItem; index: number }) {
         <span>{formatDate(item.published_at)}</span>
         <ScoreBar score={item.score} />
         {item.interest_title && <Chip tone="accent">{item.interest_title}</Chip>}
+        {personal !== 0 && (
+          <Chip
+            tone={personal > 0 ? 'ok' : 'neutral'}
+            title={`Поправка по вашим оценкам${item.personal_note ? `: ${item.personal_note}` : ''}`}
+          >
+            {personal > 0 ? '+' : ''}
+            {personal.toFixed(2)} по вашим оценкам
+          </Chip>
+        )}
+        <ReactionBar
+          reactions={reactions ?? []}
+          subject={item.headline}
+          onReact={onReact}
+          canHide={false}
+          // Until the reader's reactions are loaded a click could not show them right.
+          isDisabled={reactions === undefined}
+          className="ml-auto"
+        />
       </div>
       {translated && <p className="mt-1.5 text-xs text-faint">Оригинал: {item.title}</p>}
       {item.summary && <p className="mt-2.5 text-sm text-text/90">{item.summary}</p>}
@@ -112,7 +140,14 @@ function ItemCard({ item, index }: { item: DigestItem; index: number }) {
   )
 }
 
-function TopicSection({ topic, number }: { topic: Topic; number: number }) {
+type TopicSectionProps = {
+  topic: Topic
+  number: number
+  reactions: Record<string, ReactionKind[]> | undefined
+  onReact: (articleId: number, kind: ReactionKind, isActive: boolean) => void
+}
+
+function TopicSection({ topic, number, reactions, onReact }: TopicSectionProps) {
   return (
     <section>
       <div className="sticky top-14 z-10 -mx-1 bg-bg/90 px-1 py-2 backdrop-blur md:top-0">
@@ -129,7 +164,13 @@ function TopicSection({ topic, number }: { topic: Topic; number: number }) {
       {topic.overview && <p className="mt-1 mb-2 px-4 text-sm text-muted">{topic.overview}</p>}
       <div className="space-y-1">
         {topic.items.map((item, index) => (
-          <ItemCard key={item.article_id} item={item} index={index} />
+          <ItemCard
+            key={item.article_id}
+            item={item}
+            index={index}
+            reactions={reactions ? (reactions[item.article_id] ?? []) : undefined}
+            onReact={(kind, isActive) => onReact(item.article_id, kind, isActive)}
+          />
         ))}
       </div>
     </section>
@@ -202,6 +243,11 @@ function RejectedList({ items }: { items: DigestItem[] }) {
 
 export function DigestView({ digest, previousId }: { digest: Digest; previousId?: string }) {
   const stats = digest.stats
+  const articleIds = digest.topics.flatMap((topic) => topic.items.map((item) => item.article_id))
+  const reactions = useReactions(articleIds)
+  const feedback = useFeedback()
+  const react = (articleId: number, kind: ReactionKind, isActive: boolean) =>
+    feedback.mutate({ articleId, kind, isActive, context: 'digest' })
   return (
     <div className="space-y-6">
       <Card className="p-6">
@@ -282,6 +328,7 @@ export function DigestView({ digest, previousId }: { digest: Digest; previousId?
           {modelLabel(stats.llm)} · {stats.sources ?? 0}{' '}
           {plural(stats.sources ?? 0, ['источник', 'источника', 'источников'])}
           {stats.duplicates_merged ? ` · объединено повторов: ${stats.duplicates_merged}` : ''}
+          {stats.personalized ? ` · поправок по вашим оценкам: ${stats.personalized}` : ''}
           {stats.duration_seconds ? ` · ${Math.round(stats.duration_seconds)} с` : ''}
           {digest.finished_at && ` · ${formatDateTime(digest.finished_at)}`}
         </p>
@@ -295,7 +342,13 @@ export function DigestView({ digest, previousId }: { digest: Digest; previousId?
       ) : (
         <div className="space-y-7">
           {digest.topics.map((topic, index) => (
-            <TopicSection key={topic.title} topic={topic} number={index + 1} />
+            <TopicSection
+              key={topic.title}
+              topic={topic}
+              number={index + 1}
+              reactions={reactions.data}
+              onReact={react}
+            />
           ))}
         </div>
       )}

@@ -1,15 +1,25 @@
 import clsx from 'clsx'
-import { FileText, GitCompareArrows, Moon, Radar, Rss, SlidersHorizontal, Sun } from 'lucide-react'
+import {
+  FileText,
+  GitCompareArrows,
+  Moon,
+  Radar,
+  Rss,
+  SlidersHorizontal,
+  Sparkles,
+  Sun,
+} from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { NavLink, useLocation } from 'react-router'
 import { formatNumber, modelLabel } from '../lib/format'
-import { useMeta } from '../lib/queries'
+import { useMe, useMeta } from '../lib/queries'
 import { EASE } from './tokens'
 
 const NAV = [
   { to: '/', label: 'Дайджест', icon: FileText, also: '/digests' },
+  { to: '/feed', label: 'Для вас', icon: Sparkles },
   { to: '/profiles', label: 'Интересы', icon: SlidersHorizontal },
   { to: '/sources', label: 'Источники', icon: Rss },
   { to: '/compare', label: 'Сравнение', icon: GitCompareArrows },
@@ -56,6 +66,36 @@ function StatusLine() {
         {formatNumber(meta.articles)} публикаций · +{formatNumber(meta.articles_last_day)} за сутки
       </p>
     </div>
+  )
+}
+
+function AccountLink() {
+  const { data: me } = useMe()
+  if (!me) return null
+  return (
+    <NavLink
+      to="/account"
+      aria-label={`Аккаунт: ${me.display_name}`}
+      className={({ isActive }) =>
+        clsx(
+          'flex shrink-0 items-center gap-2.5 rounded-lg p-1 transition-colors md:px-2 md:py-1.5',
+          isActive ? 'bg-accent-soft text-accent-text' : 'text-text hover:bg-sunken',
+        )
+      }
+    >
+      <span
+        aria-hidden
+        className="grid size-7 shrink-0 place-items-center rounded-full bg-accent-soft text-xs font-semibold text-accent-text"
+      >
+        {me.display_name.slice(0, 1).toUpperCase()}
+      </span>
+      <span className="hidden min-w-0 leading-tight md:block">
+        <span className="block truncate text-[13px] font-medium">{me.display_name}</span>
+        <span className="block truncate text-[11px] text-faint">
+          {me.is_demo ? 'демо-аккаунт' : me.email}
+        </span>
+      </span>
+    </NavLink>
   )
 }
 
@@ -117,11 +157,14 @@ export function Layout({ children }: { children: ReactNode }) {
         <div className="hidden md:mt-auto md:block md:px-2">
           <StatusLine />
         </div>
+        <div className="md:mt-4">
+          <AccountLink />
+        </div>
         <button
           type="button"
           onClick={toggleDark}
           aria-label={dark ? 'Светлая тема' : 'Тёмная тема'}
-          className="grid size-9 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-sunken hover:text-text md:mt-4 md:ml-0.5"
+          className="grid size-9 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-sunken hover:text-text md:mt-2 md:ml-0.5"
         >
           <AnimatePresence mode="wait" initial={false}>
             <motion.span

@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router'
 import { ErrorNote, PageHeader } from '../components/ui'
 import { ArticlesList } from '../features/sources/ArticlesList'
 import { SourcesTable } from '../features/sources/SourcesTable'
-import { useSources } from '../lib/queries'
+import { useMe, useSources } from '../lib/queries'
 
 const TABS = [
   { id: 'sources', label: 'Источники' },
@@ -15,6 +15,7 @@ export function SourcesPage() {
   const [search, setSearch] = useSearchParams()
   const tab = search.get('tab') === 'articles' ? 'articles' : 'sources'
   const sources = useSources()
+  const me = useMe()
 
   return (
     <>
@@ -54,7 +55,7 @@ export function SourcesPage() {
         <>
           <ErrorNote error={sources.error} />
           {sources.data ? (
-            <SourcesTable sources={sources.data} />
+            <SourcesTable sources={sources.data} canEdit={Boolean(me.data?.is_admin)} />
           ) : (
             <div className="skeleton h-96" />
           )}

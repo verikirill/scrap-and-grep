@@ -60,6 +60,7 @@ export const REJECT_LABELS: Record<string, string> = {
   excluded: 'исключение',
   duplicate: 'повтор',
   over_limit: 'сверх лимита',
+  hidden: 'скрыто вами',
 }
 
 export const STAGE_LABELS: Record<string, string> = {
