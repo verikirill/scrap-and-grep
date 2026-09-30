@@ -17,6 +17,10 @@ from collections.abc import AsyncGenerator
 from typing import Any
 
 from redis.asyncio import Redis
+from redis.asyncio.retry import Retry
+from redis.backoff import ExponentialBackoff
+from redis.exceptions import ConnectionError as RedisConnectionError
+from redis.exceptions import TimeoutError as RedisTimeoutError
 from taskiq import AckableMessage, TaskiqEvents, TaskiqScheduler, TaskiqState
 from taskiq.middlewares import SmartRetryMiddleware
 from taskiq.schedule_sources import LabelScheduleSource
@@ -43,6 +47,8 @@ MEDIA_IDLE_TIMEOUT_MS = (
 DIGEST_IDLE_TIMEOUT_MS = _settings.digest_task_timeout_seconds * 1000
 STREAM_MAX_LENGTH = 100_000
 RECLAIM_EVERY_SECONDS = 10.0
+BROKER_HEALTH_CHECK_SECONDS = 30
+BROKER_RETRIES = 3
 
 
 class ReclaimingStreamBroker(RedisStreamBroker):
@@ -105,6 +111,14 @@ def _broker(queue: str, idle_timeout_ms: int) -> ReclaimingStreamBroker:
         consumer_group_name=f"radar-{queue}",
         idle_timeout=idle_timeout_ms,
         maxlen=STREAM_MAX_LENGTH,
+        # After a Valkey restart the pool still holds connections the server
+        # has closed, and redis-py does not retry by default: the first task
+        # sent after the restart failed. A connection idle for a while is now
+        # checked before use, and a broken one is replaced and the command
+        # retried. A task sent twice is harmless: every task is idempotent.
+        health_check_interval=BROKER_HEALTH_CHECK_SECONDS,
+        retry=Retry(ExponentialBackoff(cap=1.0, base=0.05), BROKER_RETRIES),
+        retry_on_error=[RedisConnectionError, RedisTimeoutError],
     ).with_middlewares(
         SmartRetryMiddleware(
             default_retry_count=3,
