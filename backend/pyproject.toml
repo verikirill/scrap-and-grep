@@ -85,6 +85,7 @@ ignore = [
 asyncio_mode = "auto"
 testpaths = ["tests"]
 addopts = "-q"
+markers = ["integration: needs a running Valkey; skipped when it is not reachable"]
 
 [tool.mypy]
 python_version = "3.14"
