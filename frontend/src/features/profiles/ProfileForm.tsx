@@ -1,0 +1,306 @@
+import clsx from 'clsx'
+import { ChevronDown, Plus, Trash2 } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
+import { useState } from 'react'
+import type { CSSProperties } from 'react'
+import { ChipsInput } from '../../components/ChipsInput'
+import { EASE, INPUT_CLASS, shortId } from '../../components/tokens'
+import { Button, Card, Chip, Field } from '../../components/ui'
+import type { Interest, ProfileSpec, SourceCategory } from '../../lib/api'
+import { CATEGORY_LABELS } from '../../lib/format'
+
+const WEIGHT_LABELS: [number, string][] = [
+  [0.75, 'второстепенный'],
+  [1.15, 'обычный'],
+  [Infinity, 'приоритетный'],
+]
+
+const weightLabel = (weight: number) => WEIGHT_LABELS.find(([limit]) => weight < limit)?.[1] ?? ''
+
+/** Filled part of a range track, as a CSS variable read by index.css. */
+const fill = (value: number, min: number, max: number) =>
+  ({ '--fill': `${((value - min) / (max - min)) * 100}%` }) as CSSProperties
+
+function InterestEditor({
+  interest,
+  isOpen,
+  onToggle,
+  onChange,
+  onRemove,
+  isRemovable,
+}: {
+  interest: Interest
+  isOpen: boolean
+  onToggle: () => void
+  onChange: (next: Interest) => void
+  onRemove: () => void
+  isRemovable: boolean
+}) {
+  return (
+    <motion.div
+      layout="position"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.98 }}
+      transition={{ duration: 0.25, ease: EASE }}
+      className="rounded-xl border border-line bg-surface"
+    >
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={isOpen}
+        aria-controls={`interest-panel-${interest.id}`}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left"
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-medium">
+            {interest.title || 'Новый интерес'}
+          </span>
+          {!isOpen && (
+            <span className="mt-0.5 block truncate text-xs text-muted">
+              {interest.keywords.length > 0
+                ? interest.keywords.slice(0, 6).join(', ')
+                : 'ключевые слова не заданы'}
+            </span>
+          )}
+        </span>
+        {interest.weight !== 1 && (
+          <Chip tone={interest.weight > 1 ? 'spark' : 'neutral'}>
+            {weightLabel(interest.weight)}
+          </Chip>
+        )}
+        <motion.span animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
+          <ChevronDown size={17} className="text-muted" />
+        </motion.span>
+      </button>
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.28, ease: EASE }}
+            className="overflow-hidden"
+            id={`interest-panel-${interest.id}`}
+          >
+            <div className="space-y-3.5 border-t border-line px-4 py-4">
+              <Field label="Название">
+                <input
+                  className={INPUT_CLASS}
+                  value={interest.title}
+                  maxLength={120}
+                  onChange={(event) => onChange({ ...interest, title: event.target.value })}
+                />
+              </Field>
+              <Field label="Что именно интересует" hint="по этому тексту идёт смысловой поиск">
+                <textarea
+                  className={clsx(INPUT_CLASS, 'min-h-16 resize-y')}
+                  value={interest.description}
+                  maxLength={600}
+                  onChange={(event) => onChange({ ...interest, description: event.target.value })}
+                />
+              </Field>
+              <Field isGroup label="Ключевые слова" hint="Enter или запятая">
+                <ChipsInput
+                  label="Ключевые слова"
+                  values={interest.keywords}
+                  onChange={(keywords) => onChange({ ...interest, keywords })}
+                  placeholder="SCADA, АСУ ТП, МЭК 61850"
+                />
+              </Field>
+              <div className="flex items-end gap-4">
+                <Field label="Важность" hint={weightLabel(interest.weight)} className="flex-1">
+                  <input
+                    type="range"
+                    min={0.5}
+                    max={1.5}
+                    step={0.1}
+                    value={interest.weight}
+                    style={fill(interest.weight, 0.5, 1.5)}
+                    onChange={(event) =>
+                      onChange({ ...interest, weight: Number(event.target.value) })
+                    }
+                    className="w-full"
+                  />
+                </Field>
+                <Button
+                  size="sm"
+                  variant="danger"
+                  icon={<Trash2 size={14} />}
+                  onClick={onRemove}
+                  disabled={!isRemovable}
+                >
+                  Удалить
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  )
+}
+
+const CATEGORIES = Object.keys(CATEGORY_LABELS) as SourceCategory[]
+
+export function ProfileForm({
+  spec,
+  onChange,
+}: {
+  spec: ProfileSpec
+  onChange: (next: ProfileSpec) => void
+}) {
+  const [openId, setOpenId] = useState<string | null>(null)
+
+  const updateInterest = (next: Interest) =>
+    onChange({
+      ...spec,
+      interests: spec.interests.map((interest) => (interest.id === next.id ? next : interest)),
+    })
+
+  const addInterest = () => {
+    const id = `interest-${shortId()}`
+    onChange({
+      ...spec,
+      interests: [...spec.interests, { id, title: '', description: '', keywords: [], weight: 1 }],
+    })
+    setOpenId(id)
+  }
+
+  const toggleCategory = (category: SourceCategory) => {
+    const active = spec.categories.includes(category)
+    onChange({
+      ...spec,
+      categories: active
+        ? spec.categories.filter((item) => item !== category)
+        : [...spec.categories, category],
+    })
+  }
+
+  return (
+    <div className="space-y-5">
+      <Card className="space-y-4 p-5">
+        <Field label="Название профиля">
+          <input
+            className={INPUT_CLASS}
+            value={spec.name}
+            maxLength={120}
+            onChange={(event) => onChange({ ...spec, name: event.target.value })}
+          />
+        </Field>
+        <Field label="Кто читатель" hint="модель пишет «почему важно» под эту роль">
+          <textarea
+            className={clsx(INPUT_CLASS, 'min-h-20 resize-y')}
+            value={spec.role}
+            maxLength={600}
+            onChange={(event) => onChange({ ...spec, role: event.target.value })}
+          />
+        </Field>
+      </Card>
+
+      <div>
+        <div className="mb-2.5 flex items-center justify-between px-1">
+          <h2 className="text-sm font-semibold">Интересы</h2>
+          <Button
+            size="sm"
+            variant="ghost"
+            icon={<Plus size={15} />}
+            onClick={addInterest}
+            disabled={spec.interests.length >= 20}
+          >
+            Добавить
+          </Button>
+        </div>
+        <div className="space-y-2">
+          <AnimatePresence initial={false}>
+            {spec.interests.map((interest) => (
+              <InterestEditor
+                key={interest.id}
+                interest={interest}
+                isOpen={openId === interest.id}
+                onToggle={() => setOpenId(openId === interest.id ? null : interest.id)}
+                onChange={updateInterest}
+                isRemovable={spec.interests.length > 1}
+                onRemove={() =>
+                  onChange({
+                    ...spec,
+                    interests: spec.interests.filter((item) => item.id !== interest.id),
+                  })
+                }
+              />
+            ))}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      <Card className="space-y-5 p-5">
+        <Field isGroup label="Не показывать" hint="темы, которые в выпуск не нужны">
+          <ChipsInput
+            label="Исключения"
+            values={spec.exclusions}
+            onChange={(exclusions) => onChange({ ...spec, exclusions })}
+            placeholder="вакансии, обзоры гаджетов"
+            max={20}
+          />
+        </Field>
+
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field label="Порог релевантности" hint={spec.min_score.toFixed(2)}>
+            <input
+              type="range"
+              min={0.2}
+              max={0.9}
+              step={0.05}
+              value={spec.min_score}
+              style={fill(spec.min_score, 0.2, 0.9)}
+              onChange={(event) => onChange({ ...spec, min_score: Number(event.target.value) })}
+              className="w-full"
+            />
+          </Field>
+          <Field label="Размер выпуска" hint={`до ${spec.max_items} публикаций`}>
+            <input
+              type="range"
+              min={5}
+              max={40}
+              step={1}
+              value={spec.max_items}
+              style={fill(spec.max_items, 5, 40)}
+              onChange={(event) => onChange({ ...spec, max_items: Number(event.target.value) })}
+              className="w-full"
+            />
+          </Field>
+        </div>
+
+        <div>
+          <p className="mb-2 flex items-baseline justify-between text-[13px] font-medium">
+            Источники
+            <span className="text-xs font-normal text-faint">
+              {spec.categories.length === 0 ? 'все категории' : 'только выбранные'}
+            </span>
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {CATEGORIES.map((category) => {
+              const active = spec.categories.includes(category)
+              return (
+                <button
+                  key={category}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => toggleCategory(category)}
+                  className={clsx(
+                    'rounded-lg border px-2.5 py-1 text-[13px] transition-colors duration-150',
+                    active
+                      ? 'border-accent bg-accent-soft text-accent-text'
+                      : 'border-line text-muted hover:border-faint hover:text-text',
+                  )}
+                >
+                  {CATEGORY_LABELS[category]}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </Card>
+    </div>
+  )
+}

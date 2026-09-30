@@ -7,6 +7,14 @@ x-backend: &backend
     context: ./backend
   image: radar-backend:local
   restart: unless-stopped
+  # The backend needs no privileges and writes nothing but temporary files.
+  read_only: true
+  tmpfs:
+    - /tmp
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
   environment: &backend-env
     RADAR_ENVIRONMENT: production
     RADAR_LOG_LEVEL: ${RADAR_LOG_LEVEL:-INFO}
@@ -21,6 +29,8 @@ x-backend: &backend
     RADAR_LLM_MODEL: ${RADAR_LLM_MODEL:-qwen3.5:9b}
     RADAR_LLM_CONCURRENCY: ${RADAR_LLM_CONCURRENCY:-4}
     RADAR_INGEST_CRON: ${RADAR_INGEST_CRON:-*/15 * * * *}
+    RADAR_RATE_LIMIT_PER_MINUTE: ${RADAR_RATE_LIMIT_PER_MINUTE:-120}
+    RADAR_DIGEST_TASK_TIMEOUT_SECONDS: ${RADAR_DIGEST_TASK_TIMEOUT_SECONDS:-1200}
   depends_on: &backend-deps
     migrate:
       condition: service_completed_successfully
@@ -111,7 +121,7 @@ services:
   migrate:
     <<: *backend
     restart: "no"
-    command: ["radar", "migrate", "--seed", "--sample", "/samples/articles.jsonl"]
+    command: ["radar", "migrate", "--seed", "--sample", "/samples/articles.jsonl", "--ingest"]
     environment:
       <<: *backend-env
       RADAR_DATABASE_URL: postgresql+psycopg://radar:${POSTGRES_PASSWORD:-radar}@postgres:5432/radar
@@ -122,6 +132,8 @@ services:
       - ./data/samples:/samples:ro
     depends_on:
       postgres:
+        condition: service_healthy
+      valkey:
         condition: service_healthy
 
   api:

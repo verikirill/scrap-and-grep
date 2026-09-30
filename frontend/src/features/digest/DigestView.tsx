@@ -1,0 +1,305 @@
+import clsx from 'clsx'
+import {
+  ChevronDown,
+  Download,
+  ExternalLink,
+  FileText,
+  GitCompareArrows,
+  Info,
+  Layers,
+} from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
+import { useState } from 'react'
+import { Link } from 'react-router'
+import { buttonClass, EASE, rowMotion } from '../../components/tokens'
+import { AnimatedNumber, Card, Chip, ScoreBar } from '../../components/ui'
+import { api } from '../../lib/api'
+import type { Digest, DigestItem, Topic } from '../../lib/api'
+import {
+  externalHref,
+  formatDate,
+  formatDateTime,
+  formatPeriod,
+  modelLabel,
+  plural,
+  REJECT_LABELS,
+} from '../../lib/format'
+
+function Funnel({ digest }: { digest: Digest }) {
+  const stats = digest.stats
+  const steps = [
+    { label: 'публикаций за период', value: stats.window_total ?? 0 },
+    { label: 'кандидатов по интересам', value: stats.candidates ?? 0 },
+    { label: 'в выпуске', value: stats.selected ?? 0 },
+  ]
+  const max = Math.max(steps[0].value, 1)
+  return (
+    <div className="grid gap-3 sm:grid-cols-3">
+      {steps.map((step, index) => (
+        <div key={step.label} className="rounded-xl bg-sunken px-4 py-3">
+          <AnimatedNumber value={step.value} className="text-2xl font-semibold" />
+          <p className="text-xs text-muted">{step.label}</p>
+          <div className="mt-2.5 h-1 overflow-hidden rounded-full bg-line">
+            <motion.div
+              className={clsx(
+                'h-full origin-left rounded-full',
+                index === 2 ? 'bg-spark' : 'bg-accent',
+              )}
+              initial={{ scaleX: 0 }}
+              // A log scale keeps the last bar visible: 20 of 800 would be a sliver.
+              animate={{ scaleX: Math.log1p(step.value) / Math.log1p(max) }}
+              transition={{ duration: 0.8, ease: EASE, delay: 0.1 * index }}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function ItemCard({ item, index }: { item: DigestItem; index: number }) {
+  const translated = item.headline !== item.title
+  return (
+    <motion.article
+      {...rowMotion(index)}
+      className="group rounded-xl border border-transparent px-4 py-4 transition-colors duration-200 hover:border-line hover:bg-surface"
+    >
+      <a
+        href={externalHref(item.url)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="font-serif text-[17px] leading-snug font-semibold text-text decoration-accent/40 underline-offset-4 hover:underline"
+      >
+        {item.headline}
+        <ExternalLink
+          size={13}
+          className="ml-1.5 inline -translate-y-px text-faint opacity-0 transition-opacity group-hover:opacity-100"
+        />
+      </a>
+      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+        <span className="font-medium text-text">{item.source_name}</span>
+        <span>{formatDate(item.published_at)}</span>
+        <ScoreBar score={item.score} />
+        {item.interest_title && <Chip tone="accent">{item.interest_title}</Chip>}
+      </div>
+      {translated && <p className="mt-1.5 text-xs text-faint">Оригинал: {item.title}</p>}
+      {item.summary && <p className="mt-2.5 text-sm text-text/90">{item.summary}</p>}
+      {item.why && (
+        <p className="mt-2.5 border-l-2 border-spark pl-3 text-sm text-muted">
+          <span className="font-medium text-text">Почему важно. </span>
+          {item.why}
+        </p>
+      )}
+      {item.duplicates.length > 0 && (
+        <p className="mt-2.5 flex flex-wrap items-center gap-1.5 text-xs text-muted">
+          <Layers size={13} />
+          Также об этом:
+          {item.duplicates.map((duplicate) => (
+            <a
+              key={duplicate.url}
+              href={externalHref(duplicate.url)}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={duplicate.title}
+              className="rounded-md bg-sunken px-1.5 py-0.5 hover:text-accent-text"
+            >
+              {duplicate.source_name}
+            </a>
+          ))}
+        </p>
+      )}
+    </motion.article>
+  )
+}
+
+function TopicSection({ topic, number }: { topic: Topic; number: number }) {
+  return (
+    <section>
+      <div className="sticky top-14 z-10 -mx-1 bg-bg/90 px-1 py-2 backdrop-blur md:top-0">
+        <h3 className="flex items-baseline gap-2.5 font-serif text-xl font-semibold tracking-tight">
+          <span className="tabular font-sans text-sm font-medium text-spark">
+            {String(number).padStart(2, '0')}
+          </span>
+          {topic.title}
+          <span className="tabular font-sans text-xs font-normal text-faint">
+            {topic.items.length}
+          </span>
+        </h3>
+      </div>
+      {topic.overview && <p className="mt-1 mb-2 px-4 text-sm text-muted">{topic.overview}</p>}
+      <div className="space-y-1">
+        {topic.items.map((item, index) => (
+          <ItemCard key={item.article_id} item={item} index={index} />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function RejectedList({ items }: { items: DigestItem[] }) {
+  const [open, setOpen] = useState(false)
+  if (items.length === 0) return null
+  return (
+    <Card className="overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
+      >
+        <span>
+          <span className="text-sm font-semibold">Не вошло в выпуск</span>
+          <span className="ml-2 text-xs text-muted">
+            {items.length} {plural(items.length, ['кандидат', 'кандидата', 'кандидатов'])} с оценкой
+            и причиной
+          </span>
+        </span>
+        <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
+          <ChevronDown size={18} className="text-muted" />
+        </motion.span>
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: EASE }}
+            className="overflow-hidden"
+          >
+            <ul className="divide-y divide-line border-t border-line">
+              {items.map((item) => (
+                <li key={item.article_id} className="flex items-start gap-3 px-5 py-3">
+                  <span className="tabular mt-0.5 w-9 shrink-0 text-xs font-semibold text-muted">
+                    {item.score.toFixed(2)}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <a
+                      href={externalHref(item.url)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm hover:text-accent-text"
+                    >
+                      {item.title}
+                    </a>
+                    <p className="mt-0.5 text-xs text-muted">
+                      {item.source_name} · {formatDate(item.published_at)}
+                      {item.reason && ` · ${item.reason}`}
+                    </p>
+                  </div>
+                  <Chip tone={item.reject_reason === 'excluded' ? 'danger' : 'neutral'}>
+                    {REJECT_LABELS[item.reject_reason ?? 'low_score'] ?? item.reject_reason}
+                  </Chip>
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </Card>
+  )
+}
+
+export function DigestView({ digest, previousId }: { digest: Digest; previousId?: string }) {
+  const stats = digest.stats
+  return (
+    <div className="space-y-6">
+      <Card className="p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs text-muted">
+              {digest.profile_name} · версия {digest.profile_version} ·{' '}
+              {formatPeriod(digest.period_start, digest.period_end)}
+            </p>
+            <h2 className="mt-1.5 font-serif text-[26px] leading-tight font-semibold tracking-tight text-balance">
+              {digest.title ?? 'Дайджест'}
+            </h2>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {previousId && (
+              <Link
+                to={`/compare?base=${previousId}&other=${digest.id}`}
+                className={buttonClass('ghost', 'sm')}
+              >
+                <GitCompareArrows size={15} />С предыдущим
+              </Link>
+            )}
+            <a
+              href={api.exportUrl(digest.id, 'md')}
+              download
+              className={buttonClass('secondary', 'sm')}
+            >
+              <FileText size={15} />
+              Markdown
+            </a>
+            <a
+              href={api.exportUrl(digest.id, 'docx')}
+              download
+              className={buttonClass('secondary', 'sm')}
+            >
+              <Download size={15} />
+              DOCX
+            </a>
+          </div>
+        </div>
+
+        <div className="mt-5">
+          <Funnel digest={digest} />
+        </div>
+
+        {stats.degraded && (
+          <p className="mt-4 flex items-start gap-2 rounded-lg bg-spark-soft px-3 py-2 text-sm text-spark">
+            <Info size={16} className="mt-0.5 shrink-0" />
+            Модель была недоступна часть времени: моделью оценено {stats.graded_by_model ??
+              0} из{' '}
+            {stats.candidates ?? 0} кандидатов, написано {stats.written_by_model ?? 0} из{' '}
+            {stats.selected ?? 0} записей. Остальное сделал резервный алгоритм.
+          </p>
+        )}
+
+        {digest.highlights.length > 0 && (
+          <div className="mt-6">
+            <h3 className="text-xs font-semibold tracking-wide text-muted uppercase">Главное</h3>
+            <ul className="mt-2 space-y-1.5">
+              {digest.highlights.map((highlight, index) => (
+                <motion.li
+                  key={`${index}-${highlight}`}
+                  {...rowMotion(index)}
+                  className="flex gap-2.5 text-sm"
+                >
+                  <span className="mt-2 size-1.5 shrink-0 rounded-full bg-spark" />
+                  {highlight}
+                </motion.li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <p className="mt-5 text-xs text-faint">
+          Поиск: {modelLabel(stats.embedding_model)}
+          {stats.lexical_only && ' (только полнотекстовый)'} · оценка и тексты:{' '}
+          {modelLabel(stats.llm)} · {stats.sources ?? 0}{' '}
+          {plural(stats.sources ?? 0, ['источник', 'источника', 'источников'])}
+          {stats.duplicates_merged ? ` · объединено повторов: ${stats.duplicates_merged}` : ''}
+          {stats.duration_seconds ? ` · ${Math.round(stats.duration_seconds)} с` : ''}
+          {digest.finished_at && ` · ${formatDateTime(digest.finished_at)}`}
+        </p>
+      </Card>
+
+      {digest.topics.length === 0 ? (
+        <Card className="px-6 py-10 text-center text-sm text-muted">
+          За этот период по интересам профиля ничего не нашлось. Попробуйте период длиннее или
+          снизьте порог релевантности в настройках интересов.
+        </Card>
+      ) : (
+        <div className="space-y-7">
+          {digest.topics.map((topic, index) => (
+            <TopicSection key={topic.title} topic={topic} number={index + 1} />
+          ))}
+        </div>
+      )}
+
+      <RejectedList items={digest.rejected} />
+    </div>
+  )
+}
