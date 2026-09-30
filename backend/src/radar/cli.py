@@ -165,7 +165,7 @@ def digest(
         from radar.db import session_scope
         from radar.db.models import Profile
         from radar.domain import ProfileSpec
-        from radar.pipeline.runner import run_digest
+        from radar.pipeline.runner import report_failure, run_digest
         from radar.render.docx import render_docx
         from radar.render.markdown import render_markdown
         from radar.store import digests as digest_store
@@ -186,7 +186,12 @@ def digest(
             )
             digest_id: uuid.UUID = created.id
 
-        await run_digest(digest_id)
+        try:
+            await run_digest(digest_id)
+        except Exception as exc:
+            # No queue here, so no retry: record the failure before leaving.
+            await report_failure(digest_id, exc)
+            raise
         async with session_scope() as session:
             loaded = await digest_store.get(session, digest_id, full=True)
             if loaded is None:

@@ -206,7 +206,8 @@ export function DigestView({ digest, previousId }: { digest: Digest; previousId?
     <div className="space-y-6">
       <Card className="p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0 flex-1">
+          {/* Full row on a phone, so the title is not squeezed by the buttons. */}
+          <div className="min-w-0 flex-1 basis-full sm:basis-0">
             <p className="text-xs text-muted">
               {digest.profile_name} · версия {digest.profile_version} ·{' '}
               {formatPeriod(digest.period_start, digest.period_end)}
