@@ -1,0 +1,42 @@
+[project]
+name = "radar-docparser"
+version = "0.1.0"
+description = "Document-to-text service for Radar, built on docling"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "docling[easyocr]>=2.131.0",
+    "fastapi>=0.142.2",
+    # Named here only to pin them to the CPU index below; docling pulls them in.
+    "torch>=2.14.0",
+    "torchvision>=0.29.0",
+    "uvicorn>=0.54.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.15,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "docparser"
+
+[dependency-groups]
+dev = ["ruff>=0.16.9"]
+
+# CPU wheels: the service parses one resume at a time and must not pull
+# gigabytes of CUDA libraries into its image.
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+torchvision = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "C4", "S", "ASYNC", "RUF", "T20"]
+ignore = ["RUF001", "RUF002", "RUF003"]
