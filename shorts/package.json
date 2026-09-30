@@ -1,0 +1,35 @@
+{
+  "name": "radar-shorts",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Renders a vertical news short for a Radar digest with Remotion",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "build": "node server/prebundle.ts",
+    "start": "node server/server.ts",
+    "render:sample": "node server/sample.ts",
+    "test": "node --test \"server/**/*.test.ts\""
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "@remotion/bundler": "4.0.531",
+    "@remotion/captions": "4.0.531",
+    "@remotion/cli": "4.0.531",
+    "@remotion/media": "4.0.531",
+    "@remotion/renderer": "4.0.531",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "remotion": "4.0.531",
+    "zod": "4.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "typescript": "~6.0.2"
+  }
+}
