@@ -1323,6 +1323,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
+    { name = "huggingface-hub" },
     { name = "numpy" },
     { name = "qwen-tts" },
     { name = "soundfile" },
@@ -1342,6 +1343,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.142.2" },
+    { name = "huggingface-hub", specifier = ">=0.36.2" },
     { name = "numpy", specifier = ">=2.3" },
     { name = "qwen-tts", specifier = ">=0.1.1" },
     { name = "soundfile", specifier = ">=0.13.1" },

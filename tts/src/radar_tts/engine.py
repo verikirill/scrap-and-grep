@@ -8,6 +8,7 @@ import asyncio
 import gc
 import io
 import logging
+import os
 import time
 from dataclasses import dataclass
 from typing import Any
@@ -15,6 +16,7 @@ from typing import Any
 import numpy as np
 import soundfile as sf
 import torch
+from huggingface_hub import snapshot_download
 
 log = logging.getLogger("radar_tts")
 
@@ -48,6 +50,18 @@ class Speech:
     sample_rate: int
     segments: list[tuple[int, int]]
     wav: bytes
+
+
+def model_path(model: str) -> str:
+    """A local directory for the model, downloading it only when allowed.
+
+    transformers 4.57.3, which qwen-tts pins, asks the Hub about a repo id
+    while loading the tokenizer even with HF_HUB_OFFLINE set, and fails in a
+    container without network. A local path it takes as it is.
+    """
+    if os.path.isdir(model):
+        return model
+    return snapshot_download(model, local_files_only=bool(os.environ.get("HF_HUB_OFFLINE")))
 
 
 def pick_device(requested: str) -> str:
@@ -127,7 +141,7 @@ class Engine:
             started = time.perf_counter()
             on_gpu = self.device.startswith("cuda")
             self._model = Qwen3TTSModel.from_pretrained(
-                self.config.model,
+                model_path(self.config.model),
                 device_map=self.device,
                 dtype=torch.bfloat16 if on_gpu else torch.float32,
                 attn_implementation="sdpa",
