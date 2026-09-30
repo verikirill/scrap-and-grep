@@ -1,0 +1,166 @@
+{
+  "file": "ml-engineer.md",
+  "status": "ready",
+  "error": null,
+  "parser": "docling",
+  "llm": "qwen3.5:9b",
+  "facts": {
+    "headline": "Ведущий инженер по машинному обучению",
+    "seniority": "senior",
+    "summary": "Ведущий инженер по машинному обучению в электросбытовой компании. Отвечает за разработку моделей прогноза потребления электроэнергии и внедрение внутренних инструментов на базе языковых моделей для диспетчеров. Занимается построением конвейеров данных, MLOps и работой с векторными базами данных.",
+    "skills": [
+      "Python",
+      "PyTorch",
+      "scikit-learn",
+      "LLM",
+      "RAG",
+      "LangChain",
+      "NLP",
+      "MLOps",
+      "SQL",
+      "PostgreSQL",
+      "ClickHouse",
+      "Kafka",
+      "Airflow",
+      "Spark",
+      "Docker",
+      "Kubernetes",
+      "Git"
+    ],
+    "domains": [
+      "машинное обучение",
+      "прогнозирование потребления энергии",
+      "обработка естественного языка",
+      "MLOps",
+      "векторные базы данных",
+      "аналитика больших данных"
+    ],
+    "by_model": true
+  },
+  "suggestion": {
+    "name": "Ведущий инженер по машинному обучению",
+    "role": "Ведущий инженер по машинному обучению в электросбытовой компании. Отвечает за разработку моделей прогноза потребления электроэнергии и внедрение внутренних инструментов на базе языковых моделей для диспетчеров. Занимается построением конвейеров данных, MLOps и работой с векторными базами данных.",
+    "interests": [
+      {
+        "id": "resume-1",
+        "title": "Прогнозирование нагрузки в энергосетях",
+        "description": "Публикации о методах предсказания потребления электроэнергии, оптимизации сетей и интеграции ИИ в АСУ ТП.",
+        "keywords": [
+          "load forecasting",
+          "energy consumption",
+          "time series",
+          "grid optimization",
+          "smart meters",
+          "AI in energy",
+          "PyTorch",
+          "scikit-learn",
+          "regression models",
+          "forecasting accuracy"
+        ],
+        "weight": 1.0
+      },
+      {
+        "id": "resume-2",
+        "title": "Языковые модели и RAG для бизнеса",
+        "description": "Материалы о применении локальных LLM, системах поиска по документации и чат-ботов в корпоративной среде.",
+        "keywords": [
+          "LLM",
+          "RAG",
+          "LangChain",
+          "local models",
+          "vector search",
+          "knowledge base",
+          "NLP",
+          "document retrieval",
+          "chatbot",
+          "fine-tuning"
+        ],
+        "weight": 1.0
+      },
+      {
+        "id": "resume-3",
+        "title": "Инфраструктура машинного обучения",
+        "description": "Новости по инструментам MLOps, оркестрации данных и развертыванию моделей в контейнеризированных средах.",
+        "keywords": [
+          "MLOps",
+          "Kubernetes",
+          "Airflow",
+          "data pipelines",
+          "monitoring",
+          "model deployment",
+          "CI/CD",
+          "Docker",
+          "ClickHouse",
+          "Spark"
+        ],
+        "weight": 1.0
+      },
+      {
+        "id": "resume-4",
+        "title": "Векторные базы данных и поиск",
+        "description": "Обзоры технологий для хранения векторов, реализации семантического поиска и интеграции с SQL.",
+        "keywords": [
+          "vector database",
+          "PostgreSQL",
+          "semantic search",
+          "embeddings",
+          "indexing",
+          "retrieval augmented",
+          "FAISS",
+          "Milvus",
+          "SQL integration",
+          "data warehousing"
+        ],
+        "weight": 1.0
+      },
+      {
+        "id": "resume-5",
+        "title": "Безопасность ИИ и локальные модели",
+        "description": "Статьи о защите данных при использовании LLM, приватности вычислений и работе с локальными языковыми моделями.",
+        "keywords": [
+          "AI security",
+          "local LLM",
+          "data privacy",
+          "prompt injection",
+          "model safety",
+          "on-premise AI",
+          "encryption",
+          "compliance",
+          "secure deployment",
+          "federated learning"
+        ],
+        "weight": 1.0
+      },
+      {
+        "id": "resume-6",
+        "title": "Аналитика данных и визуализация",
+        "description": "Информация о построении дашбордов, отчётности и аналитических системах для принятия решений.",
+        "keywords": [
+          "Power BI",
+          "data visualization",
+          "reporting",
+          "dashboarding",
+          "business intelligence",
+          "ETL",
+          "data cleaning",
+          "metrics",
+          "analytics platform",
+          "KPI tracking"
+        ],
+        "weight": 1.0
+      }
+    ],
+    "exclusions": [
+      "вакансии и карьера",
+      "обзор смартфона",
+      "игры и киберспорт"
+    ],
+    "min_score": 0.5,
+    "max_items": 20,
+    "languages": [
+      "ru",
+      "en"
+    ],
+    "categories": []
+  }
+}

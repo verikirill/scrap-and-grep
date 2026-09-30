@@ -1,0 +1,164 @@
+{
+  "file": "ics-security-engineer.pdf",
+  "status": "ready",
+  "error": null,
+  "parser": "docling",
+  "llm": "qwen3.5:9b",
+  "facts": {
+    "headline": "Ведущий инженер по защите АСУ ТП",
+    "seniority": "senior",
+    "summary": "Ведущий инженер по защите АСУ ТП в электросетевой компании. Отвечает за защиту подстанций высокого напряжения, аудиты систем, сегментацию сетей и взаимодействие с регуляторами.",
+    "skills": [
+      "SCADA",
+      "ПЛК Siemens S7",
+      "РЗА",
+      "МЭК 61850",
+      "Modbus",
+      "OPC UA",
+      "IEC 62443",
+      "187-ФЗ",
+      "ФСТЭК",
+      "KICS for Networks",
+      "PT ISIM",
+      "MaxPatrol VM",
+      "Nessus",
+      "Python",
+      "Bash"
+    ],
+    "domains": [
+      "безопасность АСУ ТП",
+      "защита критической информационной инфраструктуры",
+      "кибербезопасность энергосистем",
+      "управление уязвимостями",
+      "сетевая сегментация",
+      "соответствие регуляторным требованиям"
+    ],
+    "by_model": true
+  },
+  "suggestion": {
+    "name": "Ведущий инженер по защите АСУ ТП",
+    "role": "Ведущий инженер по защите АСУ ТП в электросетевой компании. Отвечает за защиту подстанций высокого напряжения, аудиты систем, сегментацию сетей и взаимодействие с регуляторами.",
+    "interests": [
+      {
+        "id": "resume-1",
+        "title": "Угрозы для промышленных систем управления",
+        "description": "Публикации о новых векторах атак на ПЛК, SCADA и системы телемеханики.",
+        "keywords": [
+          "Stuxnet",
+          "Industroyer",
+          "BlackEnergy",
+          "PLC security",
+          "SCADA attack",
+          "Modbus security",
+          "OPC UA encryption",
+          "ICS threat",
+          "firmware update",
+          "Siemens S7"
+        ],
+        "weight": 1.0
+      },
+      {
+        "id": "resume-2",
+        "title": "Регуляторика и защита КИИ в РФ",
+        "description": "Изменения в законодательстве, требования ФСТЭК и Роскомнадзора для объектов критической инфраструктуры.",
+        "keywords": [
+          "187-ФЗ",
+          "ФСТЭК",
+          "КИИ",
+          "приказ 239",
+          "категорирование",
+          "аудит КИИ",
+          "Роскомнадзор",
+          "ГОСТ Р 57580",
+          "инцидент КИИ",
+          "отчетность ФСТЭК"
+        ],
+        "weight": 1.0
+      },
+      {
+        "id": "resume-3",
+        "title": "Стандарты безопасности для промышленных сетей",
+        "description": "Методики проектирования защиты и оценки рисков по международным стандартам.",
+        "keywords": [
+          "IEC 62443",
+          "ISA/IEC 62443",
+          "risk assessment",
+          "threat modeling",
+          "security architecture",
+          "network segmentation",
+          "zero trust ICS",
+          "MISP",
+          "MITRE ATT&CK",
+          "TARA"
+        ],
+        "weight": 1.0
+      },
+      {
+        "id": "resume-4",
+        "title": "Мониторинг и обнаружение инцидентов в АСУ ТП",
+        "description": "Инструменты для анализа логов, выявления аномалий и реагирования на инциденты.",
+        "keywords": [
+          "KICS for Networks",
+          "MaxPatrol VM",
+          "SIEM",
+          "IDS/IPS",
+          "log analysis",
+          "threat hunting",
+          "incident response",
+          "Python scripting",
+          "Bash automation",
+          "Nessus"
+        ],
+        "weight": 1.0
+      },
+      {
+        "id": "resume-5",
+        "title": "Управление уязвимостями в промышленных системах",
+        "description": "Обновление ПО, патчинг контроллеров и балансирование безопасности с доступностью.",
+        "keywords": [
+          "vulnerability management",
+          "CVE",
+          "patch management",
+          "PLC firmware",
+          "SCADA patching",
+          "exploit mitigation",
+          "security baseline",
+          "configuration audit",
+          "network isolation",
+          "NGFW"
+        ],
+        "weight": 1.0
+      },
+      {
+        "id": "resume-6",
+        "title": "Архитектура защищенных сетей телемеханики",
+        "description": "Проектирование топологий, настройка межсетевых экранов и правил доступа.",
+        "keywords": [
+          "network segmentation",
+          "NGFW rules",
+          "telemechanics",
+          "RZA security",
+          "IEC 61850",
+          "Modbus TCP",
+          "OPC UA network",
+          "firewall policy",
+          "DMZ ICS",
+          "access control"
+        ],
+        "weight": 1.0
+      }
+    ],
+    "exclusions": [
+      "вакансии и карьера",
+      "обзор смартфона",
+      "игры и киберспорт"
+    ],
+    "min_score": 0.5,
+    "max_items": 20,
+    "languages": [
+      "ru",
+      "en"
+    ],
+    "categories": []
+  }
+}
