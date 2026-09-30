@@ -315,6 +315,10 @@ services:
     environment:
       TTS_SPEAKER: ${TTS_SPEAKER:-}
       TTS_KEEP_ALIVE_SECONDS: ${TTS_KEEP_ALIVE_SECONDS:-600}
+      # PyTorch 2.14 replaces some CUDA ops with Triton kernels compiled on
+      # first use, which needs a C compiler and a writable cache that this
+      # image does not have. The plain CUDA kernels are what was measured.
+      TORCH_DISABLE_NATIVE_JIT: "1"
       # librosa compiles with numba and caches the result next to itself;
       # the image is read-only, so the caches go to /tmp.
       NUMBA_CACHE_DIR: /tmp/numba
