@@ -24,7 +24,9 @@ class Settings(BaseSettings):
     checkpoint_database_url: str | None = None
     db_pool_size: int = 5
     db_max_overflow: int = 10
-    db_disable_prepared_statements: bool = False
+    # Safe behind PgBouncer in transaction mode; set to false only for a
+    # direct connection where server-side prepares are wanted.
+    db_disable_prepared_statements: bool = True
 
     # Valkey / Redis. Broker and cache live in separate logical databases so
     # that cache eviction never touches queued tasks.
@@ -34,18 +36,19 @@ class Settings(BaseSettings):
     # AI providers. "hashing" and "heuristic" are the offline stand-ins that
     # keep the pipeline working when no model server is reachable.
     embedding_provider: Literal["hashing", "ollama"] = "hashing"
-    embedding_model: str = "bge-m3"
+    embedding_model: str = "qwen3-embedding:4b"
+    # Empty means "use the preset for the model family" (see ai/factory.py).
     embedding_query_prefix: str = ""
     embedding_document_prefix: str = ""
     embedding_batch_size: int = 32
     llm_provider: Literal["heuristic", "ollama"] = "heuristic"
-    llm_model: str = "qwen3:8b"
+    llm_model: str = "qwen3.5:9b"
     llm_temperature: float = 0.1
     llm_num_ctx: int = 8192
     llm_timeout_seconds: float = 120.0
     llm_concurrency: int = 4
     ollama_base_url: str = "http://127.0.0.1:11434"
-    ollama_keep_alive: str = "30m"
+    ollama_keep_alive_seconds: int = 1800
     breaker_failure_threshold: int = 3
     breaker_reset_seconds: float = 30.0
 
@@ -57,13 +60,21 @@ class Settings(BaseSettings):
     max_feed_bytes: int = 8_000_000
     allow_private_feed_hosts: bool = False
 
+    # Longest a digest build may run. A build whose worker died is handed to
+    # another worker after this long, and resumes from its last checkpoint.
+    digest_task_timeout_seconds: int = Field(default=1200, ge=120)
+
     # Selection defaults
-    candidate_limit: int = 80
+    candidate_limit: int = 60
     per_interest_limit: int = 40
 
     # API
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
     rate_limit_per_minute: int = 120
+    # The preview scans the whole period once per interest; keep it rarer.
+    preview_rate_limit_per_minute: int = 40
+    # Builds queued or running at once. More would only deepen the model queue.
+    max_active_digests: int = 6
     digest_rate_limit_per_minute: int = 10
     seed_on_start: bool = True
 

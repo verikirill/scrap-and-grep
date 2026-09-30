@@ -50,5 +50,5 @@ class PipelineDeps:
     embedder: Embedder
     embed_queries: QueryEmbedder
     intelligence: Intelligence
-    candidate_limit: int = 80
+    candidate_limit: int = 60
     llm_provider: str = "heuristic"

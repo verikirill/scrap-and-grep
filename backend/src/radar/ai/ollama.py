@@ -30,7 +30,7 @@ class OllamaIntelligence:
         *,
         temperature: float = 0.1,
         num_ctx: int = 8192,
-        keep_alive: str = "30m",
+        keep_alive: int = 1800,
         concurrency: int = 4,
         timeout: float = 120.0,
     ) -> None:
@@ -49,10 +49,13 @@ class OllamaIntelligence:
         # Ollama queues requests beyond OLLAMA_NUM_PARALLEL; bounding them here
         # keeps the queue short and the timeouts honest.
         self._slots = asyncio.Semaphore(concurrency)
+        self._timeout = timeout
 
     async def _ask[T: BaseModel](self, schema: type[T], system: str, user: str) -> T:
         chain = self._llm.with_structured_output(schema, method="json_schema")
-        async with self._slots:
+        # The clock starts once a slot is free: time spent queueing behind
+        # other calls is not the model being slow and must not trip the breaker.
+        async with self._slots, asyncio.timeout(self._timeout):
             result: Any = await chain.ainvoke(
                 [SystemMessage(content=system), HumanMessage(content=user)]
             )
@@ -78,8 +81,11 @@ class OllamaIntelligence:
             prompts.SUMMARY_SYSTEM,
             prompts.summary_prompt(item, profile, interest),
         )
+        # A Russian headline is kept verbatim: rewording it can only drift from
+        # what the source said. The model's headline is a translation aid.
+        translated = item.article.language != "ru" and out.headline.strip()
         return ItemSummary(
-            headline=out.headline.strip() or item.article.title,
+            headline=translated or item.article.title,
             summary=out.summary.strip(),
             why=out.why.strip(),
             by_model=True,

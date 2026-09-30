@@ -256,7 +256,10 @@ async def import_articles(session: AsyncSession, path: Path) -> int:
     return inserted
 
 
-async def export_articles(session: AsyncSession, path: Path, since: datetime | None) -> int:
+async def export_articles(
+    session: AsyncSession, path: Path, since: datetime | None, content_limit: int | None = None
+) -> int:
+    """Write articles as JSONL, newest first. `content_limit` trims the full text."""
     statement = select(Article).order_by(Article.published_at.desc())
     if since is not None:
         statement = statement.where(Article.published_at >= since)
@@ -268,7 +271,7 @@ async def export_articles(session: AsyncSession, path: Path, since: datetime | N
                 "url": article.url,
                 "title": article.title,
                 "summary": article.summary,
-                "content": article.content,
+                "content": article.content[:content_limit] if article.content else None,
                 "author": article.author,
                 "tags": article.tags,
                 "language": article.language,

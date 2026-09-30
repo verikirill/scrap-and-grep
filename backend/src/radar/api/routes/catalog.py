@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from radar.api.deps import SessionDep, SettingsDep, rate_limit
 from radar.api.schemas import ArticleOut, Page, SourceCreate, SourceOut, SourceUpdate
 from radar.db.models import Article, Source
+from radar.domain import Language, SourceCategory
 from radar.ingest.net import UnsafeUrlError, ensure_public_url
 from radar.store.articles import ArticleFilter, list_articles
 from radar.text import stable_hash
@@ -161,9 +162,9 @@ async def search_articles(
     session: SessionDep,
     settings: SettingsDep,
     q: Annotated[str | None, Query(max_length=200)] = None,
-    source_id: Annotated[list[int] | None, Query()] = None,
-    category: Annotated[list[str] | None, Query()] = None,
-    language: Annotated[list[str] | None, Query()] = None,
+    source_id: Annotated[list[int] | None, Query(max_length=50)] = None,
+    category: Annotated[list[SourceCategory] | None, Query(max_length=5)] = None,
+    language: Annotated[list[Language] | None, Query(max_length=2)] = None,
     since: datetime | None = None,
     until: datetime | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 30,

@@ -38,6 +38,23 @@ def events_channel(digest_id: uuid.UUID | str) -> str:
     return f"digest:{digest_id}"
 
 
+async def report_failure(
+    digest_id: uuid.UUID, exc: BaseException, cache: Cache | None = None
+) -> None:
+    """Mark the digest as failed for good and tell the listeners.
+
+    Called once, after the last attempt. The full exception is in the log; the
+    reader gets only the kind of failure, because driver messages can name
+    internal hosts.
+    """
+    error = f"Сборка прервалась ({type(exc).__name__}). Подробности в журнале сервиса."
+    async with session_scope() as session:
+        await digest_store.mark_failed(session, digest_id, error)
+    await (cache or get_cache()).publish(
+        events_channel(digest_id), {"status": "failed", "error": error}
+    )
+
+
 @asynccontextmanager
 async def checkpointer() -> AsyncIterator[AsyncPostgresSaver]:
     """Postgres-backed checkpointer with its own small pool.
@@ -129,12 +146,8 @@ async def run_digest(
         else:
             async with checkpointer() as pg_saver:
                 await _execute(digest_id, initial, deps or default_deps(), pg_saver, cache)
-    except Exception as exc:
-        error = f"{type(exc).__name__}: {exc}"
-        log.exception("digest_failed", digest_id=str(digest_id))
-        async with session_scope() as session:
-            await digest_store.mark_failed(session, digest_id, error)
-        await cache.publish(events_channel(digest_id), {"status": "failed", "error": error[:300]})
+    except Exception:
+        log.exception("digest_attempt_failed", digest_id=str(digest_id))
         raise
 
     await cache.delete(f"export:{digest_id}:md", f"export:{digest_id}:docx")
@@ -154,7 +167,11 @@ async def _execute(
     graph = build_graph(deps).compile(checkpointer=saver)
     config: Any = {"configurable": {"thread_id": str(digest_id)}, "max_concurrency": 16}
     snapshot = await graph.aget_state(config)
-    # `next` is non-empty when a previous attempt stopped mid-graph.
+    # `next` is non-empty when a previous attempt stopped mid-graph: resume it.
+    # A thread that ran to the end but whose digest is not marked done is
+    # stale; starting on top of it would append to its accumulated lists.
+    if not snapshot.next and snapshot.values:
+        await saver.adelete_thread(str(digest_id))
     graph_input = None if snapshot.next else initial
     tracker = ProgressTracker()
     last_written = -1.0
@@ -171,3 +188,9 @@ async def _execute(
                 await digest_store.set_progress(
                     session, digest_id, stage=update["stage"], progress=update["progress"]
                 )
+    # The result is in the digest tables now; the checkpoints have done their
+    # job. Failing to delete them costs disk space, not correctness.
+    try:
+        await saver.adelete_thread(str(digest_id))
+    except Exception as exc:
+        log.warning("checkpoint_cleanup_failed", digest_id=str(digest_id), error=str(exc)[:200])

@@ -1,5 +1,6 @@
 """FastAPI application factory."""
 
+import re
 import time
 import uuid
 from collections.abc import AsyncIterator, Awaitable, Callable
@@ -24,6 +25,7 @@ log = get_logger(__name__)
 REQUESTS = Counter("radar_http_requests_total", "HTTP requests", ["method", "route", "status"])
 LATENCY = Histogram("radar_http_request_seconds", "HTTP request latency", ["method", "route"])
 _UNMETERED = {"/metrics", "/health/live", "/health/ready"}
+_REQUEST_ID = re.compile(r"[A-Za-z0-9_-]{8,64}")
 
 
 @asynccontextmanager
@@ -70,7 +72,9 @@ def create_app() -> FastAPI:
     async def observe(
         request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
-        request_id = request.headers.get("x-request-id") or uuid.uuid4().hex
+        supplied = request.headers.get("x-request-id", "")
+        # Echoed into logs and a response header, so accept only a plain token.
+        request_id = supplied if _REQUEST_ID.fullmatch(supplied) else uuid.uuid4().hex
         structlog.contextvars.bind_contextvars(request_id=request_id)
         started = time.perf_counter()
         try:

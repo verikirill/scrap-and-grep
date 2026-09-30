@@ -1,5 +1,6 @@
 """Candidate retrieval: dense similarity plus full-text search, per interest."""
 
+import math
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -10,11 +11,13 @@ from radar.config import EMBEDDING_DIM
 from radar.domain import Candidate, ProfileSpec
 from radar.selection.scoring import lexical_score, retrieval_score
 from radar.store.articles import get_refs
-from radar.text import tokenize
+from radar.text import content_tokens, tokenize
 
-# An exclusion removes an article only when it matches clearly and at least as
-# well as the interest that brought the article in.
-EXCLUSION_MIN_SCORE = 0.6
+# Similarity to an exclusion is judged more strictly than similarity to an
+# interest. A z-score is relative: the nearest neighbours of any phrase look
+# "unusually close" even when nothing in the period is about it, so a merely
+# high rank must not remove an article. Only a far outlier counts.
+EXCLUSION_STRONG_Z = 3.5
 
 # The window is scanned exactly: every article published in the period gets a
 # similarity, which also yields the mean and deviation needed for the z-score.
@@ -35,7 +38,10 @@ _RETRIEVE_SQL = text(
     sims AS (
         SELECT id, 1 - (embedding <=> CAST(:query_vector AS vector)) AS sim
         FROM scope
+        -- A zero vector (an article with no usable text) has no direction; its
+        -- cosine is NaN and would turn the mean and deviation into NaN as well.
         WHERE embedding IS NOT NULL AND CAST(:has_vector AS boolean)
+          AND vector_norm(embedding) > 0
     ),
     stats AS (
         SELECT avg(sim) AS mean, stddev_pop(sim) AS std FROM sims
@@ -95,11 +101,27 @@ def keyword_query(keywords: tuple[str, ...] | list[str]) -> str:
     return " OR ".join(dict.fromkeys(terms))
 
 
-def _excluded_by(match: tuple[str, float] | None, interest_score: float) -> str | None:
-    """The exclusion wins only when it fits at least as well as the interest."""
-    if match is None or match[1] < interest_score:
+def exclusion_query(exclusion: str) -> str:
+    """Every meaningful word of the exclusion must be present (websearch AND).
+
+    A phrase match would be too strict ("вакансии и карьера" never occurs
+    verbatim) and any-word too loose ("обзор смартфона" would hit every
+    "обзор").
+    """
+    return " ".join(dict.fromkeys(content_tokens(exclusion)))
+
+
+def _excluded_by(match: tuple[str, float, bool] | None, interest_z: float) -> str | None:
+    """Decide whether an exclusion removes a candidate.
+
+    Words of the exclusion found in the article are decisive. Similarity alone
+    removes the article only when it is closer to the exclusion than to the
+    interest that brought it in.
+    """
+    if match is None:
         return None
-    return match[0]
+    exclusion, exclusion_z, by_words = match
+    return exclusion if by_words or exclusion_z >= interest_z else None
 
 
 def _vector_literal(vector: list[float] | None) -> str:
@@ -142,7 +164,13 @@ async def search(
         share = (row.rank / row.max_rank) if lexical_hit and row.max_rank else 0.0
         # No similarity when the model server is down or the window holds a
         # single article; full-text rank is then the only evidence.
-        has_similarity = row.sim is not None and bool(row.std)
+        has_similarity = (
+            row.sim is not None
+            and row.std is not None
+            and math.isfinite(row.sim)
+            and math.isfinite(row.std)
+            and row.std > 0
+        )
         z_score = (row.sim - row.mean) / row.std if has_similarity else 0.0
         if semantic and has_similarity:
             score = retrieval_score(z_score, lexical_hit)
@@ -151,7 +179,7 @@ async def search(
         hits.append(
             Hit(
                 article_id=row.id,
-                similarity=float(row.sim or 0.0),
+                similarity=float(row.sim) if has_similarity else 0.0,
                 z_score=float(z_score),
                 lexical_hit=lexical_hit,
                 score=float(score),
@@ -189,23 +217,22 @@ async def retrieve_candidates(
         )
         by_interest.extend((interest.id, hit) for hit in hits)
 
-    excluded: dict[int, tuple[str, float]] = {}
+    # article id -> (exclusion, z-score, matched by words)
+    excluded: dict[int, tuple[str, float, bool]] = {}
     for exclusion in profile.exclusions:
         hits = await search(
             session,
             model=model,
             window=window,
             query_vector=exclusion_vectors.get(exclusion) if exclusion_vectors else None,
-            query_text=keyword_query((exclusion,)),
+            query_text=exclusion_query(exclusion),
             limit=per_interest_limit,
             semantic=semantic,
         )
         for hit in hits:
-            if (
-                hit.score >= EXCLUSION_MIN_SCORE
-                and hit.score > excluded.get(hit.article_id, ("", 0.0))[1]
-            ):
-                excluded[hit.article_id] = (exclusion, hit.score)
+            strong = semantic and hit.z_score >= EXCLUSION_STRONG_Z
+            if (hit.lexical_hit or strong) and hit.article_id not in excluded:
+                excluded[hit.article_id] = (exclusion, hit.z_score, hit.lexical_hit)
 
     refs = await get_refs(session, list({hit.article_id for _, hit in by_interest}))
     candidates = []
@@ -222,7 +249,7 @@ async def retrieve_candidates(
                 z_score=hit.z_score,
                 lexical_hit=hit.lexical_hit,
                 retrieval_score=hit.score,
-                excluded_by=_excluded_by(matched_exclusion, hit.score),
+                excluded_by=_excluded_by(matched_exclusion, hit.z_score),
             )
         )
     total = await session.scalar(

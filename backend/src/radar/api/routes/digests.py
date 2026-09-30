@@ -1,5 +1,6 @@
 """Digests: creation, progress stream, exports and comparison."""
 
+import asyncio
 import time
 import uuid
 from collections.abc import AsyncIterator
@@ -10,7 +11,7 @@ from urllib.parse import quote
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.sse import EventSourceResponse, ServerSentEvent
 
-from radar.api.deps import CacheDep, SessionDep, rate_limit
+from radar.api.deps import CacheDep, SessionDep, SettingsDep, rate_limit
 from radar.api.schemas import CompareOut, DigestCreate, InterestChange, ScoreChange
 from radar.db import session_scope
 from radar.db.models import Digest, Profile
@@ -53,11 +54,19 @@ async def _load_done(session: SessionDep, digest_id: uuid.UUID) -> DigestView:
 
 
 @router.post("/digests", status_code=status.HTTP_202_ACCEPTED, dependencies=[_digest_limit])
-async def create_digest(payload: DigestCreate, session: SessionDep) -> DigestSummaryView:
+async def create_digest(
+    payload: DigestCreate, session: SessionDep, settings: SettingsDep
+) -> DigestSummaryView:
     """Register a digest and queue its build. Progress is at /digests/{id}/events."""
     profile = await session.get(Profile, payload.profile_id)
     if profile is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Профиль не найден.")
+    if await digest_store.count_active(session) >= settings.max_active_digests:
+        raise HTTPException(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Уже собирается несколько выпусков. Дождитесь их завершения.",
+            headers={"Retry-After": "30"},
+        )
     end = payload.period_end or datetime.now(UTC)
     start = payload.period_start or end - timedelta(days=payload.period_days or 7)
     digest = await digest_store.create(
@@ -171,7 +180,7 @@ async def export_markdown(digest_id: uuid.UUID, session: SessionDep, cache: Cach
     key = f"export:{digest_id}:md"
     body = await cache.get_bytes(key)
     if body is None:
-        body = render_markdown(view).encode("utf-8")
+        body = (await asyncio.to_thread(render_markdown, view)).encode("utf-8")
         await cache.set_bytes(key, body, EXPORT_TTL_SECONDS)
     return Response(
         body, media_type="text/markdown; charset=utf-8", headers=_attachment(view, "md")
@@ -184,7 +193,7 @@ async def export_docx(digest_id: uuid.UUID, session: SessionDep, cache: CacheDep
     key = f"export:{digest_id}:docx"
     body = await cache.get_bytes(key)
     if body is None:
-        body = render_docx(view)
+        body = await asyncio.to_thread(render_docx, view)
         await cache.set_bytes(key, body, EXPORT_TTL_SECONDS)
     return Response(body, media_type=DOCX_MEDIA_TYPE, headers=_attachment(view, "docx"))
 

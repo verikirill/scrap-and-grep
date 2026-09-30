@@ -1,5 +1,6 @@
 """Exports must carry every source link, in both formats."""
 
+import re
 import uuid
 from datetime import UTC, datetime
 from io import BytesIO
@@ -89,8 +90,27 @@ def test_markdown_links_every_item_and_duplicate_and_survives_brackets(digest: D
     assert "[Атака](https://example.org/a/1)" in text
     assert "[Siemens закрыла уязвимость \\[в ПЛК\\]](https://example.org/a/2)" in text
     assert "Оригинал: Siemens patches PLC flaw" in text
-    assert "[Зеркало](https://mirror.example/x(1%29)" in text
+    assert "[Зеркало](https://mirror.example/x%281%29)" in text
     assert "**Почему важно:** Нужно обновить контроллеры." in text
+
+
+def test_text_from_articles_and_the_model_cannot_add_links_or_html(digest: DigestView) -> None:
+    hostile = _item(
+        3,
+        "Заголовок](https://evil.example) [ещё",
+        summary="Читайте [здесь](https://evil.example) <img src=x onerror=alert(1)>",
+        why="`код` и <script>alert(1)</script>",
+    )
+    topic = TopicView(title="Тема <b>жирная</b>", overview="", items=[hostile])
+
+    text = render_markdown(digest.model_copy(update={"topics": [topic]}))
+
+    # A closing bracket that is not escaped would end the link text early.
+    assert re.search(r"(?<!\\)\]\(https://evil", text) is None
+    assert "<img" not in text
+    assert "<script>" not in text
+    assert "<b>" not in text
+    assert "(https://example.org/a/3)" in text
 
 
 def test_markdown_shows_dates_in_moscow_time(digest: DigestView) -> None:

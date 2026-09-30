@@ -140,8 +140,8 @@ class Cache:
         current state from the database without missing an update in between.
         """
         pubsub = self._redis.pubsub()
-        await pubsub.subscribe(self._key(channel))
         try:
+            await pubsub.subscribe(self._key(channel))
             yield None
             while True:
                 message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)

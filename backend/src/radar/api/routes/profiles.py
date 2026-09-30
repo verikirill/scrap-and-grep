@@ -17,7 +17,9 @@ from radar.selection.preview import build_preview
 router = APIRouter(tags=["profiles"])
 
 _write_limit = Depends(rate_limit("write", lambda settings: settings.rate_limit_per_minute))
-_preview_limit = Depends(rate_limit("preview", lambda settings: settings.rate_limit_per_minute))
+_preview_limit = Depends(
+    rate_limit("preview", lambda settings: settings.preview_rate_limit_per_minute)
+)
 
 PREVIEW_ITEMS = 60
 # Round the window to this many minutes so that repeated previews of the same

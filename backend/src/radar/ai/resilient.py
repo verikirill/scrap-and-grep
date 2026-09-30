@@ -30,8 +30,9 @@ class CircuitBreaker:
     """Stop calling a failing dependency for a while instead of queueing on it.
 
     Closed: calls pass. After `failure_threshold` consecutive failures the
-    breaker opens and calls are refused until `reset_seconds` pass, after
-    which a single trial call decides whether to close it again.
+    breaker opens and calls are refused until `reset_seconds` pass. Calls are
+    then let through again; the first success closes it, the next failure
+    re-opens it for another `reset_seconds`.
     """
 
     def __init__(

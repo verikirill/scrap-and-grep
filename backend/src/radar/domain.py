@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from radar.text import stable_hash
 
 SourceCategory = Literal["security", "ics", "it", "energy", "regulator"]
+Language = Literal["ru", "en"]
 
 
 class Interest(BaseModel):
@@ -50,8 +51,8 @@ class ProfileSpec(BaseModel):
     exclusions: tuple[str, ...] = Field(default=(), max_length=20)
     min_score: float = Field(default=0.5, ge=0.0, le=1.0)
     max_items: int = Field(default=20, ge=3, le=60)
-    languages: tuple[str, ...] = ("ru", "en")
-    categories: tuple[SourceCategory, ...] = ()
+    languages: tuple[Language, ...] = Field(default=("ru", "en"), min_length=1, max_length=2)
+    categories: tuple[SourceCategory, ...] = Field(default=(), max_length=5)
 
     @field_validator("interests")
     @classmethod

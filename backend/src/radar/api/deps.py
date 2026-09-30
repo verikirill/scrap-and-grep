@@ -16,7 +16,10 @@ async def get_session() -> AsyncIterator[AsyncSession]:
         yield session
 
 
-SessionDep = Annotated[AsyncSession, Depends(get_session)]
+# scope="function": commit when the handler returns, before the response is
+# sent. With the default scope the commit would run after the client already
+# has its 2xx, and a follow-up request could miss the row.
+SessionDep = Annotated[AsyncSession, Depends(get_session, scope="function")]
 CacheDep = Annotated[Cache, Depends(get_cache)]
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 

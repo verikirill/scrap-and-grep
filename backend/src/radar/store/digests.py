@@ -5,7 +5,7 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -59,11 +59,44 @@ async def list_recent(
 async def set_progress(
     session: AsyncSession, digest_id: uuid.UUID, *, stage: str, progress: float
 ) -> None:
+    # Progress events are written while the graph keeps running, so the last
+    # one can land after the result is saved. A finished digest stays finished.
     await session.execute(
         update(Digest)
-        .where(Digest.id == digest_id)
-        .values(status=STATUS_RUNNING, stage=stage, progress=progress, error=None)
+        .where(Digest.id == digest_id, Digest.status != STATUS_DONE)
+        .values(status=STATUS_RUNNING, stage=stage, progress=progress, error=None, finished_at=None)
     )
+
+
+async def count_active(session: AsyncSession) -> int:
+    total = await session.scalar(
+        select(func.count())
+        .select_from(Digest)
+        .where(Digest.status.in_([STATUS_QUEUED, STATUS_RUNNING]))
+    )
+    return int(total or 0)
+
+
+async def fail_stale(session: AsyncSession, older_than: datetime) -> int:
+    """Mark digests that never finished as failed, so the UI stops waiting.
+
+    Covers the cases the queue cannot: a task lost before it was acknowledged
+    by any worker, or a build that exhausted its retries without reporting.
+    """
+    result = await session.execute(
+        update(Digest)
+        .where(
+            Digest.status.in_([STATUS_QUEUED, STATUS_RUNNING]),
+            Digest.created_at < older_than,
+        )
+        .values(
+            status=STATUS_FAILED,
+            error="Сборка не завершилась за отведённое время.",
+            finished_at=datetime.now(UTC),
+        )
+        .returning(Digest.id)
+    )
+    return len(result.all())
 
 
 async def mark_failed(session: AsyncSession, digest_id: uuid.UUID, error: str) -> None:
@@ -89,6 +122,12 @@ async def save_result(
     Deleting first makes the write idempotent: a redelivered task or a resumed
     graph run ends with exactly one copy of the result.
     """
+    # Lock the digest row: two workers finishing the same build (a redelivered
+    # task racing the original) must write one after the other, not interleave.
+    locked = await session.scalar(select(Digest.id).where(Digest.id == digest_id).with_for_update())
+    if locked is None:
+        # Deleted by the user while it was being built. Nothing to save.
+        return
     await session.execute(delete(DigestItem).where(DigestItem.digest_id == digest_id))
     await session.execute(delete(DigestTopic).where(DigestTopic.digest_id == digest_id))
 

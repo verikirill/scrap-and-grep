@@ -57,16 +57,42 @@ async def _seed(sample: Path | None) -> None:
         log.info("sample_imported", path=str(sample), articles=count)
 
 
+async def _queue_first_ingest() -> None:
+    """Ask the workers to fetch every source now instead of at the next cron tick.
+
+    Best effort: if the broker is not reachable yet, the scheduler picks the
+    work up on its own a few minutes later.
+    """
+    from radar.worker.brokers import ingest_broker
+    from radar.worker.tasks import ingest_all
+
+    try:
+        await ingest_broker.startup()
+        await ingest_all.kiq()
+        await ingest_broker.shutdown()
+    except Exception as exc:
+        log.warning("first_ingest_not_queued", error=f"{type(exc).__name__}: {exc}"[:200])
+    else:
+        log.info("first_ingest_queued")
+
+
+async def _bootstrap(seed: bool, sample: Path | None, ingest: bool) -> None:
+    await _setup_checkpoints()
+    if seed:
+        await _seed(sample)
+    if ingest:
+        await _queue_first_ingest()
+
+
 @app.command()
 def migrate(
     seed: Annotated[bool, typer.Option(help="Insert default sources and profiles.")] = False,
     sample: Annotated[Path | None, typer.Option(help="JSONL snapshot to import.")] = None,
+    ingest: Annotated[bool, typer.Option(help="Queue an immediate fetch of all sources.")] = False,
 ) -> None:
     """Apply schema migrations and create LangGraph checkpoint tables."""
     command.upgrade(_alembic_config(), "head")
-    aio.run(_setup_checkpoints())
-    if seed:
-        aio.run(_seed(_existing(sample)))
+    aio.run(_bootstrap(seed, _existing(sample), ingest))
 
 
 @app.command()
@@ -179,6 +205,9 @@ def digest(
 def export_articles_command(
     path: Path,
     days: Annotated[int | None, typer.Option(help="Only articles newer than this.")] = None,
+    content_limit: Annotated[
+        int | None, typer.Option(help="Trim full text to this many characters.")
+    ] = None,
 ) -> None:
     """Dump stored articles to JSONL (the format `migrate --sample` reads)."""
 
@@ -188,7 +217,8 @@ def export_articles_command(
 
         since = datetime.now(UTC) - timedelta(days=days) if days else None
         async with session_scope() as session:
-            typer.echo(f"exported={await export_articles(session, path, since)}")
+            count = await export_articles(session, path, since, content_limit)
+        typer.echo(f"exported={count}")
 
     aio.run(run())
 

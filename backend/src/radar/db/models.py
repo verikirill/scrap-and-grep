@@ -17,6 +17,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, TSVECTOR, UUID
@@ -196,6 +197,7 @@ class DigestItem(Base):
     article: Mapped[Article] = relationship(lazy="joined")
 
     __table_args__ = (
+        UniqueConstraint("digest_id", "article_id", name="uq_digest_items_digest_article"),
         Index("ix_digest_items_digest", "digest_id", "selected"),
         Index("ix_digest_items_article", "article_id"),
     )

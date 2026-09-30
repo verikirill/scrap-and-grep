@@ -96,13 +96,16 @@ class OllamaEmbedder:
         *,
         query_prefix: str = "",
         document_prefix: str = "",
-        keep_alive: str = "30m",
+        dimensions: int | None = None,
+        keep_alive: int = 1800,
         batch_size: int = 32,
     ) -> None:
         from langchain_ollama import OllamaEmbeddings
 
         self.model_id = f"ollama:{model}"
-        self._client = OllamaEmbeddings(model=model, base_url=base_url, keep_alive=keep_alive)
+        self._client = OllamaEmbeddings(
+            model=model, base_url=base_url, keep_alive=keep_alive, dimensions=dimensions
+        )
         self._prefix: dict[Kind, str] = {"query": query_prefix, "document": document_prefix}
         self._batch_size = batch_size
 

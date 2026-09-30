@@ -39,7 +39,9 @@ log = get_logger(__name__)
 
 # Enough for the summary prompt; keeps checkpoints small.
 STATE_CONTENT_LIMIT = 4000
-MODEL_NODE_TIMEOUT = 300.0
+# Backstop only. A slow model call times out on its own (llm_timeout_seconds)
+# and falls back to the heuristic; this bounds a node that hangs elsewhere.
+MODEL_NODE_TIMEOUT = 900.0
 _IO_RETRY = RetryPolicy(max_attempts=3, initial_interval=1.0, backoff_factor=2.0)
 
 

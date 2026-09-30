@@ -19,11 +19,11 @@ from radar.logging import configure_logging
 
 # Must exceed the longest legitimate run of a task in the queue, otherwise a
 # slow task would be handed to a second worker while the first still runs.
-INGEST_IDLE_TIMEOUT_MS = 5 * 60 * 1000
-DIGEST_IDLE_TIMEOUT_MS = 20 * 60 * 1000
-STREAM_MAX_LENGTH = 100_000
-
 _settings = get_settings()
+
+INGEST_IDLE_TIMEOUT_MS = 5 * 60 * 1000
+DIGEST_IDLE_TIMEOUT_MS = _settings.digest_task_timeout_seconds * 1000
+STREAM_MAX_LENGTH = 100_000
 
 
 def _broker(queue: str, idle_timeout_ms: int) -> RedisStreamBroker:
