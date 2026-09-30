@@ -1,0 +1,13 @@
+{
+  "interest": 0.45,
+  "resume": 0.1,
+  "learned": 0.35,
+  "peak": 0.3,
+  "fresh": 0.1,
+  "source": 0.08,
+  "collab": 0.07,
+  "avoid": 0.2,
+  "read_penalty": 0.15,
+  "min_score": 0.35,
+  "variety": 0.95
+}
