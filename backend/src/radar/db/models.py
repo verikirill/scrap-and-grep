@@ -142,6 +142,8 @@ class Digest(Base):
     stats: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="{}")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Last sign of life from the build; lets a reaper tell slow from dead.
+    heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     topics: Mapped[list[DigestTopic]] = relationship(
         back_populates="digest", cascade="all, delete-orphan", order_by="DigestTopic.position"

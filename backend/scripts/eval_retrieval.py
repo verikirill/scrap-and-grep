@@ -31,6 +31,7 @@ from radar import aio
 from radar.ai.embedder import Embedder, HashingEmbedder, OllamaEmbedder
 from radar.ai.factory import embedding_preset
 from radar.ai.ollama import OllamaIntelligence
+from radar.ai.prompts import PROMPT_VERSION
 from radar.config import get_settings
 from radar.db import session_scope
 from radar.db.models import Article, Profile
@@ -66,10 +67,16 @@ async def load_articles(start: datetime, end: datetime) -> list[Article]:
 async def grade_all(
     articles: list[Article], profile: ProfileSpec, cache_path: Path, model: str
 ) -> dict[int, int]:
-    """Grade every article with the language model; cached on disk by URL."""
-    cached: dict[str, int] = (
-        json.loads(cache_path.read_text("utf-8")) if cache_path.exists() else {}
-    )
+    """Grade every article with the language model; cached on disk by URL.
+
+    The cache remembers what produced it. Grades made for another profile, by
+    another model or with another prompt are not a reference for this run.
+    """
+    origin = {"profile": profile.fingerprint(), "judge": model, "prompt": PROMPT_VERSION}
+    stored = json.loads(cache_path.read_text("utf-8")) if cache_path.exists() else {}
+    if stored and stored.get("origin") != origin:
+        raise SystemExit(f"{cache_path} was made with {stored.get('origin')}; move it away first")
+    cached: dict[str, int] = stored.get("grades", {})
     settings = get_settings()
     judge = OllamaIntelligence(model, settings.ollama_base_url, temperature=0.0, concurrency=4)
     todo = [article for article in articles if article.url not in cached]
@@ -84,9 +91,14 @@ async def grade_all(
 
     for start in range(0, len(todo), 40):
         await asyncio.gather(*(one(article) for article in todo[start : start + 40]))
-        cache_path.write_text(json.dumps(cached, ensure_ascii=False, indent=0), "utf-8")
+        payload = {"origin": origin, "grades": cached}
+        cache_path.write_text(json.dumps(payload, ensure_ascii=False, indent=0), "utf-8")
         print(f"  {min(start + 40, len(todo))}/{len(todo)}", flush=True)
-    return {article.id: cached[article.url] for article in articles if article.url in cached}
+    ungraded = [article.id for article in articles if article.url not in cached]
+    if ungraded:
+        # An ungraded article would count as irrelevant and flatter every ranking.
+        raise SystemExit(f"{len(ungraded)} articles have no grade; run again to retry them")
+    return {article.id: cached[article.url] for article in articles}
 
 
 def metrics(ranked: list[int], grades: dict[int, int]) -> tuple[float, float, float, float]:

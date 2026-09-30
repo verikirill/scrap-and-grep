@@ -6,7 +6,7 @@ import pytest
 from radar.ai.embedder import HashingEmbedder, fit_dimension
 from radar.domain import Candidate, Grade, ProfileSpec
 from radar.selection.clustering import cluster_items
-from radar.selection.retrieval import exclusion_query, keyword_query
+from radar.selection.retrieval import _excluded_by, exclusion_query, keyword_query
 from radar.selection.scoring import (
     NO_KEYWORD_CEILING,
     REJECT_DUPLICATE,
@@ -63,6 +63,13 @@ def test_keyword_query_quotes_phrases_and_joins_with_or() -> None:
 def test_exclusion_query_requires_every_meaningful_word() -> None:
     # websearch syntax: words separated by spaces are ANDed; "и" is dropped.
     assert exclusion_query("Вакансии и карьера") == "вакансии карьера"
+
+
+def test_exclusion_by_words_is_decisive_by_meaning_only_when_closer_than_the_interest() -> None:
+    assert _excluded_by(("вакансии", 0.5, True), interest_z=4.0) == "вакансии"
+    assert _excluded_by(("вакансии", 3.6, False), interest_z=4.0) is None
+    assert _excluded_by(("вакансии", 4.2, False), interest_z=4.0) == "вакансии"
+    assert _excluded_by(None, interest_z=1.0) is None
 
 
 def test_semantic_score_grows_with_z_score_and_keyword_hit() -> None:

@@ -122,7 +122,7 @@ async def run_digest(
 ) -> None:
     """Build one digest. Safe to call again for the same id.
 
-    A finished digest is left alone. An interrupted one resumes from its last
+    A finished or failed digest is left alone. An interrupted one resumes from its last
     checkpoint, so grades and summaries already paid for are not recomputed.
     """
     cache = cache or get_cache()
@@ -131,7 +131,9 @@ async def run_digest(
         if digest is None:
             log.warning("digest_missing", digest_id=str(digest_id))
             return
-        if digest.status == digest_store.STATUS_DONE:
+        # Done needs no work. Failed is final too: it is set after the last
+        # attempt or by the reaper, and a redelivered message must not revive it.
+        if digest.status in (digest_store.STATUS_DONE, digest_store.STATUS_FAILED):
             return
         initial: DigestState = {
             "digest_id": str(digest_id),

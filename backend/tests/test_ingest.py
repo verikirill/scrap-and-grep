@@ -6,7 +6,7 @@ import feedparser
 import pytest
 
 from radar.ingest.feeds import parse_entries
-from radar.ingest.net import UnsafeUrlError, ensure_public_url
+from radar.ingest.net import UnsafeUrlError, _pinned, ensure_public_url
 from radar.text import canonical_url, content_hash
 
 FEED = """<?xml version="1.0" encoding="UTF-8"?>
@@ -108,3 +108,18 @@ def test_future_publication_date_is_clamped_to_now() -> None:
 async def test_fetcher_refuses_internal_and_non_http_addresses(url: str) -> None:
     with pytest.raises(UnsafeUrlError):
         await ensure_public_url(url)
+
+
+def test_pinned_request_keeps_the_host_name_for_routing_and_tls() -> None:
+    target, headers, extensions = _pinned("https://пример.рф/rss?page=2", "93.184.216.34")
+
+    assert target == "https://93.184.216.34/rss?page=2"
+    assert headers == {"Host": "xn--e1afmkfd.xn--p1ai"}
+    assert extensions == {"sni_hostname": "xn--e1afmkfd.xn--p1ai"}
+
+
+def test_pinned_request_brackets_ipv6_and_keeps_the_port() -> None:
+    target, headers, _ = _pinned("http://feeds.example.org:8080/a", "2001:db8::7")
+
+    assert target == "http://[2001:db8::7]:8080/a"
+    assert headers == {"Host": "feeds.example.org:8080"}

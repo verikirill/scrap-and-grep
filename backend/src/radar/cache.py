@@ -141,8 +141,9 @@ class Cache:
         current state from the database without missing an update in between.
 
         If the server goes away, the generator keeps ticking without messages
-        instead of raising: callers poll the database as a backstop, and a
-        progress stream should degrade to slower updates, not break.
+        instead of raising, and re-subscribes once the server answers again.
+        Callers poll the database as a backstop, so a progress stream degrades
+        to slower updates rather than breaks.
         """
         pubsub = self._redis.pubsub()
         connected = True
@@ -155,7 +156,13 @@ class Cache:
             yield None
             while True:
                 if not connected:
+                    # Keep ticking for the caller and try to come back.
                     await asyncio.sleep(1.0)
+                    try:
+                        await pubsub.subscribe(self._key(channel))
+                        connected = True
+                    except RedisError:
+                        connected = False
                     yield None
                     continue
                 try:

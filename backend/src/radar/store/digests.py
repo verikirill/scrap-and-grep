@@ -64,7 +64,14 @@ async def set_progress(
     await session.execute(
         update(Digest)
         .where(Digest.id == digest_id, Digest.status != STATUS_DONE)
-        .values(status=STATUS_RUNNING, stage=stage, progress=progress, error=None, finished_at=None)
+        .values(
+            status=STATUS_RUNNING,
+            stage=stage,
+            progress=progress,
+            error=None,
+            finished_at=None,
+            heartbeat_at=datetime.now(UTC),
+        )
     )
 
 
@@ -81,13 +88,14 @@ async def fail_stale(session: AsyncSession, older_than: datetime) -> int:
     """Mark digests that never finished as failed, so the UI stops waiting.
 
     Covers the cases the queue cannot: a task lost before it was acknowledged
-    by any worker, or a build that exhausted its retries without reporting.
+    by any worker, or a worker that dies on every attempt. Age is measured
+    from the last progress report, so a long but live build is left alone.
     """
     result = await session.execute(
         update(Digest)
         .where(
             Digest.status.in_([STATUS_QUEUED, STATUS_RUNNING]),
-            Digest.created_at < older_than,
+            func.coalesce(Digest.heartbeat_at, Digest.created_at) < older_than,
         )
         .values(
             status=STATUS_FAILED,

@@ -1,4 +1,10 @@
 {
+"origin": {
+"profile": "bd00ed5f8b1944b7d640f3ba37438a38",
+"judge": "qwen3.5:9b",
+"prompt": "v3"
+},
+"grades": {
 "https://cnews.ru/news/top/2026-09-23_fantaziya_zakonchilassozdatel": 0,
 "https://darkreading.com/threat-intelligence/attackers-manipulate-ai-chatbots-mass-disinformation-phishing-campaign": 1,
 "https://habr.com/ru/articles/1085800": 1,
@@ -845,4 +851,5 @@
 "https://cnews.ru/news/top/2026-09-30_dochka_elementa_nachala": 1,
 "https://securityweek.com/google-ai-is-changing-the-pace-and-profile-of-vulnerability-discovery": 2,
 "https://habr.com/ru/companies/flowwow/articles/1088660": 1
+}
 }

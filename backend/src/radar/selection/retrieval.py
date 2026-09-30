@@ -234,7 +234,12 @@ async def retrieve_candidates(
         )
         for hit in hits:
             strong = semantic and hit.z_score >= EXCLUSION_STRONG_Z
-            if (hit.lexical_hit or strong) and hit.article_id not in excluded:
+            if not (hit.lexical_hit or strong):
+                continue
+            # Several exclusions can hit one article: keep the most decisive
+            # one, a word match first, then the closer in meaning.
+            known = excluded.get(hit.article_id)
+            if known is None or (hit.lexical_hit, hit.z_score) > (known[2], known[1]):
                 excluded[hit.article_id] = (exclusion, hit.z_score, hit.lexical_hit)
 
     refs = await get_refs(session, list({hit.article_id for _, hit in by_interest}))

@@ -9,6 +9,7 @@ the same reason.
 """
 
 import asyncio
+import contextlib
 import ipaddress
 import socket
 from urllib.parse import urljoin, urlsplit, urlunsplit
@@ -109,10 +110,16 @@ def _pinned(url: str, address: str | None) -> tuple[str, dict[str, str], dict[st
         return url, {}, {}
     parts = urlsplit(url)
     host = parts.hostname or ""
+    # "пример.рф" must go out as "xn--e1afmkfd.xn--p1ai", as httpx would have
+    # sent it had the URL not been rewritten to an address. Names that the
+    # codec rejects (an IPv6 literal, for one) are left as they are.
+    with contextlib.suppress(UnicodeError):
+        host = host.encode("idna").decode("ascii")
     literal = f"[{address}]" if ":" in address else address
     netloc = f"{literal}:{parts.port}" if parts.port else literal
     target = urlunsplit((parts.scheme, netloc, parts.path, parts.query, ""))
-    host_header = f"{host}:{parts.port}" if parts.port else host
+    named = f"[{host}]" if ":" in host else host
+    host_header = f"{named}:{parts.port}" if parts.port else named
     # The certificate is still verified against the host name, not the address.
     return target, {"Host": host_header}, {"sni_hostname": host}
 
