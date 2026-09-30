@@ -1,0 +1,207 @@
+name: radar
+
+# One image, several roles. Everything that holds state is a separate service,
+# so the api and the workers can be scaled with --scale without coordination.
+x-backend: &backend
+  build:
+    context: ./backend
+  image: radar-backend:local
+  restart: unless-stopped
+  environment: &backend-env
+    RADAR_ENVIRONMENT: production
+    RADAR_LOG_LEVEL: ${RADAR_LOG_LEVEL:-INFO}
+    RADAR_DATABASE_URL: postgresql+psycopg://radar:${POSTGRES_PASSWORD:-radar}@pgbouncer:6432/radar
+    RADAR_DB_DISABLE_PREPARED_STATEMENTS: "true"
+    RADAR_BROKER_URL: redis://valkey:6379/0
+    RADAR_CACHE_URL: redis://valkey:6379/1
+    RADAR_OLLAMA_BASE_URL: ${RADAR_OLLAMA_BASE_URL:-http://ollama:11434}
+    RADAR_EMBEDDING_PROVIDER: ${RADAR_EMBEDDING_PROVIDER:-hashing}
+    RADAR_EMBEDDING_MODEL: ${RADAR_EMBEDDING_MODEL:-qwen3-embedding:4b}
+    RADAR_LLM_PROVIDER: ${RADAR_LLM_PROVIDER:-heuristic}
+    RADAR_LLM_MODEL: ${RADAR_LLM_MODEL:-qwen3.5:9b}
+    RADAR_LLM_CONCURRENCY: ${RADAR_LLM_CONCURRENCY:-4}
+    RADAR_INGEST_CRON: ${RADAR_INGEST_CRON:-*/15 * * * *}
+  depends_on: &backend-deps
+    migrate:
+      condition: service_completed_successfully
+    pgbouncer:
+      condition: service_healthy
+    valkey:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.6-pg18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: radar
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-radar}
+      POSTGRES_DB: radar
+    command:
+      - postgres
+      - -c
+      - shared_buffers=512MB
+      - -c
+      - effective_cache_size=1GB
+      - -c
+      - maintenance_work_mem=256MB
+      - -c
+      - max_connections=100
+    volumes:
+      - pgdata:/var/lib/postgresql
+    shm_size: 256mb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U radar -d radar"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Replicas open many short-lived connections; the bouncer multiplexes them
+  # onto a small, fixed number of server connections.
+  pgbouncer:
+    image: edoburu/pgbouncer:v1.26.0-p0
+    restart: unless-stopped
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: radar
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-radar}
+      DB_NAME: radar
+      AUTH_TYPE: scram-sha-256
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: "1000"
+      DEFAULT_POOL_SIZE: "20"
+      RESERVE_POOL_SIZE: "5"
+      SERVER_RESET_QUERY: DISCARD ALL
+      IGNORE_STARTUP_PARAMETERS: extra_float_digits,options
+      LISTEN_PORT: "6432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432 -U radar -d radar"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Database 0 is the task broker (streams, append-only file), database 1 the
+  # cache. volatile-lru evicts only keys with a TTL, so queued tasks survive
+  # memory pressure.
+  valkey:
+    image: valkey/valkey:9.1-alpine
+    restart: unless-stopped
+    command:
+      - valkey-server
+      - --appendonly
+      - "yes"
+      - --maxmemory
+      - 512mb
+      - --maxmemory-policy
+      - volatile-lru
+    volumes:
+      - valkeydata:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Schema migrations, checkpoint tables and the default sources and profiles.
+  # Talks to PostgreSQL directly: DDL does not belong behind a transaction pool.
+  migrate:
+    <<: *backend
+    restart: "no"
+    command: ["radar", "migrate", "--seed", "--sample", "/samples/articles.jsonl"]
+    environment:
+      <<: *backend-env
+      RADAR_DATABASE_URL: postgresql+psycopg://radar:${POSTGRES_PASSWORD:-radar}@postgres:5432/radar
+      RADAR_DB_DISABLE_PREPARED_STATEMENTS: "false"
+    volumes:
+      # A snapshot of real publications, so the first digest can be built
+      # before the first feed fetch finishes (or with no internet at all).
+      - ./data/samples:/samples:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    <<: *backend
+    command: ["uvicorn", "radar.api.app:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
+    deploy:
+      replicas: ${API_REPLICAS:-2}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health/live', timeout=3).status == 200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+
+  # Feed fetching and embedding: I/O-bound, cheap to scale.
+  worker-ingest:
+    <<: *backend
+    command: ["taskiq", "worker", "radar.worker.brokers:ingest_broker", "radar.worker.tasks", "--ack-type", "when_executed", "--max-async-tasks", "16", "--workers", "1"]
+    deploy:
+      replicas: ${INGEST_WORKERS:-1}
+
+  # Digest building: bound by the model server, scaled separately so a burst
+  # of digests cannot starve ingestion.
+  worker-digest:
+    <<: *backend
+    command: ["taskiq", "worker", "radar.worker.brokers:digest_broker", "radar.worker.tasks", "--ack-type", "when_executed", "--max-async-tasks", "2", "--workers", "1"]
+    deploy:
+      replicas: ${DIGEST_WORKERS:-2}
+
+  scheduler:
+    <<: *backend
+    command: ["taskiq", "scheduler", "radar.worker.brokers:scheduler", "radar.worker.tasks"]
+
+  # Caddy serves the built frontend and balances /api across api replicas.
+  web:
+    build:
+      context: ./frontend
+    image: radar-web:local
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:80/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+
+  ollama:
+    profiles: ["ollama"]
+    image: ollama/ollama:0.35.0
+    restart: unless-stopped
+    environment:
+      OLLAMA_NUM_PARALLEL: ${OLLAMA_NUM_PARALLEL:-4}
+      OLLAMA_MAX_LOADED_MODELS: "2"
+      OLLAMA_KEEP_ALIVE: 30m
+    volumes:
+      - ollama:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  ollama-pull:
+    profiles: ["ollama"]
+    image: ollama/ollama:0.35.0
+    restart: "no"
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - ollama pull ${RADAR_EMBEDDING_MODEL:-qwen3-embedding:4b} && ollama pull ${RADAR_LLM_MODEL:-qwen3.5:9b}
+    depends_on:
+      ollama:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  valkeydata:
+  ollama:

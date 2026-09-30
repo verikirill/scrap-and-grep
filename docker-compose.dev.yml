@@ -1,0 +1,17 @@
+# Publishes the stateful services on localhost so the backend and the Vite dev
+# server can run outside Docker.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres valkey
+services:
+  postgres:
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+  valkey:
+    ports:
+      - "127.0.0.1:${VALKEY_PORT:-6379}:6379"
+  ollama:
+    ports:
+      - "127.0.0.1:${OLLAMA_PORT:-11434}:11434"
+  api:
+    ports:
+      - "127.0.0.1:${API_PORT:-8088}:8000"
