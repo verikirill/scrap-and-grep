@@ -4,9 +4,15 @@
             -> summarize (per item) + name_topic (per topic) -> compose -> persist
 
 State holds JSON-ready dicts only. With a Postgres checkpointer every finished
-step, including each individual grade or summary, survives a worker crash, and
-a redelivered task resumes where the previous attempt stopped instead of
-paying for the model calls again.
+step survives a worker crash, and a redelivered task resumes from the step
+that was interrupted.
+
+Inside a fan-out step the guarantee depends on how the attempt ended. If one
+task fails, the results of its siblings are kept and only the failed task runs
+again. If the process is killed, the whole step restarts: LangGraph writes the
+results of a step's tasks when the step ends (measured with both "async" and
+"sync" durability). The model calls are still not paid for twice, because each
+answer is cached the moment it arrives (ai/resilient.py).
 """
 
 import operator

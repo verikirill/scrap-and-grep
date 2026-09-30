@@ -9,6 +9,17 @@ import { STAGE_LABELS } from '../../lib/format'
 // into their neighbours because they take a fraction of a second.
 const STEPS = ['prepare', 'retrieve', 'grade', 'select', 'summarize', 'compose'] as const
 
+// One word per step: six of them share a row, and the heading above already
+// says in full what is going on.
+const STEP_NAMES: Record<(typeof STEPS)[number], string> = {
+  prepare: 'Подготовка',
+  retrieve: 'Поиск',
+  grade: 'Оценка',
+  select: 'Отбор',
+  summarize: 'Выжимки',
+  compose: 'Сборка',
+}
+
 function stepIndex(stage: string | null | undefined): number {
   if (stage === 'persist' || stage === 'done') return STEPS.length
   const index = STEPS.indexOf(stage as (typeof STEPS)[number])
@@ -101,7 +112,7 @@ export function ProgressCard({ digest, event }: Props) {
                   isDone || isActive ? 'text-text' : 'text-faint',
                 )}
               >
-                {STAGE_LABELS[step]}
+                {STEP_NAMES[step]}
               </span>
             </li>
           )

@@ -4,12 +4,14 @@ from collections.abc import Sequence
 
 import numpy as np
 from sklearn.cluster import AgglomerativeClustering
-from sklearn.metrics import silhouette_score
 
 from radar.domain import SelectedItem
 
 MIN_ITEMS_TO_CLUSTER = 4
-MAX_TOPICS = 7
+MAX_TOPICS = 6
+# A topic of about five entries reads well; fewer topics hide the structure,
+# more turn the digest into a list of headings.
+ITEMS_PER_TOPIC = 5
 
 
 def cluster_items(
@@ -17,39 +19,36 @@ def cluster_items(
 ) -> list[list[SelectedItem]]:
     """Split items into topics, most important topic first.
 
-    The number of topics is chosen by silhouette score rather than a distance
-    threshold, because a threshold would have to be re-tuned for every
-    embedding model. When the vectors carry no meaning (the offline embedder) or
-    are missing, items are grouped by the interest that selected them.
+    Ward linkage on unit vectors, with the number of topics taken from the
+    size of the digest. The first version chose the number by silhouette score
+    with average linkage; on real digests that split 20 items into 18 and 2,
+    because one broad theme plus two outliers is what the score rewards. Ward
+    keeps topics balanced, and the same three digests came out as 6+6+4+4.
+
+    When the vectors carry no meaning (the offline embedder) or are missing,
+    items are grouped by the interest that selected them.
     """
     clusterable = semantic and len(items) >= MIN_ITEMS_TO_CLUSTER
     if not clusterable or any(item.article.id not in vectors for item in items):
         return _order(_group_by_interest(items))
 
-    matrix = np.vstack([vectors[item.article.id] for item in items])
-    labels = _best_labels(matrix)
+    matrix = np.vstack([vectors[item.article.id] for item in items]).astype(np.float64)
+    norms = np.linalg.norm(matrix, axis=1, keepdims=True)
+    labels = _topic_labels(matrix / np.where(norms == 0, 1.0, norms))
     groups: dict[int, list[SelectedItem]] = {}
     for item, label in zip(items, labels, strict=True):
         groups.setdefault(int(label), []).append(item)
     return _order(list(groups.values()))
 
 
-def _best_labels(matrix: np.ndarray) -> np.ndarray:
-    upper = min(MAX_TOPICS, len(matrix) - 1)
-    best_labels = np.zeros(len(matrix), dtype=int)
-    best_quality = -1.0
-    for count in range(2, upper + 1):
-        labels = AgglomerativeClustering(
-            n_clusters=count, metric="cosine", linkage="average"
-        ).fit_predict(matrix)
-        quality = float(silhouette_score(matrix, labels, metric="cosine"))
-        # A split that leaves most items alone in their topic is not a grouping.
-        singletons = int(np.sum(np.bincount(labels) == 1))
-        if singletons > count // 2:
-            continue
-        if quality > best_quality:
-            best_quality, best_labels = quality, labels
-    return best_labels
+def _topic_labels(matrix: np.ndarray) -> np.ndarray:
+    count = max(2, min(MAX_TOPICS, len(matrix) // 2, round(len(matrix) / ITEMS_PER_TOPIC)))
+    while True:
+        labels = AgglomerativeClustering(n_clusters=count, linkage="ward").fit_predict(matrix)
+        # A topic of one entry is not a topic; try a coarser split instead.
+        if count == 2 or int(np.bincount(labels).min()) > 1:
+            return np.asarray(labels)
+        count -= 1
 
 
 def _group_by_interest(items: Sequence[SelectedItem]) -> list[list[SelectedItem]]:

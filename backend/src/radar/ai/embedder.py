@@ -86,7 +86,6 @@ def _features(token: str) -> list[str]:
 class OllamaEmbedder:
     """Embeddings served by Ollama through LangChain."""
 
-    duplicate_threshold = 0.88
     semantic = True
 
     def __init__(
@@ -97,12 +96,14 @@ class OllamaEmbedder:
         query_prefix: str = "",
         document_prefix: str = "",
         dimensions: int | None = None,
+        duplicate_threshold: float = 0.88,
         keep_alive: int = 1800,
         batch_size: int = 32,
     ) -> None:
         from langchain_ollama import OllamaEmbeddings
 
         self.model_id = f"ollama:{model}"
+        self.duplicate_threshold = duplicate_threshold
         self._client = OllamaEmbeddings(
             model=model, base_url=base_url, keep_alive=keep_alive, dimensions=dimensions
         )

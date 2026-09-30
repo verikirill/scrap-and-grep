@@ -178,6 +178,28 @@ def test_clustering_separates_topics_and_puts_the_strongest_first(
     assert groups[0][0].graded.score == pytest.approx(0.9)
 
 
+def test_one_broad_theme_with_outliers_is_still_split_into_readable_topics(
+    profile: ProfileSpec, make_graded: GradedFactory
+) -> None:
+    # The shape real digests have: three neighbouring sub-themes and two
+    # unrelated articles. A split into "18 and 2" is what must not happen.
+    rng = np.random.default_rng(11)
+    subthemes = [np.array([1.0, 0.45, 0.0, 0.0]), np.array([1.0, 0.0, 0.45, 0.0]),
+                 np.array([1.0, -0.45, -0.45, 0.0])]  # fmt: skip
+    outlier = np.array([0.0, 0.0, 0.0, 1.0])
+    centers = [center for center in subthemes for _ in range(6)] + [outlier, outlier]
+    graded = [make_graded(f"Публикация {chr(1040 + n) * (n + 3)}", 0.7) for n in range(20)]
+    selected, _ = select(graded, profile.model_copy(update={"max_items": 20}), {}, 0.99)
+    vectors = {}
+    for item, center in zip(selected, centers, strict=True):
+        noisy = center + rng.normal(0, 0.03, 4)
+        vectors[item.article.id] = (noisy / np.linalg.norm(noisy)).astype(np.float32)
+
+    groups = cluster_items(selected, vectors)
+
+    assert sorted(len(group) for group in groups) == [2, 6, 6, 6]
+
+
 def test_spelling_only_vectors_are_not_clustered_but_grouped_by_interest(
     profile: ProfileSpec, make_graded: GradedFactory
 ) -> None:

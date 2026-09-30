@@ -1,5 +1,6 @@
 """The digest graph end to end, with storage and models replaced by fakes."""
 
+import asyncio
 from collections.abc import Sequence
 from datetime import datetime
 from typing import Any
@@ -213,6 +214,39 @@ async def test_failed_run_resumes_from_checkpoint_without_repeating_model_calls(
     assert store.saved is not None
     assert (intelligence.grade_calls, intelligence.summary_calls) == calls_before_resume
     assert store.saved["stats"]["selected"] == 2
+
+
+async def test_failed_grade_is_the_only_one_repeated_on_resume(
+    profile: ProfileSpec, articles: list[ArticleRef]
+) -> None:
+    class FailsOnce(CountingIntelligence):
+        def __init__(self, article_id: int) -> None:
+            super().__init__()
+            self.graded: list[int] = []
+            self._fail_for: int | None = article_id
+
+        async def grade(self, candidate: Candidate, profile: ProfileSpec) -> Grade:
+            self.graded.append(candidate.article.id)
+            if candidate.article.id == self._fail_for:
+                # Let the sibling tasks of the fan-out finish first.
+                await asyncio.sleep(0.1)
+                self._fail_for = None
+                raise ConnectionError("model server dropped the connection")
+            return await super().grade(candidate, profile)
+
+    store = FakeStore(articles)
+    intelligence = FailsOnce(articles[1].id)
+    graph = build_graph(_deps(store, intelligence)).compile(checkpointer=InMemorySaver())
+
+    with pytest.raises(ConnectionError):
+        await graph.ainvoke(_input(profile), CONFIG)
+    graded_in_first_attempt = len(intelligence.graded)
+
+    await graph.ainvoke(None, CONFIG)
+
+    assert intelligence.graded[graded_in_first_attempt:] == [articles[1].id]
+    assert store.saved is not None
+    assert store.saved["stats"]["candidates"] == len(articles)
 
 
 async def test_model_outage_degrades_to_heuristic_instead_of_failing(

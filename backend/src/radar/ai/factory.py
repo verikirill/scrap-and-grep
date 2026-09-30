@@ -19,6 +19,10 @@ class EmbeddingPreset:
     document_prefix: str = ""
     # Ask the server for a shorter Matryoshka vector instead of truncating here.
     dimensions: int | None = None
+    # Cosine above which two articles are one story. Model-specific: each model
+    # spreads similarities over its own range. 0.88 is a cautious default for
+    # models that were not calibrated on real data.
+    duplicate_threshold: float = 0.88
 
 
 # Ollama does not add prompts itself; a model used without its prefix loses
@@ -30,8 +34,12 @@ _EMBEDDING_PRESETS: dict[str, EmbeddingPreset] = {
         ),
         dimensions=EMBEDDING_DIM,
     ),
+    # Calibrated on a real digest: four reports on one Citrix incident sit at
+    # 0.73-0.84 to each other, the closest unrelated pair at 0.68.
     "embeddinggemma": EmbeddingPreset(
-        query_prefix="task: search result | query: ", document_prefix="title: none | text: "
+        query_prefix="task: search result | query: ",
+        document_prefix="title: none | text: ",
+        duplicate_threshold=0.76,
     ),
     "snowflake-arctic-embed2": EmbeddingPreset(query_prefix="query: "),
     "nomic-embed-text": EmbeddingPreset(
@@ -58,6 +66,7 @@ def get_embedder() -> Embedder:
             query_prefix=settings.embedding_query_prefix or preset.query_prefix,
             document_prefix=settings.embedding_document_prefix or preset.document_prefix,
             dimensions=preset.dimensions,
+            duplicate_threshold=preset.duplicate_threshold,
             keep_alive=settings.ollama_keep_alive_seconds,
             batch_size=settings.embedding_batch_size,
         )
