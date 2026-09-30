@@ -26,6 +26,7 @@ import {
 } from '../../lib/format'
 import { useFeedback, useReactions } from '../../lib/queries'
 import { ReactionBar } from '../feed/ReactionBar'
+import { ShortPanel } from './ShortPanel'
 
 function Funnel({ digest }: { digest: Digest }) {
   const stats = digest.stats
@@ -333,6 +334,8 @@ export function DigestView({ digest, previousId }: { digest: Digest; previousId?
           {digest.finished_at && ` · ${formatDateTime(digest.finished_at)}`}
         </p>
       </Card>
+
+      {digest.topics.length > 0 && <ShortPanel digestId={digest.id} />}
 
       {digest.topics.length === 0 ? (
         <Card className="px-6 py-10 text-center text-sm text-muted">

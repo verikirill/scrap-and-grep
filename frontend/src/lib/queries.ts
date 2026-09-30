@@ -21,6 +21,7 @@ import type {
   Resume,
   Source,
   SourceCreate,
+  Video,
 } from './api'
 
 export const keys = {
@@ -34,12 +35,14 @@ export const keys = {
   sources: ['sources'] as const,
   digests: ['digests'] as const,
   digest: (id: string) => ['digest', id] as const,
+  short: (digestId: string) => ['short', digestId] as const,
 }
 
 const ARTICLES_PAGE = 30
 const FEED_PAGE = 20
 const ACTIVE_POLL_MS = 4_000
 const RESUME_POLL_MS = 1_200
+const SHORT_POLL_MS = 2_500
 
 const isBuilding = (digest: { status: string } | undefined) =>
   digest?.status === 'queued' || digest?.status === 'running'
@@ -121,6 +124,33 @@ export function useDeleteDigest() {
   return useMutation({
     mutationFn: api.deleteDigest,
     onSuccess: () => client.invalidateQueries({ queryKey: keys.digests }),
+  })
+}
+
+/** The digest's short video, polled while it is being made. The server gives
+ * up on a stuck video by itself, so the polling always ends. */
+export const useShort = (digestId: string, isEnabled: boolean) =>
+  useQuery({
+    queryKey: keys.short(digestId),
+    queryFn: () => api.short(digestId),
+    enabled: isEnabled,
+    refetchInterval: (query) =>
+      query.state.status !== 'error' && isBuilding(query.state.data ?? undefined)
+        ? SHORT_POLL_MS
+        : false,
+  })
+
+export function useCreateShort(digestId: string) {
+  const client = useQueryClient()
+  const key = keys.short(digestId)
+  return useMutation({
+    mutationFn: () => api.createShort(digestId),
+    // A poll that started before the order would bring back the old video
+    // and stop the polling of the new one.
+    onMutate: () => client.cancelQueries({ queryKey: key }),
+    onSuccess: (video) => client.setQueryData<Video | null>(key, video),
+    // Refused (another video is being made, say): show what the server has.
+    onSettled: () => client.invalidateQueries({ queryKey: key }),
   })
 }
 

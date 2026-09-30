@@ -225,6 +225,28 @@ export interface Meta {
   resume_parser: 'builtin' | 'docling'
   resume_formats: string[]
   resume_max_bytes: number
+  /** Short videos of digests can be ordered on this server. */
+  shorts: boolean
+  /** ...and they get a voice; without it captions carry the story. */
+  shorts_voice: boolean
+}
+
+export type VideoStage = 'script' | 'voice' | 'render'
+
+export interface Video {
+  status: DigestStatus
+  stage: VideoStage | null
+  progress: number
+  error: string | null
+  /** "qwen3-tts:<speaker>", or null for a silent video with captions. */
+  voice: string | null
+  by_model: boolean
+  duration_ms: number | null
+  size_bytes: number | null
+  created_at: string
+  finished_at: string | null
+  /** Where to watch it; set once it is done. */
+  url: string | null
 }
 
 export interface User {
@@ -467,6 +489,11 @@ export const api = {
   deleteDigest: (id: string) => request<void>(`/digests/${id}`, { method: 'DELETE' }),
   compare: (base: string, other: string) =>
     request<Comparison>(`/digests/compare${query({ base, other })}`),
+
+  /** `null` when no video of the digest was ordered. */
+  short: (digestId: string) => request<Video | null>(`/digests/${digestId}/short`),
+  createShort: (digestId: string) =>
+    request<Video>(`/digests/${digestId}/short`, { method: 'POST' }),
 
   exportUrl: (id: string, format: 'md' | 'docx') => `${API_BASE}/digests/${id}/export.${format}`,
   eventsUrl: (id: string) => `${API_BASE}/digests/${id}/events`,
