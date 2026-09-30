@@ -1,0 +1,113 @@
+"""Render a digest as a DOCX document."""
+
+from io import BytesIO
+
+from docx import Document
+from docx.enum.text import WD_BREAK
+from docx.opc.constants import RELATIONSHIP_TYPE
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+from docx.shared import Pt, RGBColor
+from docx.text.paragraph import Paragraph
+
+from radar.render.markdown import format_date, format_datetime, methodology
+from radar.views import DigestView, ItemView
+
+_LINK_COLOR = "1F5FBF"
+_MUTED = RGBColor(0x5F, 0x6B, 0x7A)
+
+
+def add_hyperlink(paragraph: Paragraph, url: str, text: str, *, bold: bool = False) -> None:
+    """python-docx has no hyperlink API; build the run by hand."""
+    relation = paragraph.part.relate_to(url, RELATIONSHIP_TYPE.HYPERLINK, is_external=True)
+    hyperlink = OxmlElement("w:hyperlink")
+    hyperlink.set(qn("r:id"), relation)
+    run = OxmlElement("w:r")
+    properties = OxmlElement("w:rPr")
+    color = OxmlElement("w:color")
+    color.set(qn("w:val"), _LINK_COLOR)
+    underline = OxmlElement("w:u")
+    underline.set(qn("w:val"), "single")
+    properties.append(color)
+    properties.append(underline)
+    if bold:
+        properties.append(OxmlElement("w:b"))
+    run.append(properties)
+    text_node = OxmlElement("w:t")
+    text_node.text = text
+    text_node.set(qn("xml:space"), "preserve")
+    run.append(text_node)
+    hyperlink.append(run)
+    paragraph._p.append(hyperlink)
+
+
+def _muted(paragraph: Paragraph, text: str) -> None:
+    run = paragraph.add_run(text)
+    run.font.size = Pt(9)
+    run.font.color.rgb = _MUTED
+
+
+def _item(document: Document, item: ItemView) -> None:  # type: ignore[valid-type]
+    heading = document.add_paragraph()  # type: ignore[attr-defined]
+    heading.paragraph_format.space_before = Pt(10)
+    heading.paragraph_format.keep_with_next = True
+    add_hyperlink(heading, item.url, item.headline, bold=True)
+
+    meta = [item.source_name, format_date(item.published_at), f"релевантность {item.score:.2f}"]
+    if item.interest_title:
+        meta.append(f"интерес: {item.interest_title}")
+    _muted(document.add_paragraph(), " · ".join(meta))  # type: ignore[attr-defined]
+
+    if item.headline != item.title:
+        _muted(document.add_paragraph(), f"Оригинал: {item.title}")  # type: ignore[attr-defined]
+    if item.summary:
+        document.add_paragraph(item.summary)  # type: ignore[attr-defined]
+    if item.why:
+        why = document.add_paragraph()  # type: ignore[attr-defined]
+        why.add_run("Почему важно: ").bold = True
+        why.add_run(item.why)
+    if item.duplicates:
+        also = document.add_paragraph()  # type: ignore[attr-defined]
+        also.add_run("Также об этом: ")
+        for index, duplicate in enumerate(item.duplicates):
+            if index:
+                also.add_run(", ")
+            add_hyperlink(also, duplicate.url, duplicate.source_name)
+
+
+def render_docx(digest: DigestView) -> bytes:
+    document = Document()
+    style = document.styles["Normal"]
+    style.font.name = "Calibri"
+    style.font.size = Pt(11)
+
+    document.add_heading(digest.title or f"Дайджест для профиля «{digest.profile_name}»", level=0)
+    _muted(
+        document.add_paragraph(),
+        f"Профиль: {digest.profile_name} (версия {digest.profile_version}) · "
+        f"Период: {format_date(digest.period_start)} - {format_date(digest.period_end)} · "
+        f"Сформирован: {format_datetime(digest.finished_at or digest.created_at)} МСК",
+    )
+
+    if digest.highlights:
+        document.add_heading("Главное", level=1)
+        for highlight in digest.highlights:
+            document.add_paragraph(highlight, style="List Bullet")
+    if not digest.topics:
+        document.add_paragraph("За выбранный период публикаций по интересам профиля не найдено.")
+
+    for number, topic in enumerate(digest.topics, start=1):
+        document.add_heading(f"{number}. {topic.title}", level=1)
+        if topic.overview:
+            document.add_paragraph(topic.overview)
+        for item in topic.items:
+            _item(document, item)
+
+    document.add_paragraph().add_run().add_break(WD_BREAK.LINE)
+    document.add_heading("Как составлен выпуск", level=2)
+    for line in methodology(digest):
+        document.add_paragraph(line, style="List Bullet")
+
+    buffer = BytesIO()
+    document.save(buffer)
+    return buffer.getvalue()

@@ -1,0 +1,98 @@
+[project]
+name = "radar"
+version = "0.1.0"
+description = "AI assistant that builds IT and security news digests for the energy sector"
+authors = [
+    { name = "verikirill", email = "verikirill@mail.ru" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "alembic>=1.20.0",
+    "fastapi>=0.142.2",
+    "feedparser>=6.0.14",
+    "httpx>=0.28.1",
+    "jinja2>=3.1.6",
+    "langchain-core>=1.6.6",
+    "langchain-ollama>=1.1.0",
+    "langgraph>=1.2.12",
+    "langgraph-checkpoint-postgres>=3.1.2",
+    "numpy>=2.5.3",
+    "orjson>=3.12.0",
+    "pgvector>=0.5.0",
+    "prometheus-client>=0.26.0",
+    "psycopg[binary,pool]>=3.3.6",
+    "pydantic>=2.13.5",
+    "pydantic-settings>=2.15.0",
+    "python-docx>=1.2.0",
+    "redis[hiredis]>=8.1.0",
+    "scikit-learn>=1.9.1",
+    "sqlalchemy[asyncio]>=2.1.1",
+    "stamina>=26.1.0",
+    "structlog>=26.1.0",
+    "taskiq>=0.13.0",
+    "taskiq-redis>=1.2.4",
+    "trafilatura>=2.2.0",
+    "typer>=0.27.2",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[project.scripts]
+radar = "radar.cli:app"
+
+[build-system]
+requires = ["uv_build>=0.12.15,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "mypy>=2.3.1",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "ruff>=0.16.9",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W", "F",  # pycodestyle, pyflakes
+    "I",            # import order
+    "B",            # bugbear
+    "UP",           # modern syntax
+    "SIM",          # simplifications
+    "C4",           # comprehensions
+    "S",            # bandit security checks
+    "ASYNC",        # asyncio pitfalls
+    "RUF",
+    "T20",          # stray print()
+    "PT",           # pytest style
+]
+ignore = [
+    "RUF001", "RUF002", "RUF003",  # Cyrillic text is intentional
+    "B008",                         # FastAPI Depends() in defaults
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106"]
+"scripts/**" = ["T201", "ASYNC240"]  # one-off command-line tools that print their report
+"src/radar/migrations/**" = ["E501"]
+"src/radar/seed.py" = ["E501"]  # data tables read better on one line
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-q"
+markers = ["integration: needs a running Valkey; skipped when it is not reachable"]
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+plugins = ["pydantic.mypy"]
+files = ["src"]
+
+[[tool.mypy.overrides]]
+module = ["feedparser.*", "trafilatura.*", "pgvector.*", "sklearn.*", "docx.*", "taskiq_redis.*"]
+ignore_missing_imports = true

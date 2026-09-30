@@ -1,0 +1,105 @@
+import type { SourceCategory } from './api'
+
+const MOSCOW = 'Europe/Moscow'
+
+const dateFormat = new Intl.DateTimeFormat('ru-RU', {
+  day: 'numeric',
+  month: 'short',
+  timeZone: MOSCOW,
+})
+const dateTimeFormat = new Intl.DateTimeFormat('ru-RU', {
+  day: 'numeric',
+  month: 'short',
+  hour: '2-digit',
+  minute: '2-digit',
+  timeZone: MOSCOW,
+})
+const numberFormat = new Intl.NumberFormat('ru-RU')
+const relativeFormat = new Intl.RelativeTimeFormat('ru-RU', { numeric: 'auto' })
+
+export const formatDate = (iso: string) => dateFormat.format(new Date(iso))
+export const formatDateTime = (iso: string) => dateTimeFormat.format(new Date(iso))
+export const formatNumber = (value: number) => numberFormat.format(value)
+
+export function formatRelative(iso: string, now: number = Date.now()): string {
+  const seconds = Math.round((new Date(iso).getTime() - now) / 1000)
+  const steps: [Intl.RelativeTimeFormatUnit, number][] = [
+    ['day', 86_400],
+    ['hour', 3_600],
+    ['minute', 60],
+  ]
+  for (const [unit, size] of steps) {
+    if (Math.abs(seconds) >= size) return relativeFormat.format(Math.round(seconds / size), unit)
+  }
+  return 'только что'
+}
+
+export function formatPeriod(startIso: string, endIso: string): string {
+  return `${formatDate(startIso)} - ${formatDate(endIso)}`
+}
+
+/** Russian plural form: plural(5, ['статья', 'статьи', 'статей']). */
+export function plural(count: number, forms: [string, string, string]): string {
+  const mod10 = count % 10
+  const mod100 = count % 100
+  if (mod10 === 1 && mod100 !== 11) return forms[0]
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return forms[1]
+  return forms[2]
+}
+
+export const CATEGORY_LABELS: Record<SourceCategory, string> = {
+  security: 'Безопасность',
+  ics: 'АСУ ТП',
+  it: 'ИТ',
+  energy: 'Энергетика',
+  regulator: 'Регуляторы',
+}
+
+export const REJECT_LABELS: Record<string, string> = {
+  low_score: 'ниже порога',
+  excluded: 'исключение',
+  duplicate: 'повтор',
+  over_limit: 'сверх лимита',
+}
+
+export const STAGE_LABELS: Record<string, string> = {
+  prepare: 'Готовим публикации',
+  retrieve: 'Ищем по интересам',
+  grade: 'Оцениваем релевантность',
+  select: 'Отбираем и убираем повторы',
+  summarize: 'Пишем выжимки',
+  compose: 'Собираем выпуск',
+  persist: 'Сохраняем',
+  done: 'Готово',
+}
+
+export const SETTING_LABELS: Record<string, string> = {
+  role: 'описание роли',
+  exclusions: 'исключения',
+  min_score: 'порог релевантности',
+  max_items: 'размер выпуска',
+  languages: 'языки',
+  categories: 'категории источников',
+}
+
+/** Short model name for the status line: "ollama:qwen3.5:9b" -> "qwen3.5:9b". */
+export function modelLabel(id: string | undefined): string {
+  if (!id) return 'н/д'
+  if (id.startsWith('hashing')) return 'без модели (n-граммы)'
+  if (id === 'heuristic') return 'без модели (эвристика)'
+  return id.replace(/^ollama:/, '')
+}
+
+/**
+ * Article and source links come from third-party feeds. Anything that is not
+ * plain http(s) is dropped, so a "javascript:" URL can never reach an href.
+ */
+export function externalHref(url: string | null | undefined): string | undefined {
+  if (!url) return undefined
+  try {
+    const { protocol } = new URL(url)
+    return protocol === 'http:' || protocol === 'https:' ? url : undefined
+  } catch {
+    return undefined
+  }
+}

@@ -1,0 +1,156 @@
+"""Request and response models of the HTTP API."""
+
+import uuid
+from datetime import datetime
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
+
+from radar.domain import ProfileSpec, SourceCategory
+from radar.views import ItemView
+
+
+class Page[T](BaseModel):
+    items: list[T]
+    total: int
+    limit: int
+    offset: int
+
+
+class SourceOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    slug: str
+    name: str
+    feed_url: str
+    site_url: str | None
+    category: str
+    language: str
+    enabled: bool
+    fetch_full_text: bool
+    last_fetched_at: datetime | None
+    last_status: str | None
+    last_error: str | None
+    consecutive_failures: int
+    articles: int = 0
+    articles_last_day: int = 0
+
+
+class SourceCreate(BaseModel):
+    name: str = Field(min_length=2, max_length=200)
+    feed_url: HttpUrl
+    site_url: HttpUrl | None = None
+    category: SourceCategory
+    language: Literal["ru", "en"] = "ru"
+    fetch_full_text: bool = False
+
+
+class SourceUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=200)
+    category: SourceCategory | None = None
+    enabled: bool | None = None
+    fetch_full_text: bool | None = None
+
+
+class ArticleOut(BaseModel):
+    id: int
+    url: str
+    title: str
+    summary: str
+    has_full_text: bool
+    source_id: int
+    source_name: str
+    source_category: str
+    language: str
+    tags: list[str]
+    published_at: datetime
+
+
+class ProfileOut(BaseModel):
+    id: uuid.UUID
+    version: int
+    spec: ProfileSpec
+    created_at: datetime
+    updated_at: datetime
+
+
+class DigestCreate(BaseModel):
+    profile_id: uuid.UUID
+    period_days: int | None = Field(default=7, ge=1, le=90)
+    period_start: datetime | None = None
+    period_end: datetime | None = None
+
+    @model_validator(mode="after")
+    def _period(self) -> DigestCreate:
+        explicit = self.period_start is not None and self.period_end is not None
+        if explicit and self.period_start >= self.period_end:  # type: ignore[operator]
+            raise ValueError("period_start must be before period_end")
+        if not explicit and self.period_days is None:
+            raise ValueError("either period_days or both period bounds are required")
+        return self
+
+
+class PreviewRequest(BaseModel):
+    profile: ProfileSpec
+    period_days: int = Field(default=7, ge=1, le=90)
+
+
+class PreviewItem(BaseModel):
+    article_id: int
+    url: str
+    title: str
+    source_name: str
+    published_at: datetime
+    score: float
+    interest_id: str
+    interest_title: str | None
+    lexical_hit: bool
+    selected: bool
+    reject_reason: str | None
+
+
+class PreviewOut(BaseModel):
+    window_total: int
+    candidates: int
+    selected: int
+    lexical_only: bool
+    embedding_model: str
+    items: list[PreviewItem]
+
+
+class ScoreChange(BaseModel):
+    item: ItemView
+    base_score: float
+    delta: float
+
+
+class InterestChange(BaseModel):
+    id: str
+    title: str
+    change: Literal["added", "removed", "changed"]
+
+
+class CompareOut(BaseModel):
+    base_id: uuid.UUID
+    other_id: uuid.UUID
+    added: list[ItemView]
+    removed: list[ItemView]
+    kept: list[ScoreChange]
+    interest_changes: list[InterestChange]
+    settings_changed: list[str]
+
+
+class MetaOut(BaseModel):
+    version: str
+    embedding_provider: str
+    embedding_model: str
+    llm_provider: str
+    llm_model: str
+    articles: int
+    articles_last_day: int
+    embedded: int
+    oldest_article: datetime | None
+    newest_article: datetime | None
+    sources: int
+    sources_failing: int
