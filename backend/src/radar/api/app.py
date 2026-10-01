@@ -140,7 +140,8 @@ def create_app() -> FastAPI:
     @app.exception_handler(Exception)
     async def unhandled(request: Request, exc: Exception) -> JSONResponse:
         # Details stay in the log; the client gets a stable, non-revealing message.
-        log.exception("unhandled_error", path=request.url.path)
+        # The template, not the path: a path may carry a share link's token.
+        log.exception("unhandled_error", path=_route_template(request))
         return JSONResponse(status_code=500, content={"detail": "Внутренняя ошибка сервиса."})
 
     app.include_router(system.router)

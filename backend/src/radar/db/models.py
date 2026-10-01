@@ -250,12 +250,18 @@ class Profile(Base):
     # Not part of the spec, so a new icon is not a new version of the profile.
     icon: Mapped[str | None] = mapped_column(String(24))
     color: Mapped[str | None] = mapped_column(String(12))
+    # A link that hands a copy of the profile to another reader; null while
+    # the owner shares nothing. Owners see it again, so it is kept as is.
+    share_token: Mapped[str | None] = mapped_column(String(32))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    __table_args__ = (Index("ix_profiles_user_created", "user_id", "created_at"),)
+    __table_args__ = (
+        Index("ix_profiles_user_created", "user_id", "created_at"),
+        Index("ux_profiles_share_token", "share_token", unique=True),
+    )
 
 
 class Digest(Base):
