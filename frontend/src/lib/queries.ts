@@ -15,6 +15,8 @@ import type {
   FeedPage,
   Me,
   Adaptation,
+  DigestSchedule,
+  ScheduleInput,
   Profile,
   ProfileSpec,
   ProgressEvent,
@@ -29,6 +31,7 @@ import type {
 
 export const keys = {
   meta: ['meta'] as const,
+  schedules: ['digest-schedules'] as const,
   mcpKeys: ['mcp-keys'] as const,
   me: ['me'] as const,
   resume: ['resume'] as const,
@@ -47,6 +50,7 @@ const FEED_PAGE = 20
 const ACTIVE_POLL_MS = 4_000
 const RESUME_POLL_MS = 1_200
 const SHORT_POLL_MS = 2_500
+const SCHEDULE_POLL_MS = 60_000
 
 const isBuilding = (digest: { status: string } | undefined) =>
   digest?.status === 'queued' || digest?.status === 'running'
@@ -60,12 +64,21 @@ export const useSources = () =>
   useQuery({ queryKey: keys.sources, queryFn: api.sources, refetchInterval: 30_000 })
 
 /** The list is polled only while some digest in it is still being built. */
-export const useDigests = () =>
-  useQuery({
+export function useDigests() {
+  const client = useQueryClient()
+  return useQuery({
     queryKey: keys.digests,
     queryFn: () => api.digests(),
-    refetchInterval: (query) => (query.state.data?.some(isBuilding) ? ACTIVE_POLL_MS : false),
+    // Fast while something builds; once a minute while a schedule may add a
+    // digest by itself, so it shows up without a reload.
+    refetchInterval: (query) =>
+      query.state.data?.some(isBuilding)
+        ? ACTIVE_POLL_MS
+        : client.getQueryData<DigestSchedule[]>(keys.schedules)?.length
+          ? SCHEDULE_POLL_MS
+          : false,
   })
+}
 
 /**
  * One digest. While it is being built the row is polled as well as streamed:
@@ -731,4 +744,53 @@ export function useDecideSuggestion() {
       void client.invalidateQueries({ queryKey: adaptationKey(profileId) })
     },
   })
+}
+
+/** The reader's picture: a new address in the cached "me" at once. */
+export function useAvatar() {
+  const client = useQueryClient()
+  const put = (avatarUrl: string | null) =>
+    client.setQueryData<Me | null>(keys.me, (me) => (me ? { ...me, avatar_url: avatarUrl } : me))
+  return {
+    upload: useMutation({
+      mutationFn: api.uploadAvatar,
+      onSuccess: ({ avatar_url }) => put(avatar_url),
+    }),
+    remove: useMutation({
+      mutationFn: api.deleteAvatar,
+      onSuccess: () => put(null),
+    }),
+  }
+}
+
+/** Refreshed once a minute: after a run the next slot moves on. */
+export const useSchedules = () =>
+  useQuery({
+    queryKey: keys.schedules,
+    queryFn: api.schedules,
+    refetchInterval: (query) => (query.state.data?.length ? SCHEDULE_POLL_MS : false),
+    refetchOnWindowFocus: true,
+  })
+
+/** Set or drop a profile's schedule; the list follows at once. */
+export function useSchedule() {
+  const client = useQueryClient()
+  return {
+    save: useMutation({
+      mutationFn: ({ profileId, schedule }: { profileId: string; schedule: ScheduleInput }) =>
+        api.putSchedule(profileId, schedule),
+      onSuccess: (saved) =>
+        client.setQueryData<DigestSchedule[]>(keys.schedules, (list = []) => [
+          ...list.filter((item) => item.profile_id !== saved.profile_id),
+          saved,
+        ]),
+    }),
+    remove: useMutation({
+      mutationFn: api.deleteSchedule,
+      onSuccess: (_, profileId) =>
+        client.setQueryData<DigestSchedule[]>(keys.schedules, (list = []) =>
+          list.filter((item) => item.profile_id !== profileId),
+        ),
+    }),
+  }
 }

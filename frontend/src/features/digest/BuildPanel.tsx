@@ -5,7 +5,7 @@ import { AnimatePresence, LayoutGroup, motion } from 'motion/react'
 import { Suspense, lazy, useState } from 'react'
 import type { DateRange } from 'react-day-picker'
 import { Link } from 'react-router'
-import { CalendarMonth, CircleCheck, Newspaper } from '../../components/icons'
+import { CalendarMonth, CircleCheck, EventRepeat, Newspaper } from '../../components/icons'
 import { Segmented } from '../../components/Segmented'
 import { useRadioKeys } from '../../components/useRadioKeys'
 import { ProfileAvatar } from '../profiles/ProfileLook'
@@ -14,7 +14,9 @@ import { Button, Card, ErrorNote, Spinner } from '../../components/ui'
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover'
 import type { DigestPeriod, Profile } from '../../lib/api'
 import { plural } from '../../lib/format'
-import { useCreateDigest } from '../../lib/queries'
+import { useCreateDigest, useSchedules } from '../../lib/queries'
+import { scheduleLabel } from '../../lib/schedule'
+import { ScheduleControl } from './ScheduleControl'
 
 const PERIODS = [
   { value: '1', label: 'Сутки' },
@@ -68,6 +70,7 @@ export function BuildPanel({ profiles, initialProfileId, onCreated }: Props) {
   // The calendar's limits: stable between renders, renewed whenever it opens.
   const [today, setToday] = useState(() => new Date())
   const create = useCreateDigest()
+  const schedules = useSchedules()
 
   // An explicit click wins; otherwise the profile from the URL, then the first one.
   const fromUrl = profiles.some((profile) => profile.id === initialProfileId)
@@ -75,6 +78,9 @@ export function BuildPanel({ profiles, initialProfileId, onCreated }: Props) {
     : null
   const selectedId = profileId ?? fromUrl ?? profiles[0]?.id ?? null
   const chosen = periodOf(period, range, today)
+  const selected = profiles.find((profile) => profile.id === selectedId) ?? null
+  const scheduleOf = (profileId: string) =>
+    schedules.data?.find((item) => item.profile_id === profileId) ?? null
   const profileKeys = useRadioKeys(
     profiles.length,
     profiles.findIndex((profile) => profile.id === selectedId),
@@ -112,6 +118,7 @@ export function BuildPanel({ profiles, initialProfileId, onCreated }: Props) {
           {profiles.map((profile, index) => {
             const isActive = profile.id === selectedId
             const count = profile.spec.interests.length
+            const schedule = scheduleOf(profile.id)
             return (
               <button
                 key={profile.id}
@@ -148,6 +155,17 @@ export function BuildPanel({ profiles, initialProfileId, onCreated }: Props) {
                     {count} {plural(count, ['интерес', 'интереса', 'интересов'])} · до{' '}
                     {profile.spec.max_items} публикаций
                   </span>
+                  {schedule && (
+                    <span
+                      className={clsx(
+                        'mt-1 flex items-center gap-1 text-xs',
+                        isActive ? 'opacity-80' : 'text-primary',
+                      )}
+                    >
+                      <EventRepeat size={13} filled />
+                      <span className="truncate">{scheduleLabel(schedule)}</span>
+                    </span>
+                  )}
                 </span>
                 <AnimatePresence initial={false}>
                   {isActive && (
@@ -240,6 +258,9 @@ export function BuildPanel({ profiles, initialProfileId, onCreated }: Props) {
         <div className="mt-3">
           <ErrorNote error={create.error} />
         </div>
+      )}
+      {selected && schedules.isSuccess && (
+        <ScheduleControl key={selected.id} profile={selected} schedule={scheduleOf(selected.id)} />
       )}
     </Card>
   )
