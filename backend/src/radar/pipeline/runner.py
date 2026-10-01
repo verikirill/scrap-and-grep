@@ -14,6 +14,7 @@ from radar.ai.factory import get_embedder, get_intelligence
 from radar.cache import Cache, get_cache
 from radar.config import get_settings
 from radar.db import session_scope
+from radar.events import record
 from radar.logging import get_logger
 from radar.pipeline.graph import DigestState, build_graph
 from radar.pipeline.ports import PipelineDeps
@@ -159,6 +160,7 @@ async def run_digest(
         events_channel(digest_id), {"status": "done", "stage": "done", "progress": 1.0}
     )
     log.info("digest_done", digest_id=str(digest_id))
+    await record.digest_built(digest_id)
 
 
 async def _execute(

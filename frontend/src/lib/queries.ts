@@ -17,6 +17,7 @@ import type {
   Adaptation,
   DigestSchedule,
   ScheduleInput,
+  Placement,
   Profile,
   ProfileSpec,
   ProgressEvent,
@@ -502,6 +503,7 @@ type Feedback = {
   kind: ReactionKind
   isActive: boolean
   context: 'feed' | 'digest'
+  placement?: Placement
 }
 
 type FeedPages = { pages: FeedPage[]; pageParams: unknown[] }
@@ -566,8 +568,8 @@ export function useFeedback() {
   const client = useQueryClient()
   return useMutation({
     scope: { id: 'feedback' },
-    mutationFn: ({ articleId, kind, isActive, context }: Feedback) =>
-      api.feedback(articleId, kind, isActive, context),
+    mutationFn: ({ articleId, kind, isActive, context, placement }: Feedback) =>
+      api.feedback(articleId, kind, isActive, context, placement),
     onMutate: async ({ articleId, kind, isActive }) => {
       // A reactions request in flight would overwrite the optimistic state
       // with an older answer. The feed itself is not cancelled: that would

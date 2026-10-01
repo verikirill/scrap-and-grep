@@ -1,5 +1,6 @@
 import { useCallback, useRef } from 'react'
 import { api } from './api'
+import type { ListSlot, Placement, SeenItem } from './api'
 
 export type SeenContext = 'feed' | 'digest'
 
@@ -9,30 +10,49 @@ const VISIBLE_SHARE = 0.5
 const VISIBLE_MS = 800
 const FLUSH_MS = 4000
 const BATCH = 60
+const NO_LIST = ''
 
-const queued: Record<SeenContext, Set<number>> = { feed: new Set(), digest: new Set() }
+// Per context, then per list (a feed snapshot or a digest): what to send.
+const queued: Record<SeenContext, Map<string, Map<number, SeenItem>>> = {
+  feed: new Map(),
+  digest: new Map(),
+}
 // Reported once per page load: a second look says nothing new.
 const reported: Record<SeenContext, Set<number>> = { feed: new Set(), digest: new Set() }
+let queuedCount = 0
 let timer: number | undefined
 
 function flush(): void {
   window.clearTimeout(timer)
   timer = undefined
+  queuedCount = 0
   for (const context of ['feed', 'digest'] as const) {
-    const ids = [...queued[context]]
-    queued[context].clear()
-    for (let start = 0; start < ids.length; start += BATCH) {
-      // An impression is a hint, not a record: a lost batch is not retried.
-      void api.recordImpressions(ids.slice(start, start + BATCH), context).catch(() => undefined)
+    for (const [listId, byArticle] of queued[context]) {
+      const items = [...byArticle.values()]
+      for (let start = 0; start < items.length; start += BATCH) {
+        // An impression is a hint, not a record: a lost batch is not retried.
+        void api
+          .recordImpressions(items.slice(start, start + BATCH), context, listId || null)
+          .catch(() => undefined)
+      }
     }
+    queued[context].clear()
   }
 }
 
-function seen(articleId: number, context: SeenContext): void {
+function seen(articleId: number, context: SeenContext, placement: Placement | undefined): void {
   if (reported[context].has(articleId)) return
   reported[context].add(articleId)
-  queued[context].add(articleId)
-  if (queued[context].size >= BATCH) flush()
+  const listId = placement?.listId ?? NO_LIST
+  const list = queued[context].get(listId) ?? new Map<number, SeenItem>()
+  queued[context].set(listId, list)
+  list.set(articleId, {
+    article_id: articleId,
+    position: placement?.position ?? 0,
+    slot: placement?.slot ?? (context === 'digest' ? 'digest' : 'ranked'),
+  })
+  queuedCount += 1
+  if (queuedCount >= BATCH) flush()
   else timer ??= window.setTimeout(flush, FLUSH_MS)
 }
 
@@ -49,7 +69,13 @@ if (typeof document !== 'undefined') {
   })
 }
 
-type Watch = { articleId: number; context: SeenContext; since?: number; wait?: number }
+type Watch = {
+  articleId: number
+  context: SeenContext
+  placement?: Placement
+  since?: number
+  wait?: number
+}
 const watched = new Map<Element, Watch>()
 let observer: IntersectionObserver | null = null
 
@@ -67,7 +93,7 @@ function observe(element: Element, watch: Watch): void {
           entry.intersectionRect.height >= screen * VISIBLE_SHARE
         if (isVisible) {
           item.wait ??= window.setTimeout(() => {
-            seen(item.articleId, item.context)
+            seen(item.articleId, item.context, item.placement)
             observer?.unobserve(entry.target)
             watched.delete(entry.target)
           }, VISIBLE_MS)
@@ -95,16 +121,27 @@ function forget(element: Element): void {
  * A card the reader has marked is not watched: the mark says more. React
  * calls the ref with null on unmount, which stops the watch.
  */
-export function useSeen(articleId: number, context: SeenContext, isWatched = true) {
+export function useSeen(
+  articleId: number,
+  context: SeenContext,
+  isWatched = true,
+  placement?: Placement,
+) {
   const node = useRef<Element | null>(null)
+  // The placement arrives as a new object on every render; the watch is
+  // renewed only when what it says changes.
+  const listId = placement?.listId ?? null
+  const position = placement?.position ?? 0
+  const slot: ListSlot | undefined = placement?.slot
   return useCallback(
     (element: Element | null) => {
       if (node.current && node.current !== element) forget(node.current)
       node.current = element
       if (element && isWatched && !reported[context].has(articleId)) {
-        observe(element, { articleId, context })
+        const where = slot ? { listId, position, slot } : undefined
+        observe(element, { articleId, context, placement: where })
       }
     },
-    [articleId, context, isWatched],
+    [articleId, context, isWatched, listId, position, slot],
   )
 }

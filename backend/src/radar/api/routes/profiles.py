@@ -21,6 +21,7 @@ from radar.api.schemas import (
 )
 from radar.db.models import Profile
 from radar.domain import ProfileSpec
+from radar.events import record
 from radar.logging import get_logger
 from radar.pipeline.sql_store import CachedQueryEmbedder
 from radar.recsys.service import forget_taste
@@ -267,6 +268,7 @@ async def accept_shared_profile(
         return profile_out(own)
     profile = await _add(session, cache, user.id, spec, icon=source.icon, color=source.color)
     log.info("shared_profile_added", source_id=str(source.id), profile_id=str(profile.id))
+    await record.share_accepted(user, profile.id)
     return profile_out(profile)
 
 

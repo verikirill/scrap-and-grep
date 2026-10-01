@@ -14,7 +14,7 @@ import { Link } from 'react-router'
 import { buttonClass, EASE, rowMotion } from '../../components/tokens'
 import { AnimatedNumber, Card, Chip, ScoreBar, ReadingTime } from '../../components/ui'
 import { api } from '../../lib/api'
-import type { Digest, DigestItem, ReactionKind, Topic } from '../../lib/api'
+import type { Digest, DigestItem, Placement, ReactionKind, Topic } from '../../lib/api'
 import {
   externalHref,
   formatDate,
@@ -63,14 +63,18 @@ function Funnel({ digest }: { digest: Digest }) {
 type ItemCardProps = {
   item: DigestItem
   index: number
+  placement: Placement
   reactions: ReactionKind[] | undefined
   onReact: (kind: ReactionKind, isActive: boolean) => void
 }
 
-function ItemCard({ item, index, reactions, onReact }: ItemCardProps) {
+function ItemCard({ item, index, placement, reactions, onReact }: ItemCardProps) {
   const translated = item.headline !== item.title
   const personal = Math.abs(item.personal) >= 0.005 ? item.personal : 0
-  const seenRef = useSeen(item.article_id, 'digest', !reactions?.length)
+  const seenRef = useSeen(item.article_id, 'digest', !reactions?.length, placement)
+  const markRead = () => {
+    if (reactions !== undefined && !reactions.includes('open')) onReact('open', true)
+  }
   return (
     <motion.article
       ref={seenRef}
@@ -81,6 +85,9 @@ function ItemCard({ item, index, reactions, onReact }: ItemCardProps) {
         href={externalHref(item.url)}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={markRead}
+        // A middle click opens a tab too, without a click event.
+        onAuxClick={markRead}
         className="font-serif text-[17px] leading-snug font-semibold text-foreground decoration-primary/40 underline-offset-4 hover:underline"
       >
         {item.headline}
@@ -147,11 +154,21 @@ function ItemCard({ item, index, reactions, onReact }: ItemCardProps) {
 type TopicSectionProps = {
   topic: Topic
   number: number
+  digestId: string
+  /** The place of the topic's first article in the whole digest, from 1. */
+  firstPosition: number
   reactions: Record<string, ReactionKind[]> | undefined
-  onReact: (articleId: number, kind: ReactionKind, isActive: boolean) => void
+  onReact: (articleId: number, kind: ReactionKind, isActive: boolean, position: number) => void
 }
 
-function TopicSection({ topic, number, reactions, onReact }: TopicSectionProps) {
+function TopicSection({
+  topic,
+  number,
+  digestId,
+  firstPosition,
+  reactions,
+  onReact,
+}: TopicSectionProps) {
   return (
     <section>
       <div className="sticky top-14 z-10 -mx-1 bg-background/90 px-1 py-2 backdrop-blur md:top-0">
@@ -174,8 +191,11 @@ function TopicSection({ topic, number, reactions, onReact }: TopicSectionProps) 
             key={item.article_id}
             item={item}
             index={index}
+            placement={{ listId: digestId, position: firstPosition + index, slot: 'digest' }}
             reactions={reactions ? (reactions[item.article_id] ?? []) : undefined}
-            onReact={(kind, isActive) => onReact(item.article_id, kind, isActive)}
+            onReact={(kind, isActive) =>
+              onReact(item.article_id, kind, isActive, firstPosition + index)
+            }
           />
         ))}
       </div>
@@ -256,8 +276,19 @@ export function DigestView({ digest, previousId }: { digest: Digest; previousId?
   const articleIds = digest.topics.flatMap((topic) => topic.items.map((item) => item.article_id))
   const reactions = useReactions(articleIds)
   const feedback = useFeedback()
-  const react = (articleId: number, kind: ReactionKind, isActive: boolean) =>
-    feedback.mutate({ articleId, kind, isActive, context: 'digest' })
+  const react = (articleId: number, kind: ReactionKind, isActive: boolean, position: number) =>
+    feedback.mutate({
+      articleId,
+      kind,
+      isActive,
+      context: 'digest',
+      placement: { listId: digest.id, position, slot: 'digest' },
+    })
+  // Articles are counted through the whole digest, topic after topic.
+  const firstPositions = digest.topics.map(
+    (_, index) =>
+      1 + digest.topics.slice(0, index).reduce((count, topic) => count + topic.items.length, 0),
+  )
   return (
     <div className="space-y-6">
       <Card className="p-6">
@@ -354,6 +385,8 @@ export function DigestView({ digest, previousId }: { digest: Digest; previousId?
               key={topic.title}
               topic={topic}
               number={index + 1}
+              digestId={digest.id}
+              firstPosition={firstPositions[index]}
               reactions={reactions.data}
               onReact={react}
             />

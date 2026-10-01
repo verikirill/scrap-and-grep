@@ -29,6 +29,7 @@ from radar.config import get_settings
 from radar.db import session_scope
 from radar.db.models import Profile
 from radar.domain import ProfileSpec
+from radar.events import record
 from radar.mcp_server import keys
 from radar.recsys import service as feed_service
 from radar.recsys.service import FeedItem
@@ -128,7 +129,7 @@ def _news(item: FeedItem) -> News:
 async def _feed(reader: uuid.UUID, limit: int, offset: int = 0) -> tuple[list[FeedItem], int]:
     settings = get_settings()
     async with session_scope() as session:
-        items, total, _ = await feed_service.feed_page(
+        page = await feed_service.feed_page(
             session,
             get_cache(),
             reader,
@@ -138,8 +139,8 @@ async def _feed(reader: uuid.UUID, limit: int, offset: int = 0) -> tuple[list[Fe
             offset=offset,
         )
     # Times not known yet are found for the next call, as for the web feed.
-    await measure_soon(item.article_id for item in items if item.reading_minutes is None)
-    return items, total
+    await measure_soon(item.article_id for item in page.items if item.reading_minutes is None)
+    return page.items, page.total
 
 
 def _stem(token: str) -> str:
@@ -159,6 +160,7 @@ async def my_feed(
 ) -> NewsList:
     """Персональная лента читателя за последние две недели, лучшее сверху, с причинами."""
     items, total = await _feed(_reader(), limit, offset)
+    await record.mcp_called(_reader(), "my_feed", len(items))
     return NewsList(items=[_news(item) for item in items], total=total)
 
 
@@ -170,6 +172,7 @@ async def search_my_news(
     """Поиск по ленте читателя: только среди новостей, подобранных под него."""
     items, _ = await _feed(_reader(), feed_service.FEED_SIZE)
     found = [item for item in items if matches(query, item)]
+    await record.mcp_called(_reader(), "search_my_news", min(len(found), limit))
     return NewsList(items=[_news(item) for item in found[:limit]], total=len(found))
 
 
@@ -178,6 +181,7 @@ async def saved_news(limit: int = Field(default=10, ge=1, le=MAX_ITEMS)) -> News
     """Статьи, которые читатель сохранил."""
     async with session_scope() as session:
         items, total = await feed_service.saved_page(session, _reader(), limit=limit, offset=0)
+    await record.mcp_called(_reader(), "saved_news", len(items))
     return NewsList(items=[_news(item) for item in items], total=total)
 
 
@@ -187,6 +191,7 @@ async def my_digests(limit: int = Field(default=10, ge=1, le=MAX_ITEMS)) -> Dige
     async with session_scope() as session:
         digests = await digest_store.list_recent(session, _reader(), None, limit)
     summaries = [digest_summary(digest) for digest in digests]
+    await record.mcp_called(_reader(), "my_digests", len(summaries))
     return DigestList(
         digests=[
             DigestBrief(
@@ -214,7 +219,9 @@ async def read_digest(digest_id: str = Field(description="id из my_digests")) 
         digest = await digest_store.get(session, wanted, user_id=_reader(), full=True)
         if digest is None or digest.status != digest_store.STATUS_DONE:
             raise ValueError("Такого готового дайджеста нет.")
-        return render_markdown(digest_view(digest))
+        text = render_markdown(digest_view(digest))
+    await record.mcp_called(_reader(), "read_digest", 1)
+    return text
 
 
 @mcp.tool()
@@ -227,6 +234,7 @@ async def my_interests() -> Interests:
             .order_by(Profile.created_at, Profile.id)
         )
         specs = [ProfileSpec.model_validate(row.spec) for row in rows]
+    await record.mcp_called(_reader(), "my_interests", len(specs))
     return Interests(
         profiles=[
             ProfileBrief(

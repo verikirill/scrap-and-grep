@@ -413,6 +413,34 @@ export interface FeedItem {
   /** Contribution of each part of the evidence; empty for saved items. */
   parts: Record<string, number>
   reactions: ReactionKind[]
+  /** Why it is in the list and its place there, counted from 1. */
+  slot: ListSlot
+  position: number
+}
+
+export type ListSlot = 'ranked' | 'explore' | 'newest' | 'saved' | 'digest'
+
+/**
+ * Where the reader met an article: the list (a feed snapshot or a digest), the
+ * place in it and why it was there. Sent along with what the reader did, for
+ * the analytics and for teaching the feed's ranker.
+ */
+export interface Placement {
+  listId: string | null
+  position: number
+  slot: ListSlot
+}
+
+export interface SeenItem {
+  article_id: number
+  position: number
+  slot: ListSlot
+}
+
+function placementBody(placement: Placement | undefined) {
+  return placement
+    ? { list_id: placement.listId, position: placement.position, slot: placement.slot }
+    : {}
 }
 
 export interface FeedPage {
@@ -563,9 +591,16 @@ export const api = {
     kind: ReactionKind,
     isActive: boolean,
     context: 'feed' | 'digest',
+    placement?: Placement,
   ) =>
     request<void>('/feedback', {
-      ...json('POST', { article_id: articleId, kind, active: isActive, context }),
+      ...json('POST', {
+        article_id: articleId,
+        kind,
+        active: isActive,
+        context,
+        ...placementBody(placement),
+      }),
       // An opened link navigates away; the request must outlive the page.
       keepalive: true,
     }),
@@ -590,9 +625,9 @@ export const api = {
     request<void>(`/profiles/${profileId}/suggestions/${suggestionId}/dismiss`, {
       method: 'POST',
     }),
-  recordImpressions: (articleIds: number[], context: 'feed' | 'digest') =>
+  recordImpressions: (items: SeenItem[], context: 'feed' | 'digest', listId: string | null) =>
     request<void>('/impressions', {
-      ...json('POST', { article_ids: articleIds, context }),
+      ...json('POST', { items, context, list_id: listId }),
       keepalive: true,
     }),
   shareProfile: (id: string) => request<Profile>(`/profiles/${id}/share`, { method: 'POST' }),

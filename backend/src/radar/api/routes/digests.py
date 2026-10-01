@@ -18,6 +18,7 @@ from radar.api.schemas import CompareOut, DigestCreate, InterestChange, ScoreCha
 from radar.db import session_scope
 from radar.db.models import Digest, Profile
 from radar.domain import ProfileSpec
+from radar.events import record
 from radar.logging import get_logger
 from radar.pipeline.runner import events_channel
 from radar.render.docx import render_docx
@@ -176,7 +177,10 @@ def _settings_changed(base: ProfileSpec, other: ProfileSpec) -> list[str]:
 
 @router.get("/digests/{digest_id}")
 async def get_digest(digest_id: uuid.UUID, session: SessionDep, user: CurrentUser) -> DigestView:
-    view = digest_view(await _load(session, user, digest_id, full=True))
+    digest = await _load(session, user, digest_id, full=True)
+    view = digest_view(digest)
+    if digest.status == digest_store.STATUS_DONE:
+        await record.digest_opened(user, digest.id, digest.profile_id, digest.origin)
     await measure_soon(
         item.article_id
         for topic in view.topics

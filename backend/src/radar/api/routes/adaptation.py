@@ -5,12 +5,13 @@ from datetime import UTC, datetime
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import delete, func, select
 
 from radar.ai.factory import get_embedder
 from radar.api.adapting import adapt_after_impressions, adapt_soon
 from radar.api.deps import CacheDep, CurrentUser, SessionDep, user_rate_limit
+from radar.api.routes.feed import MAX_POSITION, Slot
 from radar.api.routes.profiles import get_owned, profile_out, taste_changed
 from radar.api.schemas import ProfileOut
 from radar.db.models import (
@@ -21,6 +22,8 @@ from radar.db.models import (
     Source,
 )
 from radar.domain import Interest, ProfileSpec
+from radar.events import record
+from radar.events.record import Placement
 from radar.recsys import store
 from radar.recsys.adaptation import learned_for
 from radar.recsys.model import adapted_weight
@@ -81,9 +84,31 @@ class AdaptationIn(BaseModel):
     adaptive: bool
 
 
+class SeenItem(BaseModel):
+    article_id: int
+    position: int = Field(default=0, ge=0, le=MAX_POSITION)
+    slot: Slot = ""
+
+
 class ImpressionsIn(BaseModel):
-    article_ids: list[int] = Field(min_length=1, max_length=60)
+    """Seen articles: `items` with their places, or bare `article_ids`."""
+
+    items: list[SeenItem] = Field(default_factory=list, max_length=60)
+    article_ids: list[int] = Field(default_factory=list, max_length=60)
     context: Literal["feed", "digest"] = "feed"
+    # The feed snapshot or the digest the articles were in.
+    list_id: uuid.UUID | None = None
+
+    @model_validator(mode="after")
+    def _one_list(self) -> ImpressionsIn:
+        if bool(self.items) == bool(self.article_ids):
+            raise ValueError("send either items or article_ids")
+        return self
+
+    def placements(self) -> list[Placement]:
+        if self.items:
+            return [Placement(item.article_id, item.position, item.slot) for item in self.items]
+        return [Placement(article_id) for article_id in self.article_ids]
 
 
 async def _adaptation(session: SessionDep, user: CurrentUser, profile: Profile) -> AdaptationOut:
@@ -273,6 +298,7 @@ async def accept_suggestion(
     await session.refresh(profile)
     await taste_changed(session, cache, user.id)
     await adapt_soon(user.id)
+    await record.suggestion_decided(user, profile.id, suggestion.kind, accepted=True)
     return profile_out(profile)
 
 
@@ -290,6 +316,7 @@ async def dismiss_suggestion(
     suggestion.status = "dismissed"
     suggestion.decided_at = datetime.now(UTC)
     await session.commit()
+    await record.suggestion_decided(user, profile.id, suggestion.kind, accepted=False)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -298,7 +325,10 @@ async def record_impressions(
     payload: ImpressionsIn, session: SessionDep, user: CurrentUser, cache: CacheDep
 ) -> Response:
     """Articles the reader has seen on screen, in the feed or in a digest."""
-    if await store.record_impressions(session, user.id, payload.article_ids, payload.context):
+    placements = payload.placements()
+    ids = [placement.article_id for placement in placements]
+    if await store.record_impressions(session, user.id, ids, payload.context):
         await session.commit()
         await adapt_after_impressions(cache, user.id)
+        await record.seen(session, user, payload.context, payload.list_id, placements)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
