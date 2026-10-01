@@ -12,6 +12,7 @@ from radar.auth import sessions as auth_sessions
 from radar.cache import get_cache
 from radar.config import get_settings
 from radar.db import session_scope
+from radar.ingest.measure import measure
 from radar.ingest.net import build_client
 from radar.ingest.service import embed_pending, enabled_source_ids, ingest_source
 from radar.logging import get_logger
@@ -81,6 +82,12 @@ async def ingest_source_task(source_id: int) -> dict[str, object]:
     if report.new_articles:
         await embed_pending_task.kiq()
     return {"source_id": source_id, "status": report.status, "new": report.new_articles}
+
+
+@ingest_broker.task(task_name="measure_articles")
+async def measure_articles(article_ids: list[int]) -> int:
+    """Read the pages of articles a reader sees, for their reading time."""
+    return await measure(article_ids)
 
 
 @ingest_broker.task(task_name="embed_pending", retry_on_error=True, max_retries=2)

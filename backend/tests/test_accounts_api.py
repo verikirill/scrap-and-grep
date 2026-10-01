@@ -101,7 +101,12 @@ async def api(database: None, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[
     get_embedder.cache_clear()
     get_intelligence.cache_clear()
     # Tasks are not sent anywhere: the tests call the task bodies themselves.
-    for task in (tasks.process_resume, tasks.refresh_taste, tasks.build_digest):
+    for task in (
+        tasks.process_resume,
+        tasks.refresh_taste,
+        tasks.build_digest,
+        tasks.measure_articles,
+    ):
         monkeypatch.setattr(task, "kiq", AsyncMock())
 
     from sqlalchemy import delete

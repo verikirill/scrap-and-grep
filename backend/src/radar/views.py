@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from radar.db.models import Digest, DigestItem
 from radar.domain import ProfileSpec
+from radar.reading import reading_minutes
 
 
 class DuplicateView(BaseModel):
@@ -37,6 +38,7 @@ class ItemView(BaseModel):
     why: str
     duplicates: list[DuplicateView] = []
     reject_reason: str | None = None
+    reading_minutes: int | None = None
 
 
 class TopicView(BaseModel):
@@ -93,6 +95,7 @@ def _item_view(item: DigestItem, profile: ProfileSpec) -> ItemView:
         why=item.why,
         duplicates=[DuplicateView.model_validate(dup) for dup in item.duplicates],
         reject_reason=item.reject_reason,
+        reading_minutes=reading_minutes(article.word_count, article.language),
     )
 
 

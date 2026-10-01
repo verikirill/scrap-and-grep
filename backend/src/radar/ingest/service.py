@@ -17,6 +17,7 @@ from radar.images.extract import from_page
 from radar.ingest.feeds import CONTENT_LIMIT, FeedResult, fetch_feed
 from radar.ingest.net import safe_get
 from radar.logging import get_logger
+from radar.reading import word_count
 from radar.store import articles as article_store
 from radar.store.articles import NewArticle
 from radar.text import content_hash
@@ -120,7 +121,11 @@ async def _with_full_text(items: list[NewArticle], client: httpx.AsyncClient) ->
             return replace(item, image_url=image_url)
         body = text[:CONTENT_LIMIT]
         return replace(
-            item, content=body, content_hash=content_hash(item.title, body), image_url=image_url
+            item,
+            content=body,
+            content_hash=content_hash(item.title, body),
+            image_url=image_url,
+            word_count=word_count(text),
         )
 
     return list(await asyncio.gather(*(enrich(item) for item in items)))

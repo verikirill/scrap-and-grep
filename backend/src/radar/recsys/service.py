@@ -20,6 +20,7 @@ from radar.domain import ProfileSpec
 from radar.logging import get_logger
 from radar.pipeline.ports import QueryEmbedder
 from radar.pipeline.sql_store import CachedQueryEmbedder
+from radar.reading import reading_minutes
 from radar.recsys import store
 from radar.recsys.model import Personal
 from radar.recsys.ranking import (
@@ -87,6 +88,8 @@ class FeedItem(BaseModel):
     reasons: list[Reason] = []
     parts: dict[str, float] = {}
     reactions: list[str] = []
+    # Known once the full text has been read; None for a teaser.
+    reading_minutes: int | None = None
 
 
 class FacetOut(BaseModel):
@@ -400,6 +403,7 @@ async def _cards(session: AsyncSession, ranked: Sequence[Ranked], reader: Reader
                 explore=entry.explore,
                 reasons=_reasons(entry, reader, article, source_name),
                 parts=entry.parts,
+                reading_minutes=reading_minutes(article.word_count, article.language),
             )
         )
     return items

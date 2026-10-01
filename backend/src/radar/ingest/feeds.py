@@ -11,6 +11,7 @@ import httpx
 
 from radar.images.extract import from_entry
 from radar.ingest.net import safe_get
+from radar.reading import word_count
 from radar.store.articles import NewArticle
 from radar.text import canonical_url, content_hash, detect_language, strip_html, truncate
 
@@ -103,6 +104,8 @@ def _parse_entry(entry: Any, language: str, now: datetime) -> NewArticle | None:
         published_at=_published_at(entry, now),
         content_hash=content_hash(title, body),
         image_url=from_entry(entry, link),
+        # Counted before the cut, so a long text keeps its length.
+        word_count=word_count(content),
     )
 
 

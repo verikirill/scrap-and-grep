@@ -28,6 +28,7 @@ class NewArticle:
     published_at: datetime
     content_hash: str
     image_url: str | None = None
+    word_count: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -83,6 +84,7 @@ async def insert_new(
             "published_at": item.published_at,
             "content_hash": item.content_hash,
             "image_url": item.image_url,
+            "word_count": item.word_count,
         }
         for item in articles
     ]

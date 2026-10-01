@@ -79,6 +79,10 @@ class Article(Base):
     image_url: Mapped[str | None] = mapped_column(Text)
     image_key: Mapped[str | None] = mapped_column(String(64))
     image_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Words of the full text, for the reading time; None while only a teaser is known.
+    word_count: Mapped[int | None] = mapped_column(Integer)
+    # When the page was last read to count them, so it is not read again soon.
+    measured_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     search_tsv: Mapped[Any] = mapped_column(TSVECTOR, Computed(_SEARCH_EXPR, persisted=True))
 
     source: Mapped[Source] = relationship(lazy="joined")
@@ -128,6 +132,24 @@ class User(Base):
     is_demo: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class ApiKey(Base):
+    """A reader's key for the MCP server. Only a hash of the key is stored;
+    the first characters stay readable so the owner can tell keys apart."""
+
+    __tablename__ = "api_keys"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid7)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    name: Mapped[str] = mapped_column(String(80))
+    prefix: Mapped[str] = mapped_column(String(16))
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (Index("ix_api_keys_user", "user_id"),)
 
 
 class UserSession(Base):
