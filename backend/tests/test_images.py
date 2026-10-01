@@ -53,6 +53,8 @@ def test_a_page_declares_its_picture_in_the_head() -> None:
         "data:image/png;base64,AAAA",
         "https://ex.org/logo.svg",
         "/favicon.ico",
+        "https://www.cnews.ru/img/design2008/placeholderimage.jpg",
+        "https://ex.org/static/no-image.png",
     ],
 )
 def test_not_every_address_is_a_picture_of_the_story(url: str) -> None:

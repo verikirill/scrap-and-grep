@@ -10,8 +10,24 @@ from typing import Any
 from urllib.parse import urljoin, urlsplit
 
 MAX_URL = 2000
-# Not pictures of the story: icons, counters, vector logos.
-_SKIP_PARTS = ("favicon", "pixel", "spacer", "1x1", "/logo", "logo.", "avatar", "gravatar")
+# Not pictures of the story: icons, counters, vector logos, the stand-in a
+# site shows when a story has no picture of its own.
+_SKIP_PARTS = (
+    "favicon",
+    "pixel",
+    "spacer",
+    "1x1",
+    "/logo",
+    "logo.",
+    "avatar",
+    "gravatar",
+    "placeholder",
+    "no-image",
+    "no_image",
+    "noimage",
+    "default-image",
+    "default_image",
+)
 _SKIP_EXTENSIONS = (".svg", ".ico", ".svgz")
 _PAGE_PROPERTIES = (
     "og:image:secure_url",

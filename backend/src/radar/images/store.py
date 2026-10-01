@@ -15,6 +15,9 @@ from pathlib import Path
 from typing import Protocol
 
 from radar.config import get_settings
+from radar.logging import get_logger
+
+log = get_logger(__name__)
 
 KEY_RE = re.compile(r"^[0-9a-f]{40}\.(jpg|png|webp|gif)$")
 CONTENT_TYPES = {"jpg": "image/jpeg", "png": "image/png", "webp": "image/webp", "gif": "image/gif"}
@@ -122,11 +125,17 @@ class S3ImageStore:
         return await asyncio.to_thread(download)
 
 
+# The secret docker-compose.yml falls back to, so the s3 profile starts as is.
+S3_PLACEHOLDER_KEY = "change-me-s3-secret"
+
+
 @lru_cache
 def get_image_store() -> ImageStore:
     settings = get_settings()
     if settings.image_store == "s3":
         secret = settings.s3_secret_key.get_secret_value() if settings.s3_secret_key else ""
+        if secret == S3_PLACEHOLDER_KEY:
+            log.warning("s3_default_secret", hint="set RADAR_S3_SECRET_KEY in .env")
         return S3ImageStore(
             endpoint=settings.s3_endpoint,
             bucket=settings.s3_bucket,

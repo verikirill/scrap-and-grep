@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 import httpx
 
 from radar.db.models import Article
-from radar.images.extract import from_page
+from radar.images.extract import from_page, usable
 from radar.images.store import ImageStore
 from radar.ingest.net import safe_get
 from radar.logging import get_logger
@@ -77,7 +77,11 @@ async def ensure_image_url(
     """The article's picture address, looked up on its page if the feed had
     none. Updates the row; the caller commits."""
     if article.image_url:
-        return article.image_url
+        # Rows stored before a stand-in pattern was known lose it here.
+        if usable(article.image_url):
+            return article.image_url
+        article.image_url = None
+        article.image_key = None
     now = now or datetime.now(UTC)
     if article.image_checked_at and now - article.image_checked_at < RECHECK_AFTER:
         return None
