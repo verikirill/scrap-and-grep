@@ -299,7 +299,10 @@ def _rows(lists: Lists) -> list[dict[str, float]]:
 def evaluate(lists: Lists, end: datetime, current: ranker_model.Model | None = None) -> Outcome:
     """Fit on all but the last days, compare with the hand blend on those days."""
     if not lists.sizes.size:
-        return Outcome(STATUS_REJECTED, "Событий пока нет.", {}, 0, 0)
+        note = (
+            "Списков старше суток пока нет: обучению нужен день, чтобы увидеть, что с ними сделали."
+        )
+        return Outcome(STATUS_REJECTED, note, {}, 0, 0)
     held = [moment >= holdout_from(end) for moment in lists.served_at]
     train = lists.take([not on for on in held])
     # Lists a model ordered favour it: only the hand blend's lists judge.
