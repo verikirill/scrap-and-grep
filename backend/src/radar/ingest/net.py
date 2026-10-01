@@ -12,13 +12,20 @@ import asyncio
 import contextlib
 import ipaddress
 import socket
+import ssl
+from functools import cache
+from importlib.resources import files
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
+import certifi
 import httpx
 import stamina
 
 from radar.config import get_settings
 
+# The Russian national CA: its root and the intermediates that sign site
+# certificates. bdu.fstec.ru sends no intermediate, so both are needed.
+RUSSIAN_CA_BUNDLE = "certs/russian_trusted_ca.pem"
 MAX_REDIRECTS = 5
 # Upper bound for one download. The per-read timeout alone would let a server
 # that trickles a byte at a time hold a worker slot for hours.
@@ -66,14 +73,68 @@ async def ensure_public_url(url: str) -> None:
 
 def build_client() -> httpx.AsyncClient:
     settings = get_settings()
+    # No keep-alive: connections are made to pinned addresses, and a pooled
+    # one must not be reused for another host name behind the same address.
+    limits = httpx.Limits(max_connections=20, max_keepalive_connections=0)
     return httpx.AsyncClient(
         timeout=httpx.Timeout(settings.http_timeout_seconds, connect=10.0),
         headers={"User-Agent": settings.http_user_agent, "Accept-Encoding": "gzip, deflate"},
-        # No keep-alive: connections are made to pinned addresses, and a pooled
-        # one must not be reused for another host name behind the same address.
-        limits=httpx.Limits(max_connections=20, max_keepalive_connections=0),
+        transport=TrustByHost(
+            usual=httpx.AsyncHTTPTransport(verify=_tls(national=False), limits=limits),
+            national=httpx.AsyncHTTPTransport(verify=_tls(national=True), limits=limits),
+        ),
         follow_redirects=False,
+        # Proxies from the environment are not used: their transport would
+        # skip the pools above, the national CA and keep-alive limits included.
+        trust_env=False,
     )
+
+
+@cache
+def _tls(*, national: bool) -> ssl.SSLContext:
+    """The usual trust store; the national one adds the Russian CA to it."""
+    context = ssl.create_default_context(cafile=certifi.where())
+    if national:
+        bundle = files("radar.ingest").joinpath(RUSSIAN_CA_BUNDLE).read_text("ascii")
+        context.load_verify_locations(cadata=bundle)
+    return context
+
+
+def trusts_russian_ca(host: str) -> bool:
+    """Whether a certificate from the Russian national CA is accepted for `host`."""
+    name = host.lower().rstrip(".")
+    return any(
+        name == domain or name.endswith(f".{domain}") for domain in get_settings().russian_ca_hosts
+    )
+
+
+class TrustByHost(httpx.AsyncBaseTransport):
+    """Sends a request through the pool that trusts the Russian national CA
+    only when the host is one of those listed in settings.
+
+    Government and some vendor sites (bdu.fstec.ru, ptsecurity.com) carry
+    certificates of that CA, which the usual trust stores do not include.
+    Trusting it for every host would let it vouch for any site, so the choice
+    is made by the name TLS checks the certificate against: the SNI name of a
+    pinned request, or the URL's host.
+    """
+
+    def __init__(
+        self, *, usual: httpx.AsyncBaseTransport, national: httpx.AsyncBaseTransport
+    ) -> None:
+        self._usual = usual
+        self._national = national
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        name = request.extensions.get("sni_hostname") or request.url.host
+        if isinstance(name, bytes):
+            name = name.decode("ascii")
+        transport = self._national if trusts_russian_ca(str(name)) else self._usual
+        return await transport.handle_async_request(request)
+
+    async def aclose(self) -> None:
+        await self._usual.aclose()
+        await self._national.aclose()
 
 
 async def safe_get(
