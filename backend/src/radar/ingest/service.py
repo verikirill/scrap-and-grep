@@ -16,6 +16,7 @@ from radar.db.models import Source
 from radar.images.extract import from_page
 from radar.ingest.feeds import CONTENT_LIMIT, FeedResult, fetch_feed
 from radar.ingest.net import safe_get
+from radar.ingest.telegram import fetch_channel
 from radar.logging import get_logger
 from radar.reading import word_count
 from radar.store import articles as article_store
@@ -52,17 +53,23 @@ async def ingest_source(source_id: int, client: httpx.AsyncClient, cache: Cache)
             source = await session.get(Source, source_id)
             if source is None or not source.enabled:
                 return IngestReport(source_id, "skipped_disabled")
-            feed_url, language = source.feed_url, source.language
+            kind, feed_url, language = source.kind, source.feed_url, source.language
             etag, last_modified, full_text = (
                 source.etag,
                 source.last_modified,
                 source.fetch_full_text,
             )
+            last_post_id = source.last_post_id
 
         try:
-            feed = await fetch_feed(
-                client, feed_url, language=language, etag=etag, last_modified=last_modified
-            )
+            if kind == "telegram":
+                feed = await fetch_channel(
+                    client, feed_url, language=language, last_post_id=last_post_id
+                )
+            else:
+                feed = await fetch_feed(
+                    client, feed_url, language=language, etag=etag, last_modified=last_modified
+                )
             new_ids = await _store(source_id, feed, client, full_text)
         except Exception as exc:
             error = f"{type(exc).__name__}: {exc}"[:500]
@@ -145,6 +152,9 @@ async def _record(
         if feed is not None and feed.status == "ok":
             source.etag = feed.etag
             source.last_modified = feed.last_modified
+        if feed is not None and feed.last_post_id is not None:
+            # Written after the posts are stored: a failed run reads them again.
+            source.last_post_id = feed.last_post_id
 
 
 async def enabled_source_ids() -> list[int]:

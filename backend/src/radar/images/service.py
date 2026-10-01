@@ -9,6 +9,7 @@ import httpx
 from radar.db.models import Article
 from radar.images.extract import from_page, usable
 from radar.images.store import ImageStore
+from radar.ingest import telegram
 from radar.ingest.net import safe_get
 from radar.logging import get_logger
 
@@ -66,6 +67,8 @@ async def download(client: httpx.AsyncClient, url: str) -> Picture:
 
 
 async def find_page_image(client: httpx.AsyncClient, url: str) -> str | None:
+    if telegram.is_post_url(url):
+        return await telegram.post_picture(client, url)
     response = await safe_get(client, url, max_bytes=PAGE_MAX_BYTES)
     response.raise_for_status()
     return from_page(response.text, url)
@@ -102,12 +105,33 @@ async def mirror(article: Article, client: httpx.AsyncClient, store: ImageStore)
         data = await store.get(article.image_key)
         if data is not None:
             return Picture(data, article.image_key.rsplit(".", 1)[1])
+    picture: Picture | None
     try:
         picture = await download(client, article.image_url)
     except Exception as exc:
         log.info("image_download_failed", url=article.image_url, error=type(exc).__name__)
+        picture = await _moved(article, client)
+    if picture is None:
         return None
     key = image_key(article.image_url, picture.extension)
     await store.put(key, picture.data)
     article.image_key = key
+    return picture
+
+
+async def _moved(article: Article, client: httpx.AsyncClient) -> Picture | None:
+    """The picture at the address its page gives now.
+
+    Some addresses do not last: Telegram's CDN links stop working after a
+    while, and a site may move its pictures. Updates the row on success.
+    """
+    try:
+        current = await find_page_image(client, article.url)
+        if not current or current == article.image_url:
+            return None
+        picture = await download(client, current)
+    except Exception as exc:
+        log.info("image_lookup_failed", url=article.url, error=type(exc).__name__)
+        return None
+    article.image_url = current
     return picture

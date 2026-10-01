@@ -7,7 +7,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator, model_validator
 
 from radar.auth.passwords import PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH
-from radar.domain import ProfileSpec, SourceCategory
+from radar.domain import ProfileSpec, SourceCategory, SourceKind
 from radar.shorts.voice import VoiceOption
 from radar.views import ItemView
 
@@ -60,6 +60,7 @@ class SourceOut(BaseModel):
     id: int
     slug: str
     name: str
+    kind: SourceKind
     feed_url: str
     site_url: str | None
     category: str
@@ -75,12 +76,26 @@ class SourceOut(BaseModel):
 
 
 class SourceCreate(BaseModel):
-    name: str = Field(min_length=2, max_length=200)
-    feed_url: HttpUrl
+    kind: SourceKind = "rss"
+    # A channel may come without one: its own title is taken then.
+    name: str | None = Field(default=None, min_length=2, max_length=200)
+    feed_url: HttpUrl | None = None
+    # A public Telegram channel: "@name" or its t.me address.
+    channel: str | None = Field(default=None, max_length=200)
     site_url: HttpUrl | None = None
     category: SourceCategory
     language: Literal["ru", "en"] = "ru"
     fetch_full_text: bool = False
+
+    @model_validator(mode="after")
+    def _address(self) -> SourceCreate:
+        if self.kind == "rss" and (
+            self.feed_url is None or self.name is None or self.channel is not None
+        ):
+            raise ValueError("a feed takes a name and feed_url, and no channel")
+        if self.kind == "telegram" and (self.channel is None or self.feed_url is not None):
+            raise ValueError("a Telegram source takes a channel, and no feed_url")
+        return self
 
 
 class SourceUpdate(BaseModel):

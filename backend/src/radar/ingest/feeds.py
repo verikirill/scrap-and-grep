@@ -28,6 +28,8 @@ class FeedResult:
     articles: tuple[NewArticle, ...] = ()
     etag: str | None = None
     last_modified: str | None = None
+    # Telegram channels: the newest post read, where the next run starts.
+    last_post_id: int | None = None
 
 
 async def fetch_feed(
