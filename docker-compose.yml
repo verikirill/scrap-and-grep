@@ -66,6 +66,7 @@ x-backend: &backend
     RADAR_CLICKHOUSE_USER: radar
     RADAR_CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-radar}
     RADAR_CLICKHOUSE_DATABASE: radar
+    RADAR_RANKER_SHARE: ${RADAR_RANKER_SHARE:-0.5}
   depends_on: &backend-deps
     migrate:
       condition: service_completed_successfully
