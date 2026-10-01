@@ -119,7 +119,8 @@ export function AnalyticsPage() {
   const isAdmin = Boolean(me.data?.is_admin && !me.data.is_demo)
   const analytics = useAnalytics(Number(period), withGuests, isAdmin)
 
-  if (me.data && !isAdmin) {
+  if (me.isError) return <ErrorNote error={me.error} />
+  if (me.isSuccess && !isAdmin) {
     return (
       <Card>
         <EmptyState icon={<AnalyticsIcon size={22} />} title="Раздел для администратора">

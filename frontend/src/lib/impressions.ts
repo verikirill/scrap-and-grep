@@ -17,8 +17,11 @@ const queued: Record<SeenContext, Map<string, Map<number, SeenItem>>> = {
   feed: new Map(),
   digest: new Map(),
 }
-// Reported once per page load: a second look says nothing new.
-const reported: Record<SeenContext, Set<number>> = { feed: new Set(), digest: new Set() }
+// Reported once per list and page load: a second look says nothing new, but
+// the same article in a rebuilt feed is somewhere else and counts there.
+const reported: Record<SeenContext, Set<string>> = { feed: new Set(), digest: new Set() }
+const reportKey = (articleId: number, listId: string | null | undefined) =>
+  `${listId ?? NO_LIST}:${articleId}`
 let queuedCount = 0
 let timer: number | undefined
 
@@ -41,8 +44,9 @@ function flush(): void {
 }
 
 function seen(articleId: number, context: SeenContext, placement: Placement | undefined): void {
-  if (reported[context].has(articleId)) return
-  reported[context].add(articleId)
+  const key = reportKey(articleId, placement?.listId)
+  if (reported[context].has(key)) return
+  reported[context].add(key)
   const listId = placement?.listId ?? NO_LIST
   const list = queued[context].get(listId) ?? new Map<number, SeenItem>()
   queued[context].set(listId, list)
@@ -59,7 +63,15 @@ function seen(articleId: number, context: SeenContext, placement: Placement | un
 if (typeof document !== 'undefined') {
   // Leaving the page sends what is left; the request outlives the page.
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState !== 'hidden') return
+    if (document.visibilityState !== 'hidden') {
+      // The observer reports only changes. A card still on screen when the
+      // reader comes back would never report again: watch everything anew.
+      for (const element of watched.keys()) {
+        observer?.unobserve(element)
+        observer?.observe(element)
+      }
+      return
+    }
     // A card on screen when the tab was left has not been looked at long enough.
     for (const item of watched.values()) {
       if (item.wait !== undefined) window.clearTimeout(item.wait)
@@ -137,7 +149,9 @@ export function useSeen(
     (element: Element | null) => {
       if (node.current && node.current !== element) forget(node.current)
       node.current = element
-      if (element && isWatched && !reported[context].has(articleId)) {
+      // Marked meanwhile: the mark says more than a look would.
+      if (element && !isWatched) forget(element)
+      if (element && isWatched && !reported[context].has(reportKey(articleId, listId))) {
         const where = slot ? { listId, position, slot } : undefined
         observe(element, { articleId, context, placement: where })
       }

@@ -87,7 +87,10 @@ function ItemCard({ item, index, placement, reactions, onReact }: ItemCardProps)
         rel="noopener noreferrer"
         onClick={markRead}
         // A middle click opens a tab too, without a click event.
-        onAuxClick={markRead}
+        onAuxClick={(event) => {
+          // The middle button opens a tab; the right one only a menu.
+          if (event.button === 1) markRead()
+        }}
         className="font-serif text-[17px] leading-snug font-semibold text-foreground decoration-primary/40 underline-offset-4 hover:underline"
       >
         {item.headline}

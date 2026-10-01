@@ -149,7 +149,10 @@ export function FeedCard({ item, index, placement, onReact }: Props) {
         rel="noopener noreferrer"
         onClick={markRead}
         // A middle click opens a tab too, without a click event.
-        onAuxClick={markRead}
+        onAuxClick={(event) => {
+          // The middle button opens a tab; the right one only a menu.
+          if (event.button === 1) markRead()
+        }}
         className={clsx(
           'mt-1.5 block font-serif text-[18px] leading-snug font-semibold decoration-primary/40 underline-offset-4 hover:underline',
           isRead ? 'text-muted-foreground' : 'text-foreground',

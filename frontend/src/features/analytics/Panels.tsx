@@ -28,7 +28,8 @@ export function Panel({
 
 /** A rate and how far it moved since the previous period of the same length. */
 function Delta({ now, before, isRate }: { now: number; before: number; isRate: boolean }) {
-  const change = now - before
+  // The arrow follows what is printed: a change that rounds to zero is level.
+  const change = isRate ? Math.round((now - before) * 1000) / 1000 : now - before
   const Icon = change > 0 ? ArrowUp : change < 0 ? ArrowDown : Minus
   const text = isRate
     ? formatPoints(change)
@@ -72,6 +73,8 @@ export function Figures({
   totals: AnalyticsTotals
   previous: AnalyticsTotals | null
 }) {
+  // A rate of a period when nothing was seen is no rate at all, not 0 %.
+  const rateBefore = (value: number | undefined) => (previous?.seen ? value : undefined)
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <Figure
@@ -90,14 +93,14 @@ export function Figures({
         label="Открывают"
         value={formatPercent(totals.ctr)}
         now={totals.ctr}
-        before={previous?.ctr}
+        before={rateBefore(previous?.ctr)}
         isRate
       />
       <Figure
         label="Отмечают лайком или закладкой"
         value={formatPercent(totals.like_rate)}
         now={totals.like_rate}
-        before={previous?.like_rate}
+        before={rateBefore(previous?.like_rate)}
         isRate
       />
     </div>
@@ -222,6 +225,8 @@ export function RateRows({
             {detail && <p className="truncate text-xs text-outline">{detail}</p>}
           </div>
           <span className="text-right text-sm text-muted-foreground tabular-nums">
+            {/* A phone has no header row: each number carries its name. */}
+            <span className="mr-1 text-xs text-outline sm:hidden">увидено</span>
             {formatNumber(rates.seen)}
           </span>
           <div className="col-span-2 sm:col-span-1">
@@ -239,9 +244,11 @@ export function RateRows({
               rates.enough ? 'text-sm' : 'text-xs text-outline',
             )}
           >
+            {rates.enough && <span className="mr-1 text-xs text-outline sm:hidden">открыли</span>}
             {rates.enough ? formatPercent(rates.ctr) : 'мало данных'}
           </span>
           <span className="text-right text-sm text-muted-foreground tabular-nums">
+            {rates.enough && <span className="mr-1 text-xs text-outline sm:hidden">лайк</span>}
             {rates.enough ? formatPercent(rates.like_rate) : ''}
           </span>
         </div>
