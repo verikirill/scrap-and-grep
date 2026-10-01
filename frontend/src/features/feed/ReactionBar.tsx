@@ -1,12 +1,12 @@
 import clsx from 'clsx'
-import { Bookmark, EyeOff, ThumbsDown, ThumbsUp } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+import { Bookmark, EyeOff, ThumbsDown, ThumbsUp } from '../../components/icons'
+import type { IconComponent } from '../../components/icons'
 import { motion } from 'motion/react'
 import type { ReactionKind } from '../../lib/api'
 
 type Action = {
   kind: ReactionKind
-  icon: LucideIcon
+  icon: IconComponent
   label: string
   activeLabel: string
   activeClass: string

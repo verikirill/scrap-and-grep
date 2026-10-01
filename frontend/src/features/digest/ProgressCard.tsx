@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { Check } from 'lucide-react'
+import { Check } from '../../components/icons'
 import { motion } from 'motion/react'
 import { Card } from '../../components/ui'
 import type { DigestSummary, ProgressEvent } from '../../lib/api'

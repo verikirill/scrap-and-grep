@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { Eye, ImageOff } from 'lucide-react'
+import { Eye, ImageOff } from '../../components/icons'
 import { useState } from 'react'
 import type { PostContent } from '../../lib/publishing'
 import { PostHtml } from './PostHtml'

@@ -1,10 +1,11 @@
 import clsx from 'clsx'
-import { LogOut, ShieldCheck, Trash2 } from 'lucide-react'
+import { LogOut, ShieldCheck, Trash2 } from '../components/icons'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router'
 import { INPUT_CLASS, buttonClass } from '../components/tokens'
 import { Button, Card, Chip, ErrorNote, Field, PageHeader } from '../components/ui'
+import { McpAccess } from '../features/account/McpAccess'
 import { ResumeDrop } from '../features/resume/ResumeDrop'
 import { ResumeFactsView } from '../features/resume/ResumeFactsView'
 import { ResumeProcessing } from '../features/resume/ResumeProcessing'
@@ -206,7 +207,10 @@ export function AccountPage() {
           </span>
           <div className="min-w-0">
             <p className="truncate text-base font-semibold">{user.display_name}</p>
-            <p className="truncate text-sm text-muted-foreground">{user.email}</p>
+            <p className="truncate text-sm text-muted-foreground">
+              {/* A guest's address is made up: it says nothing to the reader. */}
+              {user.is_demo ? 'Гостевой вход, без почты и пароля' : user.email}
+            </p>
           </div>
           <div className="ml-auto flex flex-wrap justify-end gap-1.5">
             {user.is_demo && <Chip tone="spark">временный</Chip>}
@@ -215,6 +219,7 @@ export function AccountPage() {
         </Card>
         <ErrorNote error={logout.error} />
         <ResumeSection />
+        <McpAccess />
         <DangerZone me={user} />
       </div>
     </>

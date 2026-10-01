@@ -1,4 +1,4 @@
-import { X } from 'lucide-react'
+import { X } from './icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import type { KeyboardEvent } from 'react'

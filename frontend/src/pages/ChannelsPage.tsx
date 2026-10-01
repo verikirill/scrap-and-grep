@@ -1,11 +1,11 @@
-import { KeyRound, Send } from 'lucide-react'
+import { KeyRound, Send } from '../components/icons'
 import { useState } from 'react'
 import { Card, EmptyState, PageHeader } from '../components/ui'
 import { AddChannelDialog } from '../features/channels/AddChannelDialog'
 import { BotsPanel } from '../features/channels/BotsPanel'
 import { ChannelCard } from '../features/channels/ChannelCard'
 import { PostsPanel } from '../features/channels/PostsPanel'
-import { Segmented } from '../features/channels/Segmented'
+import { Segmented } from '../components/Segmented'
 import { useChannels, usePublishingDefaults } from '../lib/publishingQueries'
 
 export function ChannelsPage() {

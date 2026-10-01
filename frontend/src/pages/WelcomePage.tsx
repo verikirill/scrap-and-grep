@@ -1,4 +1,5 @@
-import { ArrowRight, Radar, ShieldCheck } from 'lucide-react'
+import { ArrowRight, ShieldCheck } from '../components/icons'
+import { LogoMark, Wordmark } from '../components/Logo'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
@@ -101,10 +102,8 @@ export function WelcomePage() {
     <div className="mx-auto min-h-dvh max-w-2xl px-5 py-8 sm:py-12">
       <header className="mb-10 flex items-center justify-between">
         <span className="flex items-center gap-2.5">
-          <span className="grid size-8 place-items-center rounded-xl bg-primary text-white dark:text-[#0b0f17]">
-            <Radar size={18} strokeWidth={2.2} />
-          </span>
-          <span className="text-[15px] font-semibold tracking-tight">Радар</span>
+          <LogoMark size={36} />
+          <Wordmark className="text-[17px]" />
         </span>
         <Link to="/profiles" className={buttonClass('ghost', 'sm')}>
           Настрою интересы вручную

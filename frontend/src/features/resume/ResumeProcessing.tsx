@@ -1,4 +1,4 @@
-import { FileText } from 'lucide-react'
+import { FileText } from '../../components/icons'
 import { motion } from 'motion/react'
 import { Card } from '../../components/ui'
 

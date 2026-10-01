@@ -22,10 +22,12 @@ import type {
   Source,
   SourceCreate,
   Video,
+  DigestPeriod,
 } from './api'
 
 export const keys = {
   meta: ['meta'] as const,
+  mcpKeys: ['mcp-keys'] as const,
   me: ['me'] as const,
   resume: ['resume'] as const,
   feed: ['feed'] as const,
@@ -111,8 +113,8 @@ export function useDeleteProfile() {
 export function useCreateDigest() {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: ({ profileId, days }: { profileId: string; days: number }) =>
-      api.createDigest(profileId, days),
+    mutationFn: ({ profileId, period }: { profileId: string; period: DigestPeriod }) =>
+      api.createDigest(profileId, period),
     onSuccess: (created) => {
       client.setQueryData<DigestSummary[]>(keys.digests, (list) => [created, ...(list ?? [])])
     },
@@ -562,5 +564,23 @@ export function useFeedback() {
       void client.invalidateQueries({ queryKey: keys.taste })
       if (feedback.kind === 'save') void client.invalidateQueries({ queryKey: keys.saved })
     },
+  })
+}
+
+export const useMcpKeys = () => useQuery({ queryKey: keys.mcpKeys, queryFn: api.mcpKeys })
+
+export function useCreateMcpKey() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: api.createMcpKey,
+    onSuccess: () => client.invalidateQueries({ queryKey: keys.mcpKeys }),
+  })
+}
+
+export function useRevokeMcpKey() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: api.revokeMcpKey,
+    onSuccess: () => client.invalidateQueries({ queryKey: keys.mcpKeys }),
   })
 }

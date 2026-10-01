@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { Captions, Check, Clapperboard, Download, Mic, RotateCcw } from 'lucide-react'
+import { Captions, Check, Clapperboard, Download, Mic, RotateCcw } from '../../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { buttonClass, EASE } from '../../components/tokens'

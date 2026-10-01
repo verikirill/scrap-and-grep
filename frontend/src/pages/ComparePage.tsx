@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { ArrowDown, ArrowRight, ArrowUp, GitCompareArrows, Minus, Plus } from 'lucide-react'
+import { ArrowDown, ArrowRight, ArrowUp, GitCompareArrows, Minus, Plus } from '../components/icons'
 import { motion } from 'motion/react'
 import type { ReactNode } from 'react'
 import { useSearchParams } from 'react-router'

@@ -1,4 +1,4 @@
-import { RotateCw, TriangleAlert } from 'lucide-react'
+import { RotateCw, TriangleAlert } from './icons'
 import { Component } from 'react'
 import type { ReactNode } from 'react'
 import { Button, Card } from './ui'

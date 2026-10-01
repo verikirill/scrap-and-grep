@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { Plus, RotateCcw, Save, Sparkles, Trash2 } from 'lucide-react'
+import { Plus, RotateCcw, Save, Sparkles, Trash2 } from '../components/icons'
 import { motion } from 'motion/react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'

@@ -1,4 +1,4 @@
-import { Bot as BotIcon, KeyRound, Trash2 } from 'lucide-react'
+import { Bot as BotIcon, KeyRound, Trash2 } from '../../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { toast } from 'sonner'

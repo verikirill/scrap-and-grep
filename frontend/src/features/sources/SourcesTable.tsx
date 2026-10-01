@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { Plus, RefreshCw, Trash2 } from '../../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import type { FormEvent } from 'react'

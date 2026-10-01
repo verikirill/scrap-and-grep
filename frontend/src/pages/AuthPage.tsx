@@ -1,6 +1,7 @@
 import { cn } from '../lib/utils'
 import clsx from 'clsx'
-import { Eye, EyeOff, LogIn, Radar, UserPlus } from 'lucide-react'
+import { Eye, EyeOff, LogIn, UserPlus } from '../components/icons'
+import { LogoMark, Wordmark } from '../components/Logo'
 import { motion } from 'motion/react'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
@@ -8,7 +9,7 @@ import { Link, Navigate, useLocation } from 'react-router'
 import type { AuthRedirect } from '../components/RequireAuth'
 import { EASE, INPUT_CLASS } from '../components/tokens'
 import { Button, ErrorNote, Field } from '../components/ui'
-import { RadarVisual } from '../features/auth/RadarVisual'
+import { TailVisual } from '../features/auth/TailVisual'
 import { useMe, useMeta, useSignIn } from '../lib/queries'
 import { useMediaQuery } from '../lib/useMediaQuery'
 
@@ -70,14 +71,12 @@ export function AuthPage({ mode }: Props) {
       {/* The brand side keeps its dark look in both themes: it is a picture, not a surface. */}
       <aside className="relative hidden overflow-hidden bg-[#0b0f17] px-12 py-10 text-white lg:flex lg:flex-col">
         <div className="flex items-center gap-2.5">
-          <span className="grid size-8 place-items-center rounded-xl bg-[#7d9bff] text-[#0b0f17]">
-            <Radar size={18} strokeWidth={2.2} />
-          </span>
-          <span className="text-[15px] font-semibold tracking-tight">Радар</span>
+          <LogoMark size={32} />
+          <Wordmark className="text-[15px]" />
         </div>
         <div className="flex flex-1 items-center justify-center py-10">
           {/* Mounted only where it is visible: animations hidden by CSS still run. */}
-          {isWide && <RadarVisual />}
+          {isWide && <TailVisual />}
         </div>
         <div className="max-w-md">
           <p className="font-serif text-[28px] leading-tight font-semibold text-balance">
@@ -99,10 +98,8 @@ export function AuthPage({ mode }: Props) {
           className="w-full max-w-sm"
         >
           <div className="mb-8 flex items-center gap-2.5 lg:hidden">
-            <span className="grid size-8 place-items-center rounded-xl bg-primary text-white dark:text-[#0b0f17]">
-              <Radar size={18} strokeWidth={2.2} />
-            </span>
-            <span className="text-[15px] font-semibold tracking-tight">Радар</span>
+            <LogoMark size={36} />
+            <Wordmark className="text-[17px]" />
           </div>
 
           <h1 className="text-2xl font-semibold tracking-tight">

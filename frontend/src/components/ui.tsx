@@ -1,4 +1,5 @@
 import clsx from 'clsx'
+import { Schedule } from './icons'
 import { animate, motion, useMotionValue, useTransform } from 'motion/react'
 import { useEffect } from 'react'
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
@@ -239,6 +240,20 @@ export function Toggle({
         )}
       />
     </button>
+  )
+}
+
+/** "4 мин": how long the full article takes to read; nothing while it is not known. */
+export function ReadingTime({ minutes }: { minutes: number | null | undefined }) {
+  if (!minutes) return null
+  return (
+    <span
+      className="inline-flex items-center gap-1 tabular-nums"
+      title="Время чтения полной статьи"
+    >
+      <Schedule size={14} />
+      {minutes} мин
+    </span>
   )
 }
 

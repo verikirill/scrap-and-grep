@@ -1,6 +1,6 @@
 import { cn } from '../../lib/utils'
 import clsx from 'clsx'
-import { Check } from 'lucide-react'
+import { Check } from '../../components/icons'
 import { motion } from 'motion/react'
 import { INPUT_CLASS, rowMotion } from '../../components/tokens'
 import { Field } from '../../components/ui'

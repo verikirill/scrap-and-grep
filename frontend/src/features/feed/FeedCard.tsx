@@ -8,17 +8,17 @@ import {
   Rss,
   Target,
   Users,
-} from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+} from '../../components/icons'
+import type { IconComponent } from '../../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
 import { EASE, rowMotion } from '../../components/tokens'
-import { Chip } from '../../components/ui'
+import { Chip, ReadingTime } from '../../components/ui'
 import type { FeedItem, FeedReason, ReactionKind } from '../../lib/api'
 import { CATEGORY_LABELS, externalHref, formatRelative } from '../../lib/format'
 import { ReactionBar } from './ReactionBar'
 
-const REASON_ICONS: Record<FeedReason['kind'], LucideIcon> = {
+const REASON_ICONS: Record<FeedReason['kind'], IconComponent> = {
   interest: Target,
   resume: BriefcaseBusiness,
   learned: Heart,
@@ -135,6 +135,7 @@ export function FeedCard({ item, index, onReact }: Props) {
         <span className="font-medium text-foreground">{item.source_name}</span>
         <span>{CATEGORY_LABELS[item.source_category] ?? item.source_category}</span>
         <span>{formatRelative(item.published_at)}</span>
+        <ReadingTime minutes={item.reading_minutes} />
         {isRead && <span className="text-outline">прочитано</span>}
       </div>
       <a

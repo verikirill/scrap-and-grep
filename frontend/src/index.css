@@ -358,3 +358,11 @@ input[type='range']::-moz-range-thumb {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* View transitions move only the elements named for them (a digest title
+   flowing between the history list and the page header). The rest of the
+   page changes at once instead of cross-fading two snapshots of itself. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}

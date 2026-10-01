@@ -1,0 +1,22 @@
+{
+  "name": "Tail&Grep",
+  "short_name": "Tail&Grep",
+  "description": "Новости ИТ и ИБ под вашу работу: дайджесты, лента, видео и каналы",
+  "lang": "ru",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#11131c",
+  "theme_color": "#2f5bea",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

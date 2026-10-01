@@ -7,19 +7,18 @@ import {
   GitCompareArrows,
   Info,
   Layers,
-} from 'lucide-react'
+} from '../../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { buttonClass, EASE, rowMotion } from '../../components/tokens'
-import { AnimatedNumber, Card, Chip, ScoreBar } from '../../components/ui'
+import { AnimatedNumber, Card, Chip, ScoreBar, ReadingTime } from '../../components/ui'
 import { api } from '../../lib/api'
 import type { Digest, DigestItem, ReactionKind, Topic } from '../../lib/api'
 import {
   externalHref,
   formatDate,
   formatDateTime,
-  formatPeriod,
   modelLabel,
   plural,
   REJECT_LABELS,
@@ -90,6 +89,7 @@ function ItemCard({ item, index, reactions, onReact }: ItemCardProps) {
       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
         <span className="font-medium text-foreground">{item.source_name}</span>
         <span>{formatDate(item.published_at)}</span>
+        <ReadingTime minutes={item.reading_minutes} />
         <ScoreBar score={item.score} />
         {item.interest_title && <Chip tone="accent">{item.interest_title}</Chip>}
         {personal !== 0 && (
@@ -254,17 +254,9 @@ export function DigestView({ digest, previousId }: { digest: Digest; previousId?
   return (
     <div className="space-y-6">
       <Card className="p-6">
+        {/* The title is in the header above, drawn from the history list. */}
         <div className="flex flex-wrap items-start justify-between gap-4">
-          {/* Full row on a phone, so the title is not squeezed by the buttons. */}
-          <div className="min-w-0 flex-1 basis-full sm:basis-0">
-            <p className="text-xs text-muted-foreground">
-              {digest.profile_name} · версия {digest.profile_version} ·{' '}
-              {formatPeriod(digest.period_start, digest.period_end)}
-            </p>
-            <h2 className="mt-1.5 font-serif text-[26px] leading-tight font-semibold tracking-tight text-balance">
-              {digest.title ?? 'Дайджест'}
-            </h2>
-          </div>
+          <h2 className="sr-only">{digest.title ?? 'Дайджест'}</h2>
           <div className="flex flex-wrap gap-2">
             {previousId && (
               <Link

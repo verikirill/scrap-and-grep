@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { Check, ChevronDown, ExternalLink, PenLine, Send, Trash2 } from 'lucide-react'
+import { Check, ChevronDown, ExternalLink, PenLine, Send, Trash2 } from '../../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'

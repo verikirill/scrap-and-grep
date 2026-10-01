@@ -1,16 +1,15 @@
 import clsx from 'clsx'
-import { motion } from 'motion/react'
-import { useId, useRef } from 'react'
-import type { KeyboardEvent } from 'react'
-
-// Keys that move the choice, as a radio group does: by one, or to an end.
-const STEP: Record<string, number> = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }
+import { useRef } from 'react'
+import { LiquidIndicator } from './LiquidIndicator'
+import { useRadioKeys } from './useRadioKeys'
 
 /**
- * Material 3 segmented button: one choice of a few, the chosen one tinted.
+ * Material 3 segmented button: one choice of a few. The chosen one is tinted,
+ * and the tint flows to the next choice like a drop.
  * A radio group for the keyboard: one Tab stop, arrows move the choice.
  * `isScrollable` lets any number of options scroll sideways instead of
- * squeezing into equal parts.
+ * squeezing into equal parts. A value that is none of the options leaves
+ * nothing tinted (a choice made elsewhere, such as custom dates).
  */
 export function Segmented<T extends string>({
   value,
@@ -18,74 +17,71 @@ export function Segmented<T extends string>({
   onChange,
   label,
   isScrollable = false,
+  className,
 }: {
   value: T
-  options: readonly { value: T; label: string }[]
+  /** `short` replaces the label on a phone, where five long labels do not fit. */
+  options: readonly { value: T; label: string; short?: string }[]
   onChange: (value: T) => void
   label: string
   isScrollable?: boolean
+  className?: string
 }) {
-  const group = useId()
-  const buttons = useRef<(HTMLButtonElement | null)[]>([])
-  const chosen = Math.max(
-    0,
-    options.findIndex((option) => option.value === value),
-  )
-
-  const choose = (index: number) => {
-    const next = (index + options.length) % options.length
-    onChange(options[next].value)
-    buttons.current[next]?.focus()
-  }
-
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key in STEP) choose(chosen + STEP[event.key])
-    else if (event.key === 'Home') choose(0)
-    else if (event.key === 'End') choose(options.length - 1)
-    else return
-    event.preventDefault()
-  }
+  const group = useRef<HTMLDivElement>(null)
+  const found = options.findIndex((option) => option.value === value)
+  const keys = useRadioKeys(options.length, found, (index) => onChange(options[index].value))
 
   return (
     <div
+      ref={group}
       role="radiogroup"
       aria-label={label}
-      onKeyDown={onKeyDown}
+      onKeyDown={keys.onKeyDown}
       className={clsx(
-        'flex rounded-full border border-outline p-0.5',
-        isScrollable && 'overflow-x-auto [scrollbar-width:none]',
+        'relative isolate flex rounded-full border border-outline-variant bg-surface-container-low p-1',
+        // A fade at the right edge says there is more to scroll to.
+        isScrollable &&
+          'overflow-x-auto [mask-image:linear-gradient(to_right,black_85%,transparent)] [scrollbar-width:none]',
+        className,
       )}
     >
       {options.map((option, index) => {
-        const isChosen = option.value === value
+        const isChosen = index === found
         return (
           <button
             key={option.value}
-            ref={(node) => {
-              buttons.current[index] = node
-            }}
             type="button"
             role="radio"
             aria-checked={isChosen}
-            tabIndex={index === chosen ? 0 : -1}
+            {...keys.itemProps(index)}
             onClick={() => onChange(option.value)}
             className={clsx(
-              'state-layer relative h-9 overflow-hidden rounded-full px-3 text-[13px] font-medium transition-colors',
-              isScrollable ? 'flex-none' : 'min-w-0 flex-1',
-              isChosen ? 'text-on-secondary-container' : 'text-on-surface-variant',
+              'relative h-9 rounded-full px-2.5 text-[13px] transition-colors duration-300 sm:px-3.5',
+              isScrollable ? 'flex-none' : 'flex-auto',
+              isChosen
+                ? 'font-semibold text-primary-foreground'
+                : 'font-medium text-on-surface-variant hover:text-on-surface',
             )}
           >
-            {isChosen && (
-              <motion.span
-                layoutId={`segment-${group}`}
-                className="absolute inset-0 -z-10 rounded-full bg-secondary-container"
-                transition={{ type: 'spring', stiffness: 520, damping: 40 }}
-              />
+            {option.short ? (
+              <>
+                <span className="block whitespace-nowrap sm:hidden">{option.short}</span>
+                <span className="hidden whitespace-nowrap sm:block">{option.label}</span>
+              </>
+            ) : (
+              <span className="block truncate">{option.label}</span>
             )}
-            <span className="relative truncate">{option.label}</span>
           </button>
         )
       })}
+      {/* Last, so the buttons have handed over their elements when it measures. */}
+      <LiquidIndicator
+        container={group}
+        targetKey={found >= 0 ? String(value) : null}
+        getTarget={() => (found >= 0 ? keys.items.current[found] : null)}
+        axis="x"
+        className="-z-10 bg-primary shadow-elevation-1"
+      />
     </div>
   )
 }

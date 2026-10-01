@@ -1,6 +1,13 @@
 import { cn } from '../../lib/utils'
 import clsx from 'clsx'
-import { CalendarClock, FilePen, Send, Settings2, Trash2, TriangleAlert } from 'lucide-react'
+import {
+  CalendarClock,
+  FilePen,
+  Send,
+  Settings2,
+  Trash2,
+  TriangleAlert,
+} from '../../components/icons'
 import { motion } from 'motion/react'
 import { useState } from 'react'
 import { toast } from 'sonner'

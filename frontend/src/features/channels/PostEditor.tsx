@@ -17,14 +17,14 @@ import {
   Strikethrough,
   Trash2,
   Underline,
-} from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+} from '../../components/icons'
+import type { IconComponent } from '../../components/icons'
 import { useState } from 'react'
 import { Button, Field, Toggle } from '../../components/ui'
 import { INPUT_CLASS } from '../../components/tokens'
 import type { Media, PostButton, PostContent, PostFormat } from '../../lib/publishing'
 import { visibleLength } from '../../lib/postText'
-import { Segmented } from './Segmented'
+import { Segmented } from '../../components/Segmented'
 import { TelegramPreview } from './TelegramPreview'
 
 /** Telegram's spoiler: text hidden under a veil until tapped. */
@@ -50,7 +50,7 @@ function limitFor(format: PostFormat, media: Media[]): number {
 }
 
 type ToolProps = {
-  icon: LucideIcon
+  icon: IconComponent
   label: string
   active?: boolean
   onClick: () => void

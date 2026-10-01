@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react'
+import { Plus } from '../../components/icons'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button, ErrorNote, Field } from '../../components/ui'

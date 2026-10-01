@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { ArrowDown, ArrowUp, Minus, Plus } from 'lucide-react'
+import { ArrowDown, ArrowUp, Minus, Plus } from '../../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
 import type { ReactNode } from 'react'
 import { EASE } from '../../components/tokens'

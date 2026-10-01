@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { Bookmark, FileUp, RefreshCw, SlidersHorizontal, Sparkles } from 'lucide-react'
+import { Bookmark, FileUp, RefreshCw, SlidersHorizontal, Sparkles } from '../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'

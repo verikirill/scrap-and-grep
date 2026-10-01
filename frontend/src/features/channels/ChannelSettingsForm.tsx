@@ -8,7 +8,7 @@ import { INPUT_CLASS } from '../../components/tokens'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs'
 import { WEEKDAYS } from '../../lib/publishing'
 import type { ChannelSettings } from '../../lib/publishing'
-import { Segmented } from './Segmented'
+import { Segmented } from '../../components/Segmented'
 
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/
 const SECTIONS = [

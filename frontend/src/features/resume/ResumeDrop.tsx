@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { FileUp, ScanText } from 'lucide-react'
+import { FileUp, ScanText } from '../../components/icons'
 import { motion } from 'motion/react'
 import { useRef, useState } from 'react'
 import type { DragEvent } from 'react'

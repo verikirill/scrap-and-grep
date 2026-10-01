@@ -6,7 +6,7 @@ import {
   TriangleAlertIcon,
   OctagonXIcon,
   Loader2Icon,
-} from 'lucide-react'
+} from '@/components/icons'
 
 // The theme is the "dark" class the layout puts on <html>, not next-themes.
 function subscribe(onChange: () => void) {

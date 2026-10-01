@@ -1,6 +1,6 @@
 import { cn } from '../../lib/utils'
 import clsx from 'clsx'
-import { ChevronDown, Plus, Trash2 } from 'lucide-react'
+import { ChevronDown, Plus, Trash2 } from '../../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import type { CSSProperties } from 'react'

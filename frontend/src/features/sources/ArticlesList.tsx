@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { FileText, Search } from 'lucide-react'
+import { FileText, Search } from '../../components/icons'
 import { motion } from 'motion/react'
 import { useEffect, useMemo, useState } from 'react'
 import { EASE, rowMotion } from '../../components/tokens'
