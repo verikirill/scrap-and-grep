@@ -6,9 +6,10 @@ closely, with a little extra after commas and full stops. Captions show a
 page of two to four words, so an error of a syllable or two is not visible.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from itertools import pairwise
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from radar.shorts.model import (
     MAX_AUDIENCE,
@@ -23,6 +24,8 @@ from radar.shorts.model import (
 from radar.shorts.speech import clean
 
 BRAND = "Радар"
+# Dates are shown on the calendar the interface uses.
+MOSCOW = ZoneInfo("Europe/Moscow")
 _VOWELS = frozenset("аеёиоуыэюяaeiouy")
 # Digits are read as words: "2026" is eight syllables, about two per digit.
 _SYLLABLES_PER_DIGIT = 2.0
@@ -144,8 +147,23 @@ def estimate_segments(lines: list[str]) -> tuple[Segment, ...]:
     return tuple(segments)
 
 
+def _moscow(moment: datetime) -> datetime:
+    # The database keeps UTC; a naive value would otherwise be read in the
+    # server's own time zone.
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=UTC)
+    return moment.astimezone(MOSCOW)
+
+
+def format_day(moment: datetime) -> str:
+    """ "29 сентября", on the Moscow calendar the interface uses."""
+    local = _moscow(moment)
+    return f"{local.day} {_MONTHS[local.month - 1]}"
+
+
 def format_period(start: datetime, end: datetime) -> str:
     """ "23-30 сентября" or "28 сентября - 5 октября"."""
+    start, end = _moscow(start), _moscow(end)
     if (start.year, start.month) == (end.year, end.month):
         if start.day == end.day:
             return f"{end.day} {_MONTHS[end.month - 1]}"
@@ -177,7 +195,11 @@ def build_props(
             "kicker": beat.kicker,
             "title": beat.title,
             "fact": beat.fact,
+            "visual": beat.visual,
+            "points": list(beat.points),
             "source": beat.source,
+            "url": beat.url,
+            "date": beat.date,
             "startMs": cuts[index],
             "endMs": max(cuts[index + 1], cuts[index] + 1),
         }

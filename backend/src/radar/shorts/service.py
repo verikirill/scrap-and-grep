@@ -15,6 +15,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from radar.ai.factory import get_breaker, get_chat
+from radar.cache import Cache
 from radar.config import get_settings
 from radar.db import session_scope
 from radar.db.models import Video
@@ -38,7 +39,7 @@ from radar.shorts.script import (
     pick_items,
 )
 from radar.shorts.timing import build_props, format_period
-from radar.shorts.voice import VoiceClient, narrate
+from radar.shorts.voice import VoiceClient, VoiceOption, narrate
 from radar.store import digests as digest_store
 from radar.views import digest_view
 
@@ -49,6 +50,11 @@ _PARTIAL_SUFFIX = ".part"
 LEFTOVER_SECONDS = 3600
 RENDER_BUSY_ATTEMPTS = 4
 RENDER_BUSY_WAIT_SECONDS = 30
+# The voices of the voice service, as the media worker last heard them. The
+# housekeeping round refreshes them every 10 minutes; a list nobody has
+# confirmed for three rounds is dropped.
+VOICES_KEY = "shorts:voices"
+VOICES_TTL_SECONDS = 30 * 60
 
 
 @lru_cache
@@ -70,6 +76,21 @@ def get_voice() -> VoiceClient | None:
     return VoiceClient(
         settings.tts_url, timeout=settings.tts_timeout_seconds, speaker=settings.tts_voice
     )
+
+
+async def refresh_voices(cache: Cache) -> list[VoiceOption]:
+    """Ask the voice service which voices it offers and remember the answer
+    for the api, which has no route to the service."""
+    client = get_voice()
+    voices = await client.voices() if client is not None else []
+    await cache.set_json(VOICES_KEY, [voice.model_dump() for voice in voices], VOICES_TTL_SECONDS)
+    return voices
+
+
+async def known_voices(cache: Cache) -> list[VoiceOption]:
+    """The voices the media worker last heard of; empty if it has not said."""
+    cached = await cache.get_json(VOICES_KEY)
+    return [VoiceOption.model_validate(item) for item in cached] if isinstance(cached, list) else []
 
 
 def media_root() -> Path:
@@ -99,7 +120,9 @@ class AlreadyMaking(Exception):
     """The reader already has a video queued or being made."""
 
 
-async def request(session: AsyncSession, digest_id: uuid.UUID, user_id: uuid.UUID) -> Video | None:
+async def request(
+    session: AsyncSession, digest_id: uuid.UUID, user_id: uuid.UUID, voice: str | None = None
+) -> Video | None:
     """Queue a video of the digest, replacing a finished or failed one.
 
     Returns None when the digest's video is already queued or being made: two
@@ -119,6 +142,7 @@ async def request(session: AsyncSession, digest_id: uuid.UUID, user_id: uuid.UUI
         "error": None,
         "script": None,
         "voice": None,
+        "requested_voice": voice,
         "by_model": False,
         "duration_ms": None,
         "size_bytes": None,
@@ -201,13 +225,14 @@ async def process(video_id: uuid.UUID) -> bool:
         if digest is None:
             return False
         view = digest_view(digest)
+        voice = row.requested_voice
         row.status, row.stage, row.progress = STATUS_RUNNING, STAGE_SCRIPT, 0.1
 
     try:
         items = pick_items(view, settings.shorts_max_items)
         script = await get_writer().write(view, items)
         await _update(video_id, stage=STAGE_VOICE, progress=0.3)
-        narration = await narrate(get_voice(), script.lines())
+        narration = await narrate(get_voice(), script.lines(), voice)
         props = build_props(
             script,
             narration,

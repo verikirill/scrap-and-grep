@@ -12,6 +12,7 @@ from radar.api.schemas import MetaOut
 from radar.db.models import Source
 from radar.resume.files import BUILTIN_FORMATS, DOCLING_FORMATS
 from radar.resume.parse import PARSER_BUILTIN, PARSER_DOCLING
+from radar.shorts.service import known_voices
 from radar.store.articles import corpus_stats
 
 router = APIRouter(tags=["system"])
@@ -45,7 +46,7 @@ async def metrics() -> Response:
 
 
 @router.get("/api/v1/meta")
-async def meta(session: SessionDep, settings: SettingsDep) -> MetaOut:
+async def meta(session: SessionDep, settings: SettingsDep, cache: CacheDep) -> MetaOut:
     embedder = get_embedder()
     stats = await corpus_stats(session, embedder.model_id)
     sources = await session.scalar(select(func.count()).select_from(Source))
@@ -76,4 +77,5 @@ async def meta(session: SessionDep, settings: SettingsDep) -> MetaOut:
         resume_max_bytes=settings.resume_max_bytes,
         shorts=bool(settings.shorts_url),
         shorts_voice=bool(settings.shorts_url and settings.tts_url),
+        short_voices=await known_voices(cache) if settings.shorts_url and settings.tts_url else [],
     )

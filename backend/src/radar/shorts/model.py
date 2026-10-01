@@ -1,6 +1,8 @@
 """What a short video is made of: the script, the narration and the timeline."""
 
+import re
 from dataclasses import dataclass
+from typing import Literal, get_args
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -28,6 +30,17 @@ MAX_WORDS = 800
 MAX_DURATION_MS = 120_000
 # What is spoken over one news card: two sentences at most.
 MAX_NARRATION = 280
+MAX_POINT = 60
+MAX_POINTS = 3
+MAX_URL = 200
+MAX_DATE = 24
+
+# What a news item is about; picks the picture and colour of its card.
+Visual = Literal[
+    "vulnerability", "attack", "incident", "regulation", "release", "research", "energy", "other"
+]
+VISUALS: tuple[Visual, ...] = get_args(Visual)
+_URL_RE = re.compile(r"^https?://\S+$", re.IGNORECASE)
 
 
 class ShortError(Exception):
@@ -58,8 +71,32 @@ class Beat(BaseModel):
     fact: str | None = Field(default=None, max_length=MAX_FACT)
     narration: str = Field(max_length=MAX_NARRATION)
     source: str = Field(max_length=MAX_SOURCE)
+    visual: Visual = "other"
+    # Short facts ticked off on screen while the item is told.
+    points: tuple[str, ...] = Field(default=(), max_length=MAX_POINTS)
+    # The article, for the QR code on the card.
+    url: str | None = Field(default=None, max_length=MAX_URL)
+    # When it was published, e.g. "29 сентября".
+    date: str | None = Field(default=None, max_length=MAX_DATE)
 
     _spoken = field_validator("kicker", "title", "narration", "source")(_has_words)
+
+    @field_validator("points")
+    @classmethod
+    def _short_points(cls, points: tuple[str, ...]) -> tuple[str, ...]:
+        for point in points:
+            _has_words(point)
+            if len(point) > MAX_POINT:
+                raise ValueError(f"a point is longer than {MAX_POINT} characters")
+        return points
+
+    @field_validator("url")
+    @classmethod
+    def _web_address(cls, url: str | None) -> str | None:
+        # A code that opens anything but a web page has no place on the card.
+        if url is not None and not _URL_RE.match(url):
+            raise ValueError("the source address must be http or https")
+        return url
 
 
 class Script(BaseModel):

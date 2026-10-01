@@ -8,7 +8,7 @@ import base64
 from itertools import pairwise
 
 import httpx
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 from radar.logging import get_logger
 from radar.shorts.model import Narration, Segment
@@ -35,6 +35,31 @@ class _SpeechOut(BaseModel):
     audio: str
 
 
+VOICE_ID_PATTERN = r"^[A-Za-z0-9_-]{1,40}$"
+
+
+class VoiceOption(BaseModel):
+    """A voice a reader can pick for the narration."""
+
+    id: str = Field(pattern=VOICE_ID_PATTERN)
+    title: str = Field(min_length=1, max_length=40)
+    default: bool = False
+
+
+def _voice_options(listing: object) -> list[VoiceOption]:
+    """The well-formed entries of the service's list; one bad entry does not
+    take the whole choice away."""
+    if not isinstance(listing, list):
+        raise ValueError("the voice service returned something other than a list")
+    voices = []
+    for entry in listing:
+        try:
+            voices.append(VoiceOption.model_validate(entry))
+        except ValidationError:
+            log.warning("short_voice_skipped", entry=str(entry)[:80])
+    return voices
+
+
 def silent(lines: list[str]) -> Narration:
     return Narration(segments=estimate_segments(lines), audio=None, voice=None)
 
@@ -57,11 +82,18 @@ class VoiceClient:
         self._speaker = speaker
         self._transport = transport
 
-    async def speak(self, lines: list[str]) -> Narration:
+    async def voices(self) -> list[VoiceOption]:
+        """The voices the service offers; empty when it has no choice to give."""
+        async with httpx.AsyncClient(timeout=self._timeout, transport=self._transport) as client:
+            response = await client.get(f"{self._url}/v1/voices")
+        response.raise_for_status()
+        return _voice_options(response.json())
+
+    async def speak(self, lines: list[str], voice: str | None = None) -> Narration:
         payload = {
             "sentences": [spoken(line) for line in lines],
             "language": LANGUAGE,
-            "voice": self._speaker or None,
+            "voice": voice or self._speaker or None,
             "gap_ms": GAP_MS,
         }
         async with httpx.AsyncClient(timeout=self._timeout, transport=self._transport) as client:
@@ -81,12 +113,23 @@ class VoiceClient:
         return Narration(segments=segments, audio=audio, voice=f"qwen3-tts:{out.voice}")
 
 
-async def narrate(client: VoiceClient | None, lines: list[str]) -> Narration:
-    """Speak the lines, or time them for a silent video if the voice fails."""
+async def narrate(
+    client: VoiceClient | None, lines: list[str], voice: str | None = None
+) -> Narration:
+    """Speak the lines, or time them for a silent video if the voice fails.
+
+    A picked voice the service refuses (it was removed after the reader
+    chose it) gives way to the service's default voice."""
     if client is None:
         return silent(lines)
     try:
-        return await client.speak(lines)
+        try:
+            return await client.speak(lines, voice)
+        except httpx.HTTPStatusError as exc:
+            if voice is None or exc.response.status_code != httpx.codes.BAD_REQUEST:
+                raise
+            log.warning("short_voice_refused", voice=voice)
+            return await client.speak(lines, None)
     except (httpx.HTTPError, ValueError) as exc:
         log.warning("short_voice_failed", error=type(exc).__name__)
         return silent(lines)

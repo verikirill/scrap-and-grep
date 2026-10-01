@@ -3,7 +3,7 @@
 import hashlib
 import html
 import re
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, unquote_plus, urlencode, urlsplit, urlunsplit
 
 _TAG_RE = re.compile(r"<[^>]+>")
 _SCRIPT_RE = re.compile(r"<(script|style)\b[^>]*>.*?</\1>", re.IGNORECASE | re.DOTALL)
@@ -44,17 +44,41 @@ def strip_html(raw: str) -> str:
     return _SPACE_RE.sub(" ", text.replace("\xa0", " ")).strip()
 
 
+def _is_tracking(key: str) -> bool:
+    key = key.lower()
+    return key.startswith(_TRACKING_PREFIXES) or key in _TRACKING_KEYS
+
+
 def canonical_url(url: str) -> str:
     """Drop fragments and tracking parameters so reposts collapse to one URL."""
     parts = urlsplit(url.strip())
     query = [
         (key, value)
         for key, value in parse_qsl(parts.query, keep_blank_values=False)
-        if not key.lower().startswith(_TRACKING_PREFIXES) and key.lower() not in _TRACKING_KEYS
+        if not _is_tracking(key)
     ]
     path = parts.path.rstrip("/") or "/"
     host = parts.netloc.lower().removeprefix("www.")
     return urlunsplit((parts.scheme.lower(), host, path, urlencode(query), ""))
+
+
+def untracked_url(url: str) -> str:
+    """The same page without tracking parameters and credentials: an address
+    to open, not a key to compare.
+
+    The rest of the query is kept byte for byte, so a value in cp1251 or a
+    bare flag like "?print" still opens the page it opened before. A fragment
+    is dropped unless it is a route of a single-page site ("#/news/1", "#!").
+    """
+    parts = urlsplit(url.strip())
+    query = "&".join(
+        pair
+        for pair in parts.query.split("&")
+        if pair and not _is_tracking(unquote_plus(pair.split("=", 1)[0]))
+    )
+    host = parts.netloc.rpartition("@")[2]
+    fragment = parts.fragment if parts.fragment.startswith(("/", "!")) else ""
+    return urlunsplit((parts.scheme, host, parts.path, query, fragment))
 
 
 def tokenize(text: str) -> list[str]:
