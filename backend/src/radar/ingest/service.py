@@ -5,7 +5,6 @@ from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 
 import httpx
-import trafilatura
 from sqlalchemy import select
 
 from radar.ai.embedder import Embedder
@@ -16,6 +15,8 @@ from radar.db.models import Source
 from radar.images.extract import from_page
 from radar.ingest.feeds import CONTENT_LIMIT, FeedResult, fetch_feed
 from radar.ingest.net import safe_get
+from radar.ingest.pages import page_text
+from radar.ingest.ptsecurity import fetch_trending
 from radar.ingest.telegram import fetch_channel
 from radar.logging import get_logger
 from radar.reading import word_count
@@ -66,6 +67,10 @@ async def ingest_source(source_id: int, client: httpx.AsyncClient, cache: Cache)
                 feed = await fetch_channel(
                     client, feed_url, language=language, last_post_id=last_post_id
                 )
+            elif kind == "pt_trending":
+                feed = await fetch_trending(
+                    client, feed_url, etag=etag, last_modified=last_modified
+                )
             else:
                 feed = await fetch_feed(
                     client, feed_url, language=language, etag=etag, last_modified=last_modified
@@ -113,9 +118,7 @@ async def _with_full_text(items: list[NewArticle], client: httpx.AsyncClient) ->
             try:
                 response = await safe_get(client, item.url, max_bytes=FULLTEXT_MAX_BYTES)
                 response.raise_for_status()
-                text = await asyncio.to_thread(
-                    trafilatura.extract, response.text, include_comments=False, include_tables=False
-                )
+                text = await asyncio.to_thread(page_text, item.url, response.text)
             except Exception as exc:
                 log.info(
                     "fulltext_failed", url=item.url, error=f"{type(exc).__name__}: {exc}"[:200]

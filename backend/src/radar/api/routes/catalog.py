@@ -20,6 +20,7 @@ from radar.db.models import Article, Source
 from radar.domain import Language, SourceCategory
 from radar.ingest import telegram
 from radar.ingest.net import UnsafeUrlError, build_client, ensure_public_url
+from radar.ingest.pages import MarkupChanged
 from radar.logging import get_logger
 from radar.store.articles import ArticleFilter, list_articles
 from radar.text import stable_hash
@@ -147,7 +148,7 @@ async def _channel(payload: SourceCreate) -> Source:
             status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"Канал @{name} не найден или закрыл веб-превью: так его читать нельзя.",
         ) from exc
-    except telegram.MarkupChanged as exc:
+    except MarkupChanged as exc:
         log.warning("channel_page_unreadable", channel=name, error=str(exc))
         raise HTTPException(
             status.HTTP_502_BAD_GATEWAY,

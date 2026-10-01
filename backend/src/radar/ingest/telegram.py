@@ -27,6 +27,7 @@ from radar.config import get_settings
 from radar.images.extract import usable
 from radar.ingest.feeds import MAX_TAGS, MAX_URL_LENGTH, SUMMARY_LIMIT, FeedResult
 from radar.ingest.net import UnsafeUrlError, safe_get
+from radar.ingest.pages import MarkupChanged
 from radar.logging import get_logger
 from radar.reading import word_count
 from radar.store.articles import NewArticle
@@ -87,8 +88,8 @@ _TRAIL_RE = re.compile(r"[^\w»\")\]?!…%$€₽+°]+$")
 # Emoji are symbols; joiners, keycaps and skin tones glue them together.
 _EMOJI_CATEGORIES = frozenset({"So", "Sk", "Cf", "Me"})
 _KEPT_SYMBOLS = frozenset("№©®™°")
-_VARIATION_SELECTORS = dict.fromkeys(map(ord, "︎️"))
-_INVISIBLE = dict.fromkeys(map(ord, "​‌‎‏⁠﻿"))
+_VARIATION_SELECTORS = dict.fromkeys(map(ord, "\ufe0e\ufe0f"))
+_INVISIBLE = dict.fromkeys(map(ord, "\u200b\u200c\u200e\u200f\u2060\ufeff"))
 # Advertising carries a token and the advertiser's details by law.
 _AD_RE = re.compile(
     r"\bРеклама\.?\s+(?:ООО|АО|ПАО|ЗАО|ОАО|ИП|НКО|АНО)\b"
@@ -100,10 +101,6 @@ _AD_RE = re.compile(
 
 class ChannelUnavailable(Exception):
     """t.me shows no posts of the channel: there is none, or its preview is off."""
-
-
-class MarkupChanged(Exception):
-    """The page has posts, but none of them could be read."""
 
 
 @dataclass(frozen=True, slots=True)

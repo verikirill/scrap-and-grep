@@ -45,7 +45,8 @@ class Source(Base):
     slug: Mapped[str] = mapped_column(String(64), unique=True)
     name: Mapped[str] = mapped_column(String(200))
     # "rss" for RSS and Atom feeds, "telegram" for a public channel read at
-    # feed_url = https://t.me/s/<name>.
+    # feed_url = https://t.me/s/<name>, "pt_trending" for the trending
+    # vulnerabilities page of Positive Technologies.
     kind: Mapped[str] = mapped_column(String(16), default="rss", server_default="rss")
     feed_url: Mapped[str] = mapped_column(Text, unique=True)
     site_url: Mapped[str | None] = mapped_column(Text)

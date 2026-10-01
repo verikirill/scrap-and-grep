@@ -10,10 +10,10 @@ import pytest
 import stamina
 
 from radar.images.service import Picture, mirror
+from radar.ingest.pages import MarkupChanged
 from radar.ingest.telegram import (
     ChannelUnavailable,
     LinkPreview,
-    MarkupChanged,
     Post,
     articles_of,
     fetch_channel,
@@ -180,7 +180,9 @@ def test_advertising_greetings_and_service_messages_are_not_news() -> None:
 def test_a_headline_keeps_its_units_and_letters_and_loses_links() -> None:
     percent = to_article(post("Курс вырос на 5%", TEXT), "ru", NOW)
     # "й" written as "и" and a combining breve, as some editors save it.
-    letters = to_article(post("Крайний срок й \U0001f525 перенесли 1️⃣", TEXT), "ru", NOW)
+    letters = to_article(
+        post("Крайний срок и\u0306 \U0001f525 перенесли 1\ufe0f\u20e3", TEXT), "ru", NOW
+    )
     linked = to_article(
         post("Подробности https://example.org/a?x=1 в отчёте вендора", TEXT), "ru", NOW
     )

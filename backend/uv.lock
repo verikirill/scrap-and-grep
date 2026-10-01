@@ -2223,6 +2223,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },
+    { name = "certifi" },
     { name = "clickhouse-connect", extra = ["async", "orjson"] },
     { name = "cryptography" },
     { name = "fastapi" },
@@ -2273,6 +2274,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "alembic", specifier = ">=1.20.0" },
+    { name = "certifi", specifier = ">=2026.7.22" },
     { name = "clickhouse-connect", extras = ["async", "orjson"], specifier = ">=1.9.0" },
     { name = "cryptography", specifier = ">=50.0.2" },
     { name = "fastapi", specifier = ">=0.142.2" },

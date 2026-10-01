@@ -12,7 +12,6 @@ from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 
 import httpx
-import trafilatura
 from sqlalchemy import or_, update
 
 from radar.config import get_settings
@@ -20,6 +19,7 @@ from radar.db import session_scope
 from radar.db.models import Article
 from radar.images.extract import from_page
 from radar.ingest.net import build_client, safe_get
+from radar.ingest.pages import page_text
 from radar.logging import get_logger
 from radar.reading import word_count
 
@@ -50,9 +50,7 @@ async def _read(
 ) -> tuple[int | None, str | None]:
     response = await safe_get(client, url, max_bytes=PAGE_MAX_BYTES)
     response.raise_for_status()
-    text = await asyncio.to_thread(
-        trafilatura.extract, response.text, include_comments=False, include_tables=False
-    )
+    text = await asyncio.to_thread(page_text, url, response.text)
     picture = None if has_picture else from_page(response.text, url)
     return word_count(text), picture
 

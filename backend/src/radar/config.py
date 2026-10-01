@@ -60,6 +60,9 @@ class Settings(BaseSettings):
     fulltext_concurrency: int = 4
     max_feed_bytes: int = 8_000_000
     allow_private_feed_hosts: bool = False
+    # Sites whose certificates come from the Russian national CA (Минцифры).
+    # It is trusted for these hosts and their subdomains only.
+    russian_ca_hosts: list[str] = Field(default_factory=lambda: ["bdu.fstec.ru", "ptsecurity.com"])
     # Where public Telegram channels are read (t.me/s/<name>), tried in turn.
     # Where Telegram is blocked, put a mirror of t.me first.
     telegram_preview_urls: list[str] = Field(
@@ -174,6 +177,16 @@ class Settings(BaseSettings):
     ranker_share: float = Field(default=0.5, ge=0.0, le=1.0)
     ranker_train_cron: str = "30 3 * * *"
     ranker_train_days: int = Field(default=28, ge=4, le=180)
+
+    @field_validator("russian_ca_hosts")
+    @classmethod
+    def _national_ca_hosts(cls, hosts: list[str]) -> list[str]:
+        names = [host.strip().strip(".").lower() for host in hosts]
+        for name in names:
+            # "ru" alone would hand the whole zone to that CA.
+            if "." not in name or not all(name.split(".")):
+                raise ValueError(f"not a host name for the national CA: {name!r}")
+        return names
 
     @field_validator("telegram_preview_urls")
     @classmethod

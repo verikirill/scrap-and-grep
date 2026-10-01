@@ -116,3 +116,31 @@ async def test_a_channel_is_read_into_articles_and_then_from_where_it_stopped(
     assert source is not None
     assert source.last_post_id == 5
     assert source.consecutive_failures == 0
+
+
+async def test_the_trending_page_of_pt_comes_with_the_defaults_and_is_read(
+    api: str, offline: None
+) -> None:
+    from radar.cache import get_cache
+    from radar.db import session_scope
+    from radar.db.models import Article, Source
+    from radar.ingest.service import ingest_source
+    from tests.test_official_sources import PT_PAGE
+
+    async with session_scope() as session:
+        trending = await session.scalar(select(Source).where(Source.slug == "pt-trending"))
+        incident = await session.scalar(select(Source).where(Source.slug == "bdu-incident"))
+    assert trending is not None
+    assert incident is not None
+    assert (trending.kind, incident.kind, incident.fetch_full_text) == ("pt_trending", "rss", True)
+
+    page = httpx.MockTransport(lambda _: httpx.Response(200, text=PT_PAGE))
+    async with httpx.AsyncClient(transport=page) as client:
+        report = await ingest_source(trending.id, client, get_cache())
+
+    async with session_scope() as session:
+        titles = list(
+            await session.scalars(select(Article.title).where(Article.source_id == trending.id))
+        )
+    assert (report.status, report.new_articles) == ("ok", 3)
+    assert "Трендовая уязвимость CVE-2026-99002 в Microsoft Windows" in titles
