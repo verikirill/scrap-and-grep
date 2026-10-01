@@ -37,11 +37,13 @@ class FeedOut(BaseModel):
 
 # Why an article was in the list the reader acted on.
 Slot = Literal["", "ranked", "explore", "newest", "saved", "digest"]
+# A bigint article id: anything outside it is no article, and is a 422.
+ArticleId = Annotated[int, Field(ge=1, le=2**63 - 1)]
 MAX_POSITION = 1000
 
 
 class FeedbackIn(BaseModel):
-    article_id: int
+    article_id: ArticleId
     kind: Kind
     # False takes the signal back: an unlike, an unsave.
     active: bool = True

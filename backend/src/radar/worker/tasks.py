@@ -327,14 +327,9 @@ async def run_digest_schedules() -> int:
 
 @ingest_broker.task(task_name="write_events", schedule=[{"cron": "* * * * *"}])
 async def write_events() -> int:
-    """Every minute: take the events waiting in Valkey into ClickHouse."""
+    """Every minute: take the events waiting in Valkey into ClickHouse and
+    delete those of deleted accounts."""
     return await event_writer.flush(budget_seconds=EVENTS_WRITE_BUDGET)
-
-
-@ingest_broker.task(task_name="forget_events", retry_on_error=True, max_retries=5)
-async def forget_events(user_ids: list[str]) -> None:
-    """Delete what the events say about readers whose accounts are gone."""
-    await event_writer.forget([uuid.UUID(user_id) for user_id in user_ids])
 
 
 @ingest_broker.task(task_name="plan_posts", schedule=[{"cron": "* * * * *"}])

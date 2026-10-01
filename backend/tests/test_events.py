@@ -1,10 +1,12 @@
+# ruff: noqa: F811  (the database fixture is imported from the accounts tests)
 """Events on their way from the API through Valkey into ClickHouse.
 
-Runs against a real ClickHouse and Valkey and is skipped without them:
+Runs against real ClickHouse, Valkey and PostgreSQL (deleted readers are
+noted there) and is skipped without them:
 
-    docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d valkey clickhouse
+    docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres valkey clickhouse
 
-A database of its own (radar_test) keeps the run away from development data.
+Databases of their own (radar_test) keep the run away from development data.
 """
 
 import os
@@ -16,6 +18,8 @@ from typing import Any
 import httpx
 import pytest
 from redis.exceptions import ConnectionError as RedisConnectionError
+
+from tests.test_accounts_api import database  # noqa: F401  (fixture)
 
 pytestmark = pytest.mark.integration
 
@@ -32,9 +36,10 @@ SETTINGS = {
 def _reset_caches() -> None:
     from radar.cache import get_cache, get_redis
     from radar.config import get_settings
+    from radar.db import base
     from radar.events import writer
 
-    for cached in (get_settings, get_redis, get_cache):
+    for cached in (get_settings, get_redis, get_cache, base.get_engine, base.get_sessionmaker):
         cached.cache_clear()
     writer._schema_ready = False
 
@@ -48,7 +53,9 @@ def clickhouse_up() -> None:
 
 
 @pytest.fixture
-def events_on(clickhouse_up: None, monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+def events_on(
+    clickhouse_up: None, database: None, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[None]:
     """Settings that send events to the test database."""
     for key, value in SETTINGS.items():
         monkeypatch.setenv(key, value)
@@ -60,7 +67,11 @@ def events_on(clickhouse_up: None, monkeypatch: pytest.MonkeyPatch) -> Iterator[
 @pytest.fixture
 async def events(events_on: None) -> AsyncIterator[None]:
     """A migrated, empty events table and an empty stream."""
+    from sqlalchemy import delete
+
     from radar.cache import get_redis
+    from radar.db import base, session_scope
+    from radar.db.models import ForgottenReader
     from radar.events import clickhouse
 
     try:
@@ -70,9 +81,12 @@ async def events(events_on: None) -> AsyncIterator[None]:
     await clickhouse.migrate()
     async with clickhouse.connect() as client:
         for table in ("events", "events_daily"):
-            await client.command(f"TRUNCATE TABLE IF EXISTS {table}")
+            await client.command(f"TRUNCATE TABLE {table}")
+    async with session_scope() as session:
+        await session.execute(delete(ForgottenReader))
     yield
     await get_redis().aclose()
+    await base.get_engine().dispose()
 
 
 async def rows(where: str = "1", parameters: dict[str, Any] | None = None) -> list[dict[str, Any]]:
@@ -160,23 +174,23 @@ async def test_a_batch_retried_after_a_crash_is_not_doubled(
 async def test_events_wait_in_the_stream_while_clickhouse_is_down(
     events: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from radar.cache import get_redis
     from radar.config import get_settings
     from radar.events import emit
-    from radar.events.emit import STREAM
-    from radar.events.writer import flush
+    from radar.events.writer import MAX_ATTEMPTS, backlog, flush
 
     monkeypatch.setenv("RADAR_CLICKHOUSE_URL", "http://127.0.0.1:1")
     get_settings.cache_clear()
     await emit(an_event(), an_event())
-    while_down = await flush()
-    waiting = await get_redis().xlen(STREAM)
+    # Longer than any number of attempts: an outage is not a refusal.
+    while_down = [await flush() for _ in range(MAX_ATTEMPTS + 1)]
+    waiting = await backlog()
 
     monkeypatch.setenv("RADAR_CLICKHOUSE_URL", CLICKHOUSE_URL)
     get_settings.cache_clear()
     after = await flush()
 
-    assert (while_down, waiting) == (0, 2)
+    assert set(while_down) == {0}
+    assert waiting == {"waiting": 2, "set_aside": 0}
     assert after == 2
 
 
@@ -194,7 +208,7 @@ async def test_a_malformed_entry_is_set_aside_and_the_rest_written(events: None)
     assert written == 1
     assert await backlog() == {"waiting": 0, "set_aside": 1}
     [(_, entry)] = await get_redis().xrange(DEAD_LETTERS)
-    assert entry[b"reason"] == b"malformed"
+    assert entry[b"reason"] == b"unreadable"
 
 
 async def test_nothing_is_queued_while_events_are_off(
@@ -214,19 +228,30 @@ async def test_nothing_is_queued_while_events_are_off(
     assert await flush() == 0
 
 
-async def test_forgetting_a_reader_deletes_their_events_even_those_still_waiting(
+async def test_a_forgotten_reader_loses_stored_events_and_those_still_coming(
     events: None,
 ) -> None:
+    from radar.db import session_scope
+    from radar.db.models import ForgottenReader
     from radar.events import emit
-    from radar.events.writer import flush, forget
+    from radar.events.writer import flush
 
     leaving, staying = uuid.uuid4(), uuid.uuid4()
     await emit(an_event(leaving), an_event(staying))
     await flush()
     # Still in Valkey when the account goes.
     await emit(an_event(leaving))
+    async with session_scope() as session:
+        session.add(ForgottenReader(user_id=leaving))
 
-    await forget([leaving])
+    await flush()
+    # A request that was in flight when the account went.
+    await emit(an_event(leaving))
+    await flush()
 
     left = await rows()
     assert [row["user_id"] for row in left] == [staying]
+    async with session_scope() as session:
+        tombstone = await session.get(ForgottenReader, leaving)
+    assert tombstone is not None
+    assert tombstone.purged_at is not None

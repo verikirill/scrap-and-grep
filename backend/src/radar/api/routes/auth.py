@@ -24,12 +24,11 @@ from radar.auth.passwords import verify_password
 from radar.avatars import MAX_BYTES as AVATAR_MAX_BYTES
 from radar.avatars import AvatarError, normalize
 from radar.config import Settings
-from radar.db.models import Profile, Resume, User, UserAvatar
+from radar.db.models import ForgottenReader, Profile, Resume, User, UserAvatar
 from radar.events import enabled as events_enabled
 from radar.logging import get_logger
 from radar.recsys.service import forget_taste
 from radar.text import stable_hash
-from radar.worker.tasks import forget_events
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 log = get_logger(__name__)
@@ -265,14 +264,12 @@ async def delete_account(
     await auth_sessions.end_all(session, cache, user.id)
     # Owned rows go with the account through ON DELETE CASCADE.
     await session.execute(delete(User).where(User.id == user.id))
+    if events_enabled():
+        # In the same transaction: the request to forget the reader's events
+        # cannot be lost. The event writer carries it out within a minute.
+        session.add(ForgottenReader(user_id=user.id))
     await session.commit()
     await forget_taste(cache, user.id)
-    if events_enabled():
-        try:
-            await forget_events.kiq([str(user.id)])
-        except Exception as exc:
-            # The events then go with the table's 180-day limit.
-            log.warning("events_forget_not_queued", error=type(exc).__name__)
     log.info("user_deleted", user_id=str(user.id))
     response = Response(status_code=status.HTTP_204_NO_CONTENT)
     _clear_cookie(response, settings)

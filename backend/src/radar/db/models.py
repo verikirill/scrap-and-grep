@@ -640,3 +640,54 @@ class TelegramPost(Base):
         Index("ix_tg_posts_channel_created", "channel_id", "created_at"),
         Index("ix_tg_posts_articles", "article_ids", postgresql_using="gin"),
     )
+
+
+class ForgottenReader(Base):
+    """A deleted account whose events have to go from ClickHouse as well.
+
+    Written in the transaction that deletes the account, so the request to
+    forget cannot be lost. The event writer drops the reader's events still on
+    their way and deletes the stored ones; the row stays a day longer, for
+    events of requests that were in flight when the account went.
+    """
+
+    __tablename__ = "forgotten_readers"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    deleted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    purged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class RankerModel(Base):
+    """A learned feed ranker: the model, what it learned from and how it scored.
+
+    Every training run leaves a row, switched on or not, so the analytics page
+    can show why the hand blend is still in charge. At most one is active.
+    """
+
+    __tablename__ = "ranker_models"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid7)
+    version: Mapped[str] = mapped_column(String(40), unique=True)
+    # "active", "rejected" (lost to the hand blend or too little data), "retired".
+    status: Mapped[str] = mapped_column(String(16))
+    trained_from: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    trained_to: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    lists: Mapped[int] = mapped_column(Integer)
+    rows: Mapped[int] = mapped_column(Integer)
+    metrics: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    features: Mapped[list[str]] = mapped_column(JSONB)
+    # LightGBM's text dump; empty for a run that trained nothing.
+    model: Mapped[str] = mapped_column(Text, deferred=True)
+    note: Mapped[str] = mapped_column(Text, default="", server_default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        Index(
+            "uq_ranker_models_active",
+            "status",
+            unique=True,
+            postgresql_where=text("status = 'active'"),
+        ),
+        Index("ix_ranker_models_created", "created_at"),
+    )

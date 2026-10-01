@@ -5,7 +5,6 @@ Needs PostgreSQL, Valkey and ClickHouse; skipped without them.
 """
 
 import uuid
-from unittest.mock import AsyncMock
 
 import pytest
 
@@ -74,13 +73,9 @@ async def test_the_feed_records_what_was_shown_seen_and_marked(api: str, events:
     assert set(ids.values()) >= {row["article_id"] for row in recorded}
 
 
-async def test_a_deleted_account_takes_its_events_along(
-    api: str, events: None, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    from radar.events.writer import flush, forget
-    from radar.worker import tasks
+async def test_a_deleted_account_takes_its_events_along(api: str, events: None) -> None:
+    from radar.events.writer import flush
 
-    monkeypatch.setattr(tasks.forget_events, "kiq", AsyncMock())
     await seed_articles()
     async with register(api, "max") as max_:
         await max_.post("/profiles", json=profile_spec())
@@ -90,8 +85,7 @@ async def test_a_deleted_account_takes_its_events_along(
         before = await rows("user_id = %(user)s", {"user": me["id"]})
         deleted = await max_.post("/auth/me/delete", json={"password": PASSWORD})
 
-    tasks.forget_events.kiq.assert_awaited_once_with([me["id"]])  # type: ignore[attr-defined]
-    await forget([uuid.UUID(me["id"])])
+    await flush()
     assert before
     assert deleted.status_code == 204
     assert await rows("user_id = %(user)s", {"user": me["id"]}) == []

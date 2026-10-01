@@ -11,7 +11,7 @@ from sqlalchemy import delete, func, select
 from radar.ai.factory import get_embedder
 from radar.api.adapting import adapt_after_impressions, adapt_soon
 from radar.api.deps import CacheDep, CurrentUser, SessionDep, user_rate_limit
-from radar.api.routes.feed import MAX_POSITION, Slot
+from radar.api.routes.feed import MAX_POSITION, ArticleId, Slot
 from radar.api.routes.profiles import get_owned, profile_out, taste_changed
 from radar.api.schemas import ProfileOut
 from radar.db.models import (
@@ -85,7 +85,7 @@ class AdaptationIn(BaseModel):
 
 
 class SeenItem(BaseModel):
-    article_id: int
+    article_id: ArticleId
     position: int = Field(default=0, ge=0, le=MAX_POSITION)
     slot: Slot = ""
 
@@ -94,7 +94,7 @@ class ImpressionsIn(BaseModel):
     """Seen articles: `items` with their places, or bare `article_ids`."""
 
     items: list[SeenItem] = Field(default_factory=list, max_length=60)
-    article_ids: list[int] = Field(default_factory=list, max_length=60)
+    article_ids: list[ArticleId] = Field(default_factory=list, max_length=60)
     context: Literal["feed", "digest"] = "feed"
     # The feed snapshot or the digest the articles were in.
     list_id: uuid.UUID | None = None
