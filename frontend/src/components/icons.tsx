@@ -18,6 +18,10 @@ import ArrowForwardOutlineRoundedSvg from '~icons/material-symbols/arrow-forward
 import ArrowForwardRoundedSvg from '~icons/material-symbols/arrow-forward-rounded'
 import ArrowUpwardOutlineRoundedSvg from '~icons/material-symbols/arrow-upward-outline-rounded'
 import ArrowUpwardRoundedSvg from '~icons/material-symbols/arrow-upward-rounded'
+import AutoAwesomeOutlineRoundedSvg from '~icons/material-symbols/auto-awesome-outline-rounded'
+import AutoAwesomeRoundedSvg from '~icons/material-symbols/auto-awesome-rounded'
+import BlockOutlineRoundedSvg from '~icons/material-symbols/block-outline-rounded'
+import BlockRoundedSvg from '~icons/material-symbols/block-rounded'
 import BoltOutlineRoundedSvg from '~icons/material-symbols/bolt-outline-rounded'
 import BoltRoundedSvg from '~icons/material-symbols/bolt-rounded'
 import BookmarkOutlineRoundedSvg from '~icons/material-symbols/bookmark-outline-rounded'
@@ -194,6 +198,10 @@ import ThumbDownOutlineRoundedSvg from '~icons/material-symbols/thumb-down-outli
 import ThumbDownRoundedSvg from '~icons/material-symbols/thumb-down-rounded'
 import ThumbUpOutlineRoundedSvg from '~icons/material-symbols/thumb-up-outline-rounded'
 import ThumbUpRoundedSvg from '~icons/material-symbols/thumb-up-rounded'
+import TrendingDownOutlineRoundedSvg from '~icons/material-symbols/trending-down-outline-rounded'
+import TrendingDownRoundedSvg from '~icons/material-symbols/trending-down-rounded'
+import TrendingUpOutlineRoundedSvg from '~icons/material-symbols/trending-up-outline-rounded'
+import TrendingUpRoundedSvg from '~icons/material-symbols/trending-up-rounded'
 import TuneOutlineRoundedSvg from '~icons/material-symbols/tune-outline-rounded'
 import TuneRoundedSvg from '~icons/material-symbols/tune-rounded'
 import UploadFileOutlineRoundedSvg from '~icons/material-symbols/upload-file-outline-rounded'
@@ -404,6 +412,13 @@ export const Share = /* @__PURE__ */ icon(ShareOutlineRoundedSvg, ShareRoundedSv
 export const LinkOff = /* @__PURE__ */ icon(LinkOffOutlineRoundedSvg, LinkOffRoundedSvg)
 export const Colorize = /* @__PURE__ */ icon(ColorizeOutlineRoundedSvg, ColorizeRoundedSvg)
 export const LibraryAdd = /* @__PURE__ */ icon(LibraryAddOutlineRoundedSvg, LibraryAddRoundedSvg)
+export const AutoAwesome = /* @__PURE__ */ icon(AutoAwesomeOutlineRoundedSvg, AutoAwesomeRoundedSvg)
+export const TrendingUp = /* @__PURE__ */ icon(TrendingUpOutlineRoundedSvg, TrendingUpRoundedSvg)
+export const TrendingDown = /* @__PURE__ */ icon(
+  TrendingDownOutlineRoundedSvg,
+  TrendingDownRoundedSvg,
+)
+export const Block = /* @__PURE__ */ icon(BlockOutlineRoundedSvg, BlockRoundedSvg)
 
 // The names shadcn components import.
 export const CheckIcon = Check
