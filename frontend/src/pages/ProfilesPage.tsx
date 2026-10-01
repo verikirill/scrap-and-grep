@@ -136,7 +136,9 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
               />
             )}
             <ProfileAvatar profile={profile} size={28} />
-            <span className="relative">{profile.spec.name}</span>
+            <span className="relative max-w-56 truncate" title={profile.spec.name}>
+              {profile.spec.name}
+            </span>
           </button>
         ))}
         <Button

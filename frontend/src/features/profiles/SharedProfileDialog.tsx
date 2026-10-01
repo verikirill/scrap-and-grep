@@ -177,7 +177,7 @@ export function SharedProfileDialog({ token }: { token: string }) {
     // While the copy is being made the dialog stays: its answer picks the new profile.
     <Dialog open onOpenChange={(open) => !open && !accept.isPending && leave()}>
       <DialogContent
-        className="max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-[28px] p-6 sm:max-w-md"
+        className="max-h-[calc(100dvh-2rem)] overflow-x-hidden overflow-y-auto rounded-[28px] p-6 sm:max-w-md"
         showCloseButton={false}
       >
         {shared.isPending ? (

@@ -69,7 +69,7 @@ export function ShareProfileButton({ profile }: { profile: Profile }) {
           setOpen(next)
         }}
       >
-        <DialogContent className="max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto rounded-[28px] sm:max-w-md">
+        <DialogContent className="max-h-[calc(100dvh-2rem)] gap-5 overflow-x-hidden overflow-y-auto rounded-[28px] sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-lg">Поделиться профилем</DialogTitle>
             <DialogDescription>
