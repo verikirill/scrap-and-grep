@@ -17,6 +17,19 @@ import {
 
 const SEED = '#2f5bea'
 const CUSTOM = { spark: '#f2a20c', success: '#2e7d32' }
+// Colours a reader picks for a profile: tag-<name> is the tile, on-tag-<name>
+// the icon on it. Harmonised towards the seed, so they sit in the same set.
+const TAGS = {
+  blue: '#2f5bea',
+  violet: '#7c4dff',
+  teal: '#00897b',
+  green: '#2e7d32',
+  amber: '#f2a20c',
+  orange: '#ef6c00',
+  red: '#d32f2f',
+  pink: '#d81b60',
+  slate: '#546e7a',
+}
 const ROLES = [
   'primary',
   'onPrimary',
@@ -70,6 +83,14 @@ function roles(isDark) {
     out[`on-${name}`] = hexFromArgb(palette.tone(on))
     out[`${name}-container`] = hexFromArgb(palette.tone(container))
     out[`on-${name}-container`] = hexFromArgb(palette.tone(onContainer))
+  }
+  for (const [name, hex] of Object.entries(TAGS)) {
+    const palette = TonalPalette.fromInt(Blend.harmonize(argbFromHex(hex), seed))
+    const [tile, icon, swatch] = isDark ? [30, 90, 70] : [90, 30, 55]
+    out[`tag-${name}`] = hexFromArgb(palette.tone(tile))
+    out[`on-tag-${name}`] = hexFromArgb(palette.tone(icon))
+    // The colour as a dot in the picker: strong enough to tell nine apart.
+    out[`swatch-${name}`] = hexFromArgb(palette.tone(swatch))
   }
   return out
 }

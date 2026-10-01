@@ -41,6 +41,33 @@
   --md-on-success: #ffffff;
   --md-success-container: #92f7bc;
   --md-on-success-container: #002111;
+  --md-tag-blue: #dde1ff;
+  --md-on-tag-blue: #0038b7;
+  --md-swatch-blue: #5579ff;
+  --md-tag-violet: #e2dfff;
+  --md-on-tag-violet: #2e1dd4;
+  --md-swatch-violet: #7472ff;
+  --md-tag-teal: #8ff2f6;
+  --md-on-tag-teal: #004f52;
+  --md-swatch-teal: #1e9296;
+  --md-tag-green: #92f7bc;
+  --md-on-tag-green: #005231;
+  --md-swatch-green: #2c9563;
+  --md-tag-amber: #ffdcc2;
+  --md-on-tag-amber: #6d3900;
+  --md-swatch-amber: #c66d02;
+  --md-tag-orange: #ffdad2;
+  --md-on-tag-orange: #8a1c00;
+  --md-swatch-orange: #e25533;
+  --md-tag-red: #ffd9de;
+  --md-on-tag-red: #900037;
+  --md-swatch-red: #ef3e6f;
+  --md-tag-pink: #ffd8e7;
+  --md-on-tag-pink: #8b005c;
+  --md-swatch-pink: #ec33a3;
+  --md-tag-slate: #cfe5f9;
+  --md-on-tag-slate: #344959;
+  --md-swatch-slate: #718698;
 }
 
 .dark {
@@ -85,4 +112,31 @@
   --md-on-success: #003920;
   --md-success-container: #005231;
   --md-on-success-container: #92f7bc;
+  --md-tag-blue: #0038b7;
+  --md-on-tag-blue: #dde1ff;
+  --md-swatch-blue: #92a7ff;
+  --md-tag-violet: #2e1dd4;
+  --md-on-tag-violet: #e2dfff;
+  --md-swatch-violet: #a3a2ff;
+  --md-tag-teal: #004f52;
+  --md-on-tag-teal: #8ff2f6;
+  --md-swatch-teal: #54babe;
+  --md-tag-green: #005231;
+  --md-on-tag-green: #92f7bc;
+  --md-swatch-green: #5abe88;
+  --md-tag-amber: #6d3900;
+  --md-on-tag-amber: #ffdcc2;
+  --md-swatch-amber: #f69332;
+  --md-tag-orange: #8a1c00;
+  --md-on-tag-orange: #ffdad2;
+  --md-swatch-orange: #ff8b6e;
+  --md-tag-red: #900037;
+  --md-on-tag-red: #ffd9de;
+  --md-swatch-red: #ff869d;
+  --md-tag-pink: #8b005c;
+  --md-on-tag-pink: #ffd8e7;
+  --md-swatch-pink: #ff81c1;
+  --md-tag-slate: #344959;
+  --md-on-tag-slate: #cfe5f9;
+  --md-swatch-slate: #98aec1;
 }

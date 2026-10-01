@@ -10,6 +10,8 @@ import AccountCircleOutlineRoundedSvg from '~icons/material-symbols/account-circ
 import AccountCircleRoundedSvg from '~icons/material-symbols/account-circle-rounded'
 import AddOutlineRoundedSvg from '~icons/material-symbols/add-outline-rounded'
 import AddRoundedSvg from '~icons/material-symbols/add-rounded'
+import AnalyticsOutlineRoundedSvg from '~icons/material-symbols/analytics-outline-rounded'
+import AnalyticsRoundedSvg from '~icons/material-symbols/analytics-rounded'
 import ArrowDownwardOutlineRoundedSvg from '~icons/material-symbols/arrow-downward-outline-rounded'
 import ArrowDownwardRoundedSvg from '~icons/material-symbols/arrow-downward-rounded'
 import ArrowForwardOutlineRoundedSvg from '~icons/material-symbols/arrow-forward-outline-rounded'
@@ -20,6 +22,8 @@ import BoltOutlineRoundedSvg from '~icons/material-symbols/bolt-outline-rounded'
 import BoltRoundedSvg from '~icons/material-symbols/bolt-rounded'
 import BookmarkOutlineRoundedSvg from '~icons/material-symbols/bookmark-outline-rounded'
 import BookmarkRoundedSvg from '~icons/material-symbols/bookmark-rounded'
+import BugReportOutlineRoundedSvg from '~icons/material-symbols/bug-report-outline-rounded'
+import BugReportRoundedSvg from '~icons/material-symbols/bug-report-rounded'
 import CalendarClockOutlineRoundedSvg from '~icons/material-symbols/calendar-clock-outline-rounded'
 import CalendarClockRoundedSvg from '~icons/material-symbols/calendar-clock-rounded'
 import CalendarMonthOutlineRoundedSvg from '~icons/material-symbols/calendar-month-outline-rounded'
@@ -36,6 +40,8 @@ import CloseOutlineRoundedSvg from '~icons/material-symbols/close-outline-rounde
 import CloseRoundedSvg from '~icons/material-symbols/close-rounded'
 import ClosedCaptionOutlineRoundedSvg from '~icons/material-symbols/closed-caption-outline-rounded'
 import ClosedCaptionRoundedSvg from '~icons/material-symbols/closed-caption-rounded'
+import CloudOutlineRoundedSvg from '~icons/material-symbols/cloud-outline-rounded'
+import CloudRoundedSvg from '~icons/material-symbols/cloud-rounded'
 import CodeOutlineRoundedSvg from '~icons/material-symbols/code-outline-rounded'
 import CodeRoundedSvg from '~icons/material-symbols/code-rounded'
 import CompareArrowsOutlineRoundedSvg from '~icons/material-symbols/compare-arrows-outline-rounded'
@@ -46,10 +52,14 @@ import DangerousOutlineRoundedSvg from '~icons/material-symbols/dangerous-outlin
 import DangerousRoundedSvg from '~icons/material-symbols/dangerous-rounded'
 import DarkModeOutlineRoundedSvg from '~icons/material-symbols/dark-mode-outline-rounded'
 import DarkModeRoundedSvg from '~icons/material-symbols/dark-mode-rounded'
+import DatabaseOutlineRoundedSvg from '~icons/material-symbols/database-outline-rounded'
+import DatabaseRoundedSvg from '~icons/material-symbols/database-rounded'
 import DeleteOutlineRoundedSvg from '~icons/material-symbols/delete-outline-rounded'
 import DeleteRoundedSvg from '~icons/material-symbols/delete-rounded'
 import DescriptionOutlineRoundedSvg from '~icons/material-symbols/description-outline-rounded'
 import DescriptionRoundedSvg from '~icons/material-symbols/description-rounded'
+import DnsOutlineRoundedSvg from '~icons/material-symbols/dns-outline-rounded'
+import DnsRoundedSvg from '~icons/material-symbols/dns-rounded'
 import DocumentScannerOutlineRoundedSvg from '~icons/material-symbols/document-scanner-outline-rounded'
 import DocumentScannerRoundedSvg from '~icons/material-symbols/document-scanner-rounded'
 import DownloadOutlineRoundedSvg from '~icons/material-symbols/download-outline-rounded'
@@ -60,10 +70,14 @@ import EditDocumentOutlineRoundedSvg from '~icons/material-symbols/edit-document
 import EditDocumentRoundedSvg from '~icons/material-symbols/edit-document-rounded'
 import EditOutlineRoundedSvg from '~icons/material-symbols/edit-outline-rounded'
 import EditRoundedSvg from '~icons/material-symbols/edit-rounded'
+import ElectricBoltOutlineRoundedSvg from '~icons/material-symbols/electric-bolt-outline-rounded'
+import ElectricBoltRoundedSvg from '~icons/material-symbols/electric-bolt-rounded'
 import ErrorOutlineRoundedSvg from '~icons/material-symbols/error-outline-rounded'
 import ErrorRoundedSvg from '~icons/material-symbols/error-rounded'
 import ExploreOutlineRoundedSvg from '~icons/material-symbols/explore-outline-rounded'
 import ExploreRoundedSvg from '~icons/material-symbols/explore-rounded'
+import FactoryOutlineRoundedSvg from '~icons/material-symbols/factory-outline-rounded'
+import FactoryRoundedSvg from '~icons/material-symbols/factory-rounded'
 import FavoriteOutlineRoundedSvg from '~icons/material-symbols/favorite-outline-rounded'
 import FavoriteRoundedSvg from '~icons/material-symbols/favorite-rounded'
 import FormatBoldOutlineRoundedSvg from '~icons/material-symbols/format-bold-outline-rounded'
@@ -82,6 +96,8 @@ import FormatStrikethroughOutlineRoundedSvg from '~icons/material-symbols/format
 import FormatStrikethroughRoundedSvg from '~icons/material-symbols/format-strikethrough-rounded'
 import FormatUnderlinedOutlineRoundedSvg from '~icons/material-symbols/format-underlined-outline-rounded'
 import FormatUnderlinedRoundedSvg from '~icons/material-symbols/format-underlined-rounded'
+import GavelOutlineRoundedSvg from '~icons/material-symbols/gavel-outline-rounded'
+import GavelRoundedSvg from '~icons/material-symbols/gavel-rounded'
 import GroupOutlineRoundedSvg from '~icons/material-symbols/group-outline-rounded'
 import GroupRoundedSvg from '~icons/material-symbols/group-rounded'
 import HideImageOutlineRoundedSvg from '~icons/material-symbols/hide-image-outline-rounded'
@@ -96,16 +112,22 @@ import KeyboardArrowDownOutlineRoundedSvg from '~icons/material-symbols/keyboard
 import KeyboardArrowDownRoundedSvg from '~icons/material-symbols/keyboard-arrow-down-rounded'
 import KeyboardArrowUpOutlineRoundedSvg from '~icons/material-symbols/keyboard-arrow-up-outline-rounded'
 import KeyboardArrowUpRoundedSvg from '~icons/material-symbols/keyboard-arrow-up-rounded'
+import LanguageOutlineRoundedSvg from '~icons/material-symbols/language-outline-rounded'
+import LanguageRoundedSvg from '~icons/material-symbols/language-rounded'
 import LayersOutlineRoundedSvg from '~icons/material-symbols/layers-outline-rounded'
 import LayersRoundedSvg from '~icons/material-symbols/layers-rounded'
 import LightModeOutlineRoundedSvg from '~icons/material-symbols/light-mode-outline-rounded'
 import LightModeRoundedSvg from '~icons/material-symbols/light-mode-rounded'
 import LinkOutlineRoundedSvg from '~icons/material-symbols/link-outline-rounded'
 import LinkRoundedSvg from '~icons/material-symbols/link-rounded'
+import LockOutlineRoundedSvg from '~icons/material-symbols/lock-outline-rounded'
+import LockRoundedSvg from '~icons/material-symbols/lock-rounded'
 import LoginOutlineRoundedSvg from '~icons/material-symbols/login-outline-rounded'
 import LoginRoundedSvg from '~icons/material-symbols/login-rounded'
 import LogoutOutlineRoundedSvg from '~icons/material-symbols/logout-outline-rounded'
 import LogoutRoundedSvg from '~icons/material-symbols/logout-rounded'
+import MemoryOutlineRoundedSvg from '~icons/material-symbols/memory-outline-rounded'
+import MemoryRoundedSvg from '~icons/material-symbols/memory-rounded'
 import MicOutlineRoundedSvg from '~icons/material-symbols/mic-outline-rounded'
 import MicRoundedSvg from '~icons/material-symbols/mic-rounded'
 import MovieOutlineRoundedSvg from '~icons/material-symbols/movie-outline-rounded'
@@ -114,10 +136,16 @@ import NewspaperOutlineRoundedSvg from '~icons/material-symbols/newspaper-outlin
 import NewspaperRoundedSvg from '~icons/material-symbols/newspaper-rounded'
 import OpenInNewOutlineRoundedSvg from '~icons/material-symbols/open-in-new-outline-rounded'
 import OpenInNewRoundedSvg from '~icons/material-symbols/open-in-new-rounded'
+import PaletteOutlineRoundedSvg from '~icons/material-symbols/palette-outline-rounded'
+import PaletteRoundedSvg from '~icons/material-symbols/palette-rounded'
 import PersonAddOutlineRoundedSvg from '~icons/material-symbols/person-add-outline-rounded'
 import PersonAddRoundedSvg from '~icons/material-symbols/person-add-rounded'
+import PolicyOutlineRoundedSvg from '~icons/material-symbols/policy-outline-rounded'
+import PolicyRoundedSvg from '~icons/material-symbols/policy-rounded'
 import ProgressActivityOutlineRoundedSvg from '~icons/material-symbols/progress-activity-outline-rounded'
 import ProgressActivityRoundedSvg from '~icons/material-symbols/progress-activity-rounded'
+import PsychologyOutlineRoundedSvg from '~icons/material-symbols/psychology-outline-rounded'
+import PsychologyRoundedSvg from '~icons/material-symbols/psychology-rounded'
 import RadarOutlineRoundedSvg from '~icons/material-symbols/radar-outline-rounded'
 import RadarRoundedSvg from '~icons/material-symbols/radar-rounded'
 import RefreshOutlineRoundedSvg from '~icons/material-symbols/refresh-outline-rounded'
@@ -126,18 +154,28 @@ import RemoveOutlineRoundedSvg from '~icons/material-symbols/remove-outline-roun
 import RemoveRoundedSvg from '~icons/material-symbols/remove-rounded'
 import ReplayOutlineRoundedSvg from '~icons/material-symbols/replay-outline-rounded'
 import ReplayRoundedSvg from '~icons/material-symbols/replay-rounded'
+import RocketLaunchOutlineRoundedSvg from '~icons/material-symbols/rocket-launch-outline-rounded'
+import RocketLaunchRoundedSvg from '~icons/material-symbols/rocket-launch-rounded'
+import RouterOutlineRoundedSvg from '~icons/material-symbols/router-outline-rounded'
+import RouterRoundedSvg from '~icons/material-symbols/router-rounded'
 import RssFeedOutlineRoundedSvg from '~icons/material-symbols/rss-feed-outline-rounded'
 import RssFeedRoundedSvg from '~icons/material-symbols/rss-feed-rounded'
+import SatelliteAltOutlineRoundedSvg from '~icons/material-symbols/satellite-alt-outline-rounded'
+import SatelliteAltRoundedSvg from '~icons/material-symbols/satellite-alt-rounded'
 import SaveOutlineRoundedSvg from '~icons/material-symbols/save-outline-rounded'
 import SaveRoundedSvg from '~icons/material-symbols/save-rounded'
 import ScheduleOutlineRoundedSvg from '~icons/material-symbols/schedule-outline-rounded'
 import ScheduleRoundedSvg from '~icons/material-symbols/schedule-rounded'
+import SchoolOutlineRoundedSvg from '~icons/material-symbols/school-outline-rounded'
+import SchoolRoundedSvg from '~icons/material-symbols/school-rounded'
 import SearchOutlineRoundedSvg from '~icons/material-symbols/search-outline-rounded'
 import SearchRoundedSvg from '~icons/material-symbols/search-rounded'
 import SendOutlineRoundedSvg from '~icons/material-symbols/send-outline-rounded'
 import SendRoundedSvg from '~icons/material-symbols/send-rounded'
 import SettingsOutlineRoundedSvg from '~icons/material-symbols/settings-outline-rounded'
 import SettingsRoundedSvg from '~icons/material-symbols/settings-rounded'
+import ShieldOutlineRoundedSvg from '~icons/material-symbols/shield-outline-rounded'
+import ShieldRoundedSvg from '~icons/material-symbols/shield-rounded'
 import SmartToyOutlineRoundedSvg from '~icons/material-symbols/smart-toy-outline-rounded'
 import SmartToyRoundedSvg from '~icons/material-symbols/smart-toy-rounded'
 import TargetOutlineRoundedSvg from '~icons/material-symbols/target-outline-rounded'
@@ -325,6 +363,34 @@ export const GitCompareArrows = /* @__PURE__ */ icon(
   CompareArrowsOutlineRoundedSvg,
   CompareArrowsRoundedSvg,
 )
+export const Shield = /* @__PURE__ */ icon(ShieldOutlineRoundedSvg, ShieldRoundedSvg)
+export const Factory = /* @__PURE__ */ icon(FactoryOutlineRoundedSvg, FactoryRoundedSvg)
+export const ElectricBolt = /* @__PURE__ */ icon(
+  ElectricBoltOutlineRoundedSvg,
+  ElectricBoltRoundedSvg,
+)
+export const Dns = /* @__PURE__ */ icon(DnsOutlineRoundedSvg, DnsRoundedSvg)
+export const Cloud = /* @__PURE__ */ icon(CloudOutlineRoundedSvg, CloudRoundedSvg)
+export const Memory = /* @__PURE__ */ icon(MemoryOutlineRoundedSvg, MemoryRoundedSvg)
+export const Router = /* @__PURE__ */ icon(RouterOutlineRoundedSvg, RouterRoundedSvg)
+export const Database = /* @__PURE__ */ icon(DatabaseOutlineRoundedSvg, DatabaseRoundedSvg)
+export const Policy = /* @__PURE__ */ icon(PolicyOutlineRoundedSvg, PolicyRoundedSvg)
+export const Gavel = /* @__PURE__ */ icon(GavelOutlineRoundedSvg, GavelRoundedSvg)
+export const Analytics = /* @__PURE__ */ icon(AnalyticsOutlineRoundedSvg, AnalyticsRoundedSvg)
+export const RocketLaunch = /* @__PURE__ */ icon(
+  RocketLaunchOutlineRoundedSvg,
+  RocketLaunchRoundedSvg,
+)
+export const BugReport = /* @__PURE__ */ icon(BugReportOutlineRoundedSvg, BugReportRoundedSvg)
+export const Lock = /* @__PURE__ */ icon(LockOutlineRoundedSvg, LockRoundedSvg)
+export const Psychology = /* @__PURE__ */ icon(PsychologyOutlineRoundedSvg, PsychologyRoundedSvg)
+export const School = /* @__PURE__ */ icon(SchoolOutlineRoundedSvg, SchoolRoundedSvg)
+export const SatelliteAlt = /* @__PURE__ */ icon(
+  SatelliteAltOutlineRoundedSvg,
+  SatelliteAltRoundedSvg,
+)
+export const Language = /* @__PURE__ */ icon(LanguageOutlineRoundedSvg, LanguageRoundedSvg)
+export const Palette = /* @__PURE__ */ icon(PaletteOutlineRoundedSvg, PaletteRoundedSvg)
 export const FileUp = /* @__PURE__ */ icon(UploadFileOutlineRoundedSvg, UploadFileRoundedSvg)
 
 // The names shadcn components import.

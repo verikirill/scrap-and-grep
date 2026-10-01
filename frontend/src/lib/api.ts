@@ -26,6 +26,9 @@ export interface Profile {
   id: string
   version: number
   spec: ProfileSpec
+  /** Keys of the app's icon and colour sets (lib/profileLook); null until picked. */
+  icon: string | null
+  color: string | null
   created_at: string
   updated_at: string
 }
@@ -488,6 +491,8 @@ export const api = {
   updateProfile: (id: string, spec: ProfileSpec) =>
     request<Profile>(`/profiles/${id}`, json('PUT', spec)),
   deleteProfile: (id: string) => request<void>(`/profiles/${id}`, { method: 'DELETE' }),
+  setProfileLook: (id: string, look: { icon: string | null; color: string | null }) =>
+    request<Profile>(`/profiles/${id}/look`, json('PATCH', look)),
   preview: (profile: ProfileSpec, periodDays: number, signal?: AbortSignal) =>
     request<Preview>('/selection/preview', {
       ...json('POST', { profile, period_days: periodDays }),

@@ -8,6 +8,7 @@ import { Link } from 'react-router'
 import { CalendarMonth, CircleCheck, Newspaper } from '../../components/icons'
 import { Segmented } from '../../components/Segmented'
 import { useRadioKeys } from '../../components/useRadioKeys'
+import { ProfileAvatar } from '../profiles/ProfileLook'
 import { buttonClass } from '../../components/tokens'
 import { Button, Card, ErrorNote, Spinner } from '../../components/ui'
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover'
@@ -135,16 +136,7 @@ export function BuildPanel({ profiles, initialProfileId, onCreated }: Props) {
                     transition={SPRING}
                   />
                 )}
-                <span
-                  className={clsx(
-                    'grid size-10 shrink-0 place-items-center rounded-full text-sm font-semibold transition-colors duration-300',
-                    isActive
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-surface-container-highest text-on-surface-variant',
-                  )}
-                >
-                  {profile.spec.name.slice(0, 1).toUpperCase()}
-                </span>
+                <ProfileAvatar profile={profile} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">{profile.spec.name}</span>
                   <span

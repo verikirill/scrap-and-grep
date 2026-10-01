@@ -584,3 +584,22 @@ export function useRevokeMcpKey() {
     onSuccess: () => client.invalidateQueries({ queryKey: keys.mcpKeys }),
   })
 }
+
+/** A profile's icon and colour: shown at once, confirmed or reverted by the server. */
+export function useSetProfileLook() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, icon, color }: { id: string; icon: string | null; color: string | null }) =>
+      api.setProfileLook(id, { icon, color }),
+    onMutate: async ({ id, icon, color }) => {
+      await client.cancelQueries({ queryKey: keys.profiles })
+      const previous = client.getQueryData<Profile[]>(keys.profiles)
+      client.setQueryData<Profile[]>(keys.profiles, (list) =>
+        list?.map((profile) => (profile.id === id ? { ...profile, icon, color } : profile)),
+      )
+      return { previous }
+    },
+    onError: (_error, _vars, context) => client.setQueryData(keys.profiles, context?.previous),
+    onSettled: () => client.invalidateQueries({ queryKey: keys.profiles }),
+  })
+}

@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router'
 import { Button, ErrorNote, PageHeader } from '../components/ui'
 import { PreviewPanel } from '../features/profiles/PreviewPanel'
 import { ProfileForm } from '../features/profiles/ProfileForm'
+import { ProfileAvatar, ProfileLookPicker } from '../features/profiles/ProfileLook'
 import type { Profile, ProfileSpec } from '../lib/api'
 import { useDeleteProfile, useProfiles, useSaveProfile } from '../lib/queries'
 
@@ -120,19 +121,20 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
             onClick={() => leaveTo(profile.id)}
             aria-current={profile.id === activeId ? 'true' : undefined}
             className={clsx(
-              'relative rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
+              'relative isolate flex items-center gap-2 rounded-full py-1 pr-3.5 pl-1 text-sm font-medium transition-colors duration-300',
               profile.id === activeId
-                ? 'text-on-primary-container'
-                : 'text-muted-foreground hover:text-foreground',
+                ? 'text-primary-foreground'
+                : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface',
             )}
           >
             {profile.id === activeId && (
               <motion.span
                 layoutId="profile-tab"
-                className="absolute inset-0 rounded-lg bg-primary-container"
-                transition={{ type: 'spring', stiffness: 480, damping: 38 }}
+                className="absolute inset-0 -z-10 rounded-full bg-primary shadow-elevation-1"
+                transition={{ type: 'spring', stiffness: 420, damping: 32 }}
               />
             )}
+            <ProfileAvatar profile={profile} size={28} />
             <span className="relative">{profile.spec.name}</span>
           </button>
         ))}
@@ -169,7 +171,11 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
       </div>
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
-        <ProfileForm spec={draft} onChange={setDraft} />
+        <ProfileForm
+          spec={draft}
+          onChange={setDraft}
+          look={stored ? <ProfileLookPicker profile={stored} /> : null}
+        />
         <div className="lg:sticky lg:top-9 lg:self-start">
           <PreviewPanel draft={draft} saved={saved} isDirty={dirty} />
         </div>

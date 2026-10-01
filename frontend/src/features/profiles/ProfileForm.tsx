@@ -3,7 +3,7 @@ import clsx from 'clsx'
 import { ChevronDown, Plus, Trash2 } from '../../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { ChipsInput } from '../../components/ChipsInput'
 import { EASE, INPUT_CLASS, shortId } from '../../components/tokens'
 import { Button, Card, Chip, Field } from '../../components/ui'
@@ -150,9 +150,12 @@ const CATEGORIES = Object.keys(CATEGORY_LABELS) as SourceCategory[]
 export function ProfileForm({
   spec,
   onChange,
+  look,
 }: {
   spec: ProfileSpec
   onChange: (next: ProfileSpec) => void
+  /** The icon and colour picker, beside the name; a new profile has none yet. */
+  look?: ReactNode
 }) {
   const [openId, setOpenId] = useState<string | null>(null)
 
@@ -184,14 +187,17 @@ export function ProfileForm({
   return (
     <div className="space-y-5">
       <Card className="space-y-4 p-5">
-        <Field label="Название профиля">
-          <input
-            className={INPUT_CLASS}
-            value={spec.name}
-            maxLength={120}
-            onChange={(event) => onChange({ ...spec, name: event.target.value })}
-          />
-        </Field>
+        <div className="flex items-end gap-3">
+          {look}
+          <Field label="Название профиля" className="min-w-0 flex-1">
+            <input
+              className={INPUT_CLASS}
+              value={spec.name}
+              maxLength={120}
+              onChange={(event) => onChange({ ...spec, name: event.target.value })}
+            />
+          </Field>
+        </div>
         <Field label="Кто читатель" hint="модель пишет «почему важно» под эту роль">
           <textarea
             className={cn(INPUT_CLASS, 'min-h-20 resize-y')}
