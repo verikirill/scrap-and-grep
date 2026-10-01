@@ -102,13 +102,15 @@ export function FeedPage() {
             onClick={() => setSearch(id === 'feed' ? {} : { tab: id })}
             className={clsx(
               'relative inline-flex items-center gap-2 rounded-lg px-4 py-1.5 text-sm font-medium transition-colors',
-              tab === id ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
+              tab === id
+                ? 'text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground',
             )}
           >
             {tab === id && (
               <motion.span
                 layoutId="feed-tab"
-                className="absolute inset-0 rounded-lg bg-card shadow-sm"
+                className="absolute inset-0 rounded-lg bg-primary shadow-elevation-1"
                 transition={{ type: 'spring', stiffness: 480, damping: 38 }}
               />
             )}

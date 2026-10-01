@@ -36,13 +36,15 @@ export function SourcesPage() {
             onClick={() => setSearch(item.id === 'sources' ? {} : { tab: item.id })}
             className={clsx(
               'relative rounded-lg px-4 py-1.5 text-sm font-medium transition-colors',
-              tab === item.id ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
+              tab === item.id
+                ? 'text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground',
             )}
           >
             {tab === item.id && (
               <motion.span
                 layoutId="sources-tab"
-                className="absolute inset-0 rounded-lg bg-card shadow-sm"
+                className="absolute inset-0 rounded-lg bg-primary shadow-elevation-1"
                 transition={{ type: 'spring', stiffness: 480, damping: 38 }}
               />
             )}
