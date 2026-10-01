@@ -335,7 +335,8 @@ export function DigestView({ digest, previousId }: { digest: Digest; previousId?
         </p>
       </Card>
 
-      {digest.topics.length > 0 && <ShortPanel digestId={digest.id} />}
+      {/* Keyed by the digest: a voice picked for one must not carry over to the next. */}
+      {digest.topics.length > 0 && <ShortPanel key={digest.id} digestId={digest.id} />}
 
       {digest.topics.length === 0 ? (
         <Card className="px-6 py-10 text-center text-sm text-muted">

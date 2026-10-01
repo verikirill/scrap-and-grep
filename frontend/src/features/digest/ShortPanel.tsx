@@ -1,11 +1,13 @@
 import clsx from 'clsx'
 import { Captions, Check, Clapperboard, Download, Mic, RotateCcw } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
+import { useState } from 'react'
 import { buttonClass, EASE } from '../../components/tokens'
 import { Button, Card, ErrorNote } from '../../components/ui'
-import type { Video, VideoStage } from '../../lib/api'
+import type { Video, VideoStage, VoiceOption } from '../../lib/api'
 import { formatDateTime, formatDuration, formatMegabytes } from '../../lib/format'
 import { useCreateShort, useMeta, useShort } from '../../lib/queries'
+import { chosenVoice } from '../../lib/voices'
 
 const STEPS: { stage: VideoStage; name: string; doing: string }[] = [
   { stage: 'script', name: 'Сценарий', doing: 'Пишем сценарий' },
@@ -83,10 +85,64 @@ function Progress({ video }: { video: Video }) {
   )
 }
 
-function Player({ video }: { video: Video }) {
+/** "голос Ведущий" for a picked voice, the speaker's name otherwise. */
+function voiceLabel(video: Video, voices: VoiceOption[]): string {
+  if (!video.voice) return 'без озвучки'
+  const id = video.voice.replace(/^qwen3-tts:/, '')
+  const title = voices.find((voice) => voice.id === id)?.title
+  return title ? `голос «${title}»` : `голос Qwen3-TTS ${id}`
+}
+
+type VoicePickerProps = {
+  /** Radio groups of two digests open at once must not share a name. */
+  name: string
+  voices: VoiceOption[]
+  value: string | null
+  onChange: (id: string) => void
+}
+
+/** The voice of the narration, as a row of pills that are radio buttons. */
+function VoicePicker({ name, voices, value, onChange }: VoicePickerProps) {
+  return (
+    <fieldset className="mt-3">
+      <legend className="mb-1.5 text-xs text-muted">Голос</legend>
+      <div className="flex flex-wrap gap-1.5">
+        {voices.map((voice) => {
+          const isChecked = value === voice.id
+          return (
+            <label
+              key={voice.id}
+              className={clsx(
+                'inline-flex cursor-pointer items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+                'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent',
+                isChecked
+                  ? 'border-spark bg-spark-soft text-spark'
+                  : 'border-line text-muted hover:border-faint hover:text-text',
+              )}
+            >
+              <input
+                type="radio"
+                name={name}
+                value={voice.id}
+                checked={isChecked}
+                onChange={() => onChange(voice.id)}
+                className="sr-only"
+              />
+              {/* Not by colour alone: the chosen pill carries a tick. */}
+              {isChecked && <Check size={12} strokeWidth={3} aria-hidden />}
+              {voice.title}
+            </label>
+          )
+        })}
+      </div>
+    </fieldset>
+  )
+}
+
+function Player({ video, voices }: { video: Video; voices: VoiceOption[] }) {
   const details = [
     video.duration_ms ? formatDuration(video.duration_ms) : null,
-    video.voice ? `голос ${video.voice.replace(/^qwen3-tts:/, 'Qwen3-TTS ')}` : 'без озвучки',
+    voiceLabel(video, voices),
     video.by_model ? 'сценарий модели' : 'сценарий из выжимок',
     video.size_bytes ? formatMegabytes(video.size_bytes) : null,
   ].filter(Boolean)
@@ -128,11 +184,14 @@ export function ShortPanel({ digestId }: { digestId: string }) {
   const isAvailable = meta.data?.shorts === true
   const short = useShort(digestId, isAvailable)
   const create = useCreateShort(digestId)
+  const [picked, setPicked] = useState<string | null>(null)
   if (!isAvailable) return null
 
   const video = short.data ?? null
   const isBusy = video?.status === 'queued' || video?.status === 'running'
   const hasVoice = meta.data?.shorts_voice === true
+  const voices = meta.data?.short_voices ?? []
+  const voice = chosenVoice(voices, picked, video?.requested_voice)
   const state = video?.status ?? 'none'
 
   return (
@@ -153,6 +212,14 @@ export function ShortPanel({ digestId }: { digestId: string }) {
               ? 'Озвучка Qwen3-TTS'
               : 'Озвучка на этом сервере не подключена: историю рассказывают субтитры'}
           </p>
+          {!isBusy && voices.length > 0 && (
+            <VoicePicker
+              name={`short-voice-${digestId}`}
+              voices={voices}
+              value={voice}
+              onChange={setPicked}
+            />
+          )}
         </div>
         {!isBusy && (
           <Button
@@ -160,7 +227,7 @@ export function ShortPanel({ digestId }: { digestId: string }) {
             size="sm"
             icon={state === 'none' ? <Clapperboard size={15} /> : <RotateCcw size={15} />}
             isBusy={create.isPending}
-            onClick={() => create.mutate()}
+            onClick={() => create.mutate(voices.length > 0 ? voice : null)}
           >
             {state === 'none' ? 'Сделать видео' : 'Переснять'}
           </Button>
@@ -185,7 +252,7 @@ export function ShortPanel({ digestId }: { digestId: string }) {
             className="mt-5"
           >
             {isBusy && <Progress video={video} />}
-            {video.status === 'done' && <Player video={video} />}
+            {video.status === 'done' && <Player video={video} voices={voices} />}
             {video.status === 'failed' && (
               <p className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">
                 {video.error ?? 'Видео собрать не удалось.'}

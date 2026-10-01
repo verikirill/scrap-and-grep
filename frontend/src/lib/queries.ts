@@ -144,7 +144,7 @@ export function useCreateShort(digestId: string) {
   const client = useQueryClient()
   const key = keys.short(digestId)
   return useMutation({
-    mutationFn: () => api.createShort(digestId),
+    mutationFn: (voice: string | null) => api.createShort(digestId, voice),
     // A poll that started before the order would bring back the old video
     // and stop the polling of the new one.
     onMutate: () => client.cancelQueries({ queryKey: key }),
