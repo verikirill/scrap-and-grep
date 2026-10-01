@@ -1,11 +1,12 @@
 import clsx from 'clsx'
-import { Plus, RefreshCw, Trash2 } from '../../components/icons'
+import { Plus, RefreshCw, Send, Trash2 } from '../../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import type { FormEvent } from 'react'
+import { Segmented } from '../../components/Segmented'
 import { EASE, INPUT_CLASS } from '../../components/tokens'
 import { Button, Card, Chip, ErrorNote, Field, Toggle } from '../../components/ui'
-import type { Source, SourceCategory, SourceCreate } from '../../lib/api'
+import type { Source, SourceCategory, SourceCreate, SourceKind } from '../../lib/api'
 import { CATEGORY_LABELS, externalHref, formatNumber, formatRelative } from '../../lib/format'
 import { useSourceMutations } from '../../lib/queries'
 
@@ -35,41 +36,82 @@ function StatusDot({ source }: { source: Source }) {
   )
 }
 
+const KINDS = [
+  { value: 'rss', label: 'Лента RSS или Atom', short: 'RSS' },
+  { value: 'telegram', label: 'Telegram-канал', short: 'Telegram' },
+] as const
+
+type SourceForm = {
+  kind: SourceKind
+  name: string
+  /** The feed's address, or the channel: "@name" or its t.me link. */
+  address: string
+  category: SourceCategory
+  language: 'ru' | 'en'
+  fetch_full_text: boolean
+}
+
+function toRequest(form: SourceForm): SourceCreate {
+  const { kind, name, address, ...common } = form
+  return kind === 'telegram'
+    ? { ...common, kind, channel: address.trim(), ...(name.trim() ? { name: name.trim() } : {}) }
+    : { ...common, kind, name: name.trim(), feed_url: address.trim() }
+}
+
 function AddSourceForm({ onDone }: { onDone: () => void }) {
   const { create } = useSourceMutations()
-  const [form, setForm] = useState<SourceCreate>({
+  const [form, setForm] = useState<SourceForm>({
+    kind: 'rss',
     name: '',
-    feed_url: '',
+    address: '',
     category: 'security',
     language: 'ru',
     fetch_full_text: false,
   })
+  const isChannel = form.kind === 'telegram'
+  const termsId = useId()
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
-    create.mutate(form, { onSuccess: onDone })
+    create.mutate(toRequest(form), { onSuccess: onDone })
   }
 
   return (
     <form onSubmit={submit} className="space-y-4 border-b border-outline-variant p-5">
+      <Segmented
+        label="Что добавить"
+        value={form.kind}
+        options={KINDS}
+        // An address of one kind means nothing to the other. A channel's short
+        // posts mostly point to articles, which are worth opening.
+        onChange={(kind) =>
+          setForm({ ...form, kind, address: '', fetch_full_text: kind === 'telegram' })
+        }
+        className="sm:max-w-md"
+      />
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Название">
+        <Field label="Название" hint={isChannel ? 'необязательно' : undefined}>
           <input
-            required
+            required={!isChannel}
             minLength={2}
+            placeholder={isChannel ? 'по умолчанию из канала' : undefined}
             className={INPUT_CLASS}
             value={form.name}
             onChange={(event) => setForm({ ...form, name: event.target.value })}
           />
         </Field>
-        <Field label="Адрес RSS или Atom">
+        <Field label={isChannel ? 'Канал' : 'Адрес RSS или Atom'}>
           <input
             required
-            type="url"
-            placeholder="https://example.org/feed.xml"
+            type={isChannel ? 'text' : 'url'}
+            placeholder={isChannel ? '@channel или t.me/channel' : 'https://example.org/feed.xml'}
+            autoComplete="off"
+            autoCapitalize="none"
+            spellCheck={false}
+            aria-describedby={isChannel ? termsId : undefined}
             className={INPUT_CLASS}
-            value={form.feed_url}
-            onChange={(event) => setForm({ ...form, feed_url: event.target.value })}
+            value={form.address}
+            onChange={(event) => setForm({ ...form, address: event.target.value })}
           />
         </Field>
         <Field label="Категория">
@@ -104,8 +146,17 @@ function AddSourceForm({ onDone }: { onDone: () => void }) {
           checked={form.fetch_full_text}
           onChange={(fetch_full_text) => setForm({ ...form, fetch_full_text })}
         />
-        Загружать полный текст статей (если в ленте только анонс)
+        {isChannel
+          ? 'Открывать статьи, на которые ведут короткие посты'
+          : 'Загружать полный текст статей (если в ленте только анонс)'}
       </label>
+      {isChannel && (
+        <p id={termsId} className="max-w-2xl text-xs leading-relaxed text-outline">
+          Канал читается через открытую страницу t.me/s/канал, без аккаунта. Каналы с закрытым
+          веб-превью так не прочитать. Условия Telegram запрещают брать посты для ИИ без согласия
+          владельца, поэтому добавляйте каналы, авторы которых не против.
+        </p>
+      )}
       <ErrorNote error={create.error} />
       <div className="flex gap-2">
         <Button type="submit" variant="primary" isBusy={create.isPending}>
@@ -201,9 +252,16 @@ export function SourcesTable({ sources, canEdit }: Props) {
                       href={externalHref(source.site_url ?? source.feed_url)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="block truncate text-sm font-medium hover:text-on-primary-container"
+                      className="flex items-center gap-1.5 text-sm font-medium hover:text-on-primary-container"
                     >
-                      {source.name}
+                      {source.kind === 'telegram' && (
+                        <Send
+                          size={14}
+                          aria-label="Telegram-канал"
+                          className="shrink-0 text-outline"
+                        />
+                      )}
+                      <span className="truncate">{source.name}</span>
                     </a>
                     <p className="truncate text-xs text-outline">
                       {source.last_status === 'error'

@@ -80,10 +80,13 @@ export interface SharedProfile {
   own_id: string | null
 }
 
+export type SourceKind = 'rss' | 'telegram'
+
 export interface Source {
   id: number
   slug: string
   name: string
+  kind: SourceKind
   feed_url: string
   site_url: string | null
   category: SourceCategory
@@ -98,13 +101,21 @@ export interface Source {
   articles_last_day: number
 }
 
-export interface SourceCreate {
-  name: string
-  feed_url: string
+type SourceCreateCommon = {
   category: SourceCategory
   language: 'ru' | 'en'
   fetch_full_text: boolean
 }
+
+export type SourceCreate =
+  | (SourceCreateCommon & { kind: 'rss'; name: string; feed_url: string })
+  | (SourceCreateCommon & {
+      kind: 'telegram'
+      /** "@name" or the channel's t.me address. */
+      channel: string
+      /** Without one the channel's own title is taken. */
+      name?: string
+    })
 
 export interface Article {
   id: number
