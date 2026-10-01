@@ -24,6 +24,7 @@ from radar.api.routes import (
     profiles,
     publishing,
     resume,
+    schedules,
     shorts,
     system,
 )
@@ -152,6 +153,7 @@ def create_app() -> FastAPI:
         profiles.router,
         adaptation.router,
         digests.router,
+        schedules.router,
         resume.router,
         shorts.router,
         feed.router,

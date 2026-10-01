@@ -305,6 +305,52 @@ class ProfileSuggestion(Base):
     __table_args__ = (Index("ix_profile_suggestions_profile", "profile_id", "status"),)
 
 
+class UserAvatar(Base):
+    """A reader's picture, already squared and re-encoded: small enough for a row."""
+
+    __tablename__ = "user_avatars"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    image: Mapped[bytes] = mapped_column(LargeBinary)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class DigestSchedule(Base):
+    """When a profile's digest is built without the reader asking."""
+
+    __tablename__ = "digest_schedules"
+
+    profile_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("profiles.id", ondelete="CASCADE"), primary_key=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    # "daily", "weekdays" or "weekly".
+    cadence: Mapped[str] = mapped_column(String(16))
+    # Monday is 0; only for a weekly schedule.
+    weekday: Mapped[int | None] = mapped_column(Integer)
+    # Local time of the reader, in minutes after midnight.
+    minute_of_day: Mapped[int] = mapped_column(Integer)
+    timezone: Mapped[str] = mapped_column(String(64))
+    next_run_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    # Where the next digest's period starts: when the last one ran, or the
+    # slot before a first run that had to wait.
+    last_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_digest_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("digests.id", ondelete="SET NULL")
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (
+        Index("ix_digest_schedules_due", "next_run_at"),
+        Index("ix_digest_schedules_user", "user_id"),
+    )
+
+
 class UserVector(Base):
     """A reader's taste as one vector per embedding model, for finding readers alike."""
 
@@ -372,6 +418,8 @@ class Digest(Base):
     title: Mapped[str | None] = mapped_column(Text)
     highlights: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list, server_default="{}")
     stats: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="{}")
+    # "manual" when the reader ordered it, "schedule" when their schedule did.
+    origin: Mapped[str] = mapped_column(String(16), default="manual", server_default="manual")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Last sign of life from the build; lets a reaper tell slow from dead.

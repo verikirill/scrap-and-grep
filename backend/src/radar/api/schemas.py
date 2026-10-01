@@ -46,6 +46,12 @@ class MeOut(UserOut):
     # What the onboarding needs to know: is there anything to build a feed from.
     profiles: int
     resume_status: str | None
+    # The reader's picture; the query string changes with every new one.
+    avatar_url: str | None = None
+
+
+class AvatarOut(BaseModel):
+    avatar_url: str | None
 
 
 class SourceOut(BaseModel):

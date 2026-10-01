@@ -60,6 +60,8 @@ class DigestSummaryView(BaseModel):
     error: str | None
     title: str | None
     stats: dict[str, Any]
+    # "schedule" for a digest the reader's schedule ordered.
+    origin: str = "manual"
     created_at: datetime
     finished_at: datetime | None
 
@@ -113,6 +115,7 @@ def digest_summary(digest: Digest) -> DigestSummaryView:
         error=digest.error,
         title=digest.title,
         stats=digest.stats,
+        origin=digest.origin,
         created_at=digest.created_at,
         finished_at=digest.finished_at,
     )
