@@ -24,10 +24,12 @@ type Props = {
   meta: Meta | undefined
   isBusy: boolean
   onFile: (file: File) => void
+  /** One row instead of the large area: for replacing a resume already read. */
+  isCompact?: boolean
 }
 
 /** Drop zone for a resume. Size is checked here too, to save an upload. */
-export function ResumeDrop({ meta, isBusy, onFile }: Props) {
+export function ResumeDrop({ meta, isBusy, onFile, isCompact = false }: Props) {
   const input = useRef<HTMLInputElement>(null)
   const [isOver, setIsOver] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
@@ -71,37 +73,63 @@ export function ResumeDrop({ meta, isBusy, onFile }: Props) {
       onDragLeave={() => setIsOver(false)}
       onDrop={onDrop}
     >
-      <button
-        type="button"
-        disabled={isBusy}
-        onClick={() => input.current?.click()}
-        className={clsx(
-          'flex w-full flex-col items-center rounded-2xl border-2 border-dashed px-6 py-10 text-center',
-          'transition-colors duration-200 disabled:pointer-events-none disabled:opacity-60',
-          isOver
-            ? 'border-primary bg-primary-container'
-            : 'border-outline-variant bg-card hover:border-outline',
-        )}
-      >
-        <motion.span
-          animate={{ y: isOver ? -4 : 0 }}
-          transition={{ type: 'spring', stiffness: 420, damping: 24 }}
-          className="mb-4 grid size-12 place-items-center rounded-2xl bg-surface-container text-on-primary-container"
+      {isCompact ? (
+        <button
+          type="button"
+          disabled={isBusy}
+          onClick={() => input.current?.click()}
+          className={clsx(
+            'flex w-full items-center gap-3 rounded-2xl border-2 border-dashed px-4 py-3 text-left',
+            'transition-colors duration-200 disabled:pointer-events-none disabled:opacity-60',
+            isOver
+              ? 'border-primary bg-primary-container'
+              : 'border-outline-variant hover:border-outline',
+          )}
         >
-          <FileUp size={22} />
-        </motion.span>
-        <span className="text-base font-semibold">Перетащите резюме сюда</span>
-        <span className="mt-1 text-sm text-muted-foreground">или нажмите, чтобы выбрать файл</span>
-        <span className="mt-4 text-xs text-outline">
-          {formatList} · до {megabytes(limit)} МБ
-        </span>
-        {hasOcr && (
-          <span className="mt-2 inline-flex items-center gap-1.5 text-xs text-outline">
-            <ScanText size={13} />
-            Сканы и фотографии страниц читаются распознаванием текста
+          <FileUp size={20} className="shrink-0 text-on-surface-variant" />
+          <span className="min-w-0 text-sm">
+            <span className="font-medium">Заменить резюме:</span>{' '}
+            <span className="text-muted-foreground">перетащите файл или нажмите</span>
           </span>
-        )}
-      </button>
+          <span className="ml-auto hidden shrink-0 text-xs text-outline sm:inline">
+            {formatList} · до {megabytes(limit)} МБ
+          </span>
+        </button>
+      ) : (
+        <button
+          type="button"
+          disabled={isBusy}
+          onClick={() => input.current?.click()}
+          className={clsx(
+            'flex w-full flex-col items-center rounded-2xl border-2 border-dashed px-6 py-10 text-center',
+            'transition-colors duration-200 disabled:pointer-events-none disabled:opacity-60',
+            isOver
+              ? 'border-primary bg-primary-container'
+              : 'border-outline-variant bg-card hover:border-outline',
+          )}
+        >
+          <motion.span
+            animate={{ y: isOver ? -4 : 0 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 24 }}
+            className="mb-4 grid size-12 place-items-center rounded-2xl bg-surface-container text-on-primary-container"
+          >
+            <FileUp size={22} />
+          </motion.span>
+          <span className="text-base font-semibold">Перетащите резюме сюда</span>
+          <span className="mt-1 text-sm text-muted-foreground">
+            или нажмите, чтобы выбрать файл
+          </span>
+          <span className="mt-4 text-xs text-outline">
+            {formatList} · до {megabytes(limit)} МБ
+          </span>
+          {hasOcr && (
+            <span className="mt-2 inline-flex items-center gap-1.5 text-xs text-outline">
+              <ScanText size={13} />
+              Сканы и фотографии страниц читаются распознаванием текста
+            </span>
+          )}
+        </button>
+      )}
       <input
         ref={input}
         type="file"

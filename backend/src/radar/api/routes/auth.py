@@ -1,7 +1,11 @@
 """Registration, sign-in, guest access and the current account."""
 
+import asyncio
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import delete, func, select
+from sqlalchemy.dialects.postgresql import insert
 
 from radar.api.deps import (
     CacheDep,
@@ -10,13 +14,17 @@ from radar.api.deps import (
     SessionDep,
     SettingsDep,
     rate_limit,
+    user_rate_limit,
 )
-from radar.api.schemas import LoginIn, MeOut, PasswordIn, RegisterIn, UserOut
+from radar.api.schemas import AvatarOut, LoginIn, MeOut, PasswordIn, RegisterIn, UserOut
+from radar.api.uploads import read_limited
 from radar.auth import service
 from radar.auth import sessions as auth_sessions
 from radar.auth.passwords import verify_password
+from radar.avatars import MAX_BYTES as AVATAR_MAX_BYTES
+from radar.avatars import AvatarError, normalize
 from radar.config import Settings
-from radar.db.models import Profile, Resume, User
+from radar.db.models import Profile, Resume, User, UserAvatar
 from radar.logging import get_logger
 from radar.recsys.service import forget_taste
 from radar.text import stable_hash
@@ -25,6 +33,12 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 log = get_logger(__name__)
 
 _auth_limit = Depends(rate_limit("auth", lambda settings: settings.auth_rate_limit_per_minute))
+# Decoding a picture costs CPU: a few uploads a minute is plenty.
+_avatar_limit = Depends(
+    user_rate_limit("avatar", lambda settings: settings.resume_rate_limit_per_minute)
+)
+AVATAR_PATH = "/api/v1/auth/me/avatar"
+_DECODING = asyncio.Semaphore(2)
 
 # One wording for an unknown address and a wrong password: the answer must not
 # reveal which addresses are registered.
@@ -160,6 +174,9 @@ async def me(user: OptionalUser, session: SessionDep) -> MeOut | None:
         select(func.count()).select_from(Profile).where(Profile.user_id == user.id)
     )
     resume_status = await session.scalar(select(Resume.status).where(Resume.user_id == user.id))
+    avatar_at = await session.scalar(
+        select(UserAvatar.updated_at).where(UserAvatar.user_id == user.id)
+    )
     return MeOut(
         id=user.id,
         email=user.email,
@@ -168,6 +185,62 @@ async def me(user: OptionalUser, session: SessionDep) -> MeOut | None:
         is_demo=user.is_demo,
         profiles=int(profiles or 0),
         resume_status=resume_status,
+        avatar_url=_avatar_url(avatar_at),
+    )
+
+
+def _avatar_url(updated_at: datetime | None) -> str | None:
+    # A new picture gets a new address, so the old one may be cached for good.
+    return f"{AVATAR_PATH}?v={int(updated_at.timestamp() * 1_000_000)}" if updated_at else None
+
+
+@router.put("/me/avatar", dependencies=[_avatar_limit])
+async def set_avatar(request: Request, user: CurrentUser, session: SessionDep) -> AvatarOut:
+    """Take a picture as the raw request body and keep a small square copy of it."""
+    data = await read_limited(
+        request, AVATAR_MAX_BYTES, f"Картинка больше {AVATAR_MAX_BYTES // 1_000_000} МБ."
+    )
+    try:
+        # Decoding is CPU work: off the event loop, other requests keep moving,
+        # and only a couple at a time, so a burst of uploads cannot eat the memory.
+        async with _DECODING:
+            image = await asyncio.to_thread(normalize, data)
+    except AvatarError as exc:
+        raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=str(exc)) from exc
+    values = {"image": image, "updated_at": func.now()}
+    updated_at = await session.scalar(
+        insert(UserAvatar)
+        .values(user_id=user.id, **values)
+        .on_conflict_do_update(index_elements=["user_id"], set_=values)
+        .returning(UserAvatar.updated_at)
+    )
+    await session.commit()
+    return AvatarOut(avatar_url=_avatar_url(updated_at))
+
+
+@router.delete("/me/avatar", status_code=status.HTTP_204_NO_CONTENT, dependencies=[_avatar_limit])
+async def delete_avatar(user: CurrentUser, session: SessionDep) -> Response:
+    await session.execute(delete(UserAvatar).where(UserAvatar.user_id == user.id))
+    await session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/me/avatar")
+async def get_avatar(user: CurrentUser, session: SessionDep) -> Response:
+    """The signed-in reader's own picture; nobody else's is served."""
+    image = await session.scalar(select(UserAvatar.image).where(UserAvatar.user_id == user.id))
+    if image is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Картинки нет.")
+    return Response(
+        content=image,
+        media_type="image/webp",
+        # The address carries the version: the browser may keep it as long as it likes.
+        headers={
+            "Cache-Control": "private, max-age=31536000, immutable",
+            # One browser, two accounts: the cookie decides whose picture it is.
+            "Vary": "Cookie",
+            "X-Content-Type-Options": "nosniff",
+        },
     )
 
 

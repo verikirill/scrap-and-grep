@@ -80,6 +80,8 @@ import ElectricBoltOutlineRoundedSvg from '~icons/material-symbols/electric-bolt
 import ElectricBoltRoundedSvg from '~icons/material-symbols/electric-bolt-rounded'
 import ErrorOutlineRoundedSvg from '~icons/material-symbols/error-outline-rounded'
 import ErrorRoundedSvg from '~icons/material-symbols/error-rounded'
+import EventRepeatOutlineRoundedSvg from '~icons/material-symbols/event-repeat-outline-rounded'
+import EventRepeatRoundedSvg from '~icons/material-symbols/event-repeat-rounded'
 import ExploreOutlineRoundedSvg from '~icons/material-symbols/explore-outline-rounded'
 import ExploreRoundedSvg from '~icons/material-symbols/explore-rounded'
 import FactoryOutlineRoundedSvg from '~icons/material-symbols/factory-outline-rounded'
@@ -150,6 +152,8 @@ import PaletteOutlineRoundedSvg from '~icons/material-symbols/palette-outline-ro
 import PaletteRoundedSvg from '~icons/material-symbols/palette-rounded'
 import PersonAddOutlineRoundedSvg from '~icons/material-symbols/person-add-outline-rounded'
 import PersonAddRoundedSvg from '~icons/material-symbols/person-add-rounded'
+import PhotoCameraOutlineRoundedSvg from '~icons/material-symbols/photo-camera-outline-rounded'
+import PhotoCameraRoundedSvg from '~icons/material-symbols/photo-camera-rounded'
 import PolicyOutlineRoundedSvg from '~icons/material-symbols/policy-outline-rounded'
 import PolicyRoundedSvg from '~icons/material-symbols/policy-rounded'
 import ProgressActivityOutlineRoundedSvg from '~icons/material-symbols/progress-activity-outline-rounded'
@@ -419,6 +423,8 @@ export const TrendingDown = /* @__PURE__ */ icon(
   TrendingDownRoundedSvg,
 )
 export const Block = /* @__PURE__ */ icon(BlockOutlineRoundedSvg, BlockRoundedSvg)
+export const Camera = /* @__PURE__ */ icon(PhotoCameraOutlineRoundedSvg, PhotoCameraRoundedSvg)
+export const EventRepeat = /* @__PURE__ */ icon(EventRepeatOutlineRoundedSvg, EventRepeatRoundedSvg)
 
 // The names shadcn components import.
 export const CheckIcon = Check

@@ -116,6 +116,8 @@ const ICONS = {
   TrendingUp: 'trending-up',
   TrendingDown: 'trending-down',
   Block: 'block',
+  Camera: 'photo-camera',
+  EventRepeat: 'event-repeat',
 }
 
 // The names shadcn components import.

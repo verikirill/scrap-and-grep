@@ -34,7 +34,6 @@ _digest_limit = Depends(
 )
 # Builds one reader may have in flight. The total is capped separately
 # (max_active_digests), this keeps a single account from taking every slot.
-MAX_ACTIVE_PER_USER = 3
 
 EXPORT_TTL_SECONDS = 24 * 3600
 STATUS_POLL_SECONDS = 5
@@ -75,7 +74,7 @@ async def create_digest(
     if profile is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Профиль не найден.")
     if (
-        await digest_store.count_active(session, user.id) >= MAX_ACTIVE_PER_USER
+        await digest_store.count_active(session, user.id) >= digest_store.MAX_ACTIVE_PER_USER
         or await digest_store.count_active(session) >= settings.max_active_digests
     ):
         raise HTTPException(

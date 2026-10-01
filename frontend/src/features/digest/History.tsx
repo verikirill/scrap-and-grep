@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { CircleAlert, Trash2 } from '../../components/icons'
+import { CircleAlert, Trash2, EventRepeat } from '../../components/icons'
 import { AnimatePresence, LayoutGroup, motion } from 'motion/react'
 import { MorphingTitle } from './DigestHeading'
 import { Spinner } from '../../components/ui'
@@ -82,8 +82,17 @@ export function History({ digests, activeId, onSelect, onDelete }: Props) {
                     )}
                     <span className="truncate">{statusLine(digest)}</span>
                   </span>
-                  <span className="mt-0.5 block truncate text-[11px] text-outline">
-                    {digest.profile_name} · {formatRelative(digest.created_at)}
+                  <span className="mt-0.5 flex items-center gap-1 truncate text-[11px] text-outline">
+                    {digest.origin === 'schedule' && (
+                      <EventRepeat
+                        size={12}
+                        className="shrink-0"
+                        aria-label="собран по расписанию"
+                      />
+                    )}
+                    <span className="truncate">
+                      {digest.profile_name} · {formatRelative(digest.created_at)}
+                    </span>
                   </span>
                 </button>
                 {!isRunning && (

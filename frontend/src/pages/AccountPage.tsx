@@ -1,6 +1,7 @@
-import clsx from 'clsx'
-import { LogOut, ShieldCheck, Trash2 } from '../components/icons'
-import { useState } from 'react'
+import { toast } from 'sonner'
+import { Camera, LogOut, ShieldCheck, Trash2 } from '../components/icons'
+import { useRef, useState } from 'react'
+import { UserAvatar } from '../components/UserAvatar'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router'
 import { INPUT_CLASS, buttonClass } from '../components/tokens'
@@ -10,8 +11,10 @@ import { ResumeDrop } from '../features/resume/ResumeDrop'
 import { ResumeFactsView } from '../features/resume/ResumeFactsView'
 import { ResumeProcessing } from '../features/resume/ResumeProcessing'
 import type { Me } from '../lib/api'
+import { useMediaQuery } from '../lib/useMediaQuery'
 import {
   isResumeStuck,
+  useAvatar,
   useMe,
   useMeta,
   useResume,
@@ -28,9 +31,9 @@ function ResumeSection() {
   const isProcessing = upload.isPending || (current?.status === 'processing' && !isStuck)
 
   return (
-    <Card className="p-6">
+    <Card className="p-5 sm:p-6">
       <h2 className="text-base font-semibold">Резюме</h2>
-      <p className="mt-1 mb-5 text-sm text-muted-foreground">
+      <p className="mt-1 mb-4 text-sm text-muted-foreground">
         По резюме определяется специализация. Она участвует в ленте наравне с интересами.
       </p>
 
@@ -40,10 +43,10 @@ function ResumeSection() {
           usesDocling={meta.data?.resume_parser === 'docling'}
         />
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-4">
           {current?.status === 'ready' && current.facts && (
-            <div className="rounded-xl bg-surface-container p-5">
-              <ResumeFactsView resume={current} facts={current.facts} />
+            <div className="rounded-xl bg-surface-container p-4 sm:p-5">
+              <ResumeFactsView resume={current} facts={current.facts} skillsShown={14} />
               <div className="mt-4 flex flex-wrap gap-2">
                 <Link to="/welcome" className={buttonClass('secondary', 'sm')}>
                   Собрать профиль из резюме
@@ -79,6 +82,7 @@ function ResumeSection() {
             meta={meta.data}
             isBusy={upload.isPending}
             onFile={(file) => upload.mutate(file)}
+            isCompact={current?.status === 'ready'}
           />
           <ErrorNote error={upload.error ?? remove.error ?? resume.error} />
           <p className="flex items-start gap-2 text-xs text-muted-foreground">
@@ -100,7 +104,7 @@ function DangerZone({ me }: { me: Me }) {
   // A guest has no password to confirm with and nothing worth keeping.
   if (me.is_demo) {
     return (
-      <Card className="p-6">
+      <Card className="p-5">
         <h2 className="text-base font-semibold">Временный аккаунт</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Он удалится сам через сутки вместе со всем, что вы в нём сделали. Чтобы сохранить
@@ -131,7 +135,7 @@ function DangerZone({ me }: { me: Me }) {
   }
 
   return (
-    <Card className="p-6">
+    <Card className="p-5">
       <h2 className="text-base font-semibold">Удаление аккаунта</h2>
       <p className="mt-1 text-sm text-muted-foreground">
         Вместе с аккаунтом удаляются профили, выпуски, данные резюме и все оценки. Восстановить их
@@ -174,9 +178,94 @@ function DangerZone({ me }: { me: Me }) {
   )
 }
 
+const AVATAR_TYPES = 'image/jpeg,image/png,image/webp,image/gif'
+const AVATAR_MAX_BYTES = 5_000_000
+
+/** Who is signed in, with their picture: a click on it picks a new one. */
+function Identity({ me }: { me: Me }) {
+  const { upload, remove } = useAvatar()
+  const input = useRef<HTMLInputElement>(null)
+  const isBusy = upload.isPending || remove.isPending
+  const take = (file: File | undefined) => {
+    if (!file) return
+    // The server checks the content; this only saves a pointless upload.
+    if (file.size > AVATAR_MAX_BYTES) {
+      toast.error('Картинка больше 5 МБ, выберите поменьше.')
+      return
+    }
+    upload.mutate(file, { onSuccess: () => toast.success('Фото обновлено') })
+  }
+
+  return (
+    <Card className="flex flex-col items-center p-5 text-center">
+      <button
+        type="button"
+        disabled={isBusy}
+        onClick={() => input.current?.click()}
+        aria-label={me.avatar_url ? 'Сменить фото' : 'Загрузить фото'}
+        className="group relative rounded-full focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary disabled:opacity-70"
+      >
+        <UserAvatar me={me} size={96} className="bg-primary-container text-on-primary-container" />
+        <span className="absolute right-0 bottom-0 grid size-8 place-items-center rounded-full bg-primary text-primary-foreground shadow-elevation-2 transition-transform duration-300 group-hover:scale-110">
+          <Camera size={16} />
+        </span>
+      </button>
+      <input
+        ref={input}
+        type="file"
+        accept={AVATAR_TYPES}
+        hidden
+        onChange={(event) => {
+          take(event.target.files?.[0])
+          // The same file may be picked again after an error.
+          event.target.value = ''
+        }}
+      />
+      <p className="mt-3 max-w-full truncate text-base font-semibold">{me.display_name}</p>
+      <p className="max-w-full truncate text-sm text-muted-foreground">
+        {/* A guest's address is made up: it says nothing to the reader. */}
+        {me.is_demo ? 'Гостевой вход, без почты и пароля' : me.email}
+      </p>
+      {(me.is_demo || me.is_admin) && (
+        <div className="mt-2 flex flex-wrap justify-center gap-1.5">
+          {me.is_demo && <Chip tone="spark">временный</Chip>}
+          {me.is_admin && <Chip tone="accent">администратор</Chip>}
+        </div>
+      )}
+      <div className="mt-3 flex flex-wrap justify-center gap-1">
+        <Button
+          size="sm"
+          variant="ghost"
+          isBusy={upload.isPending}
+          onClick={() => input.current?.click()}
+        >
+          {me.avatar_url ? 'Сменить фото' : 'Загрузить фото'}
+        </Button>
+        {me.avatar_url && (
+          <Button
+            size="sm"
+            variant="ghost"
+            isBusy={remove.isPending}
+            onClick={() => remove.mutate(undefined, { onSuccess: () => toast('Фото убрано') })}
+          >
+            Убрать
+          </Button>
+        )}
+      </div>
+      <p className="mt-1 text-xs text-outline">
+        JPEG, PNG, WebP или GIF до 5 МБ. Мы обрежем его до квадрата и уберём данные о съёмке.
+      </p>
+      <div className="mt-2 w-full">
+        <ErrorNote error={upload.error ?? remove.error} />
+      </div>
+    </Card>
+  )
+}
+
 export function AccountPage() {
   const me = useMe()
   const { logout } = useSignOut()
+  const isWide = useMediaQuery('(min-width: 1024px)')
   const user = me.data
   if (!user) return null
 
@@ -194,33 +283,19 @@ export function AccountPage() {
           </Button>
         }
       />
-      <div className="max-w-3xl space-y-5">
-        <Card className="flex items-center gap-4 p-6">
-          <span
-            aria-hidden
-            className={clsx(
-              'grid size-12 shrink-0 place-items-center rounded-2xl text-lg font-semibold',
-              'bg-primary-container text-on-primary-container',
-            )}
-          >
-            {user.display_name.slice(0, 1).toUpperCase()}
-          </span>
-          <div className="min-w-0">
-            <p className="truncate text-base font-semibold">{user.display_name}</p>
-            <p className="truncate text-sm text-muted-foreground">
-              {/* A guest's address is made up: it says nothing to the reader. */}
-              {user.is_demo ? 'Гостевой вход, без почты и пароля' : user.email}
-            </p>
-          </div>
-          <div className="ml-auto flex flex-wrap justify-end gap-1.5">
-            {user.is_demo && <Chip tone="spark">временный</Chip>}
-            {user.is_admin && <Chip tone="accent">администратор</Chip>}
-          </div>
-        </Card>
-        <ErrorNote error={logout.error} />
-        <ResumeSection />
-        <McpAccess />
-        <DangerZone me={user} />
+      <ErrorNote error={logout.error} />
+      {/* Who and what to do with the account on the left, the bulky parts on the right. */}
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,19rem)_minmax(0,1fr)] lg:items-start">
+        <aside className="space-y-5 lg:sticky lg:top-9">
+          <Identity me={user} />
+          {isWide && <DangerZone me={user} />}
+        </aside>
+        <div className="min-w-0 space-y-5">
+          <ResumeSection />
+          <McpAccess />
+          {/* On a phone the column order is the reading order: removal comes last. */}
+          {!isWide && <DangerZone me={user} />}
+        </div>
       </div>
     </>
   )

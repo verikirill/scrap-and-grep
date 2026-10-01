@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel
 
 from radar.api.deps import CacheDep, CurrentUser, SessionDep, SettingsDep, user_rate_limit
+from radar.api.uploads import read_limited
 from radar.domain import ProfileSpec
 from radar.logging import get_logger
 from radar.recsys.service import forget_taste
@@ -49,29 +50,6 @@ def _out(row: Any) -> ResumeOut:
     )
 
 
-async def _read_body(request: Request, limit: int) -> bytes:
-    """Read the upload, refusing it as soon as it exceeds the limit.
-
-    The declared length is checked first, but it is only a claim: the stream
-    is counted as well, so a client that lies about the size is cut off too.
-    """
-    too_large = HTTPException(
-        status.HTTP_413_CONTENT_TOO_LARGE,
-        detail=f"Файл больше {limit // 1_000_000} МБ. Загрузите резюме поменьше.",
-    )
-    declared = request.headers.get("content-length")
-    if declared is not None and declared.isdigit() and int(declared) > limit:
-        raise too_large
-    chunks: list[bytes] = []
-    received = 0
-    async for chunk in request.stream():
-        received += len(chunk)
-        if received > limit:
-            raise too_large
-        chunks.append(chunk)
-    return b"".join(chunks)
-
-
 @router.post("", status_code=status.HTTP_202_ACCEPTED, dependencies=[_upload_limit])
 async def upload_resume(
     request: Request, user: CurrentUser, session: SessionDep, settings: SettingsDep
@@ -81,7 +59,10 @@ async def upload_resume(
     The file name arrives in the `X-File-Name` header and is used only to tell
     text formats apart; it is not stored.
     """
-    data = await _read_body(request, settings.resume_max_bytes)
+    limit = settings.resume_max_bytes
+    data = await read_limited(
+        request, limit, f"Файл больше {limit // 1_000_000} МБ. Загрузите резюме поменьше."
+    )
     try:
         file_format = detect_format(data, request.headers.get("x-file-name", "")[:200])
     except ResumeError as exc:

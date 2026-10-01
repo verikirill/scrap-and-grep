@@ -18,6 +18,7 @@ import { Link, NavLink, useLocation } from 'react-router'
 import { formatNumber, modelLabel } from '../lib/format'
 import { useMe, useMeta } from '../lib/queries'
 import { prefetchRoute } from '../routes'
+import { UserAvatar } from './UserAvatar'
 import { LogoMark, Wordmark } from './Logo'
 import { LiquidIndicator } from './LiquidIndicator'
 import { DURATION, EASE } from './tokens'
@@ -211,15 +212,16 @@ function AccountButton({ compact }: { compact?: boolean }) {
       title={me.is_demo ? 'Демо-аккаунт' : me.email}
       className={({ isActive }) =>
         clsx(
-          'grid size-10 place-items-center rounded-full text-sm font-semibold transition-shadow',
+          'grid size-10 place-items-center rounded-full transition-shadow',
+          // The picture keeps its colours; the ring says this is the open section.
           isActive
-            ? 'bg-primary text-primary-foreground shadow-elevation-1'
+            ? 'bg-primary text-primary-foreground shadow-elevation-1 ring-2 ring-primary ring-offset-2 ring-offset-background'
             : 'bg-tertiary-container text-on-tertiary-container hover:shadow-elevation-1',
           compact && 'size-9',
         )
       }
     >
-      {me.display_name.slice(0, 1).toUpperCase()}
+      <UserAvatar me={me} size={compact ? 36 : 40} />
     </NavLink>
   )
 }

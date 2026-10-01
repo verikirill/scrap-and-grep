@@ -27,6 +27,7 @@ async def create(
     profile_version: int,
     period_start: datetime,
     period_end: datetime,
+    origin: str = "manual",
 ) -> Digest:
     digest = Digest(
         user_id=user_id,
@@ -36,6 +37,7 @@ async def create(
         period_start=period_start,
         period_end=period_end,
         status=STATUS_QUEUED,
+        origin=origin,
     )
     session.add(digest)
     await session.flush()
@@ -90,6 +92,10 @@ async def set_progress(
             heartbeat_at=datetime.now(UTC),
         )
     )
+
+
+# A reader may have this many digests in the making at once, by hand or by schedule.
+MAX_ACTIVE_PER_USER = 3
 
 
 async def count_active(session: AsyncSession, user_id: uuid.UUID | None = None) -> int:

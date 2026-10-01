@@ -172,6 +172,8 @@ export interface NewMcpKey extends McpKey {
 }
 
 export interface DigestSummary {
+  /** "schedule" when the reader's schedule ordered it. */
+  origin?: 'manual' | 'schedule'
   id: string
   profile_id: string | null
   profile_name: string
@@ -341,7 +343,27 @@ export interface User {
 export interface Me extends User {
   profiles: number
   resume_status: ResumeStatus | null
+  /** The reader's picture; a new one gets a new address. */
+  avatar_url: string | null
 }
+
+export type Cadence = 'daily' | 'weekdays' | 'weekly'
+
+/** A profile's digest built by itself, at the reader's local time. */
+export interface DigestSchedule {
+  profile_id: string
+  cadence: Cadence
+  /** Monday is 0; weekly schedules only. */
+  weekday: number | null
+  /** HH:MM in `timezone`. */
+  time: string
+  timezone: string
+  next_run_at: string
+  last_run_at: string | null
+  last_digest_id: string | null
+}
+
+export type ScheduleInput = Pick<DigestSchedule, 'cadence' | 'weekday' | 'time' | 'timezone'>
 
 export type ResumeStatus = 'processing' | 'ready' | 'failed'
 
@@ -497,6 +519,19 @@ export const api = {
   logout: () => request<void>('/auth/logout', { method: 'POST' }),
   deleteAccount: (password: string) => request<void>('/auth/me/delete', json('POST', { password })),
   mcpKeys: () => request<McpKey[]>('/mcp/keys'),
+  /** The picture goes as the raw body; the server squares and re-encodes it. */
+  uploadAvatar: (file: File) =>
+    request<{ avatar_url: string | null }>('/auth/me/avatar', {
+      method: 'PUT',
+      body: file,
+      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+    }),
+  deleteAvatar: () => request<void>('/auth/me/avatar', { method: 'DELETE' }),
+  schedules: () => request<DigestSchedule[]>('/digest-schedules'),
+  putSchedule: (profileId: string, schedule: ScheduleInput) =>
+    request<DigestSchedule>(`/profiles/${profileId}/schedule`, json('PUT', schedule)),
+  deleteSchedule: (profileId: string) =>
+    request<void>(`/profiles/${profileId}/schedule`, { method: 'DELETE' }),
   createMcpKey: (name: string) => request<NewMcpKey>('/mcp/keys', json('POST', { name })),
   revokeMcpKey: (id: string) => request<void>(`/mcp/keys/${id}`, { method: 'DELETE' }),
 

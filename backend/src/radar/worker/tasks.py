@@ -25,6 +25,7 @@ from radar.shorts import service as shorts_service
 from radar.shorts.renderer import RendererBusy
 from radar.store import digests as digest_store
 from radar.store import profiles as profile_store
+from radar.store import schedules as schedule_store
 from radar.worker.brokers import (
     DIGEST_IDLE_TIMEOUT_MS,
     MEDIA_IDLE_TIMEOUT_MS,
@@ -302,6 +303,23 @@ async def housekeeping() -> dict[str, int]:
         "guests": guests,
         "impressions": impressions,
     }
+
+
+@ingest_broker.task(task_name="run_digest_schedules", schedule=[{"cron": "* * * * *"}])
+async def run_digest_schedules() -> int:
+    """Every minute: start the digests readers scheduled for now."""
+    async with session_scope() as session:
+        started = await schedule_store.start_due(
+            session, datetime.now(UTC), max_active_total=get_settings().max_active_digests
+        )
+    for digest_id in started:
+        try:
+            await build_digest.kiq(str(digest_id))
+        except Exception:
+            log.exception("scheduled_digest_not_queued", digest_id=str(digest_id))
+            async with session_scope() as session:
+                await digest_store.mark_failed(session, digest_id, "Очередь задач недоступна.")
+    return len(started)
 
 
 @ingest_broker.task(task_name="plan_posts", schedule=[{"cron": "* * * * *"}])
