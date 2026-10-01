@@ -1,6 +1,10 @@
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion'
 import { COLORS, DISPLAY_FONT, SAFE, TEXT_FONT } from '../theme'
 import type { Beat } from '../types'
+import { VISUAL_STYLE } from '../visuals'
+import { FactVisual } from './FactVisual'
+import { Points } from './Points'
+import { SourceCard } from './SourceCard'
 import { Words } from './Words'
 
 type Props = {
@@ -10,56 +14,54 @@ type Props = {
 }
 
 /**
- * One news item: kicker, headline, a big fact card and the source. It slides
- * in from the right and hands over to the next one with a quick fade.
+ * One news item: what kind of news it is, the headline, a picture of its key
+ * number, the facts ticked off one by one and the source with a QR code to
+ * the article. It slides in from the right and fades out into the next one.
  */
 export function BeatScene({ beat, number, durationInFrames }: Props) {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
+  const style = VISUAL_STYLE[beat.visual]
+  const Icon = style.icon
   const enter = spring({ frame, fps, config: { damping: 18, stiffness: 120 } })
   const exit = interpolate(frame, [durationInFrames - 7, durationInFrames], [1, 0], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   })
-  // The fact lands when the narration is about a third of the way in.
-  const factAt = Math.round(durationInFrames * 0.32)
-  const fact = spring({ frame: frame - factAt, fps, config: { damping: 11, stiffness: 150 } })
   const titleWords = beat.title.split(/\s+/).filter(Boolean)
-  // Titles run up to about 90 characters; long ones step down so the fact
-  // card and the source still fit above the captions.
-  const titleSize = beat.title.length > 70 ? 58 : beat.title.length > 48 ? 66 : 78
+  // Titles run up to about 90 characters; long ones step down so the picture,
+  // the facts and the source still fit above the captions.
+  const titleSize = beat.title.length > 70 ? 54 : beat.title.length > 48 ? 62 : 72
 
   return (
-    <AbsoluteFill
-      style={{
-        opacity: exit,
-        transform: `translateX(${(1 - enter) * 140}px)`,
-      }}
-    >
-      <div style={{ position: 'absolute', top: SAFE.top + 170, left: SAFE.side, right: SAFE.side }}>
+    <AbsoluteFill style={{ opacity: exit, transform: `translateX(${(1 - enter) * 140}px)` }}>
+      <div
+        style={{
+          position: 'absolute',
+          top: SAFE.top + 110,
+          left: SAFE.side,
+          right: SAFE.side,
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 18,
+            gap: 16,
             fontFamily: TEXT_FONT,
             fontWeight: 800,
-            fontSize: 36,
+            fontSize: 34,
             letterSpacing: 3,
             textTransform: 'uppercase',
-            color: COLORS.accent,
+            color: style.color,
           }}
         >
-          <span
-            style={{
-              padding: '8px 18px',
-              borderRadius: 14,
-              background: COLORS.accent,
-              color: COLORS.ink,
-            }}
-          >
+          <span style={{ padding: '6px 16px', borderRadius: 14, background: style.color, color: COLORS.ink }}>
             {String(number).padStart(2, '0')}
           </span>
+          <Icon size={40} color={style.color} strokeWidth={2.4} />
           {beat.kicker}
         </div>
         <Words
@@ -68,7 +70,7 @@ export function BeatScene({ beat, number, durationInFrames }: Props) {
           stagger={3}
           accent={{ indexes: [titleWords.length - 1], color: COLORS.spark }}
           style={{
-            marginTop: 40,
+            marginTop: 20,
             fontFamily: DISPLAY_FONT,
             fontWeight: 700,
             fontSize: titleSize,
@@ -76,39 +78,22 @@ export function BeatScene({ beat, number, durationInFrames }: Props) {
             color: COLORS.text,
           }}
         />
-        {beat.fact && (
-          <div
-            style={{
-              marginTop: 56,
-              display: 'inline-block',
-              padding: '26px 38px',
-              borderRadius: 28,
-              background: COLORS.surface,
-              border: `3px solid ${COLORS.caption}`,
-              boxShadow: `0 0 60px rgba(255, 225, 77, ${0.25 * fact})`,
-              fontFamily: DISPLAY_FONT,
-              fontWeight: 800,
-              fontSize: beat.fact.length > 16 ? 58 : 76,
-              color: COLORS.caption,
-              opacity: Math.min(1, fact * 1.4),
-              transform: `scale(${0.6 + fact * 0.4}) rotate(${(1 - fact) * -4}deg)`,
-              transformOrigin: 'left center',
-            }}
-          >
-            {beat.fact}
-          </div>
-        )}
-        <div
-          style={{
-            marginTop: 44,
-            fontFamily: TEXT_FONT,
-            fontSize: 32,
-            fontWeight: 600,
-            color: COLORS.muted,
-            opacity: interpolate(frame, [12, 24], [0, 1], { extrapolateRight: 'clamp' }),
-          }}
-        >
-          источник · {beat.source}
+        <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', gap: 36 }}>
+          <FactVisual fact={beat.fact} icon={Icon} color={style.color} durationInFrames={durationInFrames} />
+          {beat.points.length > 0 && (
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <Points points={beat.points} color={style.color} durationInFrames={durationInFrames} />
+            </div>
+          )}
+        </div>
+        <div style={{ marginTop: 24 }}>
+          <SourceCard
+            source={beat.source}
+            date={beat.date}
+            url={beat.url}
+            color={style.color}
+            from={Math.round(durationInFrames * 0.16)}
+          />
         </div>
       </div>
     </AbsoluteFill>

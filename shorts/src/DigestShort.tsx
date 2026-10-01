@@ -24,7 +24,7 @@ export function DigestShort(props: ShortProps) {
     <AbsoluteFill>
       <Background />
       <Sequence durationInFrames={hookFrames} name="Hook">
-        <HookScene hook={props.hook} audience={props.audience} durationInFrames={hookFrames} />
+        <HookScene hook={props.hook} audience={props.audience} beats={props.beats} durationInFrames={hookFrames} />
       </Sequence>
       {props.beats.map((beat, index) => {
         const from = toFrames(beat.startMs, fps)
