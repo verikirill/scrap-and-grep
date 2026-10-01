@@ -14,17 +14,17 @@ export function ResumeProcessing({ usesModel, usesDocling }: Props) {
       <div
         role="status"
         aria-label="Читаем резюме"
-        className="relative mb-5 grid size-16 place-items-center overflow-hidden rounded-2xl bg-sunken text-accent-text"
+        className="relative mb-5 grid size-16 place-items-center overflow-hidden rounded-2xl bg-surface-container text-on-primary-container"
       >
         <FileText size={28} />
         <motion.span
-          className="absolute inset-x-0 top-0 h-0.5 bg-accent"
+          className="absolute inset-x-0 top-0 h-0.5 bg-primary"
           animate={{ y: [0, 64, 0] }}
           transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
         />
       </div>
       <h2 className="text-base font-semibold">Читаем резюме</h2>
-      <p className="mt-1.5 max-w-sm text-sm text-muted">
+      <p className="mt-1.5 max-w-sm text-sm text-muted-foreground">
         {usesDocling ? 'Разбираем вёрстку документа, ' : 'Достаём текст, '}
         убираем контакты и подбираем темы новостей.{' '}
         {usesModel

@@ -39,14 +39,14 @@ function Funnel({ digest }: { digest: Digest }) {
   return (
     <div className="grid gap-3 sm:grid-cols-3">
       {steps.map((step, index) => (
-        <div key={step.label} className="rounded-xl bg-sunken px-4 py-3">
+        <div key={step.label} className="rounded-xl bg-surface-container px-4 py-3">
           <AnimatedNumber value={step.value} className="text-2xl font-semibold" />
-          <p className="text-xs text-muted">{step.label}</p>
-          <div className="mt-2.5 h-1 overflow-hidden rounded-full bg-line">
+          <p className="text-xs text-muted-foreground">{step.label}</p>
+          <div className="mt-2.5 h-1 overflow-hidden rounded-full bg-outline-variant">
             <motion.div
               className={clsx(
                 'h-full origin-left rounded-full',
-                index === 2 ? 'bg-spark' : 'bg-accent',
+                index === 2 ? 'bg-spark' : 'bg-primary',
               )}
               initial={{ scaleX: 0 }}
               // A log scale keeps the last bar visible: 20 of 800 would be a sliver.
@@ -73,22 +73,22 @@ function ItemCard({ item, index, reactions, onReact }: ItemCardProps) {
   return (
     <motion.article
       {...rowMotion(index)}
-      className="group rounded-xl border border-transparent px-4 py-4 transition-colors duration-200 hover:border-line hover:bg-surface"
+      className="group rounded-xl border border-transparent px-4 py-4 transition-colors duration-200 hover:border-outline-variant hover:bg-card"
     >
       <a
         href={externalHref(item.url)}
         target="_blank"
         rel="noopener noreferrer"
-        className="font-serif text-[17px] leading-snug font-semibold text-text decoration-accent/40 underline-offset-4 hover:underline"
+        className="font-serif text-[17px] leading-snug font-semibold text-foreground decoration-primary/40 underline-offset-4 hover:underline"
       >
         {item.headline}
         <ExternalLink
           size={13}
-          className="ml-1.5 inline -translate-y-px text-faint opacity-0 transition-opacity group-hover:opacity-100"
+          className="ml-1.5 inline -translate-y-px text-outline opacity-0 transition-opacity group-hover:opacity-100"
         />
       </a>
-      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
-        <span className="font-medium text-text">{item.source_name}</span>
+      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+        <span className="font-medium text-foreground">{item.source_name}</span>
         <span>{formatDate(item.published_at)}</span>
         <ScoreBar score={item.score} />
         {item.interest_title && <Chip tone="accent">{item.interest_title}</Chip>}
@@ -111,16 +111,16 @@ function ItemCard({ item, index, reactions, onReact }: ItemCardProps) {
           className="ml-auto"
         />
       </div>
-      {translated && <p className="mt-1.5 text-xs text-faint">Оригинал: {item.title}</p>}
-      {item.summary && <p className="mt-2.5 text-sm text-text/90">{item.summary}</p>}
+      {translated && <p className="mt-1.5 text-xs text-outline">Оригинал: {item.title}</p>}
+      {item.summary && <p className="mt-2.5 text-sm text-foreground/90">{item.summary}</p>}
       {item.why && (
-        <p className="mt-2.5 border-l-2 border-spark pl-3 text-sm text-muted">
-          <span className="font-medium text-text">Почему важно. </span>
+        <p className="mt-2.5 border-l-2 border-spark pl-3 text-sm text-muted-foreground">
+          <span className="font-medium text-foreground">Почему важно. </span>
           {item.why}
         </p>
       )}
       {item.duplicates.length > 0 && (
-        <p className="mt-2.5 flex flex-wrap items-center gap-1.5 text-xs text-muted">
+        <p className="mt-2.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
           <Layers size={13} />
           Также об этом:
           {item.duplicates.map((duplicate) => (
@@ -130,7 +130,7 @@ function ItemCard({ item, index, reactions, onReact }: ItemCardProps) {
               target="_blank"
               rel="noopener noreferrer"
               title={duplicate.title}
-              className="rounded-md bg-sunken px-1.5 py-0.5 hover:text-accent-text"
+              className="rounded-md bg-surface-container px-1.5 py-0.5 hover:text-on-primary-container"
             >
               {duplicate.source_name}
             </a>
@@ -151,18 +151,20 @@ type TopicSectionProps = {
 function TopicSection({ topic, number, reactions, onReact }: TopicSectionProps) {
   return (
     <section>
-      <div className="sticky top-14 z-10 -mx-1 bg-bg/90 px-1 py-2 backdrop-blur md:top-0">
+      <div className="sticky top-14 z-10 -mx-1 bg-background/90 px-1 py-2 backdrop-blur md:top-0">
         <h3 className="flex items-baseline gap-2.5 font-serif text-xl font-semibold tracking-tight">
           <span className="tabular font-sans text-sm font-medium text-spark">
             {String(number).padStart(2, '0')}
           </span>
           {topic.title}
-          <span className="tabular font-sans text-xs font-normal text-faint">
+          <span className="tabular font-sans text-xs font-normal text-outline">
             {topic.items.length}
           </span>
         </h3>
       </div>
-      {topic.overview && <p className="mt-1 mb-2 px-4 text-sm text-muted">{topic.overview}</p>}
+      {topic.overview && (
+        <p className="mt-1 mb-2 px-4 text-sm text-muted-foreground">{topic.overview}</p>
+      )}
       <div className="space-y-1">
         {topic.items.map((item, index) => (
           <ItemCard
@@ -191,13 +193,13 @@ function RejectedList({ items }: { items: DigestItem[] }) {
       >
         <span>
           <span className="text-sm font-semibold">Не вошло в выпуск</span>
-          <span className="ml-2 text-xs text-muted">
+          <span className="ml-2 text-xs text-muted-foreground">
             {items.length} {plural(items.length, ['кандидат', 'кандидата', 'кандидатов'])} с оценкой
             и причиной
           </span>
         </span>
         <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
-          <ChevronDown size={18} className="text-muted" />
+          <ChevronDown size={18} className="text-muted-foreground" />
         </motion.span>
       </button>
       <AnimatePresence initial={false}>
@@ -209,10 +211,10 @@ function RejectedList({ items }: { items: DigestItem[] }) {
             transition={{ duration: 0.3, ease: EASE }}
             className="overflow-hidden"
           >
-            <ul className="divide-y divide-line border-t border-line">
+            <ul className="divide-y divide-outline-variant border-t border-outline-variant">
               {items.map((item) => (
                 <li key={item.article_id} className="flex items-start gap-3 px-5 py-3">
-                  <span className="tabular mt-0.5 w-9 shrink-0 text-xs font-semibold text-muted">
+                  <span className="tabular mt-0.5 w-9 shrink-0 text-xs font-semibold text-muted-foreground">
                     {item.score.toFixed(2)}
                   </span>
                   <div className="min-w-0 flex-1">
@@ -220,11 +222,11 @@ function RejectedList({ items }: { items: DigestItem[] }) {
                       href={externalHref(item.url)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm hover:text-accent-text"
+                      className="text-sm hover:text-on-primary-container"
                     >
                       {item.title}
                     </a>
-                    <p className="mt-0.5 text-xs text-muted">
+                    <p className="mt-0.5 text-xs text-muted-foreground">
                       {item.source_name} · {formatDate(item.published_at)}
                       {item.reason && ` · ${item.reason}`}
                     </p>
@@ -255,7 +257,7 @@ export function DigestView({ digest, previousId }: { digest: Digest; previousId?
         <div className="flex flex-wrap items-start justify-between gap-4">
           {/* Full row on a phone, so the title is not squeezed by the buttons. */}
           <div className="min-w-0 flex-1 basis-full sm:basis-0">
-            <p className="text-xs text-muted">
+            <p className="text-xs text-muted-foreground">
               {digest.profile_name} · версия {digest.profile_version} ·{' '}
               {formatPeriod(digest.period_start, digest.period_end)}
             </p>
@@ -296,7 +298,7 @@ export function DigestView({ digest, previousId }: { digest: Digest; previousId?
         </div>
 
         {stats.degraded && (
-          <p className="mt-4 flex items-start gap-2 rounded-lg bg-spark-soft px-3 py-2 text-sm text-spark">
+          <p className="mt-4 flex items-start gap-2 rounded-lg bg-spark-container px-3 py-2 text-sm text-spark">
             <Info size={16} className="mt-0.5 shrink-0" />
             Модель была недоступна часть времени: моделью оценено {stats.graded_by_model ??
               0} из{' '}
@@ -307,7 +309,9 @@ export function DigestView({ digest, previousId }: { digest: Digest; previousId?
 
         {digest.highlights.length > 0 && (
           <div className="mt-6">
-            <h3 className="text-xs font-semibold tracking-wide text-muted uppercase">Главное</h3>
+            <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+              Главное
+            </h3>
             <ul className="mt-2 space-y-1.5">
               {digest.highlights.map((highlight, index) => (
                 <motion.li
@@ -323,7 +327,7 @@ export function DigestView({ digest, previousId }: { digest: Digest; previousId?
           </div>
         )}
 
-        <p className="mt-5 text-xs text-faint">
+        <p className="mt-5 text-xs text-outline">
           Поиск: {modelLabel(stats.embedding_model)}
           {stats.lexical_only && ' (только полнотекстовый)'} · оценка и тексты:{' '}
           {modelLabel(stats.llm)} · {stats.sources ?? 0}{' '}
@@ -339,7 +343,7 @@ export function DigestView({ digest, previousId }: { digest: Digest; previousId?
       {digest.topics.length > 0 && <ShortPanel key={digest.id} digestId={digest.id} />}
 
       {digest.topics.length === 0 ? (
-        <Card className="px-6 py-10 text-center text-sm text-muted">
+        <Card className="px-6 py-10 text-center text-sm text-muted-foreground">
           За этот период по интересам профиля ничего не нашлось. Попробуйте период длиннее или
           снизьте порог релевантности в настройках интересов.
         </Card>

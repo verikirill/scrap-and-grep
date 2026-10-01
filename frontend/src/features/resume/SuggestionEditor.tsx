@@ -1,3 +1,4 @@
+import { cn } from '../../lib/utils'
 import clsx from 'clsx'
 import { Check } from 'lucide-react'
 import { motion } from 'motion/react'
@@ -34,14 +35,16 @@ function InterestOption({
         className={clsx(
           'flex w-full items-start gap-3 rounded-xl border px-4 py-3 text-left transition-colors duration-150',
           isKept
-            ? 'border-accent/50 bg-accent-soft/50'
-            : 'border-line bg-surface hover:border-faint',
+            ? 'border-primary/50 bg-primary-container/50'
+            : 'border-outline-variant bg-card hover:border-outline',
         )}
       >
         <span
           className={clsx(
             'mt-0.5 grid size-5 shrink-0 place-items-center rounded-md border transition-colors duration-150',
-            isKept ? 'border-accent bg-accent text-white dark:text-[#0b0f17]' : 'border-line',
+            isKept
+              ? 'border-primary bg-primary text-white dark:text-[#0b0f17]'
+              : 'border-outline-variant',
           )}
         >
           {isKept && <Check size={13} strokeWidth={3} />}
@@ -49,9 +52,11 @@ function InterestOption({
         <span className="min-w-0">
           <span className="block text-sm font-medium">{interest.title}</span>
           {interest.description && (
-            <span className="mt-0.5 block text-[13px] text-muted">{interest.description}</span>
+            <span className="mt-0.5 block text-[13px] text-muted-foreground">
+              {interest.description}
+            </span>
           )}
-          <span className="mt-1.5 block text-xs text-faint">
+          <span className="mt-1.5 block text-xs text-outline">
             {interest.keywords.slice(0, 8).join(' · ')}
           </span>
         </span>
@@ -85,7 +90,9 @@ export function SuggestionEditor({ spec, kept, onSpecChange, onKeptChange }: Pro
             min={5}
             max={40}
             value={spec.max_items}
-            style={{ ['--fill' as string]: `${((spec.max_items - 5) / 35) * 100}%` }}
+            style={{
+              ['--fill' as string]: `${((spec.max_items - 5) / 35) * 100}%`,
+            }}
             onChange={(event) => onSpecChange({ ...spec, max_items: Number(event.target.value) })}
             className="mt-3 w-full"
           />
@@ -93,7 +100,7 @@ export function SuggestionEditor({ spec, kept, onSpecChange, onKeptChange }: Pro
       </div>
       <Field label="Кто читатель" hint="по этому тексту модель пишет «почему важно»">
         <textarea
-          className={clsx(INPUT_CLASS, 'min-h-20 resize-y')}
+          className={cn(INPUT_CLASS, 'min-h-20 resize-y')}
           value={spec.role}
           maxLength={600}
           onChange={(event) => onSpecChange({ ...spec, role: event.target.value })}
@@ -102,7 +109,7 @@ export function SuggestionEditor({ spec, kept, onSpecChange, onKeptChange }: Pro
       <div role="group" aria-label="Темы новостей">
         <p className="mb-2 flex items-baseline justify-between">
           <span className="text-[13px] font-medium">Темы новостей</span>
-          <span className="text-xs text-faint">
+          <span className="text-xs text-outline">
             выбрано {kept.length} из {spec.interests.length}
           </span>
         </p>

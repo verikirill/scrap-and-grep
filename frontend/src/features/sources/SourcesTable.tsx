@@ -27,9 +27,9 @@ function StatusDot({ source }: { source: Source }) {
       aria-label={source.enabled ? title : 'Источник отключён'}
       className={clsx(
         'size-2 shrink-0 rounded-full',
-        !source.enabled && 'bg-line',
-        source.enabled && failing && 'bg-danger',
-        source.enabled && !failing && (never ? 'bg-faint' : 'bg-ok'),
+        !source.enabled && 'bg-outline-variant',
+        source.enabled && failing && 'bg-destructive',
+        source.enabled && !failing && (never ? 'bg-outline' : 'bg-success'),
       )}
     />
   )
@@ -51,7 +51,7 @@ function AddSourceForm({ onDone }: { onDone: () => void }) {
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4 border-b border-line p-5">
+    <form onSubmit={submit} className="space-y-4 border-b border-outline-variant p-5">
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Название">
           <input
@@ -98,7 +98,7 @@ function AddSourceForm({ onDone }: { onDone: () => void }) {
           </select>
         </Field>
       </div>
-      <label className="flex items-center gap-2.5 text-sm text-muted">
+      <label className="flex items-center gap-2.5 text-sm text-muted-foreground">
         <Toggle
           label="Загружать полный текст"
           checked={form.fetch_full_text}
@@ -131,9 +131,11 @@ export function SourcesTable({ sources, canEdit }: Props) {
 
   return (
     <Card className="overflow-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3.5">
-        <p className="text-sm text-muted">
-          <span className="font-semibold text-text">{sources.filter((s) => s.enabled).length}</span>{' '}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant px-5 py-3.5">
+        <p className="text-sm text-muted-foreground">
+          <span className="font-semibold text-foreground">
+            {sources.filter((s) => s.enabled).length}
+          </span>{' '}
           из {sources.length} источников включено · опрос каждые 15 минут
         </p>
         <div className={clsx('flex gap-2', !canEdit && 'hidden')}>
@@ -181,10 +183,10 @@ export function SourcesTable({ sources, canEdit }: Props) {
         if (group.length === 0) return null
         return (
           <section key={category}>
-            <h3 className="bg-sunken px-5 py-1.5 text-xs font-semibold tracking-wide text-muted uppercase">
+            <h3 className="bg-surface-container px-5 py-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
               {CATEGORY_LABELS[category]}
             </h3>
-            <ul className="divide-y divide-line">
+            <ul className="divide-y divide-outline-variant">
               {group.map((source) => (
                 <li
                   key={source.id}
@@ -199,11 +201,11 @@ export function SourcesTable({ sources, canEdit }: Props) {
                       href={externalHref(source.site_url ?? source.feed_url)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="truncate text-sm font-medium hover:text-accent-text"
+                      className="block truncate text-sm font-medium hover:text-on-primary-container"
                     >
                       {source.name}
                     </a>
-                    <p className="truncate text-xs text-faint">
+                    <p className="truncate text-xs text-outline">
                       {source.last_status === 'error'
                         ? (source.last_error ?? 'ошибка опроса')
                         : source.last_fetched_at
@@ -212,10 +214,10 @@ export function SourcesTable({ sources, canEdit }: Props) {
                     </p>
                   </div>
                   <Chip>{source.language.toUpperCase()}</Chip>
-                  <span className="tabular w-24 text-right text-xs text-muted">
+                  <span className="tabular w-14 shrink-0 text-right sm:w-24 text-xs text-muted-foreground">
                     {formatNumber(source.articles)}
                     {source.articles_last_day > 0 && (
-                      <span className="ml-1.5 text-ok">+{source.articles_last_day}</span>
+                      <span className="ml-1.5 text-success">+{source.articles_last_day}</span>
                     )}
                   </span>
                   <div
@@ -228,7 +230,7 @@ export function SourcesTable({ sources, canEdit }: Props) {
                       type="button"
                       aria-label="Опросить источник"
                       onClick={() => refreshOne.mutate(source.id)}
-                      className="grid size-7 place-items-center rounded-md text-faint hover:bg-sunken hover:text-text"
+                      className="grid size-7 place-items-center rounded-md text-outline hover:bg-surface-container hover:text-foreground"
                     >
                       <RefreshCw size={13} />
                     </button>
@@ -240,7 +242,7 @@ export function SourcesTable({ sources, canEdit }: Props) {
                           remove.mutate(source.id)
                         }
                       }}
-                      className="grid size-7 place-items-center rounded-md text-faint hover:bg-danger-soft hover:text-danger"
+                      className="grid size-7 place-items-center rounded-md text-outline hover:bg-error-container hover:text-destructive"
                     >
                       <Trash2 size={13} />
                     </button>

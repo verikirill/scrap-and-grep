@@ -1,31 +1,32 @@
-import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import {
+  MutationCache,
+  QueryCache,
+  QueryClient,
+  QueryClientProvider,
+  keepPreviousData,
+} from '@tanstack/react-query'
 import { MotionConfig } from 'motion/react'
-import { Suspense, lazy } from 'react'
-import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router'
+import { Suspense, useEffect } from 'react'
+import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from 'react-router'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { Layout } from './components/Layout'
 import { RequireAuth } from './components/RequireAuth'
 import { ApiError } from './lib/api'
 import { keys } from './lib/queries'
+import { Toaster } from './components/ui/sonner'
+import { TooltipProvider } from './components/ui/tooltip'
 import { AuthPage } from './pages/AuthPage'
 import { DigestPage } from './pages/DigestPage'
-
-// The first screen ships in the main chunk; the other sections load on demand.
-const FeedPage = lazy(() => import('./pages/FeedPage').then((m) => ({ default: m.FeedPage })))
-const ProfilesPage = lazy(() =>
-  import('./pages/ProfilesPage').then((m) => ({ default: m.ProfilesPage })),
-)
-const SourcesPage = lazy(() =>
-  import('./pages/SourcesPage').then((m) => ({ default: m.SourcesPage })),
-)
-const ComparePage = lazy(() =>
-  import('./pages/ComparePage').then((m) => ({ default: m.ComparePage })),
-)
-const AccountPage = lazy(() =>
-  import('./pages/AccountPage').then((m) => ({ default: m.AccountPage })),
-)
-const WelcomePage = lazy(() =>
-  import('./pages/WelcomePage').then((m) => ({ default: m.WelcomePage })),
-)
+import {
+  AccountPage,
+  ChannelsPage,
+  ComparePage,
+  FeedPage,
+  ProfilesPage,
+  SourcesPage,
+  WelcomePage,
+  prefetchAllRoutes,
+} from './routes'
 
 /**
  * A 401 from any request means the session ended (expired, signed out in
@@ -41,7 +42,10 @@ const queryClient: QueryClient = new QueryClient({
   mutationCache: new MutationCache({ onError: signOutOnUnauthorized }),
   defaultOptions: {
     queries: {
-      staleTime: 10_000,
+      // Data stays fresh for half a minute and the previous answer stays on
+      // screen while the next loads: switching tabs and filters never blanks a page.
+      staleTime: 30_000,
+      placeholderData: keepPreviousData,
       refetchOnWindowFocus: false,
       // A 4xx will not get better on retry; network errors and 5xx might.
       retry: (failures, error) =>
@@ -50,53 +54,70 @@ const queryClient: QueryClient = new QueryClient({
   },
 })
 
-const fallback = <div className="skeleton h-64" />
+const fallback = (
+  <div className="space-y-4" aria-hidden>
+    <div className="skeleton h-9 w-64" />
+    <div className="skeleton h-40" />
+    <div className="skeleton h-64" />
+  </div>
+)
 
 /** Pages of a signed-in reader, inside the navigation shell. */
 function Shell() {
+  const { pathname } = useLocation()
   return (
     <RequireAuth>
       <Layout>
-        <Suspense fallback={fallback}>
-          <Outlet />
-        </Suspense>
+        {/* Keyed by the page: going elsewhere leaves a failed page behind. */}
+        <ErrorBoundary key={pathname}>
+          <Suspense fallback={fallback}>
+            <Outlet />
+          </Suspense>
+        </ErrorBoundary>
       </Layout>
     </RequireAuth>
   )
 }
 
 export default function App() {
+  useEffect(prefetchAllRoutes, [])
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Honour the OS "reduce motion" setting for every animation at once. */}
-      <MotionConfig reducedMotion="user">
-        <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<AuthPage mode="login" />} />
-            <Route path="/register" element={<AuthPage mode="register" />} />
-            <Route
-              path="/welcome"
-              element={
-                <RequireAuth>
-                  <Suspense fallback={fallback}>
-                    <WelcomePage />
-                  </Suspense>
-                </RequireAuth>
-              }
-            />
-            <Route element={<Shell />}>
-              <Route path="/" element={<DigestPage />} />
-              <Route path="/digests/:digestId" element={<DigestPage />} />
-              <Route path="/feed" element={<FeedPage />} />
-              <Route path="/profiles" element={<ProfilesPage />} />
-              <Route path="/sources" element={<SourcesPage />} />
-              <Route path="/compare" element={<ComparePage />} />
-              <Route path="/account" element={<AccountPage />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
-      </MotionConfig>
+      <TooltipProvider delayDuration={300}>
+        {/* Honour the OS "reduce motion" setting for every animation at once. */}
+        <MotionConfig reducedMotion="user">
+          <BrowserRouter>
+            <Routes>
+              <Route path="/login" element={<AuthPage mode="login" />} />
+              <Route path="/register" element={<AuthPage mode="register" />} />
+              <Route
+                path="/welcome"
+                element={
+                  <RequireAuth>
+                    <ErrorBoundary>
+                      <Suspense fallback={fallback}>
+                        <WelcomePage />
+                      </Suspense>
+                    </ErrorBoundary>
+                  </RequireAuth>
+                }
+              />
+              <Route element={<Shell />}>
+                <Route path="/" element={<DigestPage />} />
+                <Route path="/digests/:digestId" element={<DigestPage />} />
+                <Route path="/feed" element={<FeedPage />} />
+                <Route path="/profiles" element={<ProfilesPage />} />
+                <Route path="/sources" element={<SourcesPage />} />
+                <Route path="/compare" element={<ComparePage />} />
+                <Route path="/channels" element={<ChannelsPage />} />
+                <Route path="/account" element={<AccountPage />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </MotionConfig>
+        <Toaster position="bottom-center" />
+      </TooltipProvider>
     </QueryClientProvider>
   )
 }

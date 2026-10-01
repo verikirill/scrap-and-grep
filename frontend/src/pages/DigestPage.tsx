@@ -86,7 +86,7 @@ export function DigestPage() {
           {digest.isError && (
             <Card className="p-6">
               <h2 className="text-base font-semibold">Выпуск не открылся</h2>
-              <p className="mt-1 text-sm text-muted">
+              <p className="mt-1 text-sm text-muted-foreground">
                 {digest.error instanceof Error ? digest.error.message : 'Неизвестная ошибка.'}
               </p>
               <Button className="mt-4" onClick={() => navigate('/')}>
@@ -124,7 +124,7 @@ export function DigestPage() {
               >
                 <Card className="p-6">
                   <h2 className="text-base font-semibold">Выпуск собрать не удалось</h2>
-                  <p className="mt-1 text-sm text-muted">
+                  <p className="mt-1 text-sm text-muted-foreground">
                     {current.error ?? 'Причина неизвестна.'}
                   </p>
                   {current.profile_id && (
@@ -172,7 +172,7 @@ export function DigestPage() {
           layoutScroll
           className="xl:sticky xl:top-9 xl:max-h-[calc(100dvh-4.5rem)] xl:self-start xl:overflow-y-auto"
         >
-          <h2 className="mb-2.5 px-1 text-xs font-semibold tracking-wide text-muted uppercase">
+          <h2 className="mb-2.5 px-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
             История
           </h2>
           {digests.data ? (

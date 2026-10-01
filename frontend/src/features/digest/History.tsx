@@ -23,7 +23,7 @@ function statusLine(digest: DigestSummary): string {
 
 export function History({ digests, activeId, onSelect, onDelete }: Props) {
   if (digests.length === 0) {
-    return <p className="px-1 text-sm text-muted">Здесь появятся собранные выпуски.</p>
+    return <p className="px-1 text-sm text-muted-foreground">Здесь появятся собранные выпуски.</p>
   }
   return (
     <ul className="space-y-1.5">
@@ -49,17 +49,19 @@ export function History({ digests, activeId, onSelect, onDelete }: Props) {
                 className={clsx(
                   'w-full rounded-xl border px-3 py-2.5 pr-9 text-left transition-colors duration-200',
                   isActive
-                    ? 'border-accent bg-accent-soft'
-                    : 'border-transparent hover:border-line hover:bg-surface',
+                    ? 'border-primary bg-primary-container'
+                    : 'border-transparent hover:border-outline-variant hover:bg-card',
                 )}
               >
                 <span className="line-clamp-2 text-[13px] leading-snug font-medium">{name}</span>
-                <span className="mt-1 flex items-center gap-1.5 text-xs text-muted">
-                  {isRunning && <Spinner className="size-3 border-[1.5px] text-accent" />}
-                  {digest.status === 'failed' && <CircleAlert size={12} className="text-danger" />}
+                <span className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                  {isRunning && <Spinner className="size-3 border-[1.5px] text-primary" />}
+                  {digest.status === 'failed' && (
+                    <CircleAlert size={12} className="text-destructive" />
+                  )}
                   <span className="truncate">{statusLine(digest)}</span>
                 </span>
-                <span className="mt-0.5 block truncate text-[11px] text-faint">
+                <span className="mt-0.5 block truncate text-[11px] text-outline">
                   {digest.profile_name} · {formatRelative(digest.created_at)}
                 </span>
               </button>
@@ -71,7 +73,7 @@ export function History({ digests, activeId, onSelect, onDelete }: Props) {
                     if (window.confirm(`Удалить выпуск «${name}»?`)) onDelete(digest.id)
                   }}
                   // Always visible on touch screens, where there is no hover.
-                  className="absolute top-2 right-2 grid size-6 place-items-center rounded-md text-faint transition-opacity hover:bg-danger-soft hover:text-danger focus-visible:opacity-100 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100"
+                  className="absolute top-2 right-2 grid size-6 place-items-center rounded-md text-outline transition-opacity hover:bg-error-container hover:text-destructive focus-visible:opacity-100 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100"
                 >
                   <Trash2 size={13} />
                 </button>

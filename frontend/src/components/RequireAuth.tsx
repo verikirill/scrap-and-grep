@@ -11,7 +11,7 @@ function Splash({ children }: { children?: ReactNode }) {
   return (
     <div className="grid min-h-dvh place-items-center px-6">
       <div className="flex flex-col items-center gap-4 text-center">
-        <span className="grid size-11 place-items-center rounded-2xl bg-accent text-white dark:text-[#0b0f17]">
+        <span className="grid size-11 place-items-center rounded-2xl bg-primary text-white dark:text-[#0b0f17]">
           <Radar size={22} strokeWidth={2.2} />
         </span>
         {children}

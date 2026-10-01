@@ -38,7 +38,7 @@ function Timeline({ points }: { points: TimelinePoint[] }) {
           title={`${day.slice(8, 10)}.${day.slice(5, 7)}: ${formatNumber(count)}`}
         >
           <motion.div
-            className="h-full origin-bottom rounded-t bg-accent/70 transition-colors hover:bg-accent"
+            className="h-full origin-bottom rounded-t bg-primary/70 transition-colors hover:bg-primary"
             initial={{ scaleY: 0 }}
             animate={{ scaleY: Math.max(count / max, 0.03) }}
             transition={{ duration: 0.5, delay: index * 0.025, ease: EASE }}
@@ -79,17 +79,17 @@ export function ArticlesList() {
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div className="min-w-0 flex-1">
             <div className="relative">
-              <Search size={16} className="absolute top-1/2 left-3 -translate-y-1/2 text-faint" />
+              <Search size={16} className="absolute top-1/2 left-3 -translate-y-1/2 text-outline" />
               <input
                 type="search"
                 aria-label="Поиск по публикациям"
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
                 placeholder='Поиск по публикациям: уязвимость SCADA, "цифровая подстанция"'
-                className="w-full rounded-lg border border-line bg-surface py-2.5 pr-10 pl-9 text-sm placeholder:text-faint hover:border-faint focus:border-accent focus:outline-none"
+                className="w-full rounded-lg border border-outline-variant bg-card py-2.5 pr-10 pl-9 text-sm placeholder:text-outline hover:border-outline focus:border-primary focus:outline-none"
               />
               {articles.isFetching && (
-                <Spinner className="absolute top-1/2 right-3 size-3.5 -translate-y-1/2 text-accent" />
+                <Spinner className="absolute top-1/2 right-3 size-3.5 -translate-y-1/2 text-primary" />
               )}
             </div>
             <div className="mt-3 flex flex-wrap gap-1.5" role="group" aria-label="Категории">
@@ -104,8 +104,8 @@ export function ArticlesList() {
                     className={clsx(
                       'rounded-lg border px-2.5 py-1 text-[13px] transition-colors duration-150',
                       active
-                        ? 'border-accent bg-accent-soft text-accent-text'
-                        : 'border-line text-muted hover:border-faint hover:text-text',
+                        ? 'border-primary bg-primary-container text-on-primary-container'
+                        : 'border-outline-variant text-muted-foreground hover:border-outline hover:text-foreground',
                     )}
                   >
                     {CATEGORY_LABELS[category]}
@@ -115,7 +115,7 @@ export function ArticlesList() {
             </div>
           </div>
           <div className="w-full sm:w-56">
-            <p className="mb-1.5 text-xs text-muted">Публикаций за 14 дней</p>
+            <p className="mb-1.5 text-xs text-muted-foreground">Публикаций за 14 дней</p>
             {timeline.data ? (
               <Timeline points={timeline.data} />
             ) : (
@@ -128,9 +128,9 @@ export function ArticlesList() {
       <ErrorNote error={articles.error} />
 
       {total !== undefined && (
-        <p className="px-1 text-xs text-muted" aria-live="polite">
+        <p className="px-1 text-xs text-muted-foreground" aria-live="polite">
           {q ? 'Найдено' : 'Всего'}:{' '}
-          <span className="tabular font-semibold text-text">{formatNumber(total)}</span>
+          <span className="tabular font-semibold text-foreground">{formatNumber(total)}</span>
         </p>
       )}
 
@@ -152,22 +152,24 @@ export function ArticlesList() {
             ))}
           </div>
         )}
-        <ul className="divide-y divide-line">
+        <ul className="divide-y divide-outline-variant">
           {items.map((article, index) => (
             <motion.li key={article.id} {...rowMotion(index % PAGE_SIZE)} className="px-5 py-3">
               <a
                 href={externalHref(article.url)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm font-medium hover:text-accent-text"
+                className="text-sm font-medium hover:text-on-primary-container"
               >
                 {article.title}
               </a>
               {article.summary && (
-                <p className="mt-0.5 line-clamp-2 text-[13px] text-muted">{article.summary}</p>
+                <p className="mt-0.5 line-clamp-2 text-[13px] text-muted-foreground">
+                  {article.summary}
+                </p>
               )}
-              <p className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-faint">
-                <span className="font-medium text-muted">{article.source_name}</span>
+              <p className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-outline">
+                <span className="font-medium text-muted-foreground">{article.source_name}</span>
                 <span>{formatDateTime(article.published_at)}</span>
                 <Chip>{CATEGORY_LABELS[article.source_category]}</Chip>
                 {article.has_full_text && <Chip tone="ok">полный текст</Chip>}

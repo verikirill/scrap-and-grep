@@ -44,7 +44,7 @@ export function BuildPanel({ profiles, initialProfileId, onCreated }: Props) {
     <Card className="p-5">
       <div className="mb-3 flex items-baseline justify-between gap-3">
         <h2 className="text-sm font-semibold">Для кого выпуск</h2>
-        <Link to="/profiles" className="text-xs text-accent-text hover:underline">
+        <Link to="/profiles" className="text-xs text-on-primary-container hover:underline">
           Настроить интересы
         </Link>
       </div>
@@ -65,20 +65,20 @@ export function BuildPanel({ profiles, initialProfileId, onCreated }: Props) {
               aria-checked={active}
               className={clsx(
                 'relative rounded-xl border px-3.5 py-3 text-left transition-colors duration-200',
-                active ? 'border-accent' : 'border-line hover:border-faint',
+                active ? 'border-primary' : 'border-outline-variant hover:border-outline',
               )}
             >
               {active && (
                 <motion.span
                   layoutId="profile-active"
-                  className="absolute inset-0 rounded-[11px] bg-accent-soft"
+                  className="absolute inset-0 rounded-[11px] bg-primary-container"
                   transition={{ type: 'spring', stiffness: 420, damping: 36 }}
                 />
               )}
               <span className="relative block truncate text-sm font-medium">
                 {profile.spec.name}
               </span>
-              <span className="relative mt-0.5 block text-xs text-muted">
+              <span className="relative mt-0.5 block text-xs text-muted-foreground">
                 {count} {plural(count, ['интерес', 'интереса', 'интересов'])} · до{' '}
                 {profile.spec.max_items} публикаций
               </span>
@@ -89,7 +89,7 @@ export function BuildPanel({ profiles, initialProfileId, onCreated }: Props) {
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
         <div
-          className="flex max-w-full items-center gap-0.5 rounded-xl bg-sunken p-1 sm:gap-1"
+          className="flex max-w-full items-center gap-0.5 rounded-xl bg-surface-container p-1 sm:gap-1"
           role="radiogroup"
           aria-label="Период"
         >
@@ -102,13 +102,15 @@ export function BuildPanel({ profiles, initialProfileId, onCreated }: Props) {
               aria-checked={days === period.days}
               className={clsx(
                 'relative rounded-lg px-2 py-1.5 text-xs font-medium whitespace-nowrap transition-colors sm:px-3 sm:text-[13px]',
-                days === period.days ? 'text-text' : 'text-muted hover:text-text',
+                days === period.days
+                  ? 'text-foreground'
+                  : 'text-muted-foreground hover:text-foreground',
               )}
             >
               {days === period.days && (
                 <motion.span
                   layoutId="period-active"
-                  className="absolute inset-0 rounded-lg bg-surface shadow-sm"
+                  className="absolute inset-0 rounded-lg bg-card shadow-sm"
                   transition={{ type: 'spring', stiffness: 480, damping: 38 }}
                 />
               )}

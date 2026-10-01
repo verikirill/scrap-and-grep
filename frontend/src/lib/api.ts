@@ -378,7 +378,7 @@ function describe(detail: unknown, status: number): string {
   return `Ошибка ${status}`
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response
   try {
     response = await fetch(`${API_BASE}${path}`, {
@@ -396,12 +396,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T
 }
 
-const json = (method: string, body: unknown): RequestInit => ({
+export const json = (method: string, body: unknown): RequestInit => ({
   method,
   body: JSON.stringify(body),
 })
 
-function query(params: Record<string, string | number | string[] | undefined>): string {
+export function query(params: Record<string, string | number | string[] | undefined>): string {
   const search = new URLSearchParams()
   for (const [key, value] of Object.entries(params)) {
     if (value === undefined || value === '') continue

@@ -24,7 +24,7 @@ export function SourcesPage() {
         subtitle="Ленты, из которых собирается материал, и сами публикации: всё, что ассистент видел, доступно для проверки."
       />
       <div
-        className="mb-5 inline-flex gap-1 rounded-xl bg-sunken p-1"
+        className="mb-5 inline-flex gap-1 rounded-xl bg-surface-container p-1"
         role="group"
         aria-label="Раздел"
       >
@@ -36,13 +36,13 @@ export function SourcesPage() {
             onClick={() => setSearch(item.id === 'sources' ? {} : { tab: item.id })}
             className={clsx(
               'relative rounded-lg px-4 py-1.5 text-sm font-medium transition-colors',
-              tab === item.id ? 'text-text' : 'text-muted hover:text-text',
+              tab === item.id ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
             )}
           >
             {tab === item.id && (
               <motion.span
                 layoutId="sources-tab"
-                className="absolute inset-0 rounded-lg bg-surface shadow-sm"
+                className="absolute inset-0 rounded-lg bg-card shadow-sm"
                 transition={{ type: 'spring', stiffness: 480, damping: 38 }}
               />
             )}

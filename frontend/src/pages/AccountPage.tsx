@@ -29,7 +29,7 @@ function ResumeSection() {
   return (
     <Card className="p-6">
       <h2 className="text-base font-semibold">Резюме</h2>
-      <p className="mt-1 mb-5 text-sm text-muted">
+      <p className="mt-1 mb-5 text-sm text-muted-foreground">
         По резюме определяется специализация. Она участвует в ленте наравне с интересами.
       </p>
 
@@ -41,7 +41,7 @@ function ResumeSection() {
       ) : (
         <div className="space-y-5">
           {current?.status === 'ready' && current.facts && (
-            <div className="rounded-xl bg-sunken p-5">
+            <div className="rounded-xl bg-surface-container p-5">
               <ResumeFactsView resume={current} facts={current.facts} />
               <div className="mt-4 flex flex-wrap gap-2">
                 <Link to="/welcome" className={buttonClass('secondary', 'sm')}>
@@ -62,12 +62,15 @@ function ResumeSection() {
             </div>
           )}
           {isStuck && (
-            <p role="alert" className="rounded-lg bg-spark-soft px-3 py-2 text-sm text-spark">
+            <p role="alert" className="rounded-lg bg-spark-container px-3 py-2 text-sm text-spark">
               Резюме разбирается дольше обычного. Попробуйте загрузить файл ещё раз.
             </p>
           )}
           {current?.status === 'failed' && (
-            <p role="alert" className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">
+            <p
+              role="alert"
+              className="rounded-lg bg-error-container px-3 py-2 text-sm text-destructive"
+            >
               {current.error}
             </p>
           )}
@@ -77,8 +80,8 @@ function ResumeSection() {
             onFile={(file) => upload.mutate(file)}
           />
           <ErrorNote error={upload.error ?? remove.error ?? resume.error} />
-          <p className="flex items-start gap-2 text-xs text-muted">
-            <ShieldCheck size={15} className="mt-px shrink-0 text-ok" />
+          <p className="flex items-start gap-2 text-xs text-muted-foreground">
+            <ShieldCheck size={15} className="mt-px shrink-0 text-success" />
             Файл удаляется сразу после разбора. Имя и контакты вырезаются до анализа; хранятся
             только должность, навыки и предложенные темы.
           </p>
@@ -98,7 +101,7 @@ function DangerZone({ me }: { me: Me }) {
     return (
       <Card className="p-6">
         <h2 className="text-base font-semibold">Временный аккаунт</h2>
-        <p className="mt-1 text-sm text-muted">
+        <p className="mt-1 text-sm text-muted-foreground">
           Он удалится сам через сутки вместе со всем, что вы в нём сделали. Чтобы сохранить
           настройки, заведите постоянный аккаунт.
         </p>
@@ -129,7 +132,7 @@ function DangerZone({ me }: { me: Me }) {
   return (
     <Card className="p-6">
       <h2 className="text-base font-semibold">Удаление аккаунта</h2>
-      <p className="mt-1 text-sm text-muted">
+      <p className="mt-1 text-sm text-muted-foreground">
         Вместе с аккаунтом удаляются профили, выпуски, данные резюме и все оценки. Восстановить их
         будет нельзя.
       </p>
@@ -196,14 +199,14 @@ export function AccountPage() {
             aria-hidden
             className={clsx(
               'grid size-12 shrink-0 place-items-center rounded-2xl text-lg font-semibold',
-              'bg-accent-soft text-accent-text',
+              'bg-primary-container text-on-primary-container',
             )}
           >
             {user.display_name.slice(0, 1).toUpperCase()}
           </span>
           <div className="min-w-0">
             <p className="truncate text-base font-semibold">{user.display_name}</p>
-            <p className="truncate text-sm text-muted">{user.email}</p>
+            <p className="truncate text-sm text-muted-foreground">{user.email}</p>
           </div>
           <div className="ml-auto flex flex-wrap justify-end gap-1.5">
             {user.is_demo && <Chip tone="spark">временный</Chip>}

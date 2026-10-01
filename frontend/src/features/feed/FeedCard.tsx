@@ -44,7 +44,7 @@ const MATCH_PARTS = new Set(['interest', 'resume', 'learned'])
 function WhyPanel({ item }: { item: FeedItem }) {
   const rows = PARTS.filter(([key]) => Math.abs(item.parts[key] ?? 0) >= 0.005)
   return (
-    <dl className="mt-3 grid gap-x-6 gap-y-1.5 rounded-xl bg-sunken px-4 py-3 text-xs sm:grid-cols-2">
+    <dl className="mt-3 grid gap-x-6 gap-y-1.5 rounded-xl bg-surface-container px-4 py-3 text-xs sm:grid-cols-2">
       {rows.map(([key, label]) => {
         const value = item.parts[key] ?? 0
         // Matches are shown as they are (0..1); the rest are corrections to the
@@ -54,16 +54,21 @@ function WhyPanel({ item }: { item: FeedItem }) {
           : `${value > 0 ? '+' : ''}${value.toFixed(2)}`
         return (
           <div key={key} className="flex items-baseline justify-between gap-3">
-            <dt className="text-muted">{label}</dt>
-            <dd className={clsx('tabular font-semibold', value < 0 ? 'text-danger' : 'text-text')}>
+            <dt className="text-muted-foreground">{label}</dt>
+            <dd
+              className={clsx(
+                'tabular font-semibold',
+                value < 0 ? 'text-destructive' : 'text-foreground',
+              )}
+            >
               {text}
             </dd>
           </div>
         )
       })}
-      <div className="flex items-baseline justify-between gap-3 border-t border-line pt-1.5 sm:col-span-2">
-        <dt className="font-medium text-text">Итоговая оценка</dt>
-        <dd className="tabular font-semibold text-text">{item.score.toFixed(2)}</dd>
+      <div className="flex items-baseline justify-between gap-3 border-t border-outline-variant pt-1.5 sm:col-span-2">
+        <dt className="font-medium text-foreground">Итоговая оценка</dt>
+        <dd className="tabular font-semibold text-foreground">{item.score.toFixed(2)}</dd>
       </div>
     </dl>
   )
@@ -91,7 +96,7 @@ function RejectedRow({ item, onReact }: Omit<Props, 'index'>) {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-line px-4 py-2.5 text-sm text-muted"
+      className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-outline-variant px-4 py-2.5 text-sm text-muted-foreground"
     >
       <span role="status" className="min-w-0 truncate">
         {isDisliked ? 'Меньше такого: ' : 'Скрыто: '}
@@ -101,7 +106,7 @@ function RejectedRow({ item, onReact }: Omit<Props, 'index'>) {
         ref={undo}
         type="button"
         onClick={() => onReact(isDisliked ? 'dislike' : 'hide', false)}
-        className="shrink-0 font-medium text-accent-text hover:underline"
+        className="shrink-0 font-medium text-on-primary-container hover:underline"
       >
         Вернуть
       </button>
@@ -124,13 +129,13 @@ export function FeedCard({ item, index, onReact }: Props) {
   return (
     <motion.article
       {...rowMotion(index)}
-      className="group rounded-2xl border border-line bg-surface px-5 py-4 shadow-card transition-colors duration-200 hover:border-faint"
+      className="group rounded-2xl border border-outline-variant bg-card px-5 py-4 shadow-card transition-colors duration-200 hover:border-outline"
     >
-      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted">
-        <span className="font-medium text-text">{item.source_name}</span>
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted-foreground">
+        <span className="font-medium text-foreground">{item.source_name}</span>
         <span>{CATEGORY_LABELS[item.source_category] ?? item.source_category}</span>
         <span>{formatRelative(item.published_at)}</span>
-        {isRead && <span className="text-faint">прочитано</span>}
+        {isRead && <span className="text-outline">прочитано</span>}
       </div>
       <a
         href={externalHref(item.url)}
@@ -140,17 +145,19 @@ export function FeedCard({ item, index, onReact }: Props) {
         // A middle click opens a tab too, without a click event.
         onAuxClick={markRead}
         className={clsx(
-          'mt-1.5 block font-serif text-[18px] leading-snug font-semibold decoration-accent/40 underline-offset-4 hover:underline',
-          isRead ? 'text-muted' : 'text-text',
+          'mt-1.5 block font-serif text-[18px] leading-snug font-semibold decoration-primary/40 underline-offset-4 hover:underline',
+          isRead ? 'text-muted-foreground' : 'text-foreground',
         )}
       >
         {item.title}
         <ExternalLink
           size={13}
-          className="ml-1.5 inline -translate-y-px text-faint opacity-0 transition-opacity group-hover:opacity-100"
+          className="ml-1.5 inline -translate-y-px text-outline opacity-0 transition-opacity group-hover:opacity-100"
         />
       </a>
-      {item.summary && <p className="mt-2 line-clamp-3 text-sm text-text/85">{item.summary}</p>}
+      {item.summary && (
+        <p className="mt-2 line-clamp-3 text-sm text-foreground/85">{item.summary}</p>
+      )}
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <div className="flex min-w-0 flex-wrap items-center gap-1.5">
@@ -178,7 +185,7 @@ export function FeedCard({ item, index, onReact }: Props) {
               type="button"
               onClick={() => setIsWhyOpen((value) => !value)}
               aria-expanded={isWhyOpen}
-              className="inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-xs text-faint hover:text-text"
+              className="inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-xs text-outline hover:text-foreground"
             >
               {item.score.toFixed(2)}
               <motion.span animate={{ rotate: isWhyOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>

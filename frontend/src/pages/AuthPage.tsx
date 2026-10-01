@@ -1,3 +1,4 @@
+import { cn } from '../lib/utils'
 import clsx from 'clsx'
 import { Eye, EyeOff, LogIn, Radar, UserPlus } from 'lucide-react'
 import { motion } from 'motion/react'
@@ -98,7 +99,7 @@ export function AuthPage({ mode }: Props) {
           className="w-full max-w-sm"
         >
           <div className="mb-8 flex items-center gap-2.5 lg:hidden">
-            <span className="grid size-8 place-items-center rounded-xl bg-accent text-white dark:text-[#0b0f17]">
+            <span className="grid size-8 place-items-center rounded-xl bg-primary text-white dark:text-[#0b0f17]">
               <Radar size={18} strokeWidth={2.2} />
             </span>
             <span className="text-[15px] font-semibold tracking-tight">Радар</span>
@@ -107,7 +108,7 @@ export function AuthPage({ mode }: Props) {
           <h1 className="text-2xl font-semibold tracking-tight">
             {isRegister ? 'Новый аккаунт' : 'С возвращением'}
           </h1>
-          <p className="mt-1 text-sm text-muted">
+          <p className="mt-1 text-sm text-muted-foreground">
             {isRegister
               ? 'После регистрации можно загрузить резюме: по нему соберём профиль интересов.'
               : 'Войдите, чтобы открыть свои дайджесты и ленту.'}
@@ -115,7 +116,7 @@ export function AuthPage({ mode }: Props) {
 
           <nav
             aria-label="Вход или регистрация"
-            className="mt-6 inline-flex gap-1 rounded-xl bg-sunken p-1"
+            className="mt-6 inline-flex gap-1 rounded-xl bg-surface-container p-1"
           >
             {TABS.map((tab) => (
               <Link
@@ -126,13 +127,15 @@ export function AuthPage({ mode }: Props) {
                 aria-current={tab.mode === mode ? 'page' : undefined}
                 className={clsx(
                   'relative rounded-lg px-4 py-1.5 text-sm font-medium transition-colors',
-                  tab.mode === mode ? 'text-text' : 'text-muted hover:text-text',
+                  tab.mode === mode
+                    ? 'text-foreground'
+                    : 'text-muted-foreground hover:text-foreground',
                 )}
               >
                 {tab.mode === mode && (
                   <motion.span
                     layoutId="auth-tab"
-                    className="absolute inset-0 rounded-lg bg-surface shadow-sm"
+                    className="absolute inset-0 rounded-lg bg-card shadow-sm"
                     transition={{ type: 'spring', stiffness: 480, damping: 38 }}
                   />
                 )}
@@ -179,7 +182,7 @@ export function AuthPage({ mode }: Props) {
                   minLength={isRegister ? PASSWORD_MIN : undefined}
                   maxLength={128}
                   autoComplete={isRegister ? 'new-password' : 'current-password'}
-                  className={clsx(INPUT_CLASS, 'pr-10')}
+                  className={cn(INPUT_CLASS, 'pr-10')}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                 />
@@ -189,7 +192,7 @@ export function AuthPage({ mode }: Props) {
                 onClick={() => setIsPasswordShown((value) => !value)}
                 aria-label="Показать пароль"
                 aria-pressed={isPasswordShown}
-                className="absolute right-0 bottom-0 grid h-[38px] w-10 place-items-center rounded-lg text-faint hover:text-text"
+                className="absolute right-0 bottom-0 grid h-[38px] w-10 place-items-center rounded-lg text-outline hover:text-foreground"
               >
                 {isPasswordShown ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -210,7 +213,7 @@ export function AuthPage({ mode }: Props) {
           </form>
 
           {meta.data?.demo_login && (
-            <div className="mt-6 border-t border-line pt-5">
+            <div className="mt-6 border-t border-outline-variant pt-5">
               <Button
                 className="w-full"
                 isBusy={demo.isPending}
@@ -219,7 +222,7 @@ export function AuthPage({ mode }: Props) {
               >
                 Войти без регистрации
               </Button>
-              <p className="mt-2 text-center text-xs text-faint">
+              <p className="mt-2 text-center text-xs text-outline">
                 Временный аккаунт с примерами профилей. Он только ваш и удалится через сутки.
               </p>
             </div>

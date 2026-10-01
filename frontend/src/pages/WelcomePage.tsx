@@ -53,14 +53,14 @@ function Review({ resume, suggestion, onReplace }: ReviewProps) {
         <button
           type="button"
           onClick={onReplace}
-          className="mt-4 text-sm text-muted underline decoration-line underline-offset-4 hover:text-text"
+          className="mt-4 text-sm text-muted-foreground underline decoration-outline-variant underline-offset-4 hover:text-foreground"
         >
           Загрузить другой файл
         </button>
       </Card>
       <Card className="p-6">
         <h2 className="text-base font-semibold">Профиль интересов</h2>
-        <p className="mt-1 mb-5 text-sm text-muted">
+        <p className="mt-1 mb-5 text-sm text-muted-foreground">
           Оставьте темы, которые нужны в работе. Ключевые слова, важность и исключения можно будет
           поправить в разделе «Интересы».
         </p>
@@ -101,7 +101,7 @@ export function WelcomePage() {
     <div className="mx-auto min-h-dvh max-w-2xl px-5 py-8 sm:py-12">
       <header className="mb-10 flex items-center justify-between">
         <span className="flex items-center gap-2.5">
-          <span className="grid size-8 place-items-center rounded-xl bg-accent text-white dark:text-[#0b0f17]">
+          <span className="grid size-8 place-items-center rounded-xl bg-primary text-white dark:text-[#0b0f17]">
             <Radar size={18} strokeWidth={2.2} />
           </span>
           <span className="text-[15px] font-semibold tracking-tight">Радар</span>
@@ -116,7 +116,7 @@ export function WelcomePage() {
           ? `${me.data.display_name}, расскажите о своей работе`
           : 'Расскажите о своей работе'}
       </h1>
-      <p className="mt-2 mb-7 text-sm text-muted">
+      <p className="mt-2 mb-7 text-sm text-muted-foreground">
         Загрузите резюме: ассистент определит специализацию и предложит темы новостей. Лента и
         дайджесты будут подобраны под вас уже при первом открытии.
       </p>
@@ -146,17 +146,23 @@ export function WelcomePage() {
             />
             <ErrorNote error={upload.error ?? resume.error} />
             {isStuck && (
-              <p role="alert" className="rounded-lg bg-spark-soft px-3 py-2 text-sm text-spark">
+              <p
+                role="alert"
+                className="rounded-lg bg-spark-container px-3 py-2 text-sm text-spark"
+              >
                 Резюме разбирается дольше обычного. Попробуйте загрузить файл ещё раз.
               </p>
             )}
             {failure && (
-              <p role="alert" className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">
+              <p
+                role="alert"
+                className="rounded-lg bg-error-container px-3 py-2 text-sm text-destructive"
+              >
                 {failure}
               </p>
             )}
-            <p className="flex items-start gap-2 text-xs text-muted">
-              <ShieldCheck size={15} className="mt-px shrink-0 text-ok" />
+            <p className="flex items-start gap-2 text-xs text-muted-foreground">
+              <ShieldCheck size={15} className="mt-px shrink-0 text-success" />
               Файл удаляется сразу после разбора. Имя, телефон, почта и адрес вырезаются до анализа;
               в системе остаются должность, навыки и предложенные темы. Их можно стереть в разделе
               «Аккаунт».

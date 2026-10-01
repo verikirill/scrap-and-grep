@@ -121,13 +121,15 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
             aria-current={profile.id === activeId ? 'true' : undefined}
             className={clsx(
               'relative rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
-              profile.id === activeId ? 'text-accent-text' : 'text-muted hover:text-text',
+              profile.id === activeId
+                ? 'text-on-primary-container'
+                : 'text-muted-foreground hover:text-foreground',
             )}
           >
             {profile.id === activeId && (
               <motion.span
                 layoutId="profile-tab"
-                className="absolute inset-0 rounded-lg bg-accent-soft"
+                className="absolute inset-0 rounded-lg bg-primary-container"
                 transition={{ type: 'spring', stiffness: 480, damping: 38 }}
               />
             )}
@@ -166,7 +168,7 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
         {dirty && problem && <p className="text-sm text-spark">{problem}</p>}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
         <ProfileForm spec={draft} onChange={setDraft} />
         <div className="lg:sticky lg:top-9 lg:self-start">
           <PreviewPanel draft={draft} saved={saved} isDirty={dirty} />
@@ -185,7 +187,7 @@ export function ProfilesPage() {
       <>
         <PageHeader title="Интересы" />
         <ErrorNote error={profiles.error} />
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-2">
           <div className="skeleton h-96" />
           <div className="skeleton h-96" />
         </div>

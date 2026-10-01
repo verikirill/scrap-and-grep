@@ -25,14 +25,14 @@ export function ResumeFactsView({ resume, facts }: Props) {
   const level = SENIORITY_LABELS[facts.seniority]
   return (
     <div>
-      <p className="text-xs text-muted">
+      <p className="text-xs text-muted-foreground">
         {resume.file_format.toUpperCase()}
         {resume.parser && ` · ${PARSER_LABELS[resume.parser] ?? resume.parser}`} ·{' '}
         {facts.by_model ? 'разобрано языковой моделью' : 'разобрано по таблице направлений'}
       </p>
       <p className="mt-1.5 font-serif text-xl leading-snug font-semibold">{facts.headline}</p>
-      {level && <p className="mt-0.5 text-sm text-muted">{level}</p>}
-      {facts.summary && <p className="mt-3 text-sm text-text/90">{facts.summary}</p>}
+      {level && <p className="mt-0.5 text-sm text-muted-foreground">{level}</p>}
+      {facts.summary && <p className="mt-3 text-sm text-foreground/90">{facts.summary}</p>}
       {facts.skills.length > 0 && (
         <div className="mt-4 flex flex-wrap gap-1.5">
           {facts.skills.map((skill) => (
