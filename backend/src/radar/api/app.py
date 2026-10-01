@@ -16,6 +16,7 @@ from starlette.routing import Match
 
 from radar.api.routes import (
     adaptation,
+    analytics,
     auth,
     catalog,
     digests,
@@ -159,6 +160,7 @@ def create_app() -> FastAPI:
         feed.router,
         publishing.router,
         mcp_keys.router,
+        analytics.router,
     ):
         app.include_router(router, prefix="/api/v1")
     # Assistants reach the reader's news here, with a key made on the account page.

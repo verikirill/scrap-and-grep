@@ -43,6 +43,9 @@ async def connect(*, database: str | None = None) -> AsyncIterator[AsyncClient]:
         connect_timeout=_CONNECT_TIMEOUT,
         send_receive_timeout=_QUERY_TIMEOUT,
         client_name="radar",
+        # No server session: the analytics page runs its queries side by side,
+        # and a session takes one query at a time.
+        autogenerate_session_id=False,
     )
     try:
         yield client

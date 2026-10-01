@@ -89,3 +89,65 @@ async def test_a_deleted_account_takes_its_events_along(api: str, events: None) 
     assert before
     assert deleted.status_code == 204
     assert await rows("user_id = %(user)s", {"user": me["id"]}) == []
+
+
+async def test_the_administrator_sees_what_readers_did_and_nobody_else_does(
+    api: str, events: None
+) -> None:
+    from radar.auth.service import set_admin
+    from radar.db import session_scope
+    from radar.events.writer import flush
+
+    await seed_articles()
+    async with register(api, "lena") as lena, register(api, "boss") as boss:
+        await lena.post("/profiles", json=profile_spec())
+        feed = (await lena.get("/feed", params={"limit": 4})).json()
+        snapshot, items = feed["snapshot"], feed["items"]
+        await lena.post(
+            "/impressions",
+            json={
+                "list_id": snapshot,
+                "items": [
+                    {
+                        "article_id": item["article_id"],
+                        "position": item["position"],
+                        "slot": "ranked",
+                    }
+                    for item in items
+                ],
+            },
+        )
+        placed = {"list_id": snapshot, "position": 1, "slot": "ranked"}
+        for kind in ("open", "like"):
+            await lena.post(
+                "/feedback", json={"article_id": items[0]["article_id"], "kind": kind} | placed
+            )
+        # Opened within a second of showing up: no impression, yet it was seen.
+        await lena.post(
+            "/feedback",
+            json={"article_id": items[2]["article_id"], "kind": "open"} | placed | {"position": 3},
+        )
+        refused = await lena.get("/analytics/overview")
+        email = (await boss.get("/auth/me")).json()["email"]
+        async with session_scope() as session:
+            await set_admin(session, email, is_admin=True)
+        await boss.post("/auth/logout")
+        await boss.post("/auth/login", json={"email": email, "password": PASSWORD})
+        await flush()
+        answer = await boss.get("/analytics/overview", params={"days": 7})
+        overview = answer.json()
+
+    assert refused.status_code == 403
+    assert answer.status_code == 200, answer.text
+    totals = overview["totals"]
+    assert (totals["seen"], totals["opened"], totals["liked"]) == (3, 2, 1)
+    assert totals["ctr"] == pytest.approx(2 / 3)
+    assert totals["served"] == len(items)
+    [today] = [day for day in overview["daily"] if day["seen"]]
+    assert today["readers"] == 1
+    assert len(overview["daily"]) == 7
+    assert [slot["slot"] for slot in overview["slots"]] == ["ranked"]
+    assert overview["categories"][0]["category"] == "it"
+    # Three articles are too few to call a source good or bad.
+    assert overview["sources_best"] == []
+    assert overview["queue"] == {"waiting": 0, "set_aside": 0}
