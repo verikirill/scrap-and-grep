@@ -519,6 +519,65 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T
 }
 
+/** Counts over distinct reader-article pairs, and the rates between them. */
+export interface Rates {
+  /** Seen on screen, or acted on: an article opened at once has no impression. */
+  seen: number
+  opened: number
+  /** Liked or saved. */
+  liked: number
+  /** Disliked or hidden. */
+  rejected: number
+  ctr: number
+  /** 95% Wilson interval of the CTR: narrower than the truth, a guide only. */
+  ctr_low: number
+  ctr_high: number
+  like_rate: number
+  reject_rate: number
+  /** Enough seen for the rate to mean something. */
+  enough: boolean
+}
+
+export interface AnalyticsTotals extends Rates {
+  readers: number
+  served: number
+  digests_built: number
+  digests_opened: number
+  mcp_calls: number
+  suggestions_accepted: number
+  suggestions_dismissed: number
+}
+
+export interface RankerRun {
+  version: string
+  status: 'active' | 'rejected' | 'retired'
+  created_at: string
+  lists: number
+  rows: number
+  hand_ndcg: number | null
+  model_ndcg: number | null
+  note: string
+}
+
+export interface Analytics {
+  enabled: boolean
+  start: string
+  end: string
+  guests: boolean
+  totals: AnalyticsTotals | null
+  previous: AnalyticsTotals | null
+  daily: (Rates & { day: string; readers: number })[]
+  slots: (Rates & { slot: string })[]
+  sources_best: (Rates & { source_id: number; name: string })[]
+  sources_rejected: (Rates & { source_id: number; name: string })[]
+  categories: (Rates & { category: string })[]
+  adaptation: (Rates & { adaptive: boolean; readers: number })[]
+  variants: (Rates & { variant: string; readers: number })[]
+  last_event_at: string | null
+  queue: { waiting: number; set_aside: number } | null
+  ranker: { share: number; active: string | null; runs: RankerRun[] } | null
+}
+
 export const json = (method: string, body: unknown): RequestInit => ({
   method,
   body: JSON.stringify(body),
@@ -536,6 +595,8 @@ export function query(params: Record<string, string | number | string[] | undefi
 
 export const api = {
   meta: () => request<Meta>('/meta'),
+  analytics: (days: number, guests: boolean) =>
+    request<Analytics>(`/analytics/overview${query({ days, guests: String(guests) })}`),
 
   /** `null` when nobody is signed in. */
   me: () => request<Me | null>('/auth/me'),

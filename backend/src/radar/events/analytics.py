@@ -11,7 +11,7 @@ import asyncio
 import math
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from clickhouse_connect.driver.asyncclient import AsyncClient
@@ -145,7 +145,10 @@ async def overview(period: Period) -> dict[str, Any]:
         last = await client.query("SELECT max(ts) FROM events")
     measured = [_rates(row) for row in sources]
     trusted = [row for row in measured if row["enough"]]
-    last_event: datetime | None = last.result_rows[0][0] if last.result_rows else None
+    # ClickHouse answers in UTC without saying so.
+    last_event: datetime | None = (
+        last.result_rows[0][0].replace(tzinfo=UTC) if last.result_rows else None
+    )
     return {
         "totals": totals,
         "previous": previous,

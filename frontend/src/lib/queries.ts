@@ -56,6 +56,15 @@ const SCHEDULE_POLL_MS = 60_000
 const isBuilding = (digest: { status: string } | undefined) =>
   digest?.status === 'queued' || digest?.status === 'running'
 
+/** The administrator's analytics; refreshed every minute while open. */
+export const useAnalytics = (days: number, guests: boolean, isEnabled: boolean) =>
+  useQuery({
+    queryKey: ['analytics', days, guests],
+    queryFn: () => api.analytics(days, guests),
+    enabled: isEnabled,
+    refetchInterval: 60_000,
+  })
+
 export const useMeta = () =>
   useQuery({ queryKey: keys.meta, queryFn: api.meta, refetchInterval: 60_000 })
 

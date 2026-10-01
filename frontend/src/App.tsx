@@ -19,6 +19,7 @@ import { AuthPage } from './pages/AuthPage'
 import { DigestPage } from './pages/DigestPage'
 import {
   AccountPage,
+  AnalyticsPage,
   ChannelsPage,
   ComparePage,
   FeedPage,
@@ -112,6 +113,7 @@ export default function App() {
                 <Route path="/compare" element={<ComparePage />} />
                 <Route path="/channels" element={<ChannelsPage />} />
                 <Route path="/account" element={<AccountPage />} />
+                <Route path="/analytics" element={<AnalyticsPage />} />
                 <Route path="/share/:token" element={<SharePage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Route>
