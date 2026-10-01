@@ -3,6 +3,7 @@
 from datetime import datetime
 from typing import Annotated, Any
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
@@ -17,7 +18,9 @@ from radar.api.deps import (
 from radar.api.schemas import ArticleOut, Page, SourceCreate, SourceOut, SourceUpdate
 from radar.db.models import Article, Source
 from radar.domain import Language, SourceCategory
-from radar.ingest.net import UnsafeUrlError, ensure_public_url
+from radar.ingest import telegram
+from radar.ingest.net import UnsafeUrlError, build_client, ensure_public_url
+from radar.logging import get_logger
 from radar.store.articles import ArticleFilter, list_articles
 from radar.text import stable_hash
 from radar.worker.tasks import ingest_all, ingest_source_task
@@ -25,6 +28,7 @@ from radar.worker.tasks import ingest_all, ingest_source_task
 # The catalogue is shared by every reader: anyone signed in may read it, only
 # an administrator may change it.
 router = APIRouter(tags=["catalog"], dependencies=[Depends(current_user)])
+log = get_logger(__name__)
 
 _write_limit = Depends(user_rate_limit("write", lambda settings: settings.rate_limit_per_minute))
 _admin = Depends(admin_user)
@@ -101,20 +105,7 @@ async def list_sources(session: SessionDep) -> list[SourceOut]:
 
 @router.post("/sources", status_code=status.HTTP_201_CREATED, dependencies=[_admin, _write_limit])
 async def create_source(payload: SourceCreate, session: SessionDep) -> SourceOut:
-    feed_url = str(payload.feed_url)
-    try:
-        await ensure_public_url(feed_url)
-    except UnsafeUrlError as exc:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
-    source = Source(
-        slug=f"custom-{stable_hash(feed_url)[:12]}",
-        name=payload.name,
-        feed_url=feed_url,
-        site_url=str(payload.site_url) if payload.site_url else None,
-        category=payload.category,
-        language=payload.language,
-        fetch_full_text=payload.fetch_full_text,
-    )
+    source = await (_channel(payload) if payload.kind == "telegram" else _feed(payload))
     session.add(source)
     try:
         await session.flush()
@@ -123,6 +114,64 @@ async def create_source(payload: SourceCreate, session: SessionDep) -> SourceOut
     await session.commit()
     await ingest_source_task.kiq(source.id)
     return await _source_out(session, source)
+
+
+async def _feed(payload: SourceCreate) -> Source:
+    feed_url = str(payload.feed_url)
+    try:
+        await ensure_public_url(feed_url)
+    except UnsafeUrlError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
+    return Source(
+        slug=f"custom-{stable_hash(feed_url)[:12]}",
+        name=payload.name,
+        feed_url=feed_url,
+        site_url=str(payload.site_url) if payload.site_url else None,
+        category=payload.category,
+        language=payload.language,
+        fetch_full_text=payload.fetch_full_text,
+    )
+
+
+async def _channel(payload: SourceCreate) -> Source:
+    """A public channel, checked once before it is added: t.me must show its posts."""
+    try:
+        name = telegram.parse_channel(payload.channel or "")
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
+    try:
+        async with build_client() as client:
+            title = await telegram.channel_title(client, name)
+    except telegram.ChannelUnavailable as exc:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=f"Канал @{name} не найден или закрыл веб-превью: так его читать нельзя.",
+        ) from exc
+    except telegram.MarkupChanged as exc:
+        log.warning("channel_page_unreadable", channel=name, error=str(exc))
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY,
+            detail="t.me ответил страницей, в которой не нашлось постов канала.",
+        ) from exc
+    except (httpx.HTTPError, OSError, UnsafeUrlError) as exc:
+        log.warning("channel_check_failed", channel=name, error=type(exc).__name__)
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY,
+            detail=(
+                "t.me не ответил. Если Telegram недоступен из сети сервера, "
+                "задайте зеркало в RADAR_TELEGRAM_PREVIEW_URLS."
+            ),
+        ) from exc
+    return Source(
+        slug=f"tg-{name}",
+        name=payload.name or (title if len(title) >= 2 else f"@{name}")[:200],
+        kind="telegram",
+        feed_url=telegram.feed_url(name),
+        site_url=telegram.site_url(name),
+        category=payload.category,
+        language=payload.language,
+        fetch_full_text=payload.fetch_full_text,
+    )
 
 
 @router.patch("/sources/{source_id}", dependencies=[_admin, _write_limit])
