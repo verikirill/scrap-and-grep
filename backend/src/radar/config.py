@@ -125,9 +125,9 @@ class Settings(BaseSettings):
     max_active_shorts: int = 10
 
     # Copies of article pictures, kept when a link is not enough (see
-    # radar.images.store): on the media volume, or in S3/MinIO.
+    # radar.images.store): on the media volume, or in any S3-compatible store.
     image_store: Literal["local", "s3"] = "local"
-    s3_endpoint: str = "minio:9000"
+    s3_endpoint: str = "s3:8333"
     s3_bucket: str = "radar-images"
     s3_access_key: str = ""
     s3_secret_key: SecretStr | None = None
