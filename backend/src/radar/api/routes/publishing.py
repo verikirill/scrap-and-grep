@@ -3,6 +3,7 @@
 import uuid
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
+from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
@@ -16,7 +17,7 @@ from radar.publishing.compose import channel_settings
 from radar.publishing.content import PostContent
 from radar.publishing.manage import PublishingRefused, add_bot, add_channel
 from radar.publishing.schedule import next_slot
-from radar.publishing.secrets import SecretKeyMissing, TokenUnreadable
+from radar.publishing.secrets import MIN_SECRET_CHARS, SecretKeyMissing, TokenUnreadable
 from radar.publishing.settings import ChannelSettings
 from radar.publishing.telegram import TelegramUnavailable
 from radar.worker.tasks import compose_post, send_post
@@ -28,6 +29,7 @@ _limit = Depends(
     user_rate_limit("publish", lambda settings: settings.publish_rate_limit_per_minute)
 )
 EDITABLE = (publishing_service.DRAFT, publishing_service.QUEUED, publishing_service.FAILED)
+TELEGRAM_HOST = "api.telegram.org"
 DISABLED_MESSAGE = "Публикация выключена: задайте RADAR_SECRET_KEY, чтобы хранить токены ботов."
 
 
@@ -147,8 +149,12 @@ async def _channel(
     return channel
 
 
-async def _post(session: SessionDep, user: CurrentUser, post_id: uuid.UUID) -> TelegramPost:
-    post = await session.get(TelegramPost, post_id)
+async def _post(
+    session: SessionDep, user: CurrentUser, post_id: uuid.UUID, *, lock: bool = False
+) -> TelegramPost:
+    """The reader's post. `lock` holds the row until the request ends, so the
+    planner cannot send it between the check of its status and the change."""
+    post = await session.get(TelegramPost, post_id, with_for_update=lock)
     if post is None or post.user_id != user.id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Пост не найден.")
     return post
@@ -243,14 +249,22 @@ async def _posts_out(session: SessionDep, posts: list[TelegramPost]) -> list[Pos
 
 
 @router.get("/defaults")
-async def defaults(settings: SettingsDep) -> dict[str, Any]:
-    """Settings a new channel starts with, and whether bots can be stored."""
+async def defaults(settings: SettingsDep, user: CurrentUser) -> dict[str, Any]:
+    """Settings a new channel starts with, whether bots can be stored, and
+    whether posts go to the real Telegram."""
     secret = settings.secret_key.get_secret_value() if settings.secret_key else ""
     return {
         "settings": ChannelSettings().model_dump(mode="json"),
-        "enabled": len(secret) >= 16,
-        "api_url": settings.telegram_api_url,
+        "enabled": len(secret) >= MIN_SECRET_CHARS,
+        "mock": urlsplit(settings.telegram_api_url).hostname != TELEGRAM_HOST,
     }
+
+
+def _approve(post: TelegramPost) -> None:
+    """A human said yes: the post goes out however late it is, and gets a
+    fresh set of attempts."""
+    post.status, post.error = publishing_service.QUEUED, None
+    post.publish_when_ready, post.attempts = False, 0
 
 
 @router.get("/bots")
@@ -412,7 +426,7 @@ async def create_post(
 async def update_post(
     post_id: uuid.UUID, payload: PostPatch, session: SessionDep, user: CurrentUser
 ) -> PostOut:
-    post = await _post(session, user, post_id)
+    post = await _post(session, user, post_id, lock=True)
     if post.status not in EDITABLE:
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Этот пост уже нельзя изменить.")
     if payload.content is not None:
@@ -421,11 +435,12 @@ async def update_post(
                 status.HTTP_400_BAD_REQUEST, detail=" ".join(payload.content.problems())
             )
         post.content = payload.content.model_dump(mode="json")
-    post.not_before = payload.not_before
+    if "not_before" in payload.model_fields_set:
+        post.not_before = payload.not_before
     if payload.approve:
         if post.content is None:
             raise HTTPException(status.HTTP_409_CONFLICT, detail="Пост ещё не написан.")
-        post.status, post.error = publishing_service.QUEUED, None
+        _approve(post)
     await session.flush()
     return (await _posts_out(session, [post]))[0]
 
@@ -433,10 +448,11 @@ async def update_post(
 @router.post("/posts/{post_id}/publish", dependencies=[_limit])
 async def publish_post(post_id: uuid.UUID, session: SessionDep, user: CurrentUser) -> PostOut:
     """Send now, whatever the schedule says."""
-    post = await _post(session, user, post_id)
+    post = await _post(session, user, post_id, lock=True)
     if post.status not in EDITABLE or post.content is None:
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Этот пост сейчас нельзя отправить.")
-    post.status, post.not_before, post.error = publishing_service.SENDING, None, None
+    _approve(post)
+    post.status, post.not_before = publishing_service.SENDING, None
     await session.commit()
     await send_post.kiq(str(post.id))
     return (await _posts_out(session, [post]))[0]
@@ -445,7 +461,7 @@ async def publish_post(post_id: uuid.UUID, session: SessionDep, user: CurrentUse
 @router.delete("/posts/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_post(post_id: uuid.UUID, session: SessionDep, user: CurrentUser) -> None:
     """Drop a post that is not out yet; a sent one stays in the history."""
-    post = await _post(session, user, post_id)
+    post = await _post(session, user, post_id, lock=True)
     if post.status in {publishing_service.SENT, publishing_service.SENDING}:
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Отправленный пост не удаляется.")
     # A slot post is kept as skipped, so the planner does not plan it again.

@@ -27,6 +27,10 @@ def configure_logging(level: str = "INFO", *, json: bool = True) -> None:
     )
     # Third-party libraries still use stdlib logging; keep them quiet but visible.
     logging.basicConfig(level=logging.WARNING, stream=sys.stdout, format="%(message)s")
+    # httpx logs every request URL at INFO, and a Bot API URL carries the bot's
+    # token: this stays at WARNING whatever the root level becomes.
+    for name in ("httpx", "httpcore"):
+        logging.getLogger(name).setLevel(logging.WARNING)
 
 
 def get_logger(name: str) -> structlog.stdlib.BoundLogger:

@@ -230,6 +230,44 @@ def test_the_writer_drops_lines_with_invented_figures_or_links() -> None:
     assert draft.emphasis == ("Обновление 3.1 вышло",)
 
 
+def test_the_writer_drops_addresses_and_handles_the_article_does_not_mention() -> None:
+    out = _NewsOut(
+        headline="Siemens закрыла уязвимость в SIMATIC S7-1500",
+        paragraphs=[
+            "Подробности в канале t.me/scam_news.",
+            "Пишите в поддержку @scam_support.",
+            "Скачайте патч на bit.ly/patch-now.",
+            "Патч раздаёт siemens-update.xyz/s7.",
+            "Обновление 3.1 работает и с Node.js.",
+        ],
+        ending="Наконец-то!",
+    )
+
+    draft = check_news(out, story(summary="Обновление 3.1 работает с Node.js."), voice())
+
+    # Telegram turns a bare domain or @name into a link in the channel's voice;
+    # a name with a dot stays only when the article itself has it.
+    assert draft.paragraphs == ("Обновление 3.1 работает и с Node.js.",)
+
+
+def test_markdown_from_the_model_becomes_emphasis_and_the_lead_loses_its_own_dash() -> None:
+    out = _NewsOut(
+        headline="**Siemens закрыла уязвимость в SIMATIC S7-1500**",
+        lead="— атакующий мог удалённо остановить ПЛК",
+        paragraphs=["Компания выпустила **обновление 3.1**, затронуты 12 моделей."],
+    )
+
+    draft = check_news(out, story(), voice())
+    html = render_news(draft, voice(), None)
+
+    assert draft.headline == "Siemens закрыла уязвимость в SIMATIC S7-1500"
+    assert draft.lead == "атакующий мог удалённо остановить ПЛК"
+    assert draft.paragraphs == ("Компания выпустила обновление 3.1, затронуты 12 моделей.",)
+    assert "S7-1500</b> — атакующий" in html
+    assert "выпустила <b>обновление 3.1</b>, затронуты" in html
+    assert "*" not in html
+
+
 def test_a_news_post_reads_like_the_channel() -> None:
     draft = NewsDraft(
         headline="Siemens закрыла уязвимость",

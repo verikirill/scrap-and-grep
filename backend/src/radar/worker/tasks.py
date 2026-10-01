@@ -273,7 +273,11 @@ async def plan_posts() -> dict[str, int]:
         await compose_post.kiq(str(post_id))
     for post_id in ready:
         await send_post.kiq(str(post_id))
-    return {"planned": len(created), "sending": len(ready), "requeued": len(stuck["requeued"])}
+    return {
+        "planned": len(created),
+        "sending": len(ready),
+        "interrupted": len(stuck["interrupted"]),
+    }
 
 
 @digest_broker.task(task_name="compose_post", retry_on_error=True, max_retries=2)

@@ -284,3 +284,112 @@ async def test_slots_are_planned_once_and_a_draft_waits_for_approval(
     assert edited.status_code == 200, edited.text
     assert edited.json()["status"] == "queued"
     assert edited.json()["content"]["html"] == "<p>Свой <b>текст</b></p>"
+
+
+HOURLY = {
+    "mode": "interval",
+    "every_minutes": 60,
+    "window_start": "00:00",
+    "window_end": "23:59",
+    "prepare_minutes": 90,
+    "max_per_day": 24,
+}
+
+
+async def test_a_post_removed_while_it_is_written_stays_removed(
+    api: str, telegram: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from radar.cache import get_cache
+    from radar.publishing import compose, service
+
+    async with register(api, "ulyana") as reader:
+        await seed_articles()
+        channel = await connect(reader, "@radar_cancel", schedule=HOURLY)
+        [post_id, *_] = await service.plan(datetime.now(UTC))
+
+        class CancellingWriter(RecordingWriter):
+            """The owner removes the post while the model is still writing it."""
+
+            async def news(self, story: Any, voice: Any) -> Any:
+                assert (await reader.delete(f"/publishing/posts/{post_id}")).status_code == 204
+                return await super().news(story, voice)
+
+        monkeypatch.setattr(compose, "get_post_writer", CancellingWriter)
+        status = await service.compose(post_id, get_cache())
+        sent = await service.due(datetime.now(UTC) + timedelta(hours=3))
+        posts = (await reader.get("/publishing/posts", params={"channel_id": channel["id"]})).json()
+
+    assert status == "gone"
+    assert post_id not in sent
+    assert {post["status"] for post in posts if post["id"] == str(post_id)} == {"skipped"}
+    assert telegram._messages == []
+
+
+class Unreachable(httpx.AsyncBaseTransport):
+    """Telegram as the network sees it when something breaks on the way."""
+
+    def __init__(self, error: type[httpx.TransportError]) -> None:
+        self.error = error
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        raise self.error("simulated", request=request)
+
+
+async def test_a_post_that_may_have_reached_telegram_is_not_sent_again(
+    api: str, telegram: ModuleType
+) -> None:
+    from radar.cache import get_cache
+    from radar.publishing import service
+
+    async with register(api, "vera") as reader:
+        ids = await seed_articles()
+        channel = await connect(reader, "@radar_timeouts")
+        sent: dict[str, str] = {}
+        for error, article in ((httpx.ReadTimeout, "vpn"), (httpx.ConnectError, "router")):
+            post = (
+                await reader.post(
+                    f"/publishing/channels/{channel['id']}/posts",
+                    json={"article_id": ids[article], "publish": True},
+                )
+            ).json()
+            post_id = uuid.UUID(post["id"])
+            assert await service.compose(post_id, get_cache()) == service.QUEUED
+            assert post_id in await service.due()
+            sent[error.__name__] = await service.send(post_id, transport=Unreachable(error))
+        posts = (await reader.get("/publishing/posts", params={"channel_id": channel["id"]})).json()
+
+    # The answer was lost on the way back: the post may be in the channel, so
+    # the owner decides. The connection never opened: it is simply tried again.
+    assert sent == {"ReadTimeout": "failed", "ConnectError": "queued"}
+    lost = next(post for post in posts if post["status"] == "failed")
+    assert "пост мог выйти" in lost["error"]
+
+
+async def test_a_scheduled_post_that_is_late_waits_for_a_human(
+    api: str, telegram: ModuleType
+) -> None:
+    from radar.cache import get_cache
+    from radar.publishing import service
+
+    async with register(api, "yana") as reader:
+        await seed_articles()
+        channel = await connect(reader, "@radar_late", schedule=HOURLY)
+        now = datetime.now(UTC)
+        [post_id, *_] = await service.plan(now)
+        assert await service.compose(post_id, get_cache()) == service.QUEUED
+        late = await service.due(now + timedelta(hours=3))
+        [post] = [
+            post
+            for post in (
+                await reader.get("/publishing/posts", params={"channel_id": channel["id"]})
+            ).json()
+            if post["id"] == str(post_id)
+        ]
+        approved = await reader.patch(f"/publishing/posts/{post_id}", json={"approve": True})
+        then = await service.due(now + timedelta(hours=3, minutes=1))
+
+    assert post_id not in late
+    assert (post["status"], post["error"]) == ("draft", service.LATE_NOTE)
+    # Once a human says yes, it goes out however late it is.
+    assert approved.json()["status"] == "queued"
+    assert post_id in then

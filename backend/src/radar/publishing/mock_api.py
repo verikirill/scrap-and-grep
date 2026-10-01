@@ -24,7 +24,7 @@ from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
-from radar.publishing.markup import canonical, to_classic
+from radar.publishing.markup import canonical, safe_url, to_classic
 from radar.publishing.secrets import TOKEN_RE
 
 _SRC_RE = re.compile(r'src="(https?://[^"]+)"')
@@ -202,8 +202,15 @@ def _keyboard(payload: dict[str, Any]) -> list[list[dict[str, Any]]]:
 
 
 def _button(button: dict[str, Any]) -> str:
-    url, text = escape(str(button.get("url", ""))), escape(str(button.get("text", "")))
-    return f'<a class="button" href="{url}">{text}</a>'
+    text = escape(str(button.get("text", "")))
+    url = safe_url(str(button.get("url", "")))
+    if url is None:
+        return f'<span class="button">{text}</span>'
+    return f'<a class="button" href="{escape(url)}">{text}</a>'
+
+
+# Anyone on the machine can post to the mock, so its page runs no scripts.
+_VIEWER_POLICY = "default-src 'none'; img-src https: http: data:; style-src 'unsafe-inline'"
 
 
 _STYLE = """
@@ -246,7 +253,7 @@ async def viewer() -> HTMLResponse:
         '<meta name="viewport" content="width=device-width, initial-scale=1">'
         '<title>Мок Telegram</title><meta http-equiv="refresh" content="10">'
         f"<style>{_STYLE}</style></head><body><main>"
-        f"<h1>Мок Telegram · {len(_messages)} сообщений</h1>"
+        f"<h1>Мок Telegram · отправлено: {len(_messages)}</h1>"
         f"{cards or '<p>Пока ничего не отправлено.</p>'}</main></body></html>"
     )
-    return HTMLResponse(html)
+    return HTMLResponse(html, headers={"Content-Security-Policy": _VIEWER_POLICY})

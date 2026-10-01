@@ -51,6 +51,11 @@ class TelegramError(Exception):
         return self.code == httpx.codes.TOO_MANY_REQUESTS
 
     @property
+    def is_temporary(self) -> bool:
+        """Telegram's own failure: the request was not carried out, try again."""
+        return self.code >= httpx.codes.INTERNAL_SERVER_ERROR
+
+    @property
     def lost_access(self) -> bool:
         """The bot was removed from the chat or lost the right to post."""
         text = self.description.lower()
@@ -70,7 +75,20 @@ DEFAULT_TRANSPORT: httpx.AsyncBaseTransport | None = None
 
 
 class TelegramUnavailable(Exception):
-    """The Bot API did not answer."""
+    """The Bot API did not answer.
+
+    `may_have_arrived` is set when the request went out and the answer was
+    lost: Telegram has no idempotency key, so such a post must not be sent
+    again blindly.
+    """
+
+    def __init__(self, message: str, *, may_have_arrived: bool = False) -> None:
+        super().__init__(message)
+        self.may_have_arrived = may_have_arrived
+
+
+# The request never left: the connection was not made.
+_NOT_SENT = (httpx.ConnectError, httpx.ConnectTimeout, httpx.PoolTimeout)
 
 
 @dataclass(frozen=True, slots=True)
@@ -103,18 +121,24 @@ class TelegramClient:
         self._timeout = httpx.Timeout(timeout or settings.telegram_timeout_seconds, connect=10.0)
         self._transport = transport or DEFAULT_TRANSPORT
 
-    async def call(self, method: str, payload: dict[str, Any] | None = None) -> Any:
+    async def _post(self, method: str, **request: Any) -> Any:
         url = f"{self._base}/bot{self._token}/{method}"
+        # The exception texts may contain the URL, and with it the token.
         try:
             async with httpx.AsyncClient(
                 timeout=self._timeout, transport=self._transport
             ) as client:
-                response = await client.post(url, json=payload or {})
-            body = response.json()
-        except (httpx.HTTPError, ValueError) as exc:
-            # The exception text may contain the URL, and with it the token.
+                response = await client.post(url, **request)
+        except _NOT_SENT as exc:
             raise TelegramUnavailable(f"{method}: {type(exc).__name__}") from None
-        return self._result(method, body, response.status_code)
+        except httpx.HTTPError as exc:
+            raise TelegramUnavailable(
+                f"{method}: {type(exc).__name__}", may_have_arrived=True
+            ) from None
+        return self._result(method, response)
+
+    async def call(self, method: str, payload: dict[str, Any] | None = None) -> Any:
+        return await self._post(method, json=payload or {})
 
     async def get_me(self) -> BotInfo:
         result = await self.call("getMe")
@@ -157,27 +181,26 @@ class TelegramClient:
         """The same call with the picture uploaded, for when Telegram cannot
         fetch it by its address. Nested values go as JSON strings, as the Bot
         API expects in multipart requests."""
-        url = f"{self._base}/bot{self._token}/{method}"
         fields = {
             key: value if isinstance(value, str) else json.dumps(value)
             for key, value in payload.items()
             if key != field and value is not None
         }
-        try:
-            async with httpx.AsyncClient(
-                timeout=self._timeout, transport=self._transport
-            ) as client:
-                response = await client.post(
-                    url, data=fields, files={field: (filename, data, content_type)}
-                )
-            body = response.json()
-        except (httpx.HTTPError, ValueError) as exc:
-            raise TelegramUnavailable(f"{method}: {type(exc).__name__}") from None
-        return self._result(method, body, response.status_code)
+        return await self._post(method, data=fields, files={field: (filename, data, content_type)})
 
-    def _result(self, method: str, body: Any, status: int) -> Any:
+    def _result(self, method: str, response: httpx.Response) -> Any:
+        status = response.status_code
+        try:
+            body = response.json()
+        except ValueError:
+            body = None
         if not isinstance(body, dict):
-            raise TelegramUnavailable(f"{method}: unexpected answer")
+            # A proxy's error page: a gateway error means Telegram never had
+            # the request; anything else, nobody knows.
+            raise TelegramUnavailable(
+                f"{method}: unexpected answer {status}",
+                may_have_arrived=status < httpx.codes.INTERNAL_SERVER_ERROR,
+            )
         if body.get("ok"):
             return body.get("result")
         parameters = body.get("parameters") or {}

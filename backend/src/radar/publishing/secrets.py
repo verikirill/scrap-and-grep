@@ -22,6 +22,11 @@ class SecretKeyMissing(RuntimeError):
     """RADAR_SECRET_KEY is not set, so tokens cannot be stored or read."""
 
 
+# The secret is meant to be random (openssl rand -base64 32); this only
+# stops an obviously short one.
+MIN_SECRET_CHARS = 16
+
+
 class TokenUnreadable(RuntimeError):
     """The stored token was encrypted with another key."""
 
@@ -29,8 +34,8 @@ class TokenUnreadable(RuntimeError):
 def _fernet() -> Fernet:
     secret = get_settings().secret_key
     value = secret.get_secret_value() if secret is not None else ""
-    if len(value) < 16:
-        raise SecretKeyMissing("RADAR_SECRET_KEY must be set (16+ characters)")
+    if len(value) < MIN_SECRET_CHARS:
+        raise SecretKeyMissing(f"RADAR_SECRET_KEY must be set ({MIN_SECRET_CHARS}+ characters)")
     key = HKDF(algorithm=hashes.SHA256(), length=32, salt=None, info=_INFO).derive(value.encode())
     return Fernet(base64.urlsafe_b64encode(key))
 

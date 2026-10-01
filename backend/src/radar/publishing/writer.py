@@ -35,6 +35,22 @@ LEAD_LIMIT = 200
 POINT_LIMIT = 140
 ENDING_LIMIT = 60
 _HASHTAG_RE = re.compile(r"^[0-9A-Za-zА-Яа-яЁё_]{2,30}$")
+# Models told "no markup" still write **bold** now and then, and start the
+# lead with the dash the post already puts there.
+_MD_BOLD_RE = re.compile(r"\*\*(.+?)\*\*|__(.+?)__")
+_MD_MARK_RE = re.compile(r"\*\*|__|`")
+_LEADING_DASH_RE = re.compile(r"^[\s—–\-:;,.]+")
+# What Telegram turns into a link by itself: addresses, bare domains, @names.
+# A hostile article can talk the model into writing one. is_grounded already
+# drops plain web links; anything else of this shape, "Node.js" included, may
+# stay only if the article itself has it.
+_ADDRESS_RE = re.compile(
+    r"(?:https?://|tg://|www\.)\S+"
+    r"|@[A-Za-z0-9_]{4,}"
+    r"|\b[\w-]+(?:\.[\w-]+)*\.(?:[A-Za-z]{2,}|рф)\b(?:/\S*)?",
+    re.IGNORECASE,
+)
+_ADDRESS_TAIL = ".,;:!?)»\"'"
 _LENGTH = {"short": (1, 3, 450), "medium": (2, 4, 750), "long": (3, 5, 1000)}
 _TONES = {
     "punchy": (
@@ -236,9 +252,47 @@ def _others_block(voice: Voice) -> str:
     )
 
 
-def _grounded(text: str, allowed: set[str]) -> str:
-    text = " ".join(text.split())
-    return text if text and is_grounded(text, allowed) else ""
+def _unmarked(text: str) -> str:
+    return " ".join(_MD_MARK_RE.sub("", text).split())
+
+
+def _marked_phrases(parts: list[str]) -> list[str]:
+    """What the model put in **bold** itself: worth keeping bold."""
+    return [
+        _unmarked(match.group(1) or match.group(2))
+        for part in parts
+        for match in _MD_BOLD_RE.finditer(part)
+    ]
+
+
+@dataclass(frozen=True, slots=True)
+class Grounds:
+    """What a line may rest on: the figures and the text of the article."""
+
+    numbers: frozenset[str]
+    text: str
+
+    @classmethod
+    def of(cls, *stories: Story) -> Grounds:
+        text = " ".join(story.text() for story in stories)
+        return cls(frozenset(numbers(text)), text.lower())
+
+
+NOTHING = Grounds(frozenset(), "")
+
+
+def _addresses_known(text: str, grounds: Grounds) -> bool:
+    return all(
+        match.group(0).lower().rstrip(_ADDRESS_TAIL) in grounds.text
+        for match in _ADDRESS_RE.finditer(text)
+    )
+
+
+def _grounded(text: str, grounds: Grounds) -> str:
+    text = _unmarked(text)
+    if not text or not is_grounded(text, set(grounds.numbers)):
+        return ""
+    return text if _addresses_known(text, grounds) else ""
 
 
 def _hashtags(tags: list[str]) -> tuple[str, ...]:
@@ -248,7 +302,7 @@ def _hashtags(tags: list[str]) -> tuple[str, ...]:
 
 def check_news(out: _NewsOut, story: Story, voice: Voice) -> NewsDraft:
     """The model's post with every line checked against the article."""
-    allowed = numbers(story.text())
+    allowed = Grounds.of(story)
     paragraphs_max, bullets_max, _ = _LENGTH[voice.style.length]
     headline = _grounded(truncate(out.headline, HEADLINE_LIMIT), allowed)
     paragraphs = tuple(
@@ -260,19 +314,19 @@ def check_news(out: _NewsOut, story: Story, voice: Voice) -> NewsDraft:
         if line
     )[:bullets_max]
     body = " ".join(paragraphs)
+    wanted = (_unmarked(item) for item in out.emphasis + _marked_phrases(out.paragraphs))
     emphasis = tuple(
-        phrase
-        for phrase in (" ".join(item.split()) for item in out.emphasis)
-        if 3 <= len(phrase) <= 80 and phrase in body
+        dict.fromkeys(phrase for phrase in wanted if 3 <= len(phrase) <= 80 and phrase in body)
     )[:3]
+    lead = _LEADING_DASH_RE.sub("", _unmarked(truncate(out.lead, LEAD_LIMIT)))
     return NewsDraft(
         headline=headline or truncate(story.title, HEADLINE_LIMIT),
-        lead=_grounded(truncate(out.lead, LEAD_LIMIT), allowed),
+        lead=_grounded(lead, allowed),
         paragraphs=paragraphs or (_sentences(story.summary or story.body, 2, 400),),
         bullets=bullets if voice.style.bullets else (),
         ending=_grounded(truncate(out.ending, ENDING_LIMIT), allowed) if voice.style.ending else "",
         emphasis=emphasis,
-        cta=_grounded(truncate(out.cta, 40), set()) or "Подробности",
+        cta=_grounded(truncate(out.cta, 40), NOTHING) or "Подробности",
         hashtags=_hashtags(out.hashtags) if voice.style.hashtags else (),
         by_model=True,
     )
@@ -283,7 +337,7 @@ def check_digest(out: _DigestOut, stories: list[Story]) -> DigestDraft:
         raise ValueError(f"the model wrote {len(out.items)} items for {len(stories)} stories")
     items = []
     for item, story in zip(out.items, stories, strict=True):
-        allowed = numbers(story.text())
+        allowed = Grounds.of(story)
         items.append(
             DigestItemDraft(
                 title=_grounded(truncate(item.title, HEADLINE_LIMIT), allowed)
@@ -293,7 +347,7 @@ def check_digest(out: _DigestOut, stories: list[Story]) -> DigestDraft:
                 why=_grounded(truncate(item.why, 240), allowed),
             )
         )
-    every = set().union(*(numbers(story.text()) for story in stories))
+    every = Grounds.of(*stories)
     return DigestDraft(
         title=_grounded(truncate(out.title, 80), every) or "Главное за период",
         intro=_grounded(truncate(out.intro, 300), every),
