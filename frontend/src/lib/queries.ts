@@ -17,6 +17,7 @@ import type {
   Adaptation,
   DigestSchedule,
   ScheduleInput,
+  Placement,
   Profile,
   ProfileSpec,
   ProgressEvent,
@@ -54,6 +55,15 @@ const SCHEDULE_POLL_MS = 60_000
 
 const isBuilding = (digest: { status: string } | undefined) =>
   digest?.status === 'queued' || digest?.status === 'running'
+
+/** The administrator's analytics; refreshed every minute while open. */
+export const useAnalytics = (days: number, guests: boolean, isEnabled: boolean) =>
+  useQuery({
+    queryKey: ['analytics', days, guests],
+    queryFn: () => api.analytics(days, guests),
+    enabled: isEnabled,
+    refetchInterval: 60_000,
+  })
 
 export const useMeta = () =>
   useQuery({ queryKey: keys.meta, queryFn: api.meta, refetchInterval: 60_000 })
@@ -502,6 +512,7 @@ type Feedback = {
   kind: ReactionKind
   isActive: boolean
   context: 'feed' | 'digest'
+  placement?: Placement
 }
 
 type FeedPages = { pages: FeedPage[]; pageParams: unknown[] }
@@ -566,8 +577,8 @@ export function useFeedback() {
   const client = useQueryClient()
   return useMutation({
     scope: { id: 'feedback' },
-    mutationFn: ({ articleId, kind, isActive, context }: Feedback) =>
-      api.feedback(articleId, kind, isActive, context),
+    mutationFn: ({ articleId, kind, isActive, context, placement }: Feedback) =>
+      api.feedback(articleId, kind, isActive, context, placement),
     onMutate: async ({ articleId, kind, isActive }) => {
       // A reactions request in flight would overwrite the optimistic state
       // with an older answer. The feed itself is not cancelled: that would

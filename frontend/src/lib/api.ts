@@ -413,6 +413,34 @@ export interface FeedItem {
   /** Contribution of each part of the evidence; empty for saved items. */
   parts: Record<string, number>
   reactions: ReactionKind[]
+  /** Why it is in the list and its place there, counted from 1. */
+  slot: ListSlot
+  position: number
+}
+
+export type ListSlot = 'ranked' | 'explore' | 'newest' | 'saved' | 'digest'
+
+/**
+ * Where the reader met an article: the list (a feed snapshot or a digest), the
+ * place in it and why it was there. Sent along with what the reader did, for
+ * the analytics and for teaching the feed's ranker.
+ */
+export interface Placement {
+  listId: string | null
+  position: number
+  slot: ListSlot
+}
+
+export interface SeenItem {
+  article_id: number
+  position: number
+  slot: ListSlot
+}
+
+function placementBody(placement: Placement | undefined) {
+  return placement
+    ? { list_id: placement.listId, position: placement.position, slot: placement.slot }
+    : {}
 }
 
 export interface FeedPage {
@@ -491,6 +519,65 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T
 }
 
+/** Counts over distinct reader-article pairs, and the rates between them. */
+export interface Rates {
+  /** Seen on screen, or acted on: an article opened at once has no impression. */
+  seen: number
+  opened: number
+  /** Liked or saved. */
+  liked: number
+  /** Disliked or hidden. */
+  rejected: number
+  ctr: number
+  /** 95% Wilson interval of the CTR: narrower than the truth, a guide only. */
+  ctr_low: number
+  ctr_high: number
+  like_rate: number
+  reject_rate: number
+  /** Enough seen for the rate to mean something. */
+  enough: boolean
+}
+
+export interface AnalyticsTotals extends Rates {
+  readers: number
+  served: number
+  digests_built: number
+  digests_opened: number
+  mcp_calls: number
+  suggestions_accepted: number
+  suggestions_dismissed: number
+}
+
+export interface RankerRun {
+  version: string
+  status: 'active' | 'rejected' | 'retired'
+  created_at: string
+  lists: number
+  rows: number
+  hand_ndcg: number | null
+  model_ndcg: number | null
+  note: string
+}
+
+export interface Analytics {
+  enabled: boolean
+  start: string
+  end: string
+  guests: boolean
+  totals: AnalyticsTotals | null
+  previous: AnalyticsTotals | null
+  daily: (Rates & { day: string; readers: number })[]
+  slots: (Rates & { slot: string })[]
+  sources_best: (Rates & { source_id: number; name: string })[]
+  sources_rejected: (Rates & { source_id: number; name: string })[]
+  categories: (Rates & { category: string })[]
+  adaptation: (Rates & { adaptive: boolean; readers: number })[]
+  variants: (Rates & { variant: string; readers: number })[]
+  last_event_at: string | null
+  queue: { waiting: number; set_aside: number } | null
+  ranker: { share: number; active: string | null; runs: RankerRun[] } | null
+}
+
 export const json = (method: string, body: unknown): RequestInit => ({
   method,
   body: JSON.stringify(body),
@@ -508,6 +595,8 @@ export function query(params: Record<string, string | number | string[] | undefi
 
 export const api = {
   meta: () => request<Meta>('/meta'),
+  analytics: (days: number, guests: boolean) =>
+    request<Analytics>(`/analytics/overview${query({ days, guests: String(guests) })}`),
 
   /** `null` when nobody is signed in. */
   me: () => request<Me | null>('/auth/me'),
@@ -563,9 +652,16 @@ export const api = {
     kind: ReactionKind,
     isActive: boolean,
     context: 'feed' | 'digest',
+    placement?: Placement,
   ) =>
     request<void>('/feedback', {
-      ...json('POST', { article_id: articleId, kind, active: isActive, context }),
+      ...json('POST', {
+        article_id: articleId,
+        kind,
+        active: isActive,
+        context,
+        ...placementBody(placement),
+      }),
       // An opened link navigates away; the request must outlive the page.
       keepalive: true,
     }),
@@ -590,9 +686,9 @@ export const api = {
     request<void>(`/profiles/${profileId}/suggestions/${suggestionId}/dismiss`, {
       method: 'POST',
     }),
-  recordImpressions: (articleIds: number[], context: 'feed' | 'digest') =>
+  recordImpressions: (items: SeenItem[], context: 'feed' | 'digest', listId: string | null) =>
     request<void>('/impressions', {
-      ...json('POST', { article_ids: articleIds, context }),
+      ...json('POST', { items, context, list_id: listId }),
       keepalive: true,
     }),
   shareProfile: (id: string) => request<Profile>(`/profiles/${id}/share`, { method: 'POST' }),

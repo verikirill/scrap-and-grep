@@ -8,7 +8,7 @@ import { EASE, buttonClass } from '../components/tokens'
 import { Button, Card, EmptyState, ErrorNote, PageHeader } from '../components/ui'
 import { FeedCard } from '../features/feed/FeedCard'
 import { TastePanel } from '../features/feed/TastePanel'
-import type { FeedItem, ReactionKind } from '../lib/api'
+import type { FeedItem, Placement, ReactionKind } from '../lib/api'
 import { formatRelative, plural } from '../lib/format'
 import { keys, useFeed, useFeedback, useSaved, useTaste } from '../lib/queries'
 
@@ -51,12 +51,29 @@ export function FeedPage() {
   // Pages come from one snapshot and do not overlap; the check is a guard
   // for the rare case when a snapshot expired between two pages.
   const items = uniqueItems(list.data?.pages.flatMap((page) => page.items) ?? [])
+  // The snapshot each article came from: normally one for all pages.
+  const snapshotOf = new Map(
+    list.data?.pages.flatMap((page) =>
+      page.items.map((item) => [item.article_id, page.snapshot] as const),
+    ) ?? [],
+  )
+  const placementOf = (item: FeedItem): Placement => ({
+    listId: snapshotOf.get(item.article_id) ?? null,
+    position: item.position,
+    slot: item.slot,
+  })
   const generatedAt = feed.data?.pages[0]?.generated_at
   const knowsReader = Boolean(taste.data?.facets.some((facet) => facet.kind !== 'avoid'))
 
   const react = (item: FeedItem, kind: ReactionKind, isActive: boolean) => {
     feedback.mutate(
-      { articleId: item.article_id, kind, isActive, context: 'feed' },
+      {
+        articleId: item.article_id,
+        kind,
+        isActive,
+        context: 'feed',
+        placement: placementOf(item),
+      },
       {
         onSuccess: () => {
           if (TEACHING.includes(kind)) setPendingSignals((count) => count + 1)
@@ -190,6 +207,7 @@ export function FeedPage() {
                   key={item.article_id}
                   item={item}
                   index={index}
+                  placement={placementOf(item)}
                   onReact={(kind, isActive) => react(item, kind, isActive)}
                 />
               ))}

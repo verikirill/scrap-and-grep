@@ -12,12 +12,15 @@ from radar.auth import sessions as auth_sessions
 from radar.cache import get_cache
 from radar.config import get_settings
 from radar.db import session_scope
+from radar.events import enabled as events_enabled
+from radar.events import writer as event_writer
 from radar.ingest.measure import measure
 from radar.ingest.net import build_client
 from radar.ingest.service import embed_pending, enabled_source_ids, ingest_source
 from radar.logging import get_logger
 from radar.pipeline.runner import report_failure, run_digest
 from radar.publishing import service as publishing_service
+from radar.ranker import train as ranker_train
 from radar.recsys import adaptation as recsys_adaptation
 from radar.recsys import service as recsys_service
 from radar.resume import service as resume_service
@@ -67,6 +70,10 @@ SHORT_ATTEMPTS = 2
 STALE_SHORT_AFTER = timedelta(milliseconds=2 * MEDIA_IDLE_TIMEOUT_MS)
 # Writing a post is one model call and a page fetch for the picture.
 POST_LOCK_TTL = 300
+# The event writer runs every minute and stops before the next run is due.
+EVENTS_WRITE_BUDGET = 45.0
+# Loading a month of events and fitting takes minutes at most.
+RANKER_LOCK_TTL = 3600
 
 
 @ingest_broker.task(task_name="ingest_all", schedule=[{"cron": get_settings().ingest_cron}])
@@ -320,6 +327,25 @@ async def run_digest_schedules() -> int:
             async with session_scope() as session:
                 await digest_store.mark_failed(session, digest_id, "Очередь задач недоступна.")
     return len(started)
+
+
+@ingest_broker.task(task_name="write_events", schedule=[{"cron": "* * * * *"}])
+async def write_events() -> int:
+    """Every minute: take the events waiting in Valkey into ClickHouse and
+    delete those of deleted accounts."""
+    return await event_writer.flush(budget_seconds=EVENTS_WRITE_BUDGET)
+
+
+@ingest_broker.task(task_name="train_ranker", schedule=[{"cron": get_settings().ranker_train_cron}])
+async def train_ranker() -> str:
+    """Every night: train the feed ranker on the events and switch it on or off."""
+    if not events_enabled():
+        return "events off"
+    async with get_cache().lock("ranker-train", RANKER_LOCK_TTL) as acquired:
+        if not acquired:
+            return "locked"
+        run = await ranker_train.train()
+    return run.status
 
 
 @ingest_broker.task(task_name="plan_posts", schedule=[{"cron": "* * * * *"}])

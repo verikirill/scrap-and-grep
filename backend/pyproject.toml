@@ -8,6 +8,7 @@ authors = [
 requires-python = ">=3.14"
 dependencies = [
     "alembic>=1.20.0",
+    "clickhouse-connect[async,orjson]>=1.9.0",
     "cryptography>=50.0.2",
     "fastapi>=0.142.2",
     "feedparser>=6.0.14",
@@ -17,6 +18,7 @@ dependencies = [
     "langchain-ollama>=1.1.0",
     "langgraph>=1.2.12",
     "langgraph-checkpoint-postgres>=3.1.2",
+    "lightgbm>=4.7.0",
     "mcp>=2.2.0",
     "minio>=7.2.20",
     "numpy>=2.5.3",

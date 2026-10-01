@@ -17,9 +17,11 @@ from radar.cache import Cache, get_cache
 from radar.db import session_scope
 from radar.db.models import Article, Profile, Resume, Source, User
 from radar.domain import ProfileSpec
+from radar.events.model import SLOT_EXPLORE, SLOT_NEWEST, SLOT_RANKED, SLOT_SAVED
 from radar.logging import get_logger
 from radar.pipeline.ports import QueryEmbedder
 from radar.pipeline.sql_store import CachedQueryEmbedder
+from radar.ranker.serving import VARIANT_HAND, VARIANT_LEARNED, assignment, learned_order
 from radar.reading import reading_minutes
 from radar.recsys import store
 from radar.recsys.adaptation import learned_interests
@@ -91,6 +93,27 @@ class FeedItem(BaseModel):
     reactions: list[str] = []
     # Known once the full text has been read; None for a teaser.
     reading_minutes: int | None = None
+    # Why it is in the list (ranked, explore, newest, saved) and where: the
+    # reader's browser sends both back with what the reader did.
+    slot: str = SLOT_RANKED
+    position: int = 0
+
+
+class Ranking(BaseModel):
+    """How a feed was ranked: the arm of the comparison, and what is known
+    about the reader that is not in any one article."""
+
+    variant: str
+    model_version: str = ""
+    confidence: float = 0.0
+
+
+@dataclass(frozen=True, slots=True)
+class FeedPage:
+    items: list[FeedItem]
+    total: int
+    snapshot: str
+    ranking: Ranking
 
 
 class FacetOut(BaseModel):
@@ -142,7 +165,7 @@ def _latest_feed_key(user_id: uuid.UUID, model: str, generation: int) -> str:
 
 
 def _snapshot_key(user_id: uuid.UUID, snapshot: str) -> str:
-    return f"feed-snapshot:{user_id}:{snapshot}"
+    return f"feed-snapshot:v2:{user_id}:{snapshot}"
 
 
 async def forget_taste(cache: Cache, user_id: uuid.UUID) -> None:
@@ -393,6 +416,13 @@ def _reasons(
     return ordered[:3]
 
 
+def _slot(entry: Ranked) -> str:
+    if not entry.explore:
+        return SLOT_RANKED
+    # Nothing is known about the reader: the newest articles, not ranked at all.
+    return SLOT_EXPLORE if entry.parts else SLOT_NEWEST
+
+
 async def _cards(session: AsyncSession, ranked: Sequence[Ranked], reader: Reader) -> list[FeedItem]:
     ids = [item.article_id for item in ranked]
     if not ids:
@@ -424,6 +454,7 @@ async def _cards(session: AsyncSession, ranked: Sequence[Ranked], reader: Reader
                 reasons=_reasons(entry, reader, article, source_name),
                 parts=entry.parts,
                 reading_minutes=reading_minutes(article.word_count, article.language),
+                slot=_slot(entry),
             )
         )
     return items
@@ -457,12 +488,18 @@ async def build_feed(
     window_days: int,
     weights: Weights | None = None,
     embedder: Embedder | None = None,
-) -> list[FeedItem]:
+) -> tuple[list[FeedItem], Ranking]:
     """Rank the period's articles for one reader."""
     weights = weights or Weights()
     embedder = embedder or get_embedder()
     reader = await load_reader(session, cache, user_id, embedder=embedder)
     taste = reader.taste
+    arm = await assignment(user_id)
+    ranking = Ranking(
+        variant=arm.variant,
+        model_version=arm.model_version,
+        confidence=round(taste.confidence, 4),
+    )
     now = datetime.now(UTC)
     scope = store.Scope(
         start=now - timedelta(days=window_days),
@@ -478,7 +515,8 @@ async def build_feed(
         # Nothing is known about the reader yet: show what is new.
         newest = sorted(evidence, key=lambda item: item.age_hours)[:FEED_SIZE]
         ranked = [Ranked(item.article_id, 0.0, {}, {}, explore=True) for item in newest]
-        return await _cards(session, ranked, reader)
+        # Ranked by date, not by any ranker: no side of the comparison.
+        return await _cards(session, ranked, reader), Ranking(variant=VARIANT_HAND)
 
     shared = await store.collab(
         session, user_id, embedder.model_id, [item.article_id for item in evidence]
@@ -502,6 +540,14 @@ async def build_feed(
     spare = [item for item in ranked if item.score < weights.min_score]
     vectors = await load_vectors(session, embedder.model_id, [item.article_id for item in chosen])
     sources = {item.article_id: item.source_id for item in evidence}
+    # The learned ranker reorders what the hand blend would show (it never
+    # learned from the rest); the variety pass and exploration work on its
+    # order the same way as on the hand one.
+    order = None
+    if arm.variant == VARIANT_LEARNED and arm.model is not None:
+        order = learned_order(arm.model, chosen[:FEED_SIZE], ranking.confidence)
+        if order is None:
+            ranking = Ranking(variant=VARIANT_HAND, confidence=ranking.confidence)
     feed = rerank_for_variety(
         chosen,
         vectors,
@@ -509,9 +555,10 @@ async def build_feed(
         duplicate_threshold=embedder.duplicate_threshold,
         variety=weights.variety,
         limit=FEED_SIZE,
+        order=order,
     )
     feed = with_exploration(feed, spare, seed=f"{user_id}:{now:%Y-%m-%d}", limit=FEED_SIZE)
-    return await _cards(session, feed, reader)
+    return await _cards(session, feed, reader), ranking
 
 
 async def feed_page(
@@ -524,46 +571,57 @@ async def feed_page(
     limit: int,
     offset: int,
     snapshot: str | None = None,
-) -> tuple[list[FeedItem], int, str]:
+) -> FeedPage:
     """One page of the reader's feed, with their current reactions attached.
 
     The first page builds (or reuses, for `ttl` seconds) a ranked list and
     names it; later pages ask for the same snapshot, so a like between two
-    pages cannot make an article appear twice or never. Returns the page, the
-    length of the list and the snapshot id.
+    pages cannot make an article appear twice or never.
     """
-    items: list[FeedItem] | None = None
-    if snapshot is not None:
-        stored = await cache.get_json(_snapshot_key(user_id, snapshot))
-        if stored is not None:
-            items = [FeedItem.model_validate(item) for item in stored]
+
+    async def stored(name: str) -> tuple[list[FeedItem], Ranking] | None:
+        raw = await cache.get_json(_snapshot_key(user_id, name))
+        if raw is None:
+            return None
+        items = [FeedItem.model_validate(item) for item in raw["items"]]
+        return items, Ranking.model_validate(raw["ranking"])
+
+    found = await stored(snapshot) if snapshot is not None else None
     model = get_embedder().model_id
     latest_key = _latest_feed_key(user_id, model, await _generation(cache, user_id))
-    if items is None:
+    if found is None:
         latest = await cache.get_json(latest_key)
         if latest is not None:
-            stored = await cache.get_json(_snapshot_key(user_id, latest))
-            if stored is not None:
-                items, snapshot = [FeedItem.model_validate(item) for item in stored], latest
-    if items is None or snapshot is None:
-        items = await build_feed(session, cache, user_id, window_days=window_days)
+            found, snapshot = await stored(latest), latest
+    if found is None or snapshot is None:
+        found = await build_feed(session, cache, user_id, window_days=window_days)
         snapshot = uuid.uuid4().hex
         await cache.set_json(
             _snapshot_key(user_id, snapshot),
-            [item.model_dump(mode="json") for item in items],
+            {
+                "items": [item.model_dump(mode="json") for item in found[0]],
+                "ranking": found[1].model_dump(mode="json"),
+            },
             _SNAPSHOT_TTL,
         )
         await cache.set_json(latest_key, snapshot, ttl)
+    items, ranking = found
     page = items[offset : offset + limit]
     # Reactions are read live: the snapshot may be half an hour old.
     current = await store.reactions(session, user_id, [item.article_id for item in page])
-    return (
-        [
-            item.model_copy(update={"reactions": sorted(current.get(item.article_id, []))})
-            for item in page
+    return FeedPage(
+        items=[
+            item.model_copy(
+                update={
+                    "reactions": sorted(current.get(item.article_id, [])),
+                    "position": offset + index + 1,
+                }
+            )
+            for index, item in enumerate(page)
         ],
-        len(items),
-        snapshot,
+        total=len(items),
+        snapshot=snapshot,
+        ranking=ranking,
     )
 
 
@@ -576,8 +634,14 @@ async def saved_page(
     current = await store.reactions(session, user_id, ids)
     return (
         [
-            card.model_copy(update={"reactions": sorted(current.get(card.article_id, []))})
-            for card in cards
+            card.model_copy(
+                update={
+                    "reactions": sorted(current.get(card.article_id, [])),
+                    "slot": SLOT_SAVED,
+                    "position": offset + index + 1,
+                }
+            )
+            for index, card in enumerate(cards)
         ],
         total,
     )

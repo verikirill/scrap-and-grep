@@ -1,14 +1,17 @@
 """The personal feed and the signals it learns from."""
 
+import uuid
 from datetime import UTC, datetime
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from radar.api.adapting import adapt_soon
 from radar.api.deps import CacheDep, CurrentUser, SessionDep, SettingsDep, user_rate_limit
 from radar.api.reading import measure_soon
+from radar.events import record
+from radar.events.record import Placement
 from radar.logging import get_logger
 from radar.recsys import service, store
 from radar.recsys.service import FeedItem, TasteOut
@@ -32,12 +35,24 @@ class FeedOut(BaseModel):
     snapshot: str | None = None
 
 
+# Why an article was in the list the reader acted on.
+Slot = Literal["", "ranked", "explore", "newest", "saved", "digest"]
+# A bigint article id: anything outside it is no article, and is a 422.
+ArticleId = Annotated[int, Field(ge=1, le=2**63 - 1)]
+MAX_POSITION = 1000
+
+
 class FeedbackIn(BaseModel):
-    article_id: int
+    article_id: ArticleId
     kind: Kind
     # False takes the signal back: an unlike, an unsave.
     active: bool = True
     context: Literal["feed", "digest"] = "feed"
+    # Where the article was: the feed snapshot or the digest, the place in
+    # it and why it was there. Only for the events; the mark is the same.
+    list_id: uuid.UUID | None = None
+    position: int = Field(default=0, ge=0, le=MAX_POSITION)
+    slot: Slot = ""
 
 
 @router.get("/feed", dependencies=[_feed_limit])
@@ -51,7 +66,7 @@ async def get_feed(
     snapshot: Annotated[str | None, Query(pattern=r"^[0-9a-f]{32}$")] = None,
 ) -> FeedOut:
     """Articles of the last days ranked for the reader, with the reasons."""
-    items, total, snapshot = await service.feed_page(
+    page = await service.feed_page(
         session,
         cache,
         user.id,
@@ -61,14 +76,15 @@ async def get_feed(
         offset=offset,
         snapshot=snapshot,
     )
-    await measure_soon(item.article_id for item in items if item.reading_minutes is None)
+    await measure_soon(item.article_id for item in page.items if item.reading_minutes is None)
+    await record.served(session, user, page)
     return FeedOut(
-        items=items,
-        total=total,
+        items=page.items,
+        total=page.total,
         limit=limit,
         offset=offset,
         generated_at=datetime.now(UTC),
-        snapshot=snapshot,
+        snapshot=page.snapshot,
     )
 
 
@@ -110,6 +126,15 @@ async def send_feedback(
         log.warning("taste_refresh_not_queued", error=type(exc).__name__)
     # Adaptive profiles learn from the same mark.
     await adapt_soon(user.id)
+    await record.marked(
+        session,
+        user,
+        payload.kind,
+        active=payload.active,
+        surface=payload.context,
+        list_id=payload.list_id,
+        placement=Placement(payload.article_id, payload.position, payload.slot),
+    )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

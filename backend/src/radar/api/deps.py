@@ -69,9 +69,7 @@ CurrentUser = Annotated[AuthUser, Depends(current_user)]
 async def admin_user(user: CurrentUser) -> AuthUser:
     # A guest is never an administrator, whatever its row says.
     if not user.is_admin or user.is_demo:
-        raise HTTPException(
-            status.HTTP_403_FORBIDDEN, detail="Каталог источников меняет администратор."
-        )
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Это может только администратор.")
     return user
 
 

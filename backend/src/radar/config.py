@@ -149,6 +149,26 @@ class Settings(BaseSettings):
     # The MCP server: calls a minute per key. A search ranks the whole feed.
     mcp_rate_limit_per_minute: int = 60
 
+    # Reader events (what was served, seen, opened, marked) go through a
+    # Valkey stream into ClickHouse, for analytics and for training the feed
+    # ranker. An empty URL turns events off; nothing else depends on them.
+    clickhouse_url: str = ""
+    clickhouse_user: str = "default"
+    clickhouse_password: SecretStr | None = None
+    clickhouse_database: str = "radar"
+    # Events waiting for ClickHouse. While it is down they pile up here; past
+    # this many the oldest are dropped, so an outage cannot fill Valkey.
+    events_queue_max: int = Field(default=200_000, ge=1_000)
+
+    # The learned feed ranker, trained on the events every night. A model is
+    # switched on only when it beats the hand blend on days it did not see;
+    # then it serves this share of readers (picked by a hash of their id) and
+    # the rest stay on the hand blend for comparison. 0 keeps everyone on the
+    # hand blend.
+    ranker_share: float = Field(default=0.5, ge=0.0, le=1.0)
+    ranker_train_cron: str = "30 3 * * *"
+    ranker_train_days: int = Field(default=28, ge=4, le=180)
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def checkpoint_dsn(self) -> str:

@@ -134,9 +134,11 @@ async def fail_stale(session: AsyncSession, older_than: datetime) -> int:
 
 
 async def mark_failed(session: AsyncSession, digest_id: uuid.UUID, error: str) -> None:
+    # A finished digest stays finished: a failure after the save (a retry
+    # that ran out, for instance) must not hide a good result.
     await session.execute(
         update(Digest)
-        .where(Digest.id == digest_id)
+        .where(Digest.id == digest_id, Digest.status != STATUS_DONE)
         .values(status=STATUS_FAILED, error=error[:2000], finished_at=datetime.now(UTC))
     )
 

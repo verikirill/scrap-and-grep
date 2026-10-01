@@ -1,7 +1,7 @@
 """Turn evidence into a ranked feed. Pure: no database, no model calls."""
 
 import hashlib
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -176,22 +176,28 @@ def rerank_for_variety(
     duplicate_threshold: float,
     variety: float,
     limit: int,
+    order: Mapping[int, float] | None = None,
 ) -> list[Ranked]:
     """Greedy maximal-marginal-relevance pass over an already scored list.
 
     Each pick maximises relevance minus closeness to what is already in the
     feed, so five reports on one incident do not fill the first screen. A
     near-copy of a chosen article (above the embedder's duplicate threshold)
-    is dropped outright.
+    is dropped outright. `order` replaces the scores the pass works with,
+    article by article (a learned ranker's order); the articles keep theirs.
     """
-    pool = sorted(ranked, key=lambda item: (-item.score, item.article_id))
+
+    def score_of(item: Ranked) -> float:
+        return order.get(item.article_id, item.score) if order else item.score
+
+    pool = sorted(ranked, key=lambda item: (-score_of(item), item.article_id))
     if not pool:
         return []
     width = next((len(vector) for vector in vectors.values()), 1)
     blank = np.zeros(width, dtype=np.float32)
     # An article without a vector is compared as a zero vector: similar to nothing.
     matrix = np.stack([vectors.get(item.article_id, blank) for item in pool])
-    scores = np.array([item.score for item in pool])
+    scores = np.array([score_of(item) for item in pool])
     source_of = [sources.get(item.article_id) for item in pool]
     closest = np.zeros(len(pool))
     alive = np.ones(len(pool), dtype=bool)

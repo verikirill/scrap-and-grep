@@ -60,6 +60,13 @@ x-backend: &backend
     RADAR_S3_ACCESS_KEY: ${RADAR_S3_ACCESS_KEY:-radar}
     RADAR_S3_SECRET_KEY: ${RADAR_S3_SECRET_KEY:-change-me-s3-secret}
     RADAR_S3_SECURE: ${RADAR_S3_SECURE:-false}
+    # Reader events for analytics and for training the feed ranker. Set it
+    # to an empty value (RADAR_CLICKHOUSE_URL=) to turn events off.
+    RADAR_CLICKHOUSE_URL: ${RADAR_CLICKHOUSE_URL-http://clickhouse:8123}
+    RADAR_CLICKHOUSE_USER: radar
+    RADAR_CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-radar}
+    RADAR_CLICKHOUSE_DATABASE: radar
+    RADAR_RANKER_SHARE: ${RADAR_RANKER_SHARE:-0.5}
   depends_on: &backend-deps
     migrate:
       condition: service_completed_successfully
@@ -145,6 +152,33 @@ services:
       timeout: 3s
       retries: 20
 
+  # What readers were shown and what they did with it: an append-only history
+  # for analytics and for training the feed ranker. Articles, profiles and
+  # current marks stay in PostgreSQL; see docs/DECISIONS.md.
+  clickhouse:
+    image: clickhouse/clickhouse-server:26.9.8-alpine
+    restart: unless-stopped
+    environment:
+      CLICKHOUSE_DB: radar
+      CLICKHOUSE_USER: radar
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-radar}
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "0"
+    mem_limit: ${CLICKHOUSE_MEMORY:-1g}
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    volumes:
+      - chdata:/var/lib/clickhouse
+      - ./clickhouse/config.d/small.xml:/etc/clickhouse-server/config.d/small.xml:ro
+      - ./clickhouse/users.d/small.xml:/etc/clickhouse-server/users.d/small.xml:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8123/ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
   # Schema migrations, checkpoint tables and the default sources and profiles.
   # Talks to PostgreSQL directly: DDL does not belong behind a transaction pool.
   migrate:
@@ -163,6 +197,8 @@ services:
       postgres:
         condition: service_healthy
       valkey:
+        condition: service_healthy
+      clickhouse:
         condition: service_healthy
 
   api:
@@ -423,6 +459,7 @@ networks:
 volumes:
   s3data:
   pgdata:
+  chdata:
   valkeydata:
   ollama:
   media:

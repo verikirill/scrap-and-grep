@@ -24,7 +24,8 @@ from radar.auth.passwords import verify_password
 from radar.avatars import MAX_BYTES as AVATAR_MAX_BYTES
 from radar.avatars import AvatarError, normalize
 from radar.config import Settings
-from radar.db.models import Profile, Resume, User, UserAvatar
+from radar.db.models import ForgottenReader, Profile, Resume, User, UserAvatar
+from radar.events import enabled as events_enabled
 from radar.logging import get_logger
 from radar.recsys.service import forget_taste
 from radar.text import stable_hash
@@ -253,7 +254,7 @@ async def delete_account(
     settings: SettingsDep,
 ) -> Response:
     """Delete the account with everything it owns: profiles, digests, the
-    resume facts and every recorded signal. Asks for the password again; a
+    resume facts, every recorded signal and its events. Asks for the password again; a
     guest has none and is deleted at once."""
     if not user.is_demo:
         stored = await session.scalar(select(User.password_hash).where(User.id == user.id))
@@ -263,6 +264,10 @@ async def delete_account(
     await auth_sessions.end_all(session, cache, user.id)
     # Owned rows go with the account through ON DELETE CASCADE.
     await session.execute(delete(User).where(User.id == user.id))
+    if events_enabled():
+        # In the same transaction: the request to forget the reader's events
+        # cannot be lost. The event writer carries it out within a minute.
+        session.add(ForgottenReader(user_id=user.id))
     await session.commit()
     await forget_taste(cache, user.id)
     log.info("user_deleted", user_id=str(user.id))

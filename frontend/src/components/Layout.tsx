@@ -1,6 +1,7 @@
 import clsx from 'clsx'
 import { useIsFetching, useIsMutating } from '@tanstack/react-query'
 import {
+  Analytics,
   CompareArrows,
   DynamicFeed,
   Moon,
@@ -23,7 +24,13 @@ import { LogoMark, Wordmark } from './Logo'
 import { LiquidIndicator } from './LiquidIndicator'
 import { DURATION, EASE } from './tokens'
 
-type NavItem = { to: string; label: string; icon: IconComponent; also?: string[] }
+type NavItem = {
+  to: string
+  label: string
+  icon: IconComponent
+  also?: string[]
+  isAdminOnly?: boolean
+}
 
 const NAV: NavItem[] = [
   { to: '/', label: 'Дайджест', icon: Newspaper, also: ['/digests', '/share'] },
@@ -32,6 +39,7 @@ const NAV: NavItem[] = [
   { to: '/channels', label: 'Каналы', icon: Send },
   { to: '/sources', label: 'Источники', icon: Rss },
   { to: '/compare', label: 'Сравнение', icon: CompareArrows },
+  { to: '/analytics', label: 'Аналитика', icon: Analytics, isAdminOnly: true },
 ]
 
 const THEME_KEY = 'radar-theme'
@@ -259,6 +267,9 @@ function Brand() {
 
 export function Layout({ children }: { children: ReactNode }) {
   const [dark, toggleDark] = useDarkMode()
+  const me = useMe()
+  const isAdmin = Boolean(me.data?.is_admin && !me.data.is_demo)
+  const sections = NAV.filter((item) => isAdmin || !item.isAdminOnly)
   const location = useLocation()
   const section = location.pathname.split('/')[1] ?? ''
   const active = activeSection(location.pathname)
@@ -279,7 +290,7 @@ export function Layout({ children }: { children: ReactNode }) {
           aria-label="Разделы"
           className="relative flex w-full flex-col items-center gap-3"
         >
-          {NAV.map((item) => (
+          {sections.map((item) => (
             <RailItem
               key={item.to}
               item={item}
@@ -306,7 +317,7 @@ export function Layout({ children }: { children: ReactNode }) {
       <header className="sticky top-0 z-30 flex h-16 items-center gap-3 bg-surface-container/90 px-4 backdrop-blur md:hidden">
         <LogoMark size={36} />
         <Wordmark className="flex-1 text-lg" />
-        {/* The bottom bar holds five sections; the sixth lives up here. */}
+        {/* The bottom bar holds five sections; the others live up here. */}
         <NavLink
           to="/compare"
           aria-label="Сравнение выпусков"
@@ -321,6 +332,22 @@ export function Layout({ children }: { children: ReactNode }) {
         >
           <CompareArrows size={21} />
         </NavLink>
+        {isAdmin && (
+          <NavLink
+            to="/analytics"
+            aria-label="Аналитика"
+            className={({ isActive }) =>
+              clsx(
+                'state-layer relative grid size-10 shrink-0 place-items-center overflow-hidden rounded-full',
+                isActive
+                  ? 'bg-secondary-container text-on-secondary-container'
+                  : 'text-on-surface-variant',
+              )
+            }
+          >
+            <Analytics size={21} />
+          </NavLink>
+        )}
         <ThemeButton dark={dark} onToggle={toggleDark} />
         <AccountButton compact />
       </header>

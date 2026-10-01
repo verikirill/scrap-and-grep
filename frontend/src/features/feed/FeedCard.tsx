@@ -14,7 +14,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
 import { EASE, rowMotion } from '../../components/tokens'
 import { Chip, ReadingTime } from '../../components/ui'
-import type { FeedItem, FeedReason, ReactionKind } from '../../lib/api'
+import type { FeedItem, FeedReason, Placement, ReactionKind } from '../../lib/api'
 import { CATEGORY_LABELS, externalHref, formatRelative } from '../../lib/format'
 import { useSeen } from '../../lib/impressions'
 import { ReactionBar } from './ReactionBar'
@@ -78,6 +78,7 @@ function WhyPanel({ item }: { item: FeedItem }) {
 type Props = {
   item: FeedItem
   index: number
+  placement: Placement
   onReact: (kind: ReactionKind, isActive: boolean) => void
 }
 
@@ -85,7 +86,7 @@ type Props = {
  * What is left of a card the reader hid or disliked. It stays in place until
  * the feed is rebuilt, so the verdict can be taken back.
  */
-function RejectedRow({ item, onReact }: Omit<Props, 'index'>) {
+function RejectedRow({ item, onReact }: Pick<Props, 'item' | 'onReact'>) {
   const undo = useRef<HTMLButtonElement>(null)
   const isDisliked = item.reactions.includes('dislike')
   // The button that was pressed is gone with the card; without this, focus
@@ -116,10 +117,10 @@ function RejectedRow({ item, onReact }: Omit<Props, 'index'>) {
 }
 
 /** One article of the feed: what it is, why it is here, and the reader's verdict. */
-export function FeedCard({ item, index, onReact }: Props) {
+export function FeedCard({ item, index, placement, onReact }: Props) {
   const [isWhyOpen, setIsWhyOpen] = useState(false)
   // Scrolled past without a mark is a quiet "not this": adaptive profiles learn from it.
-  const seenRef = useSeen(item.article_id, 'feed', item.reactions.length === 0)
+  const seenRef = useSeen(item.article_id, 'feed', item.reactions.length === 0, placement)
   const isRejected = item.reactions.includes('hide') || item.reactions.includes('dislike')
   const isRead = item.reactions.includes('open')
   const hasBreakdown = Object.keys(item.parts).length > 0 && !item.explore
@@ -148,7 +149,10 @@ export function FeedCard({ item, index, onReact }: Props) {
         rel="noopener noreferrer"
         onClick={markRead}
         // A middle click opens a tab too, without a click event.
-        onAuxClick={markRead}
+        onAuxClick={(event) => {
+          // The middle button opens a tab; the right one only a menu.
+          if (event.button === 1) markRead()
+        }}
         className={clsx(
           'mt-1.5 block font-serif text-[18px] leading-snug font-semibold decoration-primary/40 underline-offset-4 hover:underline',
           isRead ? 'text-muted-foreground' : 'text-foreground',
