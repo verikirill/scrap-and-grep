@@ -15,7 +15,10 @@
     "moduleDetection": "force",
     "noEmit": true,
     "jsx": "react-jsx",
-    "paths": { "@/*": ["./src/*"] },
+    "paths": {
+      "@/*": ["./src/*"],
+      "material-color/*": ["./node_modules/@material/material-color-utilities/*"]
+    },
 
     /* Linting */
     "noUnusedLocals": true,

@@ -108,6 +108,10 @@ const ICONS = {
   Language: 'language',
   Palette: 'palette',
   FileUp: 'upload-file',
+  Share: 'share',
+  LinkOff: 'link-off',
+  Colorize: 'colorize',
+  LibraryAdd: 'library-add',
 }
 
 // The names shadcn components import.

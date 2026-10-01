@@ -44,6 +44,8 @@ import CloudOutlineRoundedSvg from '~icons/material-symbols/cloud-outline-rounde
 import CloudRoundedSvg from '~icons/material-symbols/cloud-rounded'
 import CodeOutlineRoundedSvg from '~icons/material-symbols/code-outline-rounded'
 import CodeRoundedSvg from '~icons/material-symbols/code-rounded'
+import ColorizeOutlineRoundedSvg from '~icons/material-symbols/colorize-outline-rounded'
+import ColorizeRoundedSvg from '~icons/material-symbols/colorize-rounded'
 import CompareArrowsOutlineRoundedSvg from '~icons/material-symbols/compare-arrows-outline-rounded'
 import CompareArrowsRoundedSvg from '~icons/material-symbols/compare-arrows-rounded'
 import ContentCopyOutlineRoundedSvg from '~icons/material-symbols/content-copy-outline-rounded'
@@ -116,8 +118,12 @@ import LanguageOutlineRoundedSvg from '~icons/material-symbols/language-outline-
 import LanguageRoundedSvg from '~icons/material-symbols/language-rounded'
 import LayersOutlineRoundedSvg from '~icons/material-symbols/layers-outline-rounded'
 import LayersRoundedSvg from '~icons/material-symbols/layers-rounded'
+import LibraryAddOutlineRoundedSvg from '~icons/material-symbols/library-add-outline-rounded'
+import LibraryAddRoundedSvg from '~icons/material-symbols/library-add-rounded'
 import LightModeOutlineRoundedSvg from '~icons/material-symbols/light-mode-outline-rounded'
 import LightModeRoundedSvg from '~icons/material-symbols/light-mode-rounded'
+import LinkOffOutlineRoundedSvg from '~icons/material-symbols/link-off-outline-rounded'
+import LinkOffRoundedSvg from '~icons/material-symbols/link-off-rounded'
 import LinkOutlineRoundedSvg from '~icons/material-symbols/link-outline-rounded'
 import LinkRoundedSvg from '~icons/material-symbols/link-rounded'
 import LockOutlineRoundedSvg from '~icons/material-symbols/lock-outline-rounded'
@@ -174,6 +180,8 @@ import SendOutlineRoundedSvg from '~icons/material-symbols/send-outline-rounded'
 import SendRoundedSvg from '~icons/material-symbols/send-rounded'
 import SettingsOutlineRoundedSvg from '~icons/material-symbols/settings-outline-rounded'
 import SettingsRoundedSvg from '~icons/material-symbols/settings-rounded'
+import ShareOutlineRoundedSvg from '~icons/material-symbols/share-outline-rounded'
+import ShareRoundedSvg from '~icons/material-symbols/share-rounded'
 import ShieldOutlineRoundedSvg from '~icons/material-symbols/shield-outline-rounded'
 import ShieldRoundedSvg from '~icons/material-symbols/shield-rounded'
 import SmartToyOutlineRoundedSvg from '~icons/material-symbols/smart-toy-outline-rounded'
@@ -392,6 +400,10 @@ export const SatelliteAlt = /* @__PURE__ */ icon(
 export const Language = /* @__PURE__ */ icon(LanguageOutlineRoundedSvg, LanguageRoundedSvg)
 export const Palette = /* @__PURE__ */ icon(PaletteOutlineRoundedSvg, PaletteRoundedSvg)
 export const FileUp = /* @__PURE__ */ icon(UploadFileOutlineRoundedSvg, UploadFileRoundedSvg)
+export const Share = /* @__PURE__ */ icon(ShareOutlineRoundedSvg, ShareRoundedSvg)
+export const LinkOff = /* @__PURE__ */ icon(LinkOffOutlineRoundedSvg, LinkOffRoundedSvg)
+export const Colorize = /* @__PURE__ */ icon(ColorizeOutlineRoundedSvg, ColorizeRoundedSvg)
+export const LibraryAdd = /* @__PURE__ */ icon(LibraryAddOutlineRoundedSvg, LibraryAddRoundedSvg)
 
 // The names shadcn components import.
 export const CheckIcon = Check

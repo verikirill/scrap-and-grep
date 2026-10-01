@@ -13,7 +13,16 @@ export default defineConfig({
   // icons in use reach the bundle, and nothing is fetched at run time.
   plugins: [react(), tailwindcss(), icons({ compiler: 'jsx', jsx: 'react' })],
   resolve: {
-    alias: { '@': path.resolve(import.meta.dirname, './src') },
+    alias: {
+      '@': path.resolve(import.meta.dirname, './src'),
+      // Single modules of Material's colour utilities. The package exports
+      // only its index, which drags every colour scheme into the bundle
+      // (20 KB gzipped instead of 9).
+      'material-color': path.resolve(
+        import.meta.dirname,
+        './node_modules/@material/material-color-utilities',
+      ),
+    },
   },
   server: {
     port: 5173,

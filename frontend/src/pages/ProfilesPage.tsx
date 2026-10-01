@@ -7,6 +7,7 @@ import { Button, ErrorNote, PageHeader } from '../components/ui'
 import { PreviewPanel } from '../features/profiles/PreviewPanel'
 import { ProfileForm } from '../features/profiles/ProfileForm'
 import { ProfileAvatar, ProfileLookPicker } from '../features/profiles/ProfileLook'
+import { ShareProfileButton } from '../features/profiles/ShareProfile'
 import type { Profile, ProfileSpec } from '../lib/api'
 import { useDeleteProfile, useProfiles, useSaveProfile } from '../lib/queries'
 
@@ -147,21 +148,25 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
         >
           Новый
         </Button>
-        {stored && profiles.length > 1 && (
-          <Button
-            size="sm"
-            variant="danger"
-            className="ml-auto"
-            icon={<Trash2 size={14} />}
-            isBusy={remove.isPending}
-            onClick={() => {
-              if (window.confirm(`Удалить профиль «${stored.spec.name}»?`)) {
-                remove.mutate(stored.id, { onSuccess: () => onSelect(null) })
-              }
-            }}
-          >
-            Удалить профиль
-          </Button>
+        {stored && (
+          <div className="ml-auto flex flex-wrap gap-1.5">
+            <ShareProfileButton profile={stored} />
+            {profiles.length > 1 && (
+              <Button
+                size="sm"
+                variant="danger"
+                icon={<Trash2 size={14} />}
+                isBusy={remove.isPending}
+                onClick={() => {
+                  if (window.confirm(`Удалить профиль «${stored.spec.name}»?`)) {
+                    remove.mutate(stored.id, { onSuccess: () => onSelect(null) })
+                  }
+                }}
+              >
+                Удалить профиль
+              </Button>
+            )}
+          </div>
         )}
       </div>
 

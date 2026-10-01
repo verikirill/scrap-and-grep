@@ -26,11 +26,22 @@ export interface Profile {
   id: string
   version: number
   spec: ProfileSpec
-  /** Keys of the app's icon and colour sets (lib/profileLook); null until picked. */
+  /** Keys of the app's icon and colour sets (lib/profileLook), or #rrggbb; null until picked. */
   icon: string | null
   color: string | null
+  /** The link that hands a copy to another reader; null while nothing is shared. */
+  share_token: string | null
   created_at: string
   updated_at: string
+}
+
+/** A profile someone sent by link, before the reader decides to take it. */
+export interface SharedProfile {
+  spec: ProfileSpec
+  icon: string | null
+  color: string | null
+  /** The reader's own profile with the same content: their original or an earlier copy. */
+  own_id: string | null
 }
 
 export interface Source {
@@ -493,6 +504,12 @@ export const api = {
   deleteProfile: (id: string) => request<void>(`/profiles/${id}`, { method: 'DELETE' }),
   setProfileLook: (id: string, look: { icon: string | null; color: string | null }) =>
     request<Profile>(`/profiles/${id}/look`, json('PATCH', look)),
+  shareProfile: (id: string) => request<Profile>(`/profiles/${id}/share`, { method: 'POST' }),
+  unshareProfile: (id: string) => request<Profile>(`/profiles/${id}/share`, { method: 'DELETE' }),
+  sharedProfile: (token: string) =>
+    request<SharedProfile>(`/shared-profiles/${encodeURIComponent(token)}`),
+  acceptSharedProfile: (token: string) =>
+    request<Profile>(`/shared-profiles/${encodeURIComponent(token)}/accept`, { method: 'POST' }),
   preview: (profile: ProfileSpec, periodDays: number, signal?: AbortSignal) =>
     request<Preview>('/selection/preview', {
       ...json('POST', { profile, period_days: periodDays }),

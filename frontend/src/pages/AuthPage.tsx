@@ -54,10 +54,11 @@ export function AuthPage({ mode }: Props) {
   const pending = login.isPending || register.isPending || demo.isPending
   const error = (isRegister ? register.error : login.error) ?? demo.error
 
-  // Signed in, whether just now or before opening this page: move on. A new
-  // reader starts with the resume step, whatever page they came from.
+  // Someone sent a profile: after signing in the reader decides about it,
+  // even a new one, who otherwise starts with the resume step.
+  const isSharedProfile = target.startsWith('/share/')
   if (me.data && !pending) {
-    return <Navigate to={register.isSuccess ? '/welcome' : target} replace />
+    return <Navigate to={register.isSuccess && !isSharedProfile ? '/welcome' : target} replace />
   }
 
   const submit = (event: FormEvent) => {
@@ -106,9 +107,11 @@ export function AuthPage({ mode }: Props) {
             {isRegister ? 'Новый аккаунт' : 'С возвращением'}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {isRegister
-              ? 'После регистрации можно загрузить резюме: по нему соберём профиль интересов.'
-              : 'Войдите, чтобы открыть свои дайджесты и ленту.'}
+            {isSharedProfile
+              ? 'С вами поделились профилем интересов. Войдите или зарегистрируйтесь, и он откроется: добавить его себе или нет, решите сами.'
+              : isRegister
+                ? 'После регистрации можно загрузить резюме: по нему соберём профиль интересов.'
+                : 'Войдите, чтобы открыть свои дайджесты и ленту.'}
           </p>
 
           <nav
@@ -125,14 +128,14 @@ export function AuthPage({ mode }: Props) {
                 className={clsx(
                   'relative rounded-lg px-4 py-1.5 text-sm font-medium transition-colors',
                   tab.mode === mode
-                    ? 'text-foreground'
+                    ? 'text-primary-foreground'
                     : 'text-muted-foreground hover:text-foreground',
                 )}
               >
                 {tab.mode === mode && (
                   <motion.span
                     layoutId="auth-tab"
-                    className="absolute inset-0 rounded-lg bg-card shadow-sm"
+                    className="absolute inset-0 rounded-lg bg-primary shadow-elevation-1"
                     transition={{ type: 'spring', stiffness: 480, damping: 38 }}
                   />
                 )}

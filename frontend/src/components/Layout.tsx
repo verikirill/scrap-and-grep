@@ -22,10 +22,10 @@ import { LogoMark, Wordmark } from './Logo'
 import { LiquidIndicator } from './LiquidIndicator'
 import { DURATION, EASE } from './tokens'
 
-type NavItem = { to: string; label: string; icon: IconComponent; also?: string }
+type NavItem = { to: string; label: string; icon: IconComponent; also?: string[] }
 
 const NAV: NavItem[] = [
-  { to: '/', label: 'Дайджест', icon: Newspaper, also: '/digests' },
+  { to: '/', label: 'Дайджест', icon: Newspaper, also: ['/digests', '/share'] },
   { to: '/feed', label: 'Для вас', icon: DynamicFeed },
   { to: '/profiles', label: 'Интересы', icon: SlidersHorizontal },
   { to: '/channels', label: 'Каналы', icon: Send },
@@ -104,7 +104,7 @@ function StatusLine() {
 function activeSection(pathname: string): string | null {
   const found = NAV.find((item) =>
     item.to === '/'
-      ? pathname === '/' || (item.also !== undefined && pathname.startsWith(item.also))
+      ? pathname === '/' || (item.also ?? []).some((prefix) => pathname.startsWith(prefix))
       : pathname.startsWith(item.to),
   )
   return found?.to ?? null

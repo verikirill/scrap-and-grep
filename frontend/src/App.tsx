@@ -23,6 +23,7 @@ import {
   ComparePage,
   FeedPage,
   ProfilesPage,
+  SharePage,
   SourcesPage,
   WelcomePage,
   prefetchAllRoutes,
@@ -111,6 +112,7 @@ export default function App() {
                 <Route path="/compare" element={<ComparePage />} />
                 <Route path="/channels" element={<ChannelsPage />} />
                 <Route path="/account" element={<AccountPage />} />
+                <Route path="/share/:token" element={<SharePage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Route>
             </Routes>
