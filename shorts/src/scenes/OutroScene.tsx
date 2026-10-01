@@ -1,5 +1,5 @@
 import { AbsoluteFill, spring, useCurrentFrame, useVideoConfig } from 'remotion'
-import { COLORS, DISPLAY_FONT, SAFE, TEXT_FONT } from '../theme'
+import { COLORS, DISPLAY_FONT, SAFE, TEXT_FONT, alpha } from '../theme'
 import { Words } from './Words'
 
 type Props = {
@@ -25,7 +25,7 @@ export function OutroScene({ brand, outro }: Props) {
           display: 'grid',
           placeItems: 'center',
           transform: `scale(${mark}) rotate(${(1 - mark) * 25}deg)`,
-          boxShadow: '0 30px 120px rgba(125, 155, 255, 0.45)',
+          boxShadow: `0 30px 120px ${alpha(COLORS.accent, 0.45)}`,
         }}
       >
         <div

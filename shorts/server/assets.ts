@@ -1,12 +1,13 @@
 import { randomBytes } from 'node:crypto'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 
-// Narration of the renders in progress. The headless browser that draws the
-// frames fetches it over HTTP from this same process, so nothing touches the
-// disk, and the entry disappears when the render ends.
-const narration = new Map<string, Buffer>()
+// Narration and pictures of the renders in progress. The headless browser
+// that draws the frames fetches them over HTTP from this same process, so
+// nothing touches the disk, and the entries disappear when the render ends.
+const held = new Map<string, { data: Buffer; type: string }>()
 
 const PREFIX = '/assets/'
+const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
 
 export function isWav(data: Buffer): boolean {
   return (
@@ -16,14 +17,32 @@ export function isWav(data: Buffer): boolean {
   )
 }
 
-/** Keep the audio for one render and return its path; call the result to drop it. */
-export function hold(audio: Buffer): { path: string; release: () => void } {
-  const token = randomBytes(16).toString('hex')
-  narration.set(token, audio)
-  return { path: `${PREFIX}${token}.wav`, release: () => narration.delete(token) }
+/**
+ * The kind of a still picture by its first bytes, whatever the caller says.
+ * GIF is left out: its animation would run on the browser's clock, not the
+ * video's, and differ between renders.
+ */
+export function pictureType(data: Buffer): { type: string; extension: string } | null {
+  if (data.length > 3 && data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff) {
+    return { type: 'image/jpeg', extension: 'jpg' }
+  }
+  if (data.subarray(0, PNG.length).equals(PNG)) {
+    return { type: 'image/png', extension: 'png' }
+  }
+  if (data.length > 12 && data.toString('latin1', 0, 4) === 'RIFF' && data.toString('latin1', 8, 12) === 'WEBP') {
+    return { type: 'image/webp', extension: 'webp' }
+  }
+  return null
 }
 
-// The browser reads the file with range requests, and from another origin
+/** Keep a file for one render and return its path; call the result to drop it. */
+export function hold(data: Buffer, type: string, extension: string): { path: string; release: () => void } {
+  const token = randomBytes(16).toString('hex')
+  held.set(token, { data, type })
+  return { path: `${PREFIX}${token}.${extension}`, release: () => held.delete(token) }
+}
+
+// The browser reads the files with range requests, and from another origin
 // than the bundle, so both CORS and ranges are answered.
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -52,26 +71,27 @@ export function serveAsset(req: IncomingMessage, res: ServerResponse, pathname: 
     res.writeHead(204, CORS).end()
     return true
   }
-  const token = pathname.slice(PREFIX.length).replace(/\.wav$/, '')
-  const audio = narration.get(token)
-  if (!audio || (req.method !== 'GET' && req.method !== 'HEAD')) {
+  const token = pathname.slice(PREFIX.length).replace(/\.[a-z0-9]+$/, '')
+  const asset = held.get(token)
+  if (!asset || (req.method !== 'GET' && req.method !== 'HEAD')) {
     res.writeHead(404, CORS).end()
     return true
   }
-  const range = req.headers.range ? parseRange(req.headers.range, audio.length) : null
+  const { data, type } = asset
+  const range = req.headers.range ? parseRange(req.headers.range, data.length) : null
   if (req.headers.range && !range) {
-    res.writeHead(416, { ...CORS, 'Content-Range': `bytes */${audio.length}` }).end()
+    res.writeHead(416, { ...CORS, 'Content-Range': `bytes */${data.length}` }).end()
     return true
   }
-  const [start, end] = range ?? [0, audio.length - 1]
+  const [start, end] = range ?? [0, data.length - 1]
   const headers = {
     ...CORS,
     'Accept-Ranges': 'bytes',
-    'Content-Type': 'audio/wav',
+    'Content-Type': type,
     'Content-Length': String(end - start + 1),
-    ...(range ? { 'Content-Range': `bytes ${start}-${end}/${audio.length}` } : {}),
+    ...(range ? { 'Content-Range': `bytes ${start}-${end}/${data.length}` } : {}),
   }
   res.writeHead(range ? 206 : 200, headers)
-  res.end(req.method === 'HEAD' ? undefined : audio.subarray(start, end + 1))
+  res.end(req.method === 'HEAD' ? undefined : data.subarray(start, end + 1))
   return true
 }

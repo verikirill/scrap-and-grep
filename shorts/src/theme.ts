@@ -1,15 +1,27 @@
-/** Colours and type of the short: the product's night palette, louder. */
+import { PALETTE } from './palette.ts'
+
+/**
+ * Colours and type of the short: the dark Material roles of the web app
+ * (palette.ts is generated from the same seed), so a video and the site look
+ * like one product. Only the karaoke highlight is the video's own.
+ */
 export const COLORS = {
-  ink: '#070a12',
-  surface: '#101624',
+  ink: PALETTE.surfaceContainerLowest,
+  surface: PALETTE.surfaceContainer,
   line: 'rgba(255, 255, 255, 0.08)',
-  text: '#f2f5fb',
-  muted: 'rgba(242, 245, 251, 0.62)',
-  accent: '#7d9bff',
-  spark: '#f5b54a',
+  text: PALETTE.onSurface,
+  muted: PALETTE.onSurfaceVariant,
+  accent: PALETTE.primary,
+  spark: PALETTE.spark,
   // The karaoke highlight: the colour every short-video viewer reads as "now".
   caption: '#ffe14d',
 } as const
+
+/** A #rrggbb colour with its opacity, for gradients and glows. */
+export function alpha(color: string, share: number): string {
+  const byte = Math.round(Math.min(1, Math.max(0, share)) * 255)
+  return `${color}${byte.toString(16).padStart(2, '0')}`
+}
 
 export const DISPLAY_FONT = 'Unbounded'
 export const TEXT_FONT = 'Onest'

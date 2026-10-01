@@ -1,10 +1,13 @@
 import type { LucideIcon } from 'lucide-react'
 import { interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion'
 import { COLORS, DISPLAY_FONT, TEXT_FONT } from '../theme'
-import { factShape, fitFontSize, formatCount, severityColor } from '../visuals'
+import { factShape, fitFontSize, formatCount, labelFontSize, severityColor } from '../visuals'
+import { PhotoCard, usePicture } from './Photo'
 
 type Props = {
   fact: string | null
+  /** The article's picture, shown when the fact is not a number to draw. */
+  imageSrc: string | null
   icon: LucideIcon
   color: string
   /** Frames the picture takes to arrive at its value. */
@@ -154,7 +157,7 @@ function IconDraw({ icon: Icon, color, text, durationInFrames }: { icon: LucideI
         </div>
       </div>
       {text && (
-        <div style={{ maxWidth: VISUAL_SIZE, padding: '8px 16px', borderRadius: 16, background: COLORS.ink, border: `3px solid ${COLORS.caption}`, fontFamily: DISPLAY_FONT, fontWeight: 800, fontSize: text.length > 12 ? 24 : 30, lineHeight: 1.15, textAlign: 'center', color: COLORS.caption, opacity: Math.min(1, pop * 1.4) }}>
+        <div style={{ maxWidth: VISUAL_SIZE, padding: '8px 16px', borderRadius: 16, background: COLORS.ink, border: `3px solid ${COLORS.caption}`, fontFamily: DISPLAY_FONT, fontWeight: 800, fontSize: labelFontSize(text, VISUAL_SIZE - 38, 30), lineHeight: 1.15, textAlign: 'center', color: COLORS.caption, opacity: Math.min(1, pop * 1.4) }}>
           {text}
         </div>
       )}
@@ -162,8 +165,13 @@ function IconDraw({ icon: Icon, color, text, durationInFrames }: { icon: LucideI
   )
 }
 
-/** The picture of a news card, chosen by the shape of its fact. */
-export function FactVisual({ fact, icon, color, durationInFrames }: Props) {
+/**
+ * The picture of a news card, chosen by the shape of its fact: a number gets
+ * its gauge, ring or counter; otherwise the article's own picture, and the
+ * icon of the kind of news when there is none.
+ */
+export function FactVisual({ fact, imageSrc, icon, color, durationInFrames }: Props) {
+  const [picture, onPictureError] = usePicture(imageSrc)
   const shape = fact ? factShape(fact) : null
   if (shape?.kind === 'cvss') {
     return <Gauge score={shape.score} durationInFrames={durationInFrames} />
@@ -174,5 +182,9 @@ export function FactVisual({ fact, icon, color, durationInFrames }: Props) {
   if (shape?.kind === 'number') {
     return <CountUp value={shape.value} decimals={shape.decimals} suffix={shape.suffix} color={color} durationInFrames={durationInFrames} />
   }
-  return <IconDraw icon={icon} color={color} text={shape?.kind === 'text' ? shape.text : null} durationInFrames={durationInFrames} />
+  const text = shape?.kind === 'text' ? shape.text : null
+  if (picture) {
+    return <PhotoCard src={picture} icon={icon} color={color} text={text} durationInFrames={durationInFrames} onError={onPictureError} />
+  }
+  return <IconDraw icon={icon} color={color} text={text} durationInFrames={durationInFrames} />
 }

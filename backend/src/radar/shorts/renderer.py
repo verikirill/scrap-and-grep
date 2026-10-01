@@ -20,10 +20,24 @@ class RendererRejected(Exception):
     """The renderer refused the props: a bug on our side, not worth a retry."""
 
 
+def _encoded(data: bytes | None) -> str | None:
+    return base64.b64encode(data).decode() if data else None
+
+
 async def render(
-    url: str, props: dict[str, Any], audio: bytes | None, *, request_timeout: float
+    url: str,
+    props: dict[str, Any],
+    audio: bytes | None,
+    images: list[bytes | None],
+    *,
+    request_timeout: float,
 ) -> bytes:
-    payload = {"props": props, "audio": base64.b64encode(audio).decode() if audio else None}
+    """The MP4 of the props, with the narration and one picture (or None) per beat."""
+    payload = {
+        "props": props,
+        "audio": _encoded(audio),
+        "images": [_encoded(image) for image in images],
+    }
     async with httpx.AsyncClient(timeout=httpx.Timeout(request_timeout, connect=10.0)) as client:
         response = await client.post(f"{url.rstrip('/')}/v1/render", json=payload)
     if response.status_code == httpx.codes.SERVICE_UNAVAILABLE:

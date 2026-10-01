@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { VISUALS } from './schema'
+import { COLORS } from './theme.ts'
 
 export type Visual = (typeof VISUALS)[number]
 
@@ -18,10 +19,10 @@ export const VISUAL_STYLE: Record<Visual, { icon: LucideIcon; color: string }> =
   vulnerability: { icon: ShieldAlert, color: '#ff5c7a' },
   attack: { icon: Crosshair, color: '#ff7a45' },
   incident: { icon: Siren, color: '#ffb020' },
-  regulation: { icon: Landmark, color: '#7d9bff' },
+  regulation: { icon: Landmark, color: COLORS.accent },
   release: { icon: Rocket, color: '#3ddc97' },
   research: { icon: ChartColumnIncreasing, color: '#4cc9f0' },
-  energy: { icon: Zap, color: '#f5b54a' },
+  energy: { icon: Zap, color: COLORS.spark },
   other: { icon: Newspaper, color: '#9aa7c7' },
 }
 
@@ -104,6 +105,19 @@ export function formatCount(value: number, decimals: number): string {
 /** The largest font size, up to `max`, at which the text fits `width` pixels. */
 export function fitFontSize(text: string, width: number, max: number): number {
   return Math.min(max, Math.floor(width / (DIGIT_EM * Math.max(1, text.length))))
+}
+
+// Width of an Unbounded capital or digit with its letter spacing, in ems.
+const CAPITAL_EM = 0.92
+const MIN_LABEL_SIZE = 20
+
+/**
+ * Font size that keeps a short label, such as "CVE-2026-71379", on one line
+ * of the given width; a label too long for that wraps at the smallest size.
+ */
+export function labelFontSize(text: string, width: number, max: number): number {
+  const fitting = Math.floor(width / (CAPITAL_EM * Math.max(1, text.length)))
+  return Math.min(max, Math.max(MIN_LABEL_SIZE, fitting))
 }
 
 /** Colour of a CVSS score by the standard's own bands. */

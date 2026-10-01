@@ -519,12 +519,21 @@ def shorts_on(
     rendered: list[dict[str, Any]] = []
 
     async def fake_render(
-        url: str, props: dict[str, Any], audio: bytes | None, *, request_timeout: float
+        url: str,
+        props: dict[str, Any],
+        audio: bytes | None,
+        images: list[bytes | None],
+        *,
+        request_timeout: float,
     ) -> bytes:
         rendered.append(props)
         return FAKE_MP4
 
+    async def no_pictures(article_ids: list[int]) -> list[None]:
+        return [None] * len(article_ids)
+
     monkeypatch.setattr(service, "render", fake_render)
+    monkeypatch.setattr(service, "beat_pictures", no_pictures)
     yield rendered
     get_settings.cache_clear()
 
