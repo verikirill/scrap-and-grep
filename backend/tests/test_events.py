@@ -12,10 +12,11 @@ Databases of their own (radar_test) keep the run away from development data.
 import os
 import uuid
 from collections.abc import AsyncIterator, Iterator
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import httpx
+import numpy as np
 import pytest
 from redis.exceptions import ConnectionError as RedisConnectionError
 
@@ -38,10 +39,12 @@ def _reset_caches() -> None:
     from radar.config import get_settings
     from radar.db import base
     from radar.events import writer
+    from radar.ranker import model
 
     for cached in (get_settings, get_redis, get_cache, base.get_engine, base.get_sessionmaker):
         cached.cache_clear()
     writer._schema_ready = False
+    model.forget()
 
 
 @pytest.fixture(scope="session")
@@ -71,7 +74,7 @@ async def events(events_on: None) -> AsyncIterator[None]:
 
     from radar.cache import get_redis
     from radar.db import base, session_scope
-    from radar.db.models import ForgottenReader
+    from radar.db.models import ForgottenReader, RankerModel
     from radar.events import clickhouse
 
     try:
@@ -84,6 +87,7 @@ async def events(events_on: None) -> AsyncIterator[None]:
             await client.command(f"TRUNCATE TABLE {table}")
     async with session_scope() as session:
         await session.execute(delete(ForgottenReader))
+        await session.execute(delete(RankerModel))
     yield
     await get_redis().aclose()
     await base.get_engine().dispose()
@@ -255,3 +259,52 @@ async def test_a_forgotten_reader_loses_stored_events_and_those_still_coming(
         tombstone = await session.get(ForgottenReader, leaving)
     assert tombstone is not None
     assert tombstone.purged_at is not None
+
+
+async def test_nightly_training_learns_from_the_events_and_switches_the_model_on(
+    events: None,
+) -> None:
+    from radar.events import emit
+    from radar.events.writer import flush
+    from radar.ranker import model
+    from radar.ranker.train import train
+
+    # Four hundred feed lists over two weeks. Readers open and like fresh
+    # articles wherever they are; the hand score is noise.
+    rng = np.random.default_rng(3)
+    now = datetime.now(UTC)
+    readers = [uuid.uuid4() for _ in range(30)]
+    for index in range(400):
+        served_at = now - timedelta(days=14) + timedelta(days=14) * index / 400
+        reader, snapshot = readers[index % len(readers)], uuid.uuid4()
+        batch = []
+        for position in range(1, 21):
+            fresh, article = float(rng.random()), index * 100 + position
+            placed = {"surface": "feed", "article_id": article, "request_id": snapshot}
+            features = {"score": float(rng.random()), "fresh": fresh, "confidence": 0.5}
+            batch.append(
+                an_event(
+                    reader,
+                    event="served",
+                    ts=served_at,
+                    position=position,
+                    features=features,
+                    **placed,
+                )
+            )
+            seen_at = served_at + timedelta(minutes=position)
+            batch.append(an_event(reader, ts=seen_at, position=position, **placed))
+            if fresh > 0.6:
+                batch.append(an_event(reader, event="open", ts=seen_at, **placed))
+            if fresh > 0.8:
+                batch.append(an_event(reader, event="like", ts=seen_at, **placed))
+        await emit(*batch)
+    await flush(budget_seconds=120)
+
+    run = await train(now)
+    active = await model.active()
+
+    assert run.status == "active", run.note
+    assert run.metrics["model_ndcg"] > run.metrics["hand_ndcg"]
+    assert active is not None
+    assert active.version == run.version

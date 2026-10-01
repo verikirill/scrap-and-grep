@@ -21,7 +21,7 @@ from radar.events.model import SLOT_EXPLORE, SLOT_NEWEST, SLOT_RANKED, SLOT_SAVE
 from radar.logging import get_logger
 from radar.pipeline.ports import QueryEmbedder
 from radar.pipeline.sql_store import CachedQueryEmbedder
-from radar.ranker.serving import assignment
+from radar.ranker.serving import VARIANT_LEARNED, assignment, learned_order
 from radar.reading import reading_minutes
 from radar.recsys import store
 from radar.recsys.adaptation import learned_interests
@@ -495,7 +495,11 @@ async def build_feed(
     reader = await load_reader(session, cache, user_id, embedder=embedder)
     taste = reader.taste
     arm = await assignment(user_id)
-    ranking = Ranking(variant=arm.variant, confidence=round(taste.confidence, 4))
+    ranking = Ranking(
+        variant=arm.variant,
+        model_version=arm.model_version,
+        confidence=round(taste.confidence, 4),
+    )
     now = datetime.now(UTC)
     scope = store.Scope(
         start=now - timedelta(days=window_days),
@@ -535,6 +539,13 @@ async def build_feed(
     spare = [item for item in ranked if item.score < weights.min_score]
     vectors = await load_vectors(session, embedder.model_id, [item.article_id for item in chosen])
     sources = {item.article_id: item.source_id for item in evidence}
+    # The learned ranker reorders the pool; the variety pass and exploration
+    # work on its order the same way as on the hand one.
+    order = (
+        learned_order(arm.model, chosen, ranking.confidence)
+        if arm.variant == VARIANT_LEARNED and arm.model is not None
+        else None
+    )
     feed = rerank_for_variety(
         chosen,
         vectors,
@@ -542,6 +553,7 @@ async def build_feed(
         duplicate_threshold=embedder.duplicate_threshold,
         variety=weights.variety,
         limit=FEED_SIZE,
+        order=order,
     )
     feed = with_exploration(feed, spare, seed=f"{user_id}:{now:%Y-%m-%d}", limit=FEED_SIZE)
     return await _cards(session, feed, reader), ranking

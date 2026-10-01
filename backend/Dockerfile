@@ -24,6 +24,11 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # Runtime stage: the virtualenv and nothing else, run as an unprivileged user.
 FROM python:3.14-slim-trixie AS runtime
 
+# LightGBM, the learned feed ranker, needs the OpenMP runtime.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
 # /data/media is where the media worker puts videos. A named volume mounted
 # there starts with this directory's owner, so the worker can write to it.
 RUN groupadd --system --gid 10001 radar \

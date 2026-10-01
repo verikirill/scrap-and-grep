@@ -160,6 +160,15 @@ class Settings(BaseSettings):
     # this many the oldest are dropped, so an outage cannot fill Valkey.
     events_queue_max: int = Field(default=200_000, ge=1_000)
 
+    # The learned feed ranker, trained on the events every night. A model is
+    # switched on only when it beats the hand blend on days it did not see;
+    # then it serves this share of readers (picked by a hash of their id) and
+    # the rest stay on the hand blend for comparison. 0 keeps everyone on the
+    # hand blend.
+    ranker_share: float = Field(default=0.5, ge=0.0, le=1.0)
+    ranker_train_cron: str = "30 3 * * *"
+    ranker_train_days: int = Field(default=28, ge=4, le=180)
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def checkpoint_dsn(self) -> str:

@@ -5,7 +5,9 @@ Needs PostgreSQL, Valkey and ClickHouse; skipped without them.
 """
 
 import uuid
+from datetime import UTC, datetime
 
+import numpy as np
 import pytest
 
 from tests.test_accounts_api import (  # noqa: F401  (fixtures)
@@ -151,3 +153,64 @@ async def test_the_administrator_sees_what_readers_did_and_nobody_else_does(
     # Three articles are too few to call a source good or bad.
     assert overview["sources_best"] == []
     assert overview["queue"] == {"waiting": 0, "set_aside": 0}
+
+
+async def test_a_switched_on_model_orders_the_feed_of_readers_in_its_group(
+    api: str, events: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from radar.config import get_settings
+    from radar.db import session_scope
+    from radar.db.models import RankerModel
+    from radar.events.writer import flush
+    from radar.ranker import model
+    from radar.ranker.features import FEATURES
+    from radar.ranker.train import assemble, fit
+
+    # A model that learned readers want the oldest news first: the opposite of
+    # the hand blend, which gives fresh articles a little lift.
+    rng = np.random.default_rng(5)
+    examples = []
+    served_at = datetime.now(UTC)
+    for index in range(150):
+        # In the narrow band where the test articles are: an hour apart is 0.0014.
+        fresh = rng.uniform(0.04, 0.05, 20)
+        for rank, position in enumerate(np.argsort(fresh)):
+            label = 4 - rank * 5 // 20
+            examples.append(
+                (index, int(position) + 1, {"fresh": float(fresh[position])}, served_at, label)
+            )
+    booster = fit(assemble(examples))
+    async with session_scope() as session:
+        session.add(
+            RankerModel(
+                version="test-1",
+                status="active",
+                trained_from=served_at,
+                trained_to=served_at,
+                lists=150,
+                rows=len(examples),
+                metrics={},
+                features=list(FEATURES),
+                model=booster.model_to_string(),
+            )
+        )
+    monkeypatch.setenv("RADAR_RANKER_SHARE", "1")
+    get_settings.cache_clear()
+    model.forget()
+
+    await seed_articles()
+    async with register(api, "lena") as lena:
+        await lena.post("/profiles", json=profile_spec())
+        feed = (await lena.get("/feed")).json()
+        me = (await lena.get("/auth/me")).json()
+    await flush()
+    served = [
+        row
+        for row in await rows("user_id = %(user)s", {"user": me["id"]})
+        if row["event"] == "served"
+    ]
+
+    published = [item["published_at"] for item in feed["items"] if item["slot"] == "ranked"]
+    assert len(published) > 1
+    assert published == sorted(published)
+    assert {(row["variant"], row["model_version"]) for row in served} == {("learned", "test-1")}

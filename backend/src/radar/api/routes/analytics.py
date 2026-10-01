@@ -8,10 +8,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy import select
 
-from radar.api.deps import AdminUser, SessionDep, user_rate_limit
+from radar.api.deps import AdminUser, SessionDep, SettingsDep, user_rate_limit
 from radar.db.models import Source
 from radar.events import analytics, enabled, writer
 from radar.logging import get_logger
+from radar.ranker import model as ranker_model
+from radar.ranker import train
 
 router = APIRouter(tags=["analytics"])
 log = get_logger(__name__)
@@ -81,6 +83,26 @@ class Queue(BaseModel):
     set_aside: int
 
 
+class RankerRun(BaseModel):
+    version: str
+    # "active", "rejected" or "retired".
+    status: str
+    created_at: datetime
+    lists: int
+    rows: int
+    hand_ndcg: float | None
+    model_ndcg: float | None
+    note: str
+
+
+class RankerOut(BaseModel):
+    """The learned ranker: the share of readers it serves when on, and the last runs."""
+
+    share: float
+    active: str | None
+    runs: list[RankerRun]
+
+
 class AnalyticsOut(BaseModel):
     enabled: bool
     start: date
@@ -97,12 +119,14 @@ class AnalyticsOut(BaseModel):
     variants: list[VariantOut] = []
     last_event_at: datetime | None = None
     queue: Queue | None = None
+    ranker: RankerOut | None = None
 
 
 @router.get("/analytics/overview", dependencies=[_limit])
 async def get_overview(
     user: AdminUser,
     session: SessionDep,
+    settings: SettingsDep,
     days: Annotated[int, Query(ge=1, le=90)] = 30,
     guests: bool = True,
 ) -> AnalyticsOut:
@@ -128,11 +152,29 @@ async def get_overview(
             row | {"name": names.get(row["source_id"], f"Источник {row['source_id']}")}
             for row in found[key]
         ]
+    runs = await train.history()
     return AnalyticsOut(
         enabled=True,
         start=period.start,
         end=period.end,
         guests=guests,
         queue=Queue(**await writer.backlog()),
+        ranker=RankerOut(
+            share=settings.ranker_share,
+            active=current.version if (current := await ranker_model.active()) else None,
+            runs=[
+                RankerRun(
+                    version=run.version,
+                    status=run.status,
+                    created_at=run.created_at,
+                    lists=run.lists,
+                    rows=run.rows,
+                    hand_ndcg=run.metrics.get("hand_ndcg"),
+                    model_ndcg=run.metrics.get("model_ndcg"),
+                    note=run.note,
+                )
+                for run in runs
+            ],
+        ),
         **found,
     )
