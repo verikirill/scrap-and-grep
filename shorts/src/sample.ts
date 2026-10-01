@@ -21,10 +21,10 @@ const LINES = [
   'ФСТЭК обновила требования к значимым объектам КИИ.',
   'Шифровальщик остановил диспетчерскую европейской сетевой компании.',
 ]
-const OUTRO = 'Полный дайджест со ссылками ждёт в Радаре'
+const OUTRO = 'Полный дайджест со ссылками ждёт в Tail and Grep'
 
 export const SAMPLE_PROPS: ShortProps = {
-  brand: 'Радар',
+  brand: 'Tail&Grep',
   period: '23-30 сентября',
   audience: 'ИБ АСУ ТП',
   hook: HOOK,

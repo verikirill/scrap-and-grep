@@ -102,8 +102,8 @@ async def bot_api(token: str, method: str, request: Request) -> JSONResponse:
             {
                 "id": bot_id,
                 "is_bot": True,
-                "first_name": "Радар мок",
-                "username": f"radar_mock_{bot_id}_bot",
+                "first_name": "Tail&Grep мок",
+                "username": f"tailgrep_mock_{bot_id}_bot",
             }
         )
     if method == "getChat":
