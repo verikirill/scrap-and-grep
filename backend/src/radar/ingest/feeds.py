@@ -9,6 +9,7 @@ from typing import Any, Literal
 import feedparser
 import httpx
 
+from radar.images.extract import from_entry
 from radar.ingest.net import safe_get
 from radar.store.articles import NewArticle
 from radar.text import canonical_url, content_hash, detect_language, strip_html, truncate
@@ -101,6 +102,7 @@ def _parse_entry(entry: Any, language: str, now: datetime) -> NewArticle | None:
         language=language if language in {"ru", "en"} else detect_language(f"{title} {body[:500]}"),
         published_at=_published_at(entry, now),
         content_hash=content_hash(title, body),
+        image_url=from_entry(entry, link),
     )
 
 

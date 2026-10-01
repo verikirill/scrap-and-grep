@@ -263,3 +263,16 @@ def export_articles_command(
 
 if __name__ == "__main__":
     app()
+
+
+@app.command("telegram-mock")
+def telegram_mock(
+    host: str = typer.Option("127.0.0.1", help="Address to listen on."),
+    port: int = typer.Option(8089, help="Port to listen on."),
+) -> None:
+    """Run a stand-in for the Telegram Bot API, with a viewer of what was sent."""
+    import uvicorn
+
+    from radar.publishing.mock_api import app as mock_app
+
+    uvicorn.run(mock_app, host=host, port=port, log_level="warning")

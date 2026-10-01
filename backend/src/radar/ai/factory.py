@@ -78,8 +78,9 @@ def get_embedder() -> Embedder:
 
 
 @lru_cache
-def get_chat() -> OllamaChat | None:
-    """The model connection, or None in offline mode."""
+def get_chat(temperature: float | None = None) -> OllamaChat | None:
+    """The model connection, or None in offline mode. Writing that must vary
+    between calls passes its own temperature."""
     settings = get_settings()
     if settings.llm_provider != "ollama":
         return None
@@ -89,7 +90,7 @@ def get_chat() -> OllamaChat | None:
     return OllamaChat(
         settings.llm_model,
         settings.ollama_base_url,
-        temperature=settings.llm_temperature,
+        temperature=settings.llm_temperature if temperature is None else temperature,
         num_ctx=settings.llm_num_ctx,
         keep_alive=settings.ollama_keep_alive_seconds,
         concurrency=settings.llm_concurrency,
