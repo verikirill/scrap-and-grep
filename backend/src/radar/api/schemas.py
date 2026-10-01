@@ -7,7 +7,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator, model_validator
 
 from radar.auth.passwords import PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH
-from radar.domain import ProfileSpec, SourceCategory, SourceKind
+from radar.domain import AddableSourceKind, ProfileSpec, SourceCategory, SourceKind
 from radar.shorts.voice import VoiceOption
 from radar.views import ItemView
 
@@ -76,7 +76,7 @@ class SourceOut(BaseModel):
 
 
 class SourceCreate(BaseModel):
-    kind: SourceKind = "rss"
+    kind: AddableSourceKind = "rss"
     # A channel may come without one: its own title is taken then.
     name: str | None = Field(default=None, min_length=2, max_length=200)
     feed_url: HttpUrl | None = None

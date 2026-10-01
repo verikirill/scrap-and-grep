@@ -16,7 +16,9 @@ from radar.text import content_hash
 
 # (slug, name, feed, site, category, language, fetch_full_text)
 # Every feed here answered with parseable entries on 2026-09-30. Full-text
-# fetching is on only where the feed carries a one-line teaser.
+# fetching is on only where the feed carries a one-line teaser. The BDU feeds
+# and the PT page were added on 2026-10-02, with the national CA trusted for
+# their hosts (radar.ingest.net).
 DEFAULT_SOURCES: tuple[tuple[str, str, str, str, str, str, bool], ...] = (
     ("habr-infosec", "Хабр: Информационная безопасность", "https://habr.com/ru/rss/hubs/infosecurity/articles/all/?fl=ru", "https://habr.com/ru/hubs/infosecurity/", "security", "ru", False),
     ("securitylab", "SecurityLab.ru", "https://www.securitylab.ru/_services/export/rss/", "https://www.securitylab.ru", "security", "ru", True),
@@ -53,7 +55,14 @@ DEFAULT_SOURCES: tuple[tuple[str, str, str, str, str, str, bool], ...] = (
     ("utilitydive", "Utility Dive", "https://www.utilitydive.com/feeds/news/", "https://www.utilitydive.com", "energy", "en", False),
     ("power-technology", "Power Technology", "https://www.power-technology.com/feed/", "https://www.power-technology.com", "energy", "en", False),
     ("nkcki", "НКЦКИ (safe-surf.ru)", "https://safe-surf.ru/rss/", "https://safe-surf.ru", "regulator", "ru", True),
+    # Full text comes from the data in each vulnerability's page (radar.ingest.bdu).
+    ("bdu-incident", "БДУ ФСТЭК: уязвимости, используемые в атаках", "https://bdu.fstec.ru/ubi/vul/incident/rss", "https://bdu.fstec.ru/vul", "regulator", "ru", True),
+    ("bdu-danger", "БДУ ФСТЭК: наиболее опасные уязвимости", "https://bdu.fstec.ru/ubi/vul/danger/rss", "https://bdu.fstec.ru/vul/danger", "regulator", "ru", True),
+    ("pt-trending", "Positive Technologies: трендовые уязвимости", "https://ptsecurity.com/research/trending-vulnerabilities/", "https://ptsecurity.com/research/trending-vulnerabilities/", "security", "ru", False),
 )  # fmt: skip
+
+# Sources that are not feeds; the rest are RSS or Atom.
+SOURCE_KINDS = {"pt-trending": "pt_trending"}
 
 # How the example profiles look in lists (see ProfileLook).
 EXAMPLE_LOOKS = {
@@ -206,6 +215,7 @@ async def seed_defaults(session: AsyncSession) -> dict[str, int]:
             "category": category,
             "language": language,
             "fetch_full_text": full_text,
+            "kind": SOURCE_KINDS.get(slug, "rss"),
         }
         for slug, name, feed, site, category, language, full_text in DEFAULT_SOURCES
     ]

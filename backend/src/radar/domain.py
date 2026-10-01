@@ -12,8 +12,11 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from radar.text import stable_hash
 
 SourceCategory = Literal["security", "ics", "it", "energy", "regulator"]
-# An RSS or Atom feed, or a public Telegram channel.
-SourceKind = Literal["rss", "telegram"]
+# An RSS or Atom feed, a public Telegram channel, or the trending
+# vulnerabilities page of Positive Technologies.
+SourceKind = Literal["rss", "telegram", "pt_trending"]
+# What an administrator can add; the PT page comes with the defaults.
+AddableSourceKind = Literal["rss", "telegram"]
 Language = Literal["ru", "en"]
 
 
