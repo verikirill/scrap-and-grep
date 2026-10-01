@@ -67,10 +67,16 @@ def wait_for_digest(client: httpx.Client, digest_id: str) -> dict:
     raise AssertionError  # unreachable
 
 
-def short_video(client: httpx.Client, digest_id: str) -> None:
-    """Order the video, wait for it and check that an MP4 comes back."""
+def short_video(client: httpx.Client, digest_id: str, voices: list[dict]) -> None:
+    """Order the video, wait for it and check that an MP4 comes back. When
+    the server offers voices, a voice other than the default is picked."""
     started = time.monotonic()
-    video = client.post(f"{API}/digests/{digest_id}/short").raise_for_status().json()
+    picked = next((voice["id"] for voice in voices if not voice["default"]), None)
+    video = client.post(
+        f"{API}/digests/{digest_id}/short", json={"voice": picked}
+    ).raise_for_status().json()
+    if video["requested_voice"] != picked:
+        fail(f"asked for voice {picked}, the video has {video['requested_voice']}")
     stages: list[str] = []
     while video["status"] in ("queued", "running"):
         if time.monotonic() - started > SHORT_TIMEOUT_SECONDS:
@@ -194,7 +200,7 @@ def main() -> None:
 
         if ready.get("shorts"):
             step("a short video of the digest")
-            short_video(client, first["id"])
+            short_video(client, first["id"], ready.get("short_voices", []))
 
         step("changing interests changes the selection")
         spec = profile["spec"]
