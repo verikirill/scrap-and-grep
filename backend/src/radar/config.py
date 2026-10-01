@@ -55,7 +55,7 @@ class Settings(BaseSettings):
     # Ingestion
     ingest_cron: str = "*/15 * * * *"
     http_timeout_seconds: float = 20.0
-    http_user_agent: str = "RadarDigestBot/0.1 (+hackathon prototype)"
+    http_user_agent: str = "TailGrepBot/0.1 (+hackathon prototype)"
     fulltext_concurrency: int = 4
     max_feed_bytes: int = 8_000_000
     allow_private_feed_hosts: bool = False
@@ -145,6 +145,9 @@ class Settings(BaseSettings):
     publish_rate_limit_per_minute: int = 20
     max_bots_per_user: int = 10
     max_channels_per_user: int = 30
+
+    # The MCP server: calls a minute per key. A search ranks the whole feed.
+    mcp_rate_limit_per_minute: int = 60
 
     @computed_field  # type: ignore[prop-decorator]
     @property
