@@ -76,8 +76,23 @@ async def _queue_first_ingest() -> None:
         log.info("first_ingest_queued")
 
 
+async def _migrate_events() -> None:
+    """The events schema in ClickHouse. Not fatal: until it is there only the
+    events wait in their stream, and the writer applies the schema itself as
+    soon as the server answers."""
+    from radar.events import clickhouse, enabled
+
+    if not enabled():
+        return
+    try:
+        await clickhouse.migrate()
+    except Exception as exc:
+        log.warning("clickhouse_not_migrated", error=f"{type(exc).__name__}: {exc}"[:200])
+
+
 async def _bootstrap(seed: bool, sample: Path | None, ingest: bool) -> None:
     await _setup_checkpoints()
+    await _migrate_events()
     if seed:
         await _seed(sample)
     if ingest:
@@ -90,7 +105,8 @@ def migrate(
     sample: Annotated[Path | None, typer.Option(help="JSONL snapshot to import.")] = None,
     ingest: Annotated[bool, typer.Option(help="Queue an immediate fetch of all sources.")] = False,
 ) -> None:
-    """Apply schema migrations and create LangGraph checkpoint tables."""
+    """Apply schema migrations, create LangGraph checkpoint tables and the
+    events schema in ClickHouse."""
     command.upgrade(_alembic_config(), "head")
     aio.run(_bootstrap(seed, _existing(sample), ingest))
 
@@ -220,7 +236,8 @@ def grant_admin(
     email: str,
     revoke: Annotated[bool, typer.Option(help="Take the role away instead.")] = False,
 ) -> None:
-    """Let an account manage the source catalogue, or stop it from doing so.
+    """Let an account manage the source catalogue and see the analytics, or
+    stop it from doing so.
 
     The role is granted here, by someone with access to the server, never by
     registering with a particular address.

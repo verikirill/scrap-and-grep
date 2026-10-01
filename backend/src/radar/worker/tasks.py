@@ -12,6 +12,7 @@ from radar.auth import sessions as auth_sessions
 from radar.cache import get_cache
 from radar.config import get_settings
 from radar.db import session_scope
+from radar.events import writer as event_writer
 from radar.ingest.measure import measure
 from radar.ingest.net import build_client
 from radar.ingest.service import embed_pending, enabled_source_ids, ingest_source
@@ -67,6 +68,8 @@ SHORT_ATTEMPTS = 2
 STALE_SHORT_AFTER = timedelta(milliseconds=2 * MEDIA_IDLE_TIMEOUT_MS)
 # Writing a post is one model call and a page fetch for the picture.
 POST_LOCK_TTL = 300
+# The event writer runs every minute and stops before the next run is due.
+EVENTS_WRITE_BUDGET = 45.0
 
 
 @ingest_broker.task(task_name="ingest_all", schedule=[{"cron": get_settings().ingest_cron}])
@@ -320,6 +323,18 @@ async def run_digest_schedules() -> int:
             async with session_scope() as session:
                 await digest_store.mark_failed(session, digest_id, "Очередь задач недоступна.")
     return len(started)
+
+
+@ingest_broker.task(task_name="write_events", schedule=[{"cron": "* * * * *"}])
+async def write_events() -> int:
+    """Every minute: take the events waiting in Valkey into ClickHouse."""
+    return await event_writer.flush(budget_seconds=EVENTS_WRITE_BUDGET)
+
+
+@ingest_broker.task(task_name="forget_events", retry_on_error=True, max_retries=5)
+async def forget_events(user_ids: list[str]) -> None:
+    """Delete what the events say about readers whose accounts are gone."""
+    await event_writer.forget([uuid.UUID(user_id) for user_id in user_ids])
 
 
 @ingest_broker.task(task_name="plan_posts", schedule=[{"cron": "* * * * *"}])
