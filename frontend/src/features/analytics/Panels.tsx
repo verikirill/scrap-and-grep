@@ -157,7 +157,7 @@ export function Funnel({ totals }: { totals: Rates }) {
       {steps.map((step) => (
         <li
           key={step.label}
-          className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)_auto] items-center gap-3"
+          className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)_6.5rem] items-center gap-3"
         >
           <span className="truncate text-sm">{step.label}</span>
           <RateBar rate={step.share} scale={1} tone={step.tone} />
@@ -208,7 +208,7 @@ export function RateRows({
   const scale = Math.max(0.05, ...rows.map((row) => row.rates.ctr_high))
   return (
     <div className="space-y-3.5">
-      <div className="hidden grid-cols-[minmax(0,12rem)_5rem_minmax(0,1fr)_4.5rem_4.5rem] gap-3 text-[11px] text-outline sm:grid">
+      <div className="hidden grid-cols-[minmax(0,15rem)_5rem_minmax(0,1fr)_5rem_4.5rem] gap-3 text-[11px] text-outline sm:grid">
         <span />
         <span className="text-right">увидено</span>
         <span>доля открытий</span>
@@ -218,7 +218,7 @@ export function RateRows({
       {rows.map(({ key, label, detail, rates }) => (
         <div
           key={key}
-          className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 sm:grid-cols-[minmax(0,12rem)_5rem_minmax(0,1fr)_4.5rem_4.5rem]"
+          className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 sm:grid-cols-[minmax(0,15rem)_5rem_minmax(0,1fr)_5rem_4.5rem]"
         >
           <div className="min-w-0">
             <p className="truncate text-sm">{label}</p>
