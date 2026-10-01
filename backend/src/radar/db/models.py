@@ -44,6 +44,9 @@ class Source(Base):
     id: Mapped[int] = mapped_column(Integer, Identity(), primary_key=True)
     slug: Mapped[str] = mapped_column(String(64), unique=True)
     name: Mapped[str] = mapped_column(String(200))
+    # "rss" for RSS and Atom feeds, "telegram" for a public channel read at
+    # feed_url = https://t.me/s/<name>.
+    kind: Mapped[str] = mapped_column(String(16), default="rss", server_default="rss")
     feed_url: Mapped[str] = mapped_column(Text, unique=True)
     site_url: Mapped[str | None] = mapped_column(Text)
     category: Mapped[str] = mapped_column(String(32))
@@ -52,6 +55,8 @@ class Source(Base):
     fetch_full_text: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     etag: Mapped[str | None] = mapped_column(Text)
     last_modified: Mapped[str | None] = mapped_column(Text)
+    # A channel's newest post already read; the next run starts after it.
+    last_post_id: Mapped[int | None] = mapped_column(BigInteger)
     last_fetched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_status: Mapped[str | None] = mapped_column(String(32))
     last_error: Mapped[str | None] = mapped_column(Text)

@@ -2,8 +2,9 @@
 
 from functools import lru_cache
 from typing import Literal
+from urllib.parse import urlsplit
 
-from pydantic import Field, SecretStr, computed_field
+from pydantic import Field, SecretStr, computed_field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Every stored vector has this width. Smaller models are zero-padded (cosine
@@ -59,6 +60,11 @@ class Settings(BaseSettings):
     fulltext_concurrency: int = 4
     max_feed_bytes: int = 8_000_000
     allow_private_feed_hosts: bool = False
+    # Where public Telegram channels are read (t.me/s/<name>), tried in turn.
+    # Where Telegram is blocked, put a mirror of t.me first.
+    telegram_preview_urls: list[str] = Field(
+        default_factory=lambda: ["https://t.me", "https://telegram.me"], min_length=1
+    )
 
     # Longest a digest build may run. A build whose worker died is handed to
     # another worker after this long, and resumes from its last checkpoint.
@@ -168,6 +174,21 @@ class Settings(BaseSettings):
     ranker_share: float = Field(default=0.5, ge=0.0, le=1.0)
     ranker_train_cron: str = "30 3 * * *"
     ranker_train_days: int = Field(default=28, ge=4, le=180)
+
+    @field_validator("telegram_preview_urls")
+    @classmethod
+    def _preview_bases(cls, urls: list[str]) -> list[str]:
+        for url in urls:
+            parts = urlsplit(url)
+            if (
+                parts.scheme not in {"http", "https"}
+                or not parts.hostname
+                or parts.username
+                or parts.query
+                or parts.fragment
+            ):
+                raise ValueError(f"not a base address for t.me pages: {url!r}")
+        return urls
 
     @computed_field  # type: ignore[prop-decorator]
     @property
