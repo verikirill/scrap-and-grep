@@ -256,6 +256,23 @@ def grant_admin(
     aio.run(run())
 
 
+@app.command("train-ranker")
+def train_ranker() -> None:
+    """Train the feed ranker on the events now, as the nightly task does, and
+    switch it on only if it beats the hand blend."""
+
+    async def run() -> None:
+        from radar.events import enabled
+        from radar.ranker.train import train
+
+        if not enabled():
+            raise typer.BadParameter("events are off: set RADAR_CLICKHOUSE_URL")
+        result = await train()
+        typer.echo(f"{result.version}: {result.status}. {result.note}")
+
+    aio.run(run())
+
+
 @app.command("export-articles")
 def export_articles_command(
     path: Path,
