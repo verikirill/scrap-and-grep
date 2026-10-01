@@ -6,6 +6,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import BaseModel
 
+from radar.api.adapting import adapt_soon
 from radar.api.deps import CacheDep, CurrentUser, SessionDep, SettingsDep, user_rate_limit
 from radar.api.reading import measure_soon
 from radar.logging import get_logger
@@ -107,6 +108,8 @@ async def send_feedback(
     except Exception as exc:
         # Only the "readers alike" vector lags behind; the signal itself is saved.
         log.warning("taste_refresh_not_queued", error=type(exc).__name__)
+    # Adaptive profiles learn from the same mark.
+    await adapt_soon(user.id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

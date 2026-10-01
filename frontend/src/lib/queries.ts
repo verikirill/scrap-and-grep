@@ -14,6 +14,7 @@ import type {
   FeedItem,
   FeedPage,
   Me,
+  Adaptation,
   Profile,
   ProfileSpec,
   ProgressEvent,
@@ -656,6 +657,78 @@ export function useAcceptSharedProfile() {
       void client.invalidateQueries({ queryKey: keys.feed })
       void client.invalidateQueries({ queryKey: keys.taste })
       void client.invalidateQueries({ queryKey: keys.profiles })
+    },
+  })
+}
+
+const adaptationKey = (profileId: string) => ['adaptation', profileId] as const
+
+/** What a profile learned from the reader. Refreshed now and then: it is recomputed in the background. */
+export const useAdaptation = (profileId: string | null) =>
+  useQuery({
+    queryKey: adaptationKey(profileId ?? ''),
+    queryFn: () => api.adaptation(profileId as string),
+    enabled: Boolean(profileId),
+    refetchInterval: 60_000,
+  })
+
+function putAdaptation(client: QueryClient, profileId: string, adaptation: Adaptation): void {
+  client.setQueryData(adaptationKey(profileId), adaptation)
+  // The feed and the profile list carry the adaptive flag and its effects.
+  void client.invalidateQueries({ queryKey: keys.profiles })
+  void client.invalidateQueries({ queryKey: keys.feed })
+  void client.invalidateQueries({ queryKey: keys.taste })
+}
+
+export function useSetAdaptive() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: ({ profileId, adaptive }: { profileId: string; adaptive: boolean }) =>
+      api.setAdaptive(profileId, adaptive),
+    onSuccess: (adaptation, { profileId }) => putAdaptation(client, profileId, adaptation),
+  })
+}
+
+export function useResetAdaptation() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: api.resetAdaptation,
+    onSuccess: (adaptation, profileId) => putAdaptation(client, profileId, adaptation),
+  })
+}
+
+/** Take or turn down a suggestion; either way it leaves the list at once. */
+export function useDecideSuggestion() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      profileId,
+      suggestionId,
+      isAccepted,
+    }: {
+      profileId: string
+      suggestionId: string
+      isAccepted: boolean
+    }) =>
+      isAccepted
+        ? api.acceptSuggestion(profileId, suggestionId)
+        : api.dismissSuggestion(profileId, suggestionId).then(() => null),
+    onSuccess: (profile, { profileId, suggestionId }) => {
+      client.setQueryData<Adaptation>(adaptationKey(profileId), (current) =>
+        current
+          ? {
+              ...current,
+              suggestions: current.suggestions.filter((item) => item.id !== suggestionId),
+            }
+          : current,
+      )
+      if (profile) {
+        putProfile(client, profile)
+        void client.invalidateQueries({ queryKey: keys.feed })
+        void client.invalidateQueries({ queryKey: keys.taste })
+      }
+      // Not awaited: the caller's onSuccess (the editor's draft) must run at once.
+      void client.invalidateQueries({ queryKey: adaptationKey(profileId) })
     },
   })
 }

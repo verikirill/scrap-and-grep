@@ -106,6 +106,7 @@ async def api(database: None, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[
         tasks.refresh_taste,
         tasks.build_digest,
         tasks.measure_articles,
+        tasks.adapt_profiles,
     ):
         monkeypatch.setattr(task, "kiq", AsyncMock())
 

@@ -89,7 +89,7 @@ def _unit(vector: np.ndarray) -> np.ndarray:
     return vector / norm if norm else vector
 
 
-def _net_weights(signals: Sequence[Signal]) -> dict[int, tuple[float, Signal]]:
+def net_weights(signals: Sequence[Signal]) -> dict[int, tuple[float, Signal]]:
     """Sum the signals of one article into a single signed weight.
 
     An article that was opened and then disliked is a rejection, not half a
@@ -107,7 +107,7 @@ def _net_weights(signals: Sequence[Signal]) -> dict[int, tuple[float, Signal]]:
     return net
 
 
-def _cluster(vectors: np.ndarray, max_clusters: int) -> np.ndarray:
+def cluster_labels(vectors: np.ndarray, max_clusters: int) -> np.ndarray:
     count = len(vectors)
     clusters = min(max_clusters, max(1, count // _SIGNALS_PER_FACET))
     if clusters == 1:
@@ -129,7 +129,7 @@ def _learn(
     ]
     if not usable:
         return []
-    labels = _cluster(np.stack([vector for _, _, vector in usable]), max_clusters)
+    labels = cluster_labels(np.stack([vector for _, _, vector in usable]), max_clusters)
     total = sum(weight for weight, _, _ in usable)
     facets = []
     for label in sorted(set(labels.tolist())):
@@ -183,7 +183,7 @@ def build_taste(
     rejected_ids: frozenset[int] = frozenset(),
 ) -> Taste:
     """Combine what the reader stated (interests, resume) with what they did."""
-    net = _net_weights(signals)
+    net = net_weights(signals)
     positive = [(weight, signal) for weight, signal in net.values() if weight > 0]
     negative = [(-weight, signal) for weight, signal in net.values() if weight < 0]
     reactions: dict[int, set[str]] = {}

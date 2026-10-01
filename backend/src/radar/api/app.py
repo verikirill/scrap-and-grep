@@ -15,6 +15,7 @@ from prometheus_client import Counter, Histogram
 from starlette.routing import Match
 
 from radar.api.routes import (
+    adaptation,
     auth,
     catalog,
     digests,
@@ -149,6 +150,7 @@ def create_app() -> FastAPI:
         auth.router,
         catalog.router,
         profiles.router,
+        adaptation.router,
         digests.router,
         resume.router,
         shorts.router,

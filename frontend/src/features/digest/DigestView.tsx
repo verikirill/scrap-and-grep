@@ -23,6 +23,7 @@ import {
   plural,
   REJECT_LABELS,
 } from '../../lib/format'
+import { useSeen } from '../../lib/impressions'
 import { useFeedback, useReactions } from '../../lib/queries'
 import { ReactionBar } from '../feed/ReactionBar'
 import { ShortPanel } from './ShortPanel'
@@ -69,8 +70,10 @@ type ItemCardProps = {
 function ItemCard({ item, index, reactions, onReact }: ItemCardProps) {
   const translated = item.headline !== item.title
   const personal = Math.abs(item.personal) >= 0.005 ? item.personal : 0
+  const seenRef = useSeen(item.article_id, 'digest', !reactions?.length)
   return (
     <motion.article
+      ref={seenRef}
       {...rowMotion(index)}
       className="group rounded-xl border border-transparent px-4 py-4 transition-colors duration-200 hover:border-outline-variant hover:bg-card"
     >
@@ -245,6 +248,10 @@ function RejectedList({ items }: { items: DigestItem[] }) {
 }
 
 export function DigestView({ digest, previousId }: { digest: Digest; previousId?: string }) {
+  // Interests whose weight or meaning the reader's marks had moved when this digest was built.
+  const adapted = Object.values(digest.stats.adaptation ?? {}).filter(
+    (item) => Math.abs(item.factor - 1) >= 0.01 || item.drift >= 0.005,
+  ).length
   const stats = digest.stats
   const articleIds = digest.topics.flatMap((topic) => topic.items.map((item) => item.article_id))
   const reactions = useReactions(articleIds)
@@ -326,6 +333,7 @@ export function DigestView({ digest, previousId }: { digest: Digest; previousId?
           {plural(stats.sources ?? 0, ['источник', 'источника', 'источников'])}
           {stats.duplicates_merged ? ` · объединено повторов: ${stats.duplicates_merged}` : ''}
           {stats.personalized ? ` · поправок по вашим оценкам: ${stats.personalized}` : ''}
+          {adapted > 0 ? ` · интересов подстроено под ваши отметки: ${adapted}` : ''}
           {stats.duration_seconds ? ` · ${Math.round(stats.duration_seconds)} с` : ''}
           {digest.finished_at && ` · ${formatDateTime(digest.finished_at)}`}
         </p>

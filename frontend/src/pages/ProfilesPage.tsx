@@ -4,6 +4,7 @@ import { motion } from 'motion/react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Button, ErrorNote, PageHeader } from '../components/ui'
+import { AdaptationPanel } from '../features/profiles/AdaptationPanel'
 import { PreviewPanel } from '../features/profiles/PreviewPanel'
 import { ProfileForm } from '../features/profiles/ProfileForm'
 import { ProfileAvatar, ProfileLookPicker } from '../features/profiles/ProfileLook'
@@ -66,6 +67,31 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
         },
       },
     )
+  }
+
+  /**
+   * An accepted suggestion is already saved as a new version. The draft takes
+   * the same change, so edits in progress stay and nothing looks unsaved.
+   */
+  const applySuggestion = (profile: Profile) => {
+    // The version the suggestion was accepted on.
+    const before = saved
+    setDraft((current) => {
+      if (!before || JSON.stringify(current) === JSON.stringify(before)) return profile.spec
+      const knownIds = new Set([...before.interests, ...current.interests].map((item) => item.id))
+      const known = new Set([...before.exclusions, ...current.exclusions])
+      return {
+        ...current,
+        interests: [
+          ...current.interests,
+          ...profile.spec.interests.filter((item) => !knownIds.has(item.id)),
+        ],
+        exclusions: [
+          ...current.exclusions,
+          ...profile.spec.exclusions.filter((item) => !known.has(item)),
+        ],
+      }
+    })
   }
 
   /** Switching away from unsaved edits asks first instead of dropping them. */
@@ -178,11 +204,14 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
       </div>
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
-        <ProfileForm
-          spec={draft}
-          onChange={setDraft}
-          look={stored ? <ProfileLookPicker profile={stored} /> : null}
-        />
+        <div className="min-w-0 space-y-6">
+          {stored && <AdaptationPanel profile={stored} onApplied={applySuggestion} />}
+          <ProfileForm
+            spec={draft}
+            onChange={setDraft}
+            look={stored ? <ProfileLookPicker profile={stored} /> : null}
+          />
+        </div>
         <div className="lg:sticky lg:top-9 lg:self-start">
           <PreviewPanel draft={draft} saved={saved} isDirty={dirty} />
         </div>

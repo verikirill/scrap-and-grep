@@ -31,8 +31,44 @@ export interface Profile {
   color: string | null
   /** The link that hands a copy to another reader; null while nothing is shared. */
   share_token: string | null
+  /** Whether the profile follows its reader's marks. */
+  adaptive: boolean
   created_at: string
   updated_at: string
+}
+
+/** What one interest of a profile has learned from the reader's marks. */
+export interface InterestLearning {
+  interest_id: string
+  title: string
+  stated_weight: number
+  /** The weight the feed and digests use now. */
+  weight: number
+  factor: number
+  /** How far the interest's meaning moved towards what was liked, 0..1. */
+  drift: number
+  positives: number
+  negatives: number
+  skipped: number
+}
+
+export interface Suggestion {
+  id: string
+  kind: 'interest' | 'exclusion'
+  source: 'likes' | 'dislikes' | 'similar_readers'
+  title: string
+  description: string
+  keywords: string[]
+  articles: { id: number; title: string; url: string; source_name: string }[]
+  created_at: string
+}
+
+export interface Adaptation {
+  adaptive: boolean
+  since: string | null
+  updated_at: string | null
+  interests: InterestLearning[]
+  suggestions: Suggestion[]
 }
 
 /** A profile someone sent by link, before the reader decides to take it. */
@@ -113,6 +149,8 @@ export interface DigestStats {
   written_by_model?: number
   degraded?: boolean
   personalized?: number
+  /** Interests that learned from the reader, as the digest used them. */
+  adaptation?: Record<string, { factor: number; drift: number; positives: number }>
   duration_seconds?: number
 }
 
@@ -504,6 +542,24 @@ export const api = {
   deleteProfile: (id: string) => request<void>(`/profiles/${id}`, { method: 'DELETE' }),
   setProfileLook: (id: string, look: { icon: string | null; color: string | null }) =>
     request<Profile>(`/profiles/${id}/look`, json('PATCH', look)),
+  adaptation: (id: string) => request<Adaptation>(`/profiles/${id}/adaptation`),
+  setAdaptive: (id: string, adaptive: boolean) =>
+    request<Adaptation>(`/profiles/${id}/adaptation`, json('PATCH', { adaptive })),
+  resetAdaptation: (id: string) =>
+    request<Adaptation>(`/profiles/${id}/adaptation/reset`, { method: 'POST' }),
+  acceptSuggestion: (profileId: string, suggestionId: string) =>
+    request<Profile>(`/profiles/${profileId}/suggestions/${suggestionId}/accept`, {
+      method: 'POST',
+    }),
+  dismissSuggestion: (profileId: string, suggestionId: string) =>
+    request<void>(`/profiles/${profileId}/suggestions/${suggestionId}/dismiss`, {
+      method: 'POST',
+    }),
+  recordImpressions: (articleIds: number[], context: 'feed' | 'digest') =>
+    request<void>('/impressions', {
+      ...json('POST', { article_ids: articleIds, context }),
+      keepalive: true,
+    }),
   shareProfile: (id: string) => request<Profile>(`/profiles/${id}/share`, { method: 'POST' }),
   unshareProfile: (id: string) => request<Profile>(`/profiles/${id}/share`, { method: 'DELETE' }),
   sharedProfile: (token: string) =>

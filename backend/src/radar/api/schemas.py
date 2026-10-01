@@ -106,6 +106,8 @@ class ProfileOut(BaseModel):
     color: str | None = None
     # Only the owner lists their profiles, so only the owner sees the link.
     share_token: str | None = None
+    # Whether the profile follows its reader's marks.
+    adaptive: bool = True
     created_at: datetime
     updated_at: datetime
 

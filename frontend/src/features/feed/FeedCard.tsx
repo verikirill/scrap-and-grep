@@ -16,6 +16,7 @@ import { EASE, rowMotion } from '../../components/tokens'
 import { Chip, ReadingTime } from '../../components/ui'
 import type { FeedItem, FeedReason, ReactionKind } from '../../lib/api'
 import { CATEGORY_LABELS, externalHref, formatRelative } from '../../lib/format'
+import { useSeen } from '../../lib/impressions'
 import { ReactionBar } from './ReactionBar'
 
 const REASON_ICONS: Record<FeedReason['kind'], IconComponent> = {
@@ -117,6 +118,8 @@ function RejectedRow({ item, onReact }: Omit<Props, 'index'>) {
 /** One article of the feed: what it is, why it is here, and the reader's verdict. */
 export function FeedCard({ item, index, onReact }: Props) {
   const [isWhyOpen, setIsWhyOpen] = useState(false)
+  // Scrolled past without a mark is a quiet "not this": adaptive profiles learn from it.
+  const seenRef = useSeen(item.article_id, 'feed', item.reactions.length === 0)
   const isRejected = item.reactions.includes('hide') || item.reactions.includes('dislike')
   const isRead = item.reactions.includes('open')
   const hasBreakdown = Object.keys(item.parts).length > 0 && !item.explore
@@ -128,6 +131,7 @@ export function FeedCard({ item, index, onReact }: Props) {
 
   return (
     <motion.article
+      ref={seenRef}
       {...rowMotion(index)}
       className="group rounded-2xl border border-outline-variant bg-card px-5 py-4 shadow-card transition-colors duration-200 hover:border-outline"
     >

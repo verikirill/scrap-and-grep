@@ -112,6 +112,10 @@ const ICONS = {
   LinkOff: 'link-off',
   Colorize: 'colorize',
   LibraryAdd: 'library-add',
+  AutoAwesome: 'auto-awesome',
+  TrendingUp: 'trending-up',
+  TrendingDown: 'trending-down',
+  Block: 'block',
 }
 
 // The names shadcn components import.

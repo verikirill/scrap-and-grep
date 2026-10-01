@@ -24,6 +24,7 @@ from radar.domain import (
 )
 from radar.pipeline.graph import DigestState, build_graph
 from radar.pipeline.ports import PipelineDeps
+from radar.recsys.model import Learned, Personal
 from radar.selection.retrieval import Window
 from radar.text import tokenize
 from tests.conftest import ArticleFactory
@@ -34,10 +35,16 @@ CONFIG: Any = {"configurable": {"thread_id": "digest-1"}}
 class FakeStore:
     """Keyword retrieval over an in-memory list; records what gets saved."""
 
-    def __init__(self, articles: list[ArticleRef], fail_saves: int = 0) -> None:
+    def __init__(
+        self,
+        articles: list[ArticleRef],
+        fail_saves: int = 0,
+        learned: dict[str, Learned] | None = None,
+    ) -> None:
         self.articles = articles
         self.saved: dict[str, Any] | None = None
         self._fail_saves = fail_saves
+        self._learned = learned or {}
 
     async def ensure_embeddings(self, start: datetime, end: datetime) -> int:
         return 0
@@ -71,6 +78,16 @@ class FakeStore:
 
     async def vectors(self, article_ids: Sequence[int]) -> dict[int, np.ndarray]:
         return {}
+
+    async def personal(
+        self, user_id: str, article_ids: Sequence[int], start: datetime, end: datetime
+    ) -> dict[int, Personal]:
+        return {}
+
+    async def learned(
+        self, user_id: str, profile_id: str, profile: ProfileSpec
+    ) -> dict[str, Learned]:
+        return self._learned
 
     async def save(
         self,
@@ -278,3 +295,32 @@ async def test_empty_period_produces_an_empty_digest_not_an_error(profile: Profi
     assert store.saved is not None
     assert store.saved["topics"] == []
     assert store.saved["stats"]["selected"] == 0
+
+
+async def test_a_profile_that_learned_from_its_reader_weighs_its_interests_accordingly(
+    profile: ProfileSpec, articles: list[ArticleRef]
+) -> None:
+    """Interests the reader's marks favour count for more, the others for less,
+    and the digest records what it used."""
+    learned = {"ics": Learned(factor=1.25, positives=6.0), "vuln": Learned(factor=0.75)}
+    runs = {}
+    for name, store in (
+        ("stated", FakeStore(articles)),
+        ("learned", FakeStore(articles, learned=learned)),
+    ):
+        graph = build_graph(_deps(store, HeuristicIntelligence())).compile(
+            checkpointer=InMemorySaver()
+        )
+        state = {**_input(profile), "user_id": "user-1", "profile_id": "profile-1"}
+        await graph.ainvoke(state, {"configurable": {"thread_id": name}})
+        assert store.saved is not None
+        runs[name] = store.saved
+
+    def score(saved: dict[str, Any], article: ArticleRef) -> float:
+        return next(item.score for item in saved["graded"] if item.article.id == article.id)
+
+    # Only the "vulnerabilities" interest brings the Linux CVE: its score drops by a quarter.
+    linux = articles[1]
+    assert score(runs["learned"], linux) == pytest.approx(score(runs["stated"], linux) * 0.75)
+    assert runs["learned"]["stats"]["adaptation"]["ics"]["factor"] == 1.25
+    assert runs["stated"]["stats"]["adaptation"] == {}
