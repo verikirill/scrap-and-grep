@@ -3,7 +3,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, computed_field
+from pydantic import Field, SecretStr, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Every stored vector has this width. Smaller models are zero-padded (cosine
@@ -55,7 +55,7 @@ class Settings(BaseSettings):
     # Ingestion
     ingest_cron: str = "*/15 * * * *"
     http_timeout_seconds: float = 20.0
-    http_user_agent: str = "RadarDigestBot/0.1 (+hackathon prototype)"
+    http_user_agent: str = "TailGrepBot/0.1 (+hackathon prototype)"
     fulltext_concurrency: int = 4
     max_feed_bytes: int = 8_000_000
     allow_private_feed_hosts: bool = False
@@ -123,6 +123,31 @@ class Settings(BaseSettings):
     # Videos queued or being made at once, across all readers: a safety cap,
     # not a schedule. The media worker makes them one after another anyway.
     max_active_shorts: int = 10
+
+    # Copies of article pictures, kept when a link is not enough (see
+    # radar.images.store): on the media volume, or in any S3-compatible store.
+    image_store: Literal["local", "s3"] = "local"
+    s3_endpoint: str = "s3:8333"
+    s3_bucket: str = "radar-images"
+    s3_access_key: str = ""
+    s3_secret_key: SecretStr | None = None
+    s3_secure: bool = False
+    s3_region: str = ""
+
+    # Posting to Telegram channels. Bot tokens are stored encrypted with a key
+    # derived from this secret; without it no bot can be added.
+    secret_key: SecretStr | None = None
+    telegram_api_url: str = "https://api.telegram.org"
+    telegram_timeout_seconds: float = Field(default=30.0, ge=5)
+    # Posts are written with more freedom than grades: two channels that take
+    # the same news must not get the same text.
+    publish_temperature: float = Field(default=0.7, ge=0.0, le=1.5)
+    publish_rate_limit_per_minute: int = 20
+    max_bots_per_user: int = 10
+    max_channels_per_user: int = 30
+
+    # The MCP server: calls a minute per key. A search ranks the whole feed.
+    mcp_rate_limit_per_minute: int = 60
 
     @computed_field  # type: ignore[prop-decorator]
     @property

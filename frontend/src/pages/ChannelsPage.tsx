@@ -1,0 +1,88 @@
+import { KeyRound, Send } from '../components/icons'
+import { useState } from 'react'
+import { Card, EmptyState, PageHeader } from '../components/ui'
+import { AddChannelDialog } from '../features/channels/AddChannelDialog'
+import { BotsPanel } from '../features/channels/BotsPanel'
+import { ChannelCard } from '../features/channels/ChannelCard'
+import { PostsPanel } from '../features/channels/PostsPanel'
+import { Segmented } from '../components/Segmented'
+import { useChannels, usePublishingDefaults } from '../lib/publishingQueries'
+
+export function ChannelsPage() {
+  const { data: defaults } = usePublishingDefaults()
+  const { data: channels, isPending } = useChannels()
+  const [selected, setSelected] = useState<string>('all')
+  const isMock = defaults?.mock ?? false
+  // A channel removed while chosen leaves the filter on all of them.
+  const active = channels?.some((channel) => channel.id === selected) ? selected : 'all'
+
+  return (
+    <>
+      <PageHeader
+        title="Каналы"
+        subtitle="Боты публикуют новости в ваши Telegram-каналы по расписанию: под аудиторию каждого канала, своим голосом, со своей подачей ссылок."
+        actions={<AddChannelDialog />}
+      />
+
+      {defaults && !defaults.enabled && (
+        <Card variant="filled" className="mb-6 flex items-start gap-3 p-5">
+          <KeyRound size={20} className="mt-0.5 shrink-0 text-spark" />
+          <p className="text-sm">
+            Публикация выключена: на сервере не задан <code>RADAR_SECRET_KEY</code>, без него токены
+            ботов негде хранить. Добавьте его в <code>.env</code> и перезапустите стек.
+          </p>
+        </Card>
+      )}
+      {isMock && (
+        <p className="mb-6 rounded-2xl bg-secondary-container px-4 py-3 text-sm text-on-secondary-container">
+          Сейчас посты уходят в мок Telegram, а не в настоящий: подойдёт любой токен вида
+          123456789:AA… и любой @канал. Отправленное видно на странице мока (порт 8089).
+        </p>
+      )}
+
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
+        <div className="space-y-4">
+          <BotsPanel />
+          {isPending && <div className="skeleton h-56" />}
+          {channels?.length === 0 && (
+            <Card variant="outlined">
+              <EmptyState icon={<Send size={22} />} title="Каналов пока нет">
+                Подключите бота, добавьте его администратором в канал и нажмите «Канал».
+              </EmptyState>
+            </Card>
+          )}
+          {channels?.map((channel, index) => (
+            <ChannelCard
+              key={channel.id}
+              channel={channel}
+              index={index}
+              isSelected={active === channel.id}
+              onSelect={() => setSelected(active === channel.id ? 'all' : channel.id)}
+            />
+          ))}
+        </div>
+
+        <section aria-label="Посты" className="min-w-0 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-lg font-normal">Очередь и история</h2>
+            {channels && channels.length > 1 && (
+              <div className="max-w-full min-w-0">
+                <Segmented
+                  label="Канал"
+                  value={active}
+                  onChange={setSelected}
+                  isScrollable
+                  options={[
+                    { value: 'all', label: 'Все' },
+                    ...channels.map((channel) => ({ value: channel.id, label: channel.title })),
+                  ]}
+                />
+              </div>
+            )}
+          </div>
+          <PostsPanel channelId={active === 'all' ? undefined : active} channels={channels ?? []} />
+        </section>
+      </div>
+    </>
+  )
+}

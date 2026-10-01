@@ -1,11 +1,13 @@
 import clsx from 'clsx'
-import { Plus, RotateCcw, Save, Sparkles, Trash2 } from 'lucide-react'
+import { Plus, RotateCcw, Save, Sparkles, Trash2 } from '../components/icons'
 import { motion } from 'motion/react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Button, ErrorNote, PageHeader } from '../components/ui'
 import { PreviewPanel } from '../features/profiles/PreviewPanel'
 import { ProfileForm } from '../features/profiles/ProfileForm'
+import { ProfileAvatar, ProfileLookPicker } from '../features/profiles/ProfileLook'
+import { ShareProfileButton } from '../features/profiles/ShareProfile'
 import type { Profile, ProfileSpec } from '../lib/api'
 import { useDeleteProfile, useProfiles, useSaveProfile } from '../lib/queries'
 
@@ -120,18 +122,23 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
             onClick={() => leaveTo(profile.id)}
             aria-current={profile.id === activeId ? 'true' : undefined}
             className={clsx(
-              'relative rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
-              profile.id === activeId ? 'text-accent-text' : 'text-muted hover:text-text',
+              'relative isolate flex items-center gap-2 rounded-full py-1 pr-3.5 pl-1 text-sm font-medium transition-colors duration-300',
+              profile.id === activeId
+                ? 'text-primary-foreground'
+                : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface',
             )}
           >
             {profile.id === activeId && (
               <motion.span
                 layoutId="profile-tab"
-                className="absolute inset-0 rounded-lg bg-accent-soft"
-                transition={{ type: 'spring', stiffness: 480, damping: 38 }}
+                className="absolute inset-0 -z-10 rounded-full bg-primary shadow-elevation-1"
+                transition={{ type: 'spring', stiffness: 420, damping: 32 }}
               />
             )}
-            <span className="relative">{profile.spec.name}</span>
+            <ProfileAvatar profile={profile} size={28} />
+            <span className="relative max-w-56 truncate" title={profile.spec.name}>
+              {profile.spec.name}
+            </span>
           </button>
         ))}
         <Button
@@ -143,21 +150,25 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
         >
           Новый
         </Button>
-        {stored && profiles.length > 1 && (
-          <Button
-            size="sm"
-            variant="danger"
-            className="ml-auto"
-            icon={<Trash2 size={14} />}
-            isBusy={remove.isPending}
-            onClick={() => {
-              if (window.confirm(`Удалить профиль «${stored.spec.name}»?`)) {
-                remove.mutate(stored.id, { onSuccess: () => onSelect(null) })
-              }
-            }}
-          >
-            Удалить профиль
-          </Button>
+        {stored && (
+          <div className="ml-auto flex flex-wrap gap-1.5">
+            <ShareProfileButton profile={stored} />
+            {profiles.length > 1 && (
+              <Button
+                size="sm"
+                variant="danger"
+                icon={<Trash2 size={14} />}
+                isBusy={remove.isPending}
+                onClick={() => {
+                  if (window.confirm(`Удалить профиль «${stored.spec.name}»?`)) {
+                    remove.mutate(stored.id, { onSuccess: () => onSelect(null) })
+                  }
+                }}
+              >
+                Удалить профиль
+              </Button>
+            )}
+          </div>
         )}
       </div>
 
@@ -166,8 +177,12 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
         {dirty && problem && <p className="text-sm text-spark">{problem}</p>}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
-        <ProfileForm spec={draft} onChange={setDraft} />
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
+        <ProfileForm
+          spec={draft}
+          onChange={setDraft}
+          look={stored ? <ProfileLookPicker profile={stored} /> : null}
+        />
         <div className="lg:sticky lg:top-9 lg:self-start">
           <PreviewPanel draft={draft} saved={saved} isDirty={dirty} />
         </div>
@@ -185,7 +200,7 @@ export function ProfilesPage() {
       <>
         <PageHeader title="Интересы" />
         <ErrorNote error={profiles.error} />
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-2">
           <div className="skeleton h-96" />
           <div className="skeleton h-96" />
         </div>

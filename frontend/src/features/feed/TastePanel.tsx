@@ -16,10 +16,12 @@ function FacetRow({ facet }: { facet: TasteFacet }) {
   const isAvoid = facet.kind === 'avoid'
   return (
     <li className="flex items-center gap-2.5">
-      <span className="h-1 w-8 shrink-0 overflow-hidden rounded-full bg-line">
+      <span className="h-1 w-8 shrink-0 overflow-hidden rounded-full bg-outline-variant">
         <motion.span
           className={
-            isAvoid ? 'block h-full origin-left bg-danger' : 'block h-full origin-left bg-accent'
+            isAvoid
+              ? 'block h-full origin-left bg-destructive'
+              : 'block h-full origin-left bg-primary'
           }
           initial={{ scaleX: 0 }}
           animate={{ scaleX: Math.min(1, facet.weight / 1.5) }}
@@ -39,7 +41,7 @@ export function TastePanel({ taste }: { taste: Taste }) {
   return (
     <Card className="p-5">
       <h2 className="text-sm font-semibold">Что лента знает о вас</h2>
-      <p className="mt-1 text-xs text-muted">
+      <p className="mt-1 text-xs text-muted-foreground">
         {signals === 0
           ? 'Оценок пока нет. Отмечайте публикации: лента начнёт учитывать их с первой же.'
           : `${signals} ${plural(signals, ['оценка', 'оценки', 'оценок'])} за последнее время. Старые оценки постепенно теряют вес.`}
@@ -47,7 +49,7 @@ export function TastePanel({ taste }: { taste: Taste }) {
 
       <div className="mt-3">
         <div className="flex items-baseline justify-between text-xs">
-          <span className="text-muted">Доверие к оценкам</span>
+          <span className="text-muted-foreground">Доверие к оценкам</span>
           <span className="tabular font-semibold">{Math.round(taste.confidence * 100)}%</span>
         </div>
         <div
@@ -56,7 +58,7 @@ export function TastePanel({ taste }: { taste: Taste }) {
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={Math.round(taste.confidence * 100)}
-          className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-sunken"
+          className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface-container"
         >
           <motion.div
             className="h-full origin-left rounded-full bg-spark"
@@ -73,7 +75,7 @@ export function TastePanel({ taste }: { taste: Taste }) {
           if (facets.length === 0 && !group.empty) return null
           return (
             <section key={group.kind}>
-              <h3 className="text-xs font-semibold tracking-wide text-muted uppercase">
+              <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 {group.title}
               </h3>
               {facets.length > 0 ? (
@@ -83,7 +85,7 @@ export function TastePanel({ taste }: { taste: Taste }) {
                   ))}
                 </ul>
               ) : (
-                <p className="mt-1.5 text-[13px] text-faint">{group.empty}</p>
+                <p className="mt-1.5 text-[13px] text-outline">{group.empty}</p>
               )}
             </section>
           )
@@ -91,7 +93,9 @@ export function TastePanel({ taste }: { taste: Taste }) {
 
         {taste.sources.length > 0 && (
           <section>
-            <h3 className="text-xs font-semibold tracking-wide text-muted uppercase">Источники</h3>
+            <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+              Источники
+            </h3>
             <ul className="mt-2 space-y-1">
               {taste.sources.map((source) => (
                 <li
@@ -99,7 +103,7 @@ export function TastePanel({ taste }: { taste: Taste }) {
                   className="flex items-baseline justify-between gap-3 text-[13px]"
                 >
                   <span className="min-w-0 truncate">{source.name}</span>
-                  <span className={source.affinity < 0 ? 'text-danger' : 'text-ok'}>
+                  <span className={source.affinity < 0 ? 'text-destructive' : 'text-success'}>
                     {source.affinity < 0 ? 'реже' : 'чаще'}
                   </span>
                 </li>
@@ -109,13 +113,13 @@ export function TastePanel({ taste }: { taste: Taste }) {
         )}
       </div>
 
-      <p className="mt-5 border-t border-line pt-3 text-xs text-muted">
+      <p className="mt-5 border-t border-outline-variant pt-3 text-xs text-muted-foreground">
         Интересы правятся в разделе{' '}
-        <Link to="/profiles" className="text-accent-text hover:underline">
+        <Link to="/profiles" className="text-on-primary-container hover:underline">
           «Интересы»
         </Link>
         , резюме - в{' '}
-        <Link to="/account" className="text-accent-text hover:underline">
+        <Link to="/account" className="text-on-primary-container hover:underline">
           аккаунте
         </Link>
         .

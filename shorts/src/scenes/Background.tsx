@@ -1,5 +1,5 @@
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from 'remotion'
-import { COLORS } from '../theme'
+import { COLORS, alpha } from '../theme'
 
 /**
  * Night sky of the product: two slow colour clouds, a faint grid and a radar
@@ -18,8 +18,8 @@ export function Background() {
       <AbsoluteFill
         style={{
           background: [
-            `radial-gradient(circle at ${cloudA.x}% ${cloudA.y}%, rgba(125, 155, 255, 0.28), transparent 42%)`,
-            `radial-gradient(circle at ${cloudB.x}% ${cloudB.y}%, rgba(245, 181, 74, 0.16), transparent 40%)`,
+            `radial-gradient(circle at ${cloudA.x}% ${cloudA.y}%, ${alpha(COLORS.accent, 0.28)}, transparent 42%)`,
+            `radial-gradient(circle at ${cloudB.x}% ${cloudB.y}%, ${alpha(COLORS.spark, 0.16)}, transparent 40%)`,
           ].join(','),
         }}
       />
@@ -41,7 +41,7 @@ export function Background() {
           top: 900 - 1400,
           borderRadius: '50%',
           background:
-            'conic-gradient(from 0deg, transparent 0deg, transparent 310deg, rgba(125, 155, 255, 0.14) 358deg, transparent 360deg)',
+            `conic-gradient(from 0deg, transparent 0deg, transparent 310deg, ${alpha(COLORS.accent, 0.14)} 358deg, transparent 360deg)`,
           transform: `rotate(${t * 40}deg)`,
         }}
       />

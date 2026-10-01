@@ -1,5 +1,7 @@
+import path from 'node:path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
+import icons from 'unplugin-icons/vite'
 import { defineConfig } from 'vitest/config'
 
 // In development the API is reached through the gateway of the running stack;
@@ -7,7 +9,21 @@ import { defineConfig } from 'vitest/config'
 const API_TARGET = process.env.VITE_API_TARGET ?? 'http://127.0.0.1:8080'
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  // Material Symbols are compiled into components at build time: only the
+  // icons in use reach the bundle, and nothing is fetched at run time.
+  plugins: [react(), tailwindcss(), icons({ compiler: 'jsx', jsx: 'react' })],
+  resolve: {
+    alias: {
+      '@': path.resolve(import.meta.dirname, './src'),
+      // Single modules of Material's colour utilities. The package exports
+      // only its index, which drags every colour scheme into the bundle
+      // (20 KB gzipped instead of 9).
+      'material-color': path.resolve(
+        import.meta.dirname,
+        './node_modules/@material/material-color-utilities',
+      ),
+    },
+  },
   server: {
     port: 5173,
     proxy: {

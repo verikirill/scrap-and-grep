@@ -12,10 +12,12 @@ from radar.auth import sessions as auth_sessions
 from radar.cache import get_cache
 from radar.config import get_settings
 from radar.db import session_scope
+from radar.ingest.measure import measure
 from radar.ingest.net import build_client
 from radar.ingest.service import embed_pending, enabled_source_ids, ingest_source
 from radar.logging import get_logger
 from radar.pipeline.runner import report_failure, run_digest
+from radar.publishing import service as publishing_service
 from radar.recsys import service as recsys_service
 from radar.resume import service as resume_service
 from radar.shorts import service as shorts_service
@@ -57,6 +59,8 @@ SHORT_ATTEMPTS = 2
 # A redelivered task resumes a video after the idle timeout and may run for
 # nearly as long again; only after that is the video given up on.
 STALE_SHORT_AFTER = timedelta(milliseconds=2 * MEDIA_IDLE_TIMEOUT_MS)
+# Writing a post is one model call and a page fetch for the picture.
+POST_LOCK_TTL = 300
 
 
 @ingest_broker.task(task_name="ingest_all", schedule=[{"cron": get_settings().ingest_cron}])
@@ -78,6 +82,12 @@ async def ingest_source_task(source_id: int) -> dict[str, object]:
     if report.new_articles:
         await embed_pending_task.kiq()
     return {"source_id": source_id, "status": report.status, "new": report.new_articles}
+
+
+@ingest_broker.task(task_name="measure_articles")
+async def measure_articles(article_ids: list[int]) -> int:
+    """Read the pages of articles a reader sees, for their reading time."""
+    return await measure(article_ids)
 
 
 @ingest_broker.task(task_name="embed_pending", retry_on_error=True, max_retries=2)
@@ -257,3 +267,39 @@ async def housekeeping() -> dict[str, int]:
         except Exception as exc:
             log.warning("short_purge_not_queued", error=type(exc).__name__)
     return {"resumes": resumes, "shorts": shorts, "sessions": sessions, "guests": guests}
+
+
+@ingest_broker.task(task_name="plan_posts", schedule=[{"cron": "* * * * *"}])
+async def plan_posts() -> dict[str, int]:
+    """Every minute: create the posts whose slots are due, send the ones whose
+    time has come, take over the ones a dead worker left behind."""
+    created = await publishing_service.plan()
+    stuck = await publishing_service.recover()
+    ready = await publishing_service.due()
+    for post_id in [*created, *stuck["compose"]]:
+        await compose_post.kiq(str(post_id))
+    for post_id in ready:
+        await send_post.kiq(str(post_id))
+    return {
+        "planned": len(created),
+        "sending": len(ready),
+        "interrupted": len(stuck["interrupted"]),
+    }
+
+
+@digest_broker.task(task_name="compose_post", retry_on_error=True, max_retries=2)
+async def compose_post(post_id: str) -> str:
+    """Write a planned post. Runs where the model is: it is model work."""
+    async with get_cache().lock(f"post:{post_id}", POST_LOCK_TTL) as acquired:
+        if not acquired:
+            return "locked"
+        return await publishing_service.compose(uuid.UUID(post_id), get_cache())
+
+
+@ingest_broker.task(task_name="send_post")
+async def send_post(post_id: str) -> str:
+    """Publish one post; a failure is recorded on the post, not retried here."""
+    async with get_cache().lock(f"post:{post_id}", POST_LOCK_TTL) as acquired:
+        if not acquired:
+            return "locked"
+        return await publishing_service.send(uuid.UUID(post_id))

@@ -1,4 +1,4 @@
-import { FileText, RotateCcw } from 'lucide-react'
+import { FileText, RotateCcw } from '../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { EASE } from '../components/tokens'
@@ -6,6 +6,7 @@ import { Button, Card, EmptyState, ErrorNote, PageHeader } from '../components/u
 import { BuildPanel } from '../features/digest/BuildPanel'
 import { DigestView } from '../features/digest/DigestView'
 import { History } from '../features/digest/History'
+import { DigestHeading } from '../features/digest/DigestHeading'
 import { ProgressCard } from '../features/digest/ProgressCard'
 import type { DigestSummary } from '../lib/api'
 import {
@@ -39,6 +40,7 @@ export function DigestPage() {
   const progress = useDigestProgress(digest.data)
 
   const current = digest.data
+  const summary = digests.data?.find((item) => item.id === activeId)
   const isBuilding = current?.status === 'queued' || current?.status === 'running'
   // The issue built before this one for the same profile, for the compare link.
   const previous = digests.data?.find(
@@ -61,7 +63,7 @@ export function DigestPage() {
   const handleRetry = () => {
     if (!current?.profile_id) return
     retry.mutate(
-      { profileId: current.profile_id, days: periodDays(current) },
+      { profileId: current.profile_id, period: { days: periodDays(current) } },
       { onSuccess: (created) => navigate(`/digests/${created.id}`) },
     )
   }
@@ -86,7 +88,7 @@ export function DigestPage() {
           {digest.isError && (
             <Card className="p-6">
               <h2 className="text-base font-semibold">Выпуск не открылся</h2>
-              <p className="mt-1 text-sm text-muted">
+              <p className="mt-1 text-sm text-muted-foreground">
                 {digest.error instanceof Error ? digest.error.message : 'Неизвестная ошибка.'}
               </p>
               <Button className="mt-4" onClick={() => navigate('/')}>
@@ -94,6 +96,11 @@ export function DigestPage() {
               </Button>
             </Card>
           )}
+
+          {/* Outside the presence below and keyed by the digest: the old
+              header leaves and the new one comes in the same render, which is
+              what lets their titles morph into the history rows and back. */}
+          {summary && <DigestHeading key={summary.id} summary={summary} />}
 
           <AnimatePresence mode="wait">
             {digest.isLoading && activeId && (
@@ -124,7 +131,7 @@ export function DigestPage() {
               >
                 <Card className="p-6">
                   <h2 className="text-base font-semibold">Выпуск собрать не удалось</h2>
-                  <p className="mt-1 text-sm text-muted">
+                  <p className="mt-1 text-sm text-muted-foreground">
                     {current.error ?? 'Причина неизвестна.'}
                   </p>
                   {current.profile_id && (
@@ -172,7 +179,7 @@ export function DigestPage() {
           layoutScroll
           className="xl:sticky xl:top-9 xl:max-h-[calc(100dvh-4.5rem)] xl:self-start xl:overflow-y-auto"
         >
-          <h2 className="mb-2.5 px-1 text-xs font-semibold tracking-wide text-muted uppercase">
+          <h2 className="mb-2.5 px-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
             История
           </h2>
           {digests.data ? (

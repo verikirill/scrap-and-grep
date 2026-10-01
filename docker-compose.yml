@@ -46,6 +46,20 @@ x-backend: &backend
     RADAR_TTS_URL: ${RADAR_TTS_URL:-}
     RADAR_TTS_VOICE: ${RADAR_TTS_VOICE:-}
     RADAR_MEDIA_DIR: /data/media
+    # Publishing to Telegram channels. Bot tokens are stored encrypted with a
+    # key derived from RADAR_SECRET_KEY; without it no bot can be added. With
+    # the telegram-mock profile point the API at http://telegram-mock:8089 to
+    # try everything without Telegram.
+    RADAR_SECRET_KEY: ${RADAR_SECRET_KEY:-}
+    RADAR_TELEGRAM_API_URL: ${RADAR_TELEGRAM_API_URL:-https://api.telegram.org}
+    # Copies of article pictures: on the media volume, or in S3 (the s3
+    # profile starts SeaweedFS; then set RADAR_IMAGE_STORE=s3).
+    RADAR_IMAGE_STORE: ${RADAR_IMAGE_STORE:-local}
+    RADAR_S3_ENDPOINT: ${RADAR_S3_ENDPOINT:-s3:8333}
+    RADAR_S3_BUCKET: ${RADAR_S3_BUCKET:-radar-images}
+    RADAR_S3_ACCESS_KEY: ${RADAR_S3_ACCESS_KEY:-radar}
+    RADAR_S3_SECRET_KEY: ${RADAR_S3_SECRET_KEY:-change-me-s3-secret}
+    RADAR_S3_SECURE: ${RADAR_S3_SECURE:-false}
   depends_on: &backend-deps
     migrate:
       condition: service_completed_successfully
@@ -172,6 +186,9 @@ services:
     command: ["taskiq", "worker", "radar.worker.brokers:ingest_broker", "radar.worker.tasks", "--ack-type", "when_executed", "--max-async-tasks", "16", "--workers", "1"]
     deploy:
       replicas: ${INGEST_WORKERS:-1}
+    # Sends posts, and keeps a copy of a picture Telegram could not fetch.
+    volumes:
+      - media:/data/media
 
   # Digest building: bound by the model server, scaled separately so a burst
   # of digests cannot starve ingestion.
@@ -368,6 +385,33 @@ services:
       ollama:
         condition: service_healthy
 
+  # A stand-in for the Telegram Bot API with a viewer of what was sent:
+  # http://localhost:8089. Any token of the right shape is a bot.
+  telegram-mock:
+    profiles: ["telegram-mock"]
+    <<: *backend
+    # The mock keeps everything in memory: no database, secrets or storage.
+    environment:
+      RADAR_ENVIRONMENT: production
+      RADAR_LOG_LEVEL: ${RADAR_LOG_LEVEL:-INFO}
+    depends_on: {}
+    command: ["radar", "telegram-mock", "--host", "0.0.0.0", "--port", "8089"]
+    ports:
+      - "127.0.0.1:8089:8089"
+
+  # S3-compatible storage for picture copies (RADAR_IMAGE_STORE=s3). SeaweedFS
+  # in its single-container mode; MinIO no longer publishes images.
+  s3:
+    profiles: ["s3"]
+    image: chrislusf/seaweedfs:4.48
+    restart: unless-stopped
+    environment:
+      AWS_ACCESS_KEY_ID: ${RADAR_S3_ACCESS_KEY:-radar}
+      AWS_SECRET_ACCESS_KEY: ${RADAR_S3_SECRET_KEY:-change-me-s3-secret}
+      S3_BUCKET: ${RADAR_S3_BUCKET:-radar-images}
+    volumes:
+      - s3data:/data
+
 networks:
   # No gateway: containers on it reach each other and nothing else.
   parsing:
@@ -377,6 +421,7 @@ networks:
     internal: true
 
 volumes:
+  s3data:
   pgdata:
   valkeydata:
   ollama:

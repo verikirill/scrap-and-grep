@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { Captions, Check, Clapperboard, Download, Mic, RotateCcw } from 'lucide-react'
+import { Captions, Check, Clapperboard, Download, Mic, RotateCcw } from '../../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { buttonClass, EASE } from '../../components/tokens'
@@ -40,7 +40,7 @@ function Progress({ video }: { video: Video }) {
         aria-valuemax={100}
         aria-valuenow={isQueued ? undefined : percent}
         aria-valuetext={isQueued ? 'В очереди' : `${percent}%`}
-        className="mt-3 h-1.5 overflow-hidden rounded-full bg-sunken"
+        className="mt-3 h-1.5 overflow-hidden rounded-full bg-surface-container"
       >
         <motion.div
           className="h-full origin-left rounded-full bg-spark"
@@ -59,15 +59,15 @@ function Progress({ video }: { video: Video }) {
               aria-current={isActive ? 'step' : undefined}
               className={clsx(
                 'flex items-center gap-2 text-xs',
-                isDone || isActive ? 'text-text' : 'text-faint',
+                isDone || isActive ? 'text-foreground' : 'text-outline',
               )}
             >
               <span
                 className={clsx(
                   'grid size-5 place-items-center rounded-full text-[10px] font-semibold',
                   isDone && 'bg-spark text-[#0b0f17]',
-                  isActive && 'bg-spark-soft text-spark',
-                  !isDone && !isActive && 'bg-sunken',
+                  isActive && 'bg-spark-container text-spark',
+                  !isDone && !isActive && 'bg-surface-container',
                 )}
               >
                 {isDone ? <Check size={11} strokeWidth={3} aria-hidden /> : index + 1}
@@ -78,7 +78,7 @@ function Progress({ video }: { video: Video }) {
           )
         })}
       </ol>
-      <p className="mt-4 text-xs text-muted">
+      <p className="mt-4 text-xs text-muted-foreground">
         Обычно это занимает одну-три минуты. Можно читать выпуск: видео появится здесь.
       </p>
     </div>
@@ -105,7 +105,7 @@ type VoicePickerProps = {
 function VoicePicker({ name, voices, value, onChange }: VoicePickerProps) {
   return (
     <fieldset className="mt-3">
-      <legend className="mb-1.5 text-xs text-muted">Голос</legend>
+      <legend className="mb-1.5 text-xs text-muted-foreground">Голос</legend>
       <div className="flex flex-wrap gap-1.5">
         {voices.map((voice) => {
           const isChecked = value === voice.id
@@ -114,10 +114,10 @@ function VoicePicker({ name, voices, value, onChange }: VoicePickerProps) {
               key={voice.id}
               className={clsx(
                 'inline-flex cursor-pointer items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition-colors',
-                'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent',
+                'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary',
                 isChecked
-                  ? 'border-spark bg-spark-soft text-spark'
-                  : 'border-line text-muted hover:border-faint hover:text-text',
+                  ? 'border-spark bg-spark-container text-spark'
+                  : 'border-outline-variant text-muted-foreground hover:border-outline hover:text-foreground',
               )}
             >
               <input
@@ -162,9 +162,9 @@ function Player({ video, voices }: { video: Video; voices: VoiceOption[] }) {
         className="aspect-[9/16] w-full max-w-[17rem] rounded-xl bg-[#070a12] shadow-card"
       />
       <div className="min-w-0 space-y-3">
-        <p className="text-sm text-muted">{details.join(' · ')}</p>
+        <p className="text-sm text-muted-foreground">{details.join(' · ')}</p>
         {video.finished_at && (
-          <p className="text-xs text-faint">Готово {formatDateTime(video.finished_at)}</p>
+          <p className="text-xs text-outline">Готово {formatDateTime(video.finished_at)}</p>
         )}
         <a href={`${url}&download=1`} download className={buttonClass('primary', 'sm')}>
           <Download size={15} />
@@ -202,11 +202,11 @@ export function ShortPanel({ digestId }: { digestId: string }) {
             <Clapperboard size={17} className="text-spark" aria-hidden />
             Короткое видео
           </h3>
-          <p className="mt-1 max-w-prose text-sm text-muted">
+          <p className="mt-1 max-w-prose text-sm text-muted-foreground">
             Вертикальный ролик на полминуты-минуту: главные новости выпуска, крупные цифры и
             субтитры по словам.
           </p>
-          <p className="mt-2 flex items-center gap-1.5 text-xs text-faint">
+          <p className="mt-2 flex items-center gap-1.5 text-xs text-outline">
             {hasVoice ? <Mic size={13} aria-hidden /> : <Captions size={13} aria-hidden />}
             {hasVoice
               ? 'Озвучка Qwen3-TTS'
@@ -254,7 +254,7 @@ export function ShortPanel({ digestId }: { digestId: string }) {
             {isBusy && <Progress video={video} />}
             {video.status === 'done' && <Player video={video} voices={voices} />}
             {video.status === 'failed' && (
-              <p className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">
+              <p className="rounded-lg bg-error-container px-3 py-2 text-sm text-destructive">
                 {video.error ?? 'Видео собрать не удалось.'}
               </p>
             )}

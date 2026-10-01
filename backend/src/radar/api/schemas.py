@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator, model_validator
 
 from radar.auth.passwords import PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH
 from radar.domain import ProfileSpec, SourceCategory
@@ -102,8 +102,36 @@ class ProfileOut(BaseModel):
     id: uuid.UUID
     version: int
     spec: ProfileSpec
+    icon: str | None = None
+    color: str | None = None
+    # Only the owner lists their profiles, so only the owner sees the link.
+    share_token: str | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class ProfileLook(BaseModel):
+    """A profile's icon and colour: keys of the sets the web app draws, or a
+    colour of the reader's own as #rrggbb."""
+
+    icon: str | None = Field(default=None, pattern=r"^[a-z][a-z_]{1,23}$")
+    color: str | None = Field(default=None, pattern=r"^(?:[a-z]{3,12}|#[0-9a-fA-F]{6})$")
+
+    @field_validator("color")
+    @classmethod
+    def _lower(cls, value: str | None) -> str | None:
+        return value.lower() if value else value
+
+
+class SharedProfileOut(BaseModel):
+    """A profile someone sent by link, as the reader who opened it sees it."""
+
+    spec: ProfileSpec
+    icon: str | None
+    color: str | None
+    # The reader's own profile with the same content: the owner's original,
+    # or a copy added from this link before.
+    own_id: uuid.UUID | None
 
 
 class DigestCreate(BaseModel):

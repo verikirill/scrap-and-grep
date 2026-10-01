@@ -74,6 +74,15 @@ class Article(Base):
     published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     content_hash: Mapped[str] = mapped_column(String(64))
+    # The story's picture: its address, a stored copy (radar.images.store) when
+    # the address alone did not do, and when the page was last asked for one.
+    image_url: Mapped[str | None] = mapped_column(Text)
+    image_key: Mapped[str | None] = mapped_column(String(64))
+    image_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Words of the full text, for the reading time; None while only a teaser is known.
+    word_count: Mapped[int | None] = mapped_column(Integer)
+    # When the page was last read to count them, so it is not read again soon.
+    measured_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     search_tsv: Mapped[Any] = mapped_column(TSVECTOR, Computed(_SEARCH_EXPR, persisted=True))
 
     source: Mapped[Source] = relationship(lazy="joined")
@@ -123,6 +132,24 @@ class User(Base):
     is_demo: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class ApiKey(Base):
+    """A reader's key for the MCP server. Only a hash of the key is stored;
+    the first characters stay readable so the owner can tell keys apart."""
+
+    __tablename__ = "api_keys"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid7)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    name: Mapped[str] = mapped_column(String(80))
+    prefix: Mapped[str] = mapped_column(String(16))
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (Index("ix_api_keys_user", "user_id"),)
 
 
 class UserSession(Base):
@@ -219,12 +246,22 @@ class Profile(Base):
     name: Mapped[str] = mapped_column(String(120))
     spec: Mapped[dict[str, Any]] = mapped_column(JSONB)
     version: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    # How the profile looks in lists: names from the app's icon and colour sets.
+    # Not part of the spec, so a new icon is not a new version of the profile.
+    icon: Mapped[str | None] = mapped_column(String(24))
+    color: Mapped[str | None] = mapped_column(String(12))
+    # A link that hands a copy of the profile to another reader; null while
+    # the owner shares nothing. Owners see it again, so it is kept as is.
+    share_token: Mapped[str | None] = mapped_column(String(32))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    __table_args__ = (Index("ix_profiles_user_created", "user_id", "created_at"),)
+    __table_args__ = (
+        Index("ix_profiles_user_created", "user_id", "created_at"),
+        Index("ux_profiles_share_token", "share_token", unique=True),
+    )
 
 
 class Digest(Base):
@@ -359,4 +396,112 @@ class Video(Base):
             unique=True,
             postgresql_where=text("status IN ('queued', 'running')"),
         ),
+    )
+
+
+class TelegramBot(Base):
+    """A bot a reader connected by its token, to post to their channels."""
+
+    __tablename__ = "tg_bots"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid7)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    telegram_id: Mapped[int] = mapped_column(BigInteger)
+    username: Mapped[str] = mapped_column(String(64))
+    name: Mapped[str] = mapped_column(String(128))
+    # Fernet ciphertext; see radar.publishing.secrets.
+    token_encrypted: Mapped[str] = mapped_column(Text)
+    token_hint: Mapped[str] = mapped_column(String(32))
+    status: Mapped[str] = mapped_column(String(16), default="ok", server_default="ok")
+    last_error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (UniqueConstraint("user_id", "telegram_id", name="uq_tg_bots_user_bot"),)
+
+
+class TelegramChannel(Base):
+    """A channel or group a bot posts to, with what, how and when (settings)."""
+
+    __tablename__ = "tg_channels"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid7)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    bot_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tg_bots.id", ondelete="CASCADE"))
+    chat_id: Mapped[int] = mapped_column(BigInteger)
+    username: Mapped[str | None] = mapped_column(String(64))
+    title: Mapped[str] = mapped_column(String(256))
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    # The audience: whose interests pick the news. NULL pauses the news posts.
+    profile_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("profiles.id", ondelete="SET NULL")
+    )
+    # radar.publishing.settings.ChannelSettings as JSON.
+    settings: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="{}")
+    status: Mapped[str] = mapped_column(String(16), default="ok", server_default="ok")
+    last_error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    bot: Mapped[TelegramBot] = relationship(lazy="joined")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "chat_id", name="uq_tg_channels_user_chat"),
+        Index("ix_tg_channels_enabled", "enabled"),
+    )
+
+
+class TelegramPost(Base):
+    """One post of a channel, from the moment its slot is planned to the
+    message in Telegram.
+
+    Statuses: composing (being written), draft (waits for approval), queued
+    (approved, waits for its slot), sending, sent, failed, skipped (nothing
+    fit the slot).
+    """
+
+    __tablename__ = "tg_posts"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid7)
+    channel_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tg_channels.id", ondelete="CASCADE"))
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    kind: Mapped[str] = mapped_column(String(16), default="news")
+    status: Mapped[str] = mapped_column(String(16), default="composing")
+    # The slot it fills; NULL for a post made by hand outside the schedule.
+    slot_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Not sent before this moment: Telegram asked to wait, or a human chose a time.
+    not_before: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    article_ids: Mapped[list[int]] = mapped_column(
+        ARRAY(BigInteger), default=list, server_default="{}"
+    )
+    # radar.publishing.content.PostContent as JSON.
+    content: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    by_model: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    # Queue it once written, or keep it as a draft for a human to approve.
+    publish_when_ready: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    message_id: Mapped[int | None] = mapped_column(BigInteger)
+    message_url: Mapped[str | None] = mapped_column(Text)
+    error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        # The planner runs every minute and may see one slot many times.
+        Index(
+            "uq_tg_posts_slot",
+            "channel_id",
+            "kind",
+            "slot_at",
+            unique=True,
+            postgresql_where=text("slot_at IS NOT NULL"),
+        ),
+        Index("ix_tg_posts_status_slot", "status", "slot_at"),
+        Index("ix_tg_posts_channel_created", "channel_id", "created_at"),
+        Index("ix_tg_posts_articles", "article_ids", postgresql_using="gin"),
     )

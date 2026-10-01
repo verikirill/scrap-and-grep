@@ -13,6 +13,7 @@ from fastapi.sse import EventSourceResponse, ServerSentEvent
 from sqlalchemy import select
 
 from radar.api.deps import CacheDep, CurrentUser, SessionDep, SettingsDep, user_rate_limit
+from radar.api.reading import measure_soon
 from radar.api.schemas import CompareOut, DigestCreate, InterestChange, ScoreChange
 from radar.db import session_scope
 from radar.db.models import Digest, Profile
@@ -176,7 +177,14 @@ def _settings_changed(base: ProfileSpec, other: ProfileSpec) -> list[str]:
 
 @router.get("/digests/{digest_id}")
 async def get_digest(digest_id: uuid.UUID, session: SessionDep, user: CurrentUser) -> DigestView:
-    return digest_view(await _load(session, user, digest_id, full=True))
+    view = digest_view(await _load(session, user, digest_id, full=True))
+    await measure_soon(
+        item.article_id
+        for topic in view.topics
+        for item in topic.items
+        if item.reading_minutes is None
+    )
+    return view
 
 
 @router.delete(

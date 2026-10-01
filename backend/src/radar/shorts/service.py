@@ -31,6 +31,7 @@ from radar.shorts.model import (
     STATUS_RUNNING,
     ShortError,
 )
+from radar.shorts.pictures import beat_pictures
 from radar.shorts.renderer import RendererBusy, RendererRejected, render
 from radar.shorts.script import (
     HeuristicScriptWriter,
@@ -192,7 +193,9 @@ def _write(path: Path, data: bytes) -> None:
     os.replace(partial, path)
 
 
-async def _render_when_free(url: str, props: dict[str, Any], audio: bytes | None) -> bytes:
+async def _render_when_free(
+    url: str, props: dict[str, Any], audio: bytes | None, images: list[bytes | None]
+) -> bytes:
     """Render, waiting while the renderer's queue is full.
 
     The queue retries a failed task at once (taskiq's retry delay needs a
@@ -202,10 +205,10 @@ async def _render_when_free(url: str, props: dict[str, Any], audio: bytes | None
     timeout = get_settings().shorts_timeout_seconds
     for _ in range(RENDER_BUSY_ATTEMPTS - 1):
         try:
-            return await render(url, props, audio, request_timeout=timeout)
+            return await render(url, props, audio, images, request_timeout=timeout)
         except RendererBusy:
             await asyncio.sleep(RENDER_BUSY_WAIT_SECONDS)
-    return await render(url, props, audio, request_timeout=timeout)
+    return await render(url, props, audio, images, request_timeout=timeout)
 
 
 async def process(video_id: uuid.UUID) -> bool:
@@ -240,7 +243,9 @@ async def process(video_id: uuid.UUID) -> bool:
             audience=view.profile.name,
         )
         await _update(video_id, stage=STAGE_RENDER, progress=0.55)
-        video = await _render_when_free(settings.shorts_url, props, narration.audio)
+        pictures = await beat_pictures([beat.article_id for beat in script.beats])
+        images = [picture.data if picture else None for picture in pictures]
+        video = await _render_when_free(settings.shorts_url, props, narration.audio, images)
     except ShortError as exc:
         await fail(video_id, str(exc))
         return True
@@ -268,6 +273,7 @@ async def process(video_id: uuid.UUID) -> bool:
         beats=len(script.beats),
         by_model=script.by_model,
         voice=narration.voice,
+        pictures=sum(image is not None for image in images),
         duration_ms=props["durationMs"],
         size_bytes=len(video),
     )

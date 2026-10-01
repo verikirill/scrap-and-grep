@@ -18,14 +18,17 @@ import type {
   ProfileSpec,
   ProgressEvent,
   ReactionKind,
+  SharedProfile,
   Resume,
   Source,
   SourceCreate,
   Video,
+  DigestPeriod,
 } from './api'
 
 export const keys = {
   meta: ['meta'] as const,
+  mcpKeys: ['mcp-keys'] as const,
   me: ['me'] as const,
   resume: ['resume'] as const,
   feed: ['feed'] as const,
@@ -75,6 +78,15 @@ export const useDigest = (id: string | undefined) =>
     refetchInterval: (query) => (isBuilding(query.state.data) ? ACTIVE_POLL_MS : false),
   })
 
+/** Put a profile the server returned into the cached list, new or replaced. */
+function putProfile(client: QueryClient, profile: Profile): void {
+  client.setQueryData<Profile[]>(keys.profiles, (list = []) =>
+    list.some((item) => item.id === profile.id)
+      ? list.map((item) => (item.id === profile.id ? profile : item))
+      : [...list, profile],
+  )
+}
+
 export function useSaveProfile() {
   const client = useQueryClient()
   return useMutation({
@@ -83,11 +95,7 @@ export function useSaveProfile() {
     onSuccess: (profile) => {
       // Put the saved version into the cache at once: the editor compares its
       // draft with it, and must not look "unsaved" until a refetch arrives.
-      client.setQueryData<Profile[]>(keys.profiles, (list = []) =>
-        list.some((item) => item.id === profile.id)
-          ? list.map((item) => (item.id === profile.id ? profile : item))
-          : [...list, profile],
-      )
+      putProfile(client, profile)
       // Interests are part of the reader's taste.
       void client.invalidateQueries({ queryKey: keys.feed })
       void client.invalidateQueries({ queryKey: keys.taste })
@@ -111,8 +119,8 @@ export function useDeleteProfile() {
 export function useCreateDigest() {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: ({ profileId, days }: { profileId: string; days: number }) =>
-      api.createDigest(profileId, days),
+    mutationFn: ({ profileId, period }: { profileId: string; period: DigestPeriod }) =>
+      api.createDigest(profileId, period),
     onSuccess: (created) => {
       client.setQueryData<DigestSummary[]>(keys.digests, (list) => [created, ...(list ?? [])])
     },
@@ -561,6 +569,93 @@ export function useFeedback() {
     onSuccess: (_data, feedback) => {
       void client.invalidateQueries({ queryKey: keys.taste })
       if (feedback.kind === 'save') void client.invalidateQueries({ queryKey: keys.saved })
+    },
+  })
+}
+
+export const useMcpKeys = () => useQuery({ queryKey: keys.mcpKeys, queryFn: api.mcpKeys })
+
+export function useCreateMcpKey() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: api.createMcpKey,
+    onSuccess: () => client.invalidateQueries({ queryKey: keys.mcpKeys }),
+  })
+}
+
+export function useRevokeMcpKey() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: api.revokeMcpKey,
+    onSuccess: () => client.invalidateQueries({ queryKey: keys.mcpKeys }),
+  })
+}
+
+const LOOK = ['profile-look'] as const
+
+/** A profile's icon and colour: shown at once, confirmed or reverted by the server. */
+export function useSetProfileLook() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationKey: LOOK,
+    // One after another: quick picks reach the server, behind any replica, in
+    // the order they were made.
+    scope: { id: 'profile-look' },
+    mutationFn: ({ id, icon, color }: { id: string; icon: string | null; color: string | null }) =>
+      api.setProfileLook(id, { icon, color }),
+    onMutate: async ({ id, icon, color }) => {
+      await client.cancelQueries({ queryKey: keys.profiles })
+      const previous = client.getQueryData<Profile[]>(keys.profiles)
+      client.setQueryData<Profile[]>(keys.profiles, (list) =>
+        list?.map((profile) => (profile.id === id ? { ...profile, icon, color } : profile)),
+      )
+      return { previous }
+    },
+    onError: (_error, _vars, context) => client.setQueryData(keys.profiles, context?.previous),
+    // Only the last pick refetches: an earlier answer would overwrite the
+    // later picks still shown ahead of the server.
+    onSettled: () =>
+      client.isMutating({ mutationKey: LOOK }) === 1
+        ? client.invalidateQueries({ queryKey: keys.profiles })
+        : undefined,
+  })
+}
+
+/** The owner opens or closes the link of a profile. */
+export function useProfileLink() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, isShared }: { id: string; isShared: boolean }) =>
+      isShared ? api.shareProfile(id) : api.unshareProfile(id),
+    onSuccess: (profile) => putProfile(client, profile),
+  })
+}
+
+const sharedKey = (token: string) => ['shared-profile', token] as const
+
+/** What a link hands over. Never the answer for another link meanwhile. */
+export const useSharedProfile = (token: string) =>
+  useQuery({
+    queryKey: sharedKey(token),
+    queryFn: () => api.sharedProfile(token),
+    placeholderData: undefined,
+    staleTime: 0,
+  })
+
+/** Add a copy of a shared profile; the list and the reader's taste follow. */
+export function useAcceptSharedProfile() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: api.acceptSharedProfile,
+    onSuccess: (profile, token) => {
+      putProfile(client, profile)
+      // The link opened again says the profile is already there.
+      client.setQueryData<SharedProfile>(sharedKey(token), (shared) =>
+        shared ? { ...shared, own_id: profile.id } : shared,
+      )
+      void client.invalidateQueries({ queryKey: keys.feed })
+      void client.invalidateQueries({ queryKey: keys.taste })
+      void client.invalidateQueries({ queryKey: keys.profiles })
     },
   })
 }

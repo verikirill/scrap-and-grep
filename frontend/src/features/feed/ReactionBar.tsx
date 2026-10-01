@@ -1,12 +1,12 @@
 import clsx from 'clsx'
-import { Bookmark, EyeOff, ThumbsDown, ThumbsUp } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+import { Bookmark, EyeOff, ThumbsDown, ThumbsUp } from '../../components/icons'
+import type { IconComponent } from '../../components/icons'
 import { motion } from 'motion/react'
 import type { ReactionKind } from '../../lib/api'
 
 type Action = {
   kind: ReactionKind
-  icon: LucideIcon
+  icon: IconComponent
   label: string
   activeLabel: string
   activeClass: string
@@ -18,28 +18,28 @@ const ACTIONS: Action[] = [
     icon: ThumbsUp,
     label: 'Больше такого',
     activeLabel: 'Убрать отметку «больше такого»',
-    activeClass: 'bg-ok-soft text-ok',
+    activeClass: 'bg-success-container text-success',
   },
   {
     kind: 'dislike',
     icon: ThumbsDown,
     label: 'Меньше такого',
     activeLabel: 'Убрать отметку «меньше такого»',
-    activeClass: 'bg-danger-soft text-danger',
+    activeClass: 'bg-error-container text-destructive',
   },
   {
     kind: 'save',
     icon: Bookmark,
     label: 'Сохранить',
     activeLabel: 'Убрать из сохранённого',
-    activeClass: 'bg-spark-soft text-spark',
+    activeClass: 'bg-spark-container text-spark',
   },
   {
     kind: 'hide',
     icon: EyeOff,
     label: 'Скрыть',
     activeLabel: 'Вернуть в ленту',
-    activeClass: 'bg-sunken text-text',
+    activeClass: 'bg-surface-container text-foreground',
   },
 ]
 
@@ -82,7 +82,9 @@ export function ReactionBar({
             onClick={() => onReact(kind, !isActive)}
             className={clsx(
               'grid size-8 place-items-center rounded-lg transition-colors duration-150 disabled:opacity-40',
-              isActive ? activeClass : 'text-faint hover:bg-sunken hover:text-text',
+              isActive
+                ? activeClass
+                : 'text-outline hover:bg-surface-container hover:text-foreground',
             )}
           >
             <Icon size={16} fill={isActive && kind !== 'hide' ? 'currentColor' : 'none'} />

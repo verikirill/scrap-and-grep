@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { ArrowDown, ArrowRight, ArrowUp, GitCompareArrows, Minus, Plus } from 'lucide-react'
+import { ArrowDown, ArrowRight, ArrowUp, GitCompareArrows, Minus, Plus } from '../components/icons'
 import { motion } from 'motion/react'
 import type { ReactNode } from 'react'
 import { useSearchParams } from 'react-router'
@@ -36,13 +36,16 @@ function Column({
 }) {
   return (
     <Card className="flex min-w-0 flex-col overflow-hidden">
-      <div className="flex items-center gap-2.5 border-b border-line px-4 py-3">
+      <div className="flex items-center gap-2.5 border-b border-outline-variant px-4 py-3">
         <span className={clsx('grid size-6 place-items-center rounded-md', tone)}>{icon}</span>
         <h2 className="text-sm font-semibold">{title}</h2>
-        <AnimatedNumber value={count} className="ml-auto text-sm font-semibold text-muted" />
+        <AnimatedNumber
+          value={count}
+          className="ml-auto text-sm font-semibold text-muted-foreground"
+        />
       </div>
-      <ul className="divide-y divide-line">{children}</ul>
-      {count === 0 && <p className="px-4 py-6 text-center text-xs text-faint">Пусто</p>}
+      <ul className="divide-y divide-outline-variant">{children}</ul>
+      {count === 0 && <p className="px-4 py-6 text-center text-xs text-outline">Пусто</p>}
     </Card>
   )
 }
@@ -55,17 +58,17 @@ function Row({ item, index, trailing }: { item: DigestItem; index: number; trail
           href={externalHref(item.url)}
           target="_blank"
           rel="noopener noreferrer"
-          className="line-clamp-2 text-[13px] leading-snug hover:text-accent-text"
+          className="line-clamp-2 text-[13px] leading-snug hover:text-on-primary-container"
         >
           {item.headline}
         </a>
-        <p className="mt-0.5 truncate text-[11px] text-faint">
+        <p className="mt-0.5 truncate text-[11px] text-outline">
           {item.source_name}
           {item.interest_title && ` · ${item.interest_title}`}
         </p>
       </div>
       {trailing ?? (
-        <span className="tabular mt-0.5 text-xs font-semibold text-muted">
+        <span className="tabular mt-0.5 text-xs font-semibold text-muted-foreground">
           {item.score.toFixed(2)}
         </span>
       )}
@@ -75,13 +78,13 @@ function Row({ item, index, trailing }: { item: DigestItem; index: number; trail
 
 function Delta({ delta }: { delta: number }) {
   if (Math.abs(delta) < 0.005)
-    return <span className="tabular mt-0.5 text-xs text-faint">0.00</span>
+    return <span className="tabular mt-0.5 text-xs text-outline">0.00</span>
   const up = delta > 0
   return (
     <span
       className={clsx(
         'tabular mt-0.5 flex items-center gap-0.5 text-xs font-semibold',
-        up ? 'text-ok' : 'text-spark',
+        up ? 'text-success' : 'text-spark',
       )}
     >
       {up ? <ArrowUp size={11} strokeWidth={3} /> : <ArrowDown size={11} strokeWidth={3} />}
@@ -134,7 +137,7 @@ export function ComparePage() {
                 </option>
               ))}
             </select>
-            <ArrowRight size={18} className="mx-auto hidden text-faint sm:block" />
+            <ArrowRight size={18} className="mx-auto hidden text-outline sm:block" />
             <select
               aria-label="Стало"
               className={INPUT_CLASS}
@@ -151,7 +154,9 @@ export function ComparePage() {
 
           <ErrorNote error={comparison.error} />
           {base && base === other && (
-            <p className="text-sm text-muted">Выбран один и тот же выпуск. Выберите два разных.</p>
+            <p className="text-sm text-muted-foreground">
+              Выбран один и тот же выпуск. Выберите два разных.
+            </p>
           )}
 
           {comparison.data && (
@@ -165,7 +170,7 @@ export function ComparePage() {
               {(comparison.data.interest_changes.length > 0 ||
                 comparison.data.settings_changed.length > 0) && (
                 <Card className="p-4">
-                  <h2 className="mb-2 text-xs font-semibold tracking-wide text-muted uppercase">
+                  <h2 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                     Что изменили в профиле
                   </h2>
                   <div className="flex flex-wrap gap-1.5">
@@ -188,7 +193,7 @@ export function ComparePage() {
                 <Column
                   title="Появилось"
                   count={comparison.data.added.length}
-                  tone="bg-ok-soft text-ok"
+                  tone="bg-success-container text-success"
                   icon={<Plus size={14} strokeWidth={3} />}
                 >
                   {comparison.data.added.map((item, index) => (
@@ -198,7 +203,7 @@ export function ComparePage() {
                 <Column
                   title="Ушло"
                   count={comparison.data.removed.length}
-                  tone="bg-danger-soft text-danger"
+                  tone="bg-error-container text-destructive"
                   icon={<Minus size={14} strokeWidth={3} />}
                 >
                   {comparison.data.removed.map((item, index) => (
@@ -208,7 +213,7 @@ export function ComparePage() {
                 <Column
                   title="Осталось"
                   count={comparison.data.kept.length}
-                  tone="bg-sunken text-muted"
+                  tone="bg-surface-container text-muted-foreground"
                   icon={<ArrowRight size={14} strokeWidth={3} />}
                 >
                   {comparison.data.kept.map((change, index) => (

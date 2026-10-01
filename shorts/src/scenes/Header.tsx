@@ -1,5 +1,5 @@
 import { interpolate, useCurrentFrame, useVideoConfig } from 'remotion'
-import { COLORS, SAFE, TEXT_FONT } from '../theme'
+import { COLORS, SAFE, TEXT_FONT, alpha } from '../theme'
 import type { Beat } from '../types'
 
 type Props = {
@@ -74,7 +74,7 @@ export function Header({ brand, period, beats }: Props) {
               height: 18,
               borderRadius: '50%',
               background: COLORS.accent,
-              boxShadow: `0 0 0 8px rgba(125, 155, 255, 0.22)`,
+              boxShadow: `0 0 0 8px ${alpha(COLORS.accent, 0.22)}`,
             }}
           />
           {brand}

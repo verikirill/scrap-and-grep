@@ -1,8 +1,9 @@
+import { cn } from '../../lib/utils'
 import clsx from 'clsx'
-import { ChevronDown, Plus, Trash2 } from 'lucide-react'
+import { ChevronDown, Plus, Trash2 } from '../../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { ChipsInput } from '../../components/ChipsInput'
 import { EASE, INPUT_CLASS, shortId } from '../../components/tokens'
 import { Button, Card, Chip, Field } from '../../components/ui'
@@ -43,7 +44,7 @@ function InterestEditor({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.98 }}
       transition={{ duration: 0.25, ease: EASE }}
-      className="rounded-xl border border-line bg-surface"
+      className="rounded-xl border border-outline-variant bg-card"
     >
       <button
         type="button"
@@ -57,7 +58,7 @@ function InterestEditor({
             {interest.title || 'Новый интерес'}
           </span>
           {!isOpen && (
-            <span className="mt-0.5 block truncate text-xs text-muted">
+            <span className="mt-0.5 block truncate text-xs text-muted-foreground">
               {interest.keywords.length > 0
                 ? interest.keywords.slice(0, 6).join(', ')
                 : 'ключевые слова не заданы'}
@@ -70,7 +71,7 @@ function InterestEditor({
           </Chip>
         )}
         <motion.span animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
-          <ChevronDown size={17} className="text-muted" />
+          <ChevronDown size={17} className="text-muted-foreground" />
         </motion.span>
       </button>
       <AnimatePresence initial={false}>
@@ -83,7 +84,7 @@ function InterestEditor({
             className="overflow-hidden"
             id={`interest-panel-${interest.id}`}
           >
-            <div className="space-y-3.5 border-t border-line px-4 py-4">
+            <div className="space-y-3.5 border-t border-outline-variant px-4 py-4">
               <Field label="Название">
                 <input
                   className={INPUT_CLASS}
@@ -94,7 +95,7 @@ function InterestEditor({
               </Field>
               <Field label="Что именно интересует" hint="по этому тексту идёт смысловой поиск">
                 <textarea
-                  className={clsx(INPUT_CLASS, 'min-h-16 resize-y')}
+                  className={cn(INPUT_CLASS, 'min-h-16 resize-y')}
                   value={interest.description}
                   maxLength={600}
                   onChange={(event) => onChange({ ...interest, description: event.target.value })}
@@ -118,7 +119,10 @@ function InterestEditor({
                     value={interest.weight}
                     style={fill(interest.weight, 0.5, 1.5)}
                     onChange={(event) =>
-                      onChange({ ...interest, weight: Number(event.target.value) })
+                      onChange({
+                        ...interest,
+                        weight: Number(event.target.value),
+                      })
                     }
                     className="w-full"
                   />
@@ -146,9 +150,12 @@ const CATEGORIES = Object.keys(CATEGORY_LABELS) as SourceCategory[]
 export function ProfileForm({
   spec,
   onChange,
+  look,
 }: {
   spec: ProfileSpec
   onChange: (next: ProfileSpec) => void
+  /** The icon and colour picker, beside the name; a new profile has none yet. */
+  look?: ReactNode
 }) {
   const [openId, setOpenId] = useState<string | null>(null)
 
@@ -180,17 +187,20 @@ export function ProfileForm({
   return (
     <div className="space-y-5">
       <Card className="space-y-4 p-5">
-        <Field label="Название профиля">
-          <input
-            className={INPUT_CLASS}
-            value={spec.name}
-            maxLength={120}
-            onChange={(event) => onChange({ ...spec, name: event.target.value })}
-          />
-        </Field>
+        <div className="flex items-end gap-3">
+          {look}
+          <Field label="Название профиля" className="min-w-0 flex-1">
+            <input
+              className={INPUT_CLASS}
+              value={spec.name}
+              maxLength={120}
+              onChange={(event) => onChange({ ...spec, name: event.target.value })}
+            />
+          </Field>
+        </div>
         <Field label="Кто читатель" hint="модель пишет «почему важно» под эту роль">
           <textarea
-            className={clsx(INPUT_CLASS, 'min-h-20 resize-y')}
+            className={cn(INPUT_CLASS, 'min-h-20 resize-y')}
             value={spec.role}
             maxLength={600}
             onChange={(event) => onChange({ ...spec, role: event.target.value })}
@@ -274,7 +284,7 @@ export function ProfileForm({
         <div>
           <p className="mb-2 flex items-baseline justify-between text-[13px] font-medium">
             Источники
-            <span className="text-xs font-normal text-faint">
+            <span className="text-xs font-normal text-outline">
               {spec.categories.length === 0 ? 'все категории' : 'только выбранные'}
             </span>
           </p>
@@ -290,8 +300,8 @@ export function ProfileForm({
                   className={clsx(
                     'rounded-lg border px-2.5 py-1 text-[13px] transition-colors duration-150',
                     active
-                      ? 'border-accent bg-accent-soft text-accent-text'
-                      : 'border-line text-muted hover:border-faint hover:text-text',
+                      ? 'border-primary bg-primary-container text-on-primary-container'
+                      : 'border-outline-variant text-muted-foreground hover:border-outline hover:text-foreground',
                   )}
                 >
                   {CATEGORY_LABELS[category]}

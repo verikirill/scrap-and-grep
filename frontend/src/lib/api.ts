@@ -26,8 +26,22 @@ export interface Profile {
   id: string
   version: number
   spec: ProfileSpec
+  /** Keys of the app's icon and colour sets (lib/profileLook), or #rrggbb; null until picked. */
+  icon: string | null
+  color: string | null
+  /** The link that hands a copy to another reader; null while nothing is shared. */
+  share_token: string | null
   created_at: string
   updated_at: string
+}
+
+/** A profile someone sent by link, before the reader decides to take it. */
+export interface SharedProfile {
+  spec: ProfileSpec
+  icon: string | null
+  color: string | null
+  /** The reader's own profile with the same content: their original or an earlier copy. */
+  own_id: string | null
 }
 
 export interface Source {
@@ -102,6 +116,23 @@ export interface DigestStats {
   duration_seconds?: number
 }
 
+/** A digest's period: days back from now, or two dates. */
+export type DigestPeriod = { days: number } | { start: Date; end: Date }
+
+/** A key an AI assistant uses to reach the reader's news over MCP. */
+export interface McpKey {
+  id: string
+  name: string
+  /** The first characters, to tell keys apart; the key itself is shown once. */
+  prefix: string
+  created_at: string
+  last_used_at: string | null
+}
+
+export interface NewMcpKey extends McpKey {
+  token: string
+}
+
 export interface DigestSummary {
   id: string
   profile_id: string | null
@@ -147,6 +178,8 @@ export interface DigestItem {
   why: string
   duplicates: Duplicate[]
   reject_reason: string | null
+  /** Minutes to read the full text; null until its page has been read. */
+  reading_minutes: number | null
 }
 
 export interface Topic {
@@ -314,6 +347,8 @@ export interface FeedItem {
   published_at: string
   score: number
   explore: boolean
+  /** Minutes to read the full text; null until its page has been read. */
+  reading_minutes: number | null
   reasons: FeedReason[]
   /** Contribution of each part of the evidence; empty for saved items. */
   parts: Record<string, number>
@@ -378,7 +413,7 @@ function describe(detail: unknown, status: number): string {
   return `Ошибка ${status}`
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response
   try {
     response = await fetch(`${API_BASE}${path}`, {
@@ -396,12 +431,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T
 }
 
-const json = (method: string, body: unknown): RequestInit => ({
+export const json = (method: string, body: unknown): RequestInit => ({
   method,
   body: JSON.stringify(body),
 })
 
-function query(params: Record<string, string | number | string[] | undefined>): string {
+export function query(params: Record<string, string | number | string[] | undefined>): string {
   const search = new URLSearchParams()
   for (const [key, value] of Object.entries(params)) {
     if (value === undefined || value === '') continue
@@ -423,6 +458,9 @@ export const api = {
   demoLogin: () => request<User>('/auth/demo', { method: 'POST' }),
   logout: () => request<void>('/auth/logout', { method: 'POST' }),
   deleteAccount: (password: string) => request<void>('/auth/me/delete', json('POST', { password })),
+  mcpKeys: () => request<McpKey[]>('/mcp/keys'),
+  createMcpKey: (name: string) => request<NewMcpKey>('/mcp/keys', json('POST', { name })),
+  revokeMcpKey: (id: string) => request<void>(`/mcp/keys/${id}`, { method: 'DELETE' }),
 
   /** `null` when no resume has been uploaded. */
   resume: () => request<Resume | null>('/resume'),
@@ -464,6 +502,14 @@ export const api = {
   updateProfile: (id: string, spec: ProfileSpec) =>
     request<Profile>(`/profiles/${id}`, json('PUT', spec)),
   deleteProfile: (id: string) => request<void>(`/profiles/${id}`, { method: 'DELETE' }),
+  setProfileLook: (id: string, look: { icon: string | null; color: string | null }) =>
+    request<Profile>(`/profiles/${id}/look`, json('PATCH', look)),
+  shareProfile: (id: string) => request<Profile>(`/profiles/${id}/share`, { method: 'POST' }),
+  unshareProfile: (id: string) => request<Profile>(`/profiles/${id}/share`, { method: 'DELETE' }),
+  sharedProfile: (token: string) =>
+    request<SharedProfile>(`/shared-profiles/${encodeURIComponent(token)}`),
+  acceptSharedProfile: (token: string) =>
+    request<Profile>(`/shared-profiles/${encodeURIComponent(token)}/accept`, { method: 'POST' }),
   preview: (profile: ProfileSpec, periodDays: number, signal?: AbortSignal) =>
     request<Preview>('/selection/preview', {
       ...json('POST', { profile, period_days: periodDays }),
@@ -491,10 +537,21 @@ export const api = {
   digests: (profileId?: string) =>
     request<DigestSummary[]>(`/digests${query({ profile_id: profileId, limit: 40 })}`),
   digest: (id: string) => request<Digest>(`/digests/${id}`),
-  createDigest: (profileId: string, periodDays: number) =>
+  /** A period is a number of days back from now, or two dates. */
+  createDigest: (profileId: string, period: DigestPeriod) =>
     request<DigestSummary>(
       '/digests',
-      json('POST', { profile_id: profileId, period_days: periodDays }),
+      json(
+        'POST',
+        'days' in period
+          ? { profile_id: profileId, period_days: period.days }
+          : {
+              profile_id: profileId,
+              period_days: null,
+              period_start: period.start.toISOString(),
+              period_end: period.end.toISOString(),
+            },
+      ),
     ),
   deleteDigest: (id: string) => request<void>(`/digests/${id}`, { method: 'DELETE' }),
   compare: (base: string, other: string) =>

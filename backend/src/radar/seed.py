@@ -55,6 +55,13 @@ DEFAULT_SOURCES: tuple[tuple[str, str, str, str, str, str, bool], ...] = (
     ("nkcki", "НКЦКИ (safe-surf.ru)", "https://safe-surf.ru/rss/", "https://safe-surf.ru", "regulator", "ru", True),
 )  # fmt: skip
 
+# How the example profiles look in lists (see ProfileLook).
+EXAMPLE_LOOKS = {
+    "Специалист по ИБ АСУ ТП": ("shield", "red"),
+    "Руководитель ИТ-инфраструктуры": ("servers", "blue"),
+    "Директор по цифровой трансформации": ("network", "violet"),
+}
+
 DEFAULT_PROFILES: tuple[ProfileSpec, ...] = (
     ProfileSpec(
         name="Специалист по ИБ АСУ ТП",
@@ -212,7 +219,16 @@ async def seed_defaults(session: AsyncSession) -> dict[str, int]:
     owned = select(func.count()).select_from(Profile).where(Profile.user_id == demo_id)
     if demo_id is not None and not await session.scalar(owned):
         for spec in DEFAULT_PROFILES:
-            session.add(Profile(user_id=demo_id, name=spec.name, spec=spec.model_dump(mode="json")))
+            icon, color = EXAMPLE_LOOKS.get(spec.name, (None, None))
+            session.add(
+                Profile(
+                    user_id=demo_id,
+                    name=spec.name,
+                    spec=spec.model_dump(mode="json"),
+                    icon=icon,
+                    color=color,
+                )
+            )
             profiles_added += 1
     return {"sources": len(inserted.all()), "profiles": profiles_added}
 

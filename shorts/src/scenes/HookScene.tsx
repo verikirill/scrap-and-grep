@@ -2,14 +2,18 @@ import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } fr
 import { COLORS, DISPLAY_FONT, SAFE, TEXT_FONT } from '../theme'
 import type { Beat } from '../types'
 import { VISUAL_STYLE } from '../visuals'
+import { Covers } from './Photo'
 import { Words } from './Words'
 
 type Props = {
   hook: string
   audience: string
-  beats: Pick<Beat, 'kicker' | 'visual'>[]
+  beats: Pick<Beat, 'kicker' | 'visual' | 'imageSrc'>[]
   durationInFrames: number
 }
+
+// One picture on the cover is a coincidence; two or three show what is ahead.
+const MIN_COVERS = 2
 
 /** The first seconds: a loud promise of what is coming, over a pulsing ring. */
 export function HookScene({ hook, audience, beats, durationInFrames }: Props) {
@@ -32,6 +36,9 @@ export function HookScene({ hook, audience, beats, durationInFrames }: Props) {
   const accentIndex = Math.max(
     0,
     words.findIndex((word) => /\d/.test(word)),
+  )
+  const covers = beats.flatMap((beat) =>
+    beat.imageSrc ? [{ src: beat.imageSrc, color: VISUAL_STYLE[beat.visual].color }] : [],
   )
 
   return (
@@ -94,6 +101,7 @@ export function HookScene({ hook, audience, beats, durationInFrames }: Props) {
           }}
         />
         <Contents beats={beats} />
+        {covers.length >= MIN_COVERS && <Covers pictures={covers} />}
       </div>
     </AbsoluteFill>
   )

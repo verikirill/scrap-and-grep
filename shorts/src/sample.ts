@@ -21,10 +21,10 @@ const LINES = [
   'ФСТЭК обновила требования к значимым объектам КИИ.',
   'Шифровальщик остановил диспетчерскую европейской сетевой компании.',
 ]
-const OUTRO = 'Полный дайджест со ссылками ждёт в Радаре'
+const OUTRO = 'Полный дайджест со ссылками ждёт в Tail and Grep'
 
 export const SAMPLE_PROPS: ShortProps = {
-  brand: 'Радар',
+  brand: 'Tail&Grep',
   period: '23-30 сентября',
   audience: 'ИБ АСУ ТП',
   hook: HOOK,
@@ -39,6 +39,7 @@ export const SAMPLE_PROPS: ShortProps = {
       source: 'SecurityWeek',
       url: 'https://example.org/news/siemens-simatic',
       date: '29 сентября',
+      imageSrc: null,
       startMs: 3000,
       endMs: 8000,
     },
@@ -51,6 +52,7 @@ export const SAMPLE_PROPS: ShortProps = {
       source: 'НКЦКИ',
       url: 'https://example.org/news/fstec-kii',
       date: '27 сентября',
+      imageSrc: null,
       startMs: 8000,
       endMs: 13000,
     },
@@ -63,6 +65,7 @@ export const SAMPLE_PROPS: ShortProps = {
       source: 'Industrial Cyber',
       url: 'https://example.org/news/ransomware-dispatch',
       date: '25 сентября',
+      imageSrc: null,
       startMs: 13000,
       endMs: 18000,
     },

@@ -3,9 +3,11 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { SAMPLE_PROPS } from '../src/sample.ts'
 import { shortSchema } from '../src/schema.ts'
-import { isWav, parseRange } from './assets.ts'
+import { isWav, parseRange, pictureType } from './assets.ts'
+import { HttpError } from './http.ts'
+import { MAX_PICTURE_BYTES, parseRequest } from './request.ts'
 import { SerialQueue } from './queue.ts'
-import { factShape, fitFontSize, formatCount, severityColor } from '../src/visuals.ts'
+import { factShape, fitFontSize, formatCount, labelFontSize, severityColor } from '../src/visuals.ts'
 import { MAX_QR_SIZE, MIN_MODULE_PX, makeQr } from '../src/qr.ts'
 
 describe('range requests for the narration', () => {
@@ -130,6 +132,13 @@ describe('pictures of facts', () => {
     assert.equal(fitFontSize('48', 250, 88), 88)
   })
 
+  it('keeps an identifier on one line and lets a sentence wrap', () => {
+    // 22 px of Unbounded fits the 14 characters of a CVE id into 290 px.
+    assert.equal(labelFontSize('CVE-2026-71379', 290, 30), 22)
+    assert.equal(labelFontSize('48 часов', 290, 30), 30)
+    assert.equal(labelFontSize('до конца первого квартала 2027 года', 290, 30), 20)
+  })
+
   it('colours a CVSS score by the bands of the standard', () => {
     assert.equal(severityColor(9.8), severityColor(9))
     assert.notEqual(severityColor(8.9), severityColor(9))
@@ -162,5 +171,47 @@ describe('source address on a card', () => {
     assert.equal(makeQr(`https://example.org/${'a'.repeat(390)}`), null)
     // More than a QR code holds is no code, not a crash.
     assert.equal(makeQr('a'.repeat(5000)), null)
+  })
+})
+
+describe('pictures of the news', () => {
+  const jpeg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(64)])
+  const request = (images: (string | null)[], props: object = SAMPLE_PROPS) =>
+    Buffer.from(JSON.stringify({ props, audio: null, images }))
+
+  it('tells a picture by its bytes, not by its name', () => {
+    assert.deepEqual(pictureType(jpeg), { type: 'image/jpeg', extension: 'jpg' })
+    const webp = Buffer.alloc(32)
+    webp.write('RIFF', 0, 'latin1')
+    webp.write('WEBP', 8, 'latin1')
+    assert.equal(pictureType(webp)?.extension, 'webp')
+    // An animated GIF would run on the browser's clock, not the video's.
+    assert.equal(pictureType(Buffer.from('GIF89a and the rest of it')), null)
+    assert.equal(pictureType(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>')), null)
+  })
+
+  it('takes one picture per news item, or none', () => {
+    const job = parseRequest(request([jpeg.toString('base64'), null]))
+    assert.equal(job.pictures.length, 2)
+    assert.equal(job.pictures[0]?.type, 'image/jpeg')
+    assert.equal(job.pictures[1], null)
+    // Older callers send no pictures at all.
+    const none = parseRequest(Buffer.from(JSON.stringify({ props: SAMPLE_PROPS, audio: null })))
+    assert.deepEqual(none.pictures, [])
+  })
+
+  it('keeps the picture addresses its own', () => {
+    const [first, ...rest] = SAMPLE_PROPS.beats
+    const props = { ...SAMPLE_PROPS, beats: [{ ...first, imageSrc: 'http://169.254.169.254/latest' }, ...rest] }
+    const job = parseRequest(request([], props))
+    assert.ok(job.props.beats.every((beat) => beat.imageSrc === null))
+  })
+
+  it('refuses what is not a picture, too many pictures and too large ones', () => {
+    const refused = (images: (string | null)[], status: number) =>
+      assert.throws(() => parseRequest(request(images)), (error: unknown) => error instanceof HttpError && error.status === status)
+    refused([Buffer.from('<html>').toString('base64')], 400)
+    refused(SAMPLE_PROPS.beats.map(() => null).concat([null]), 400)
+    refused(['A'.repeat(Math.ceil((MAX_PICTURE_BYTES * 4) / 3) + 8)], 413)
   })
 })

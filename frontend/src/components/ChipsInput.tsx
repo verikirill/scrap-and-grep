@@ -1,4 +1,4 @@
-import { X } from 'lucide-react'
+import { X } from './icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import type { KeyboardEvent } from 'react'
@@ -34,7 +34,7 @@ export function ChipsInput({ values, onChange, placeholder, label, max = 30 }: P
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-line bg-surface px-2 py-1.5 transition-colors focus-within:border-accent hover:border-faint">
+    <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-outline-variant bg-card px-2 py-1.5 transition-colors focus-within:border-primary hover:border-outline">
       <AnimatePresence initial={false}>
         {values.map((value) => (
           <motion.span
@@ -44,14 +44,14 @@ export function ChipsInput({ values, onChange, placeholder, label, max = 30 }: P
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.85 }}
             transition={{ duration: 0.15 }}
-            className="inline-flex items-center gap-1 rounded-md bg-sunken py-0.5 pr-1 pl-2 text-[13px]"
+            className="inline-flex items-center gap-1 rounded-md bg-surface-container py-0.5 pr-1 pl-2 text-[13px]"
           >
             {value}
             <button
               type="button"
               aria-label={`Убрать «${value}»`}
               onClick={() => onChange(values.filter((item) => item !== value))}
-              className="grid size-4 place-items-center rounded text-faint hover:bg-line hover:text-text"
+              className="grid size-4 place-items-center rounded text-outline hover:bg-outline-variant hover:text-foreground"
             >
               <X size={11} strokeWidth={2.5} />
             </button>
@@ -65,7 +65,7 @@ export function ChipsInput({ values, onChange, placeholder, label, max = 30 }: P
         onKeyDown={onKeyDown}
         onBlur={commit}
         placeholder={values.length === 0 ? placeholder : ''}
-        className="min-w-24 flex-1 bg-transparent py-0.5 text-sm placeholder:text-faint focus:outline-none"
+        className="min-w-24 flex-1 bg-transparent py-0.5 text-sm placeholder:text-outline focus:outline-none"
       />
     </div>
   )

@@ -1,19 +1,19 @@
 // HTTP service the backend worker calls to turn a script and its narration
 // into an MP4. It listens on the internal Docker network only.
 //
-//   POST /v1/render  {"props": ShortProps without audioSrc, "audio": base64 WAV | null}
+//   POST /v1/render  {"props": ShortProps without audioSrc, "audio": base64 WAV | null,
+//                     "images": [base64 JPEG/PNG/WebP | null, one per beat]}
 //                    -> 200 video/mp4, 400 bad props, 413 too big, 503 busy, 504 too slow
 //   GET  /healthz    -> {"status": "ok", "queued": n}
 import { createServer } from 'node:http'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { ensureBrowser, makeCancelSignal } from '@remotion/renderer'
-import { z } from 'zod'
-import { shortSchema } from '../src/schema.ts'
-import type { ShortProps } from '../src/types.ts'
-import { hold, isWav, serveAsset } from './assets.ts'
+import { hold, serveAsset } from './assets.ts'
 import { HttpError, log, readBody, sendJson } from './http.ts'
 import { SerialQueue } from './queue.ts'
 import { bundled, renderShort } from './render.ts'
+import { parseRequest } from './request.ts'
+import type { Job } from './request.ts'
 
 /** A positive number from the environment; a typo stops the service at start. */
 function setting(name: string, fallback: number | null): number | null {
@@ -30,63 +30,47 @@ function setting(name: string, fallback: number | null): number | null {
 
 const PORT = setting('PORT', 3000) as number
 const HOST = process.env.HOST ?? '0.0.0.0'
-// Two minutes of 24 kHz 16-bit mono is 5.8 MB, 7.7 MB as base64.
-const MAX_BODY_BYTES = 16 * 1024 * 1024
+// Two minutes of 24 kHz 16-bit mono is 5.8 MB, 7.7 MB as base64; seven
+// pictures of up to 3 MB add 28 MB more.
+const MAX_BODY_BYTES = 40 * 1024 * 1024
 const RENDER_TIMEOUT_MS = setting('RENDER_TIMEOUT_MS', 10 * 60 * 1000) as number
 // Browser tabs rendering frames in parallel; null lets Remotion pick.
 const CONCURRENCY = setting('RENDER_CONCURRENCY', null)
 const QUEUE_LIMIT = 4
 const LOGGED_ERROR_CHARS = 300
 
-const requestSchema = z.object({
-  props: z.record(z.string(), z.unknown()),
-  audio: z.string().nullable(),
-})
-
-type Job = { props: ShortProps; audio: Buffer | null }
-
 const queue = new SerialQueue(QUEUE_LIMIT)
 
-function parseRequest(body: Buffer): Job {
-  let json: unknown
-  try {
-    json = JSON.parse(body.toString('utf8'))
-  } catch {
-    throw new HttpError(400, 'the body is not JSON')
-  }
-  const request = requestSchema.safeParse(json)
-  if (!request.success) {
-    throw new HttpError(400, z.prettifyError(request.error))
-  }
-  // The audio address is ours to give, whatever the caller sent.
-  const props = shortSchema.safeParse({ ...request.data.props, audioSrc: null })
-  if (!props.success) {
-    throw new HttpError(400, z.prettifyError(props.error))
-  }
-  const audio = request.data.audio === null ? null : Buffer.from(request.data.audio, 'base64')
-  if (audio && !isWav(audio)) {
-    throw new HttpError(400, 'audio must be a WAV file')
-  }
-  return { props: props.data, audio }
-}
-
 async function renderJob(job: Job, cancelSignal: ReturnType<typeof makeCancelSignal>['cancelSignal']) {
-  const asset = job.audio ? hold(job.audio) : null
+  const audio = job.audio ? hold(job.audio, 'audio/wav', 'wav') : null
+  const pictures = job.pictures.map((picture) => (picture ? hold(picture.data, picture.type, picture.extension) : null))
+  const local = (path: string) => `http://127.0.0.1:${PORT}${path}`
   const started = performance.now()
   try {
     const rendered = await renderShort({
-      props: { ...job.props, audioSrc: asset ? `http://127.0.0.1:${PORT}${asset.path}` : null },
+      props: {
+        ...job.props,
+        audioSrc: audio ? local(audio.path) : null,
+        beats: job.props.beats.map((beat, index) => {
+          const picture = pictures[index]
+          return { ...beat, imageSrc: picture ? local(picture.path) : null }
+        }),
+      },
       concurrency: CONCURRENCY,
       cancelSignal,
     })
     log('rendered', {
       frames: rendered.frames,
+      pictures: pictures.filter(Boolean).length,
       seconds: Math.round(performance.now() - started) / 1000,
       bytes: rendered.video?.length ?? 0,
     })
     return rendered.video
   } finally {
-    asset?.release()
+    audio?.release()
+    for (const picture of pictures) {
+      picture?.release()
+    }
   }
 }
 
@@ -99,8 +83,8 @@ async function render(req: IncomingMessage, res: ServerResponse) {
   }
   const { cancelSignal, cancel } = makeCancelSignal()
   let job: Job | null = null
-  // A worker that gave up must not keep its place in line, nor its audio in
-  // memory, while it waits for its turn.
+  // A worker that gave up must not keep its place in line, nor its audio and
+  // pictures in memory, while it waits for its turn.
   res.on('close', () => {
     if (!res.writableFinished) {
       job = null

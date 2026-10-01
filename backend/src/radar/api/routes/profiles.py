@@ -1,14 +1,24 @@
 """Reader profiles and the instant selection preview."""
 
+import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
-from sqlalchemy import func, select
+from fastapi import APIRouter, Depends, HTTPException, Path, Response, status
+from pydantic import ValidationError
+from sqlalchemy import func, select, text, update
 
 from radar.ai.factory import get_embedder
 from radar.api.deps import CacheDep, CurrentUser, SessionDep, SettingsDep, user_rate_limit
-from radar.api.schemas import PreviewItem, PreviewOut, PreviewRequest, ProfileOut
+from radar.api.schemas import (
+    PreviewItem,
+    PreviewOut,
+    PreviewRequest,
+    ProfileLook,
+    ProfileOut,
+    SharedProfileOut,
+)
 from radar.db.models import Profile
 from radar.domain import ProfileSpec
 from radar.logging import get_logger
@@ -21,12 +31,16 @@ router = APIRouter(tags=["profiles"])
 log = get_logger(__name__)
 
 _write_limit = Depends(user_rate_limit("write", lambda settings: settings.rate_limit_per_minute))
+_share_limit = Depends(user_rate_limit("share", lambda settings: settings.rate_limit_per_minute))
 _preview_limit = Depends(
     user_rate_limit("preview", lambda settings: settings.preview_rate_limit_per_minute)
 )
 # A reader needs a handful of profiles; the cap keeps one account from
 # filling the table.
 MAX_PROFILES_PER_USER = 30
+# 128 random bits: a link cannot be guessed, and the address stays short.
+SHARE_TOKEN_BYTES = 16
+ShareToken = Annotated[str, Path(pattern=r"^[A-Za-z0-9_-]{16,32}$")]
 
 PREVIEW_ITEMS = 60
 # Round the window to this many minutes so that repeated previews of the same
@@ -40,6 +54,9 @@ def _out(profile: Profile) -> ProfileOut:
         id=profile.id,
         version=profile.version,
         spec=ProfileSpec.model_validate(profile.spec),
+        icon=profile.icon,
+        color=profile.color,
+        share_token=profile.share_token,
         created_at=profile.created_at,
         updated_at=profile.updated_at,
     )
@@ -74,28 +91,54 @@ async def _taste_changed(session: SessionDep, cache: CacheDep, user_id: uuid.UUI
 @router.get("/profiles")
 async def list_profiles(session: SessionDep, user: CurrentUser) -> list[ProfileOut]:
     rows = await session.execute(
-        select(Profile).where(Profile.user_id == user.id).order_by(Profile.created_at)
+        select(Profile).where(Profile.user_id == user.id).order_by(Profile.created_at, Profile.id)
     )
     return [_out(profile) for profile in rows.scalars()]
+
+
+async def _lock_profiles(session: SessionDep, user_id: uuid.UUID) -> None:
+    """Hold the reader's profile list until the transaction ends.
+
+    Without it, parallel requests all count the profiles before any of them
+    inserts, and pass the limit or add the same shared profile twice.
+    """
+    await session.execute(
+        text("SELECT pg_advisory_xact_lock(hashtext(:key))").bindparams(key=f"profiles:{user_id}")
+    )
+
+
+async def _add(
+    session: SessionDep,
+    cache: CacheDep,
+    user_id: uuid.UUID,
+    spec: ProfileSpec,
+    *,
+    icon: str | None = None,
+    color: str | None = None,
+) -> Profile:
+    await _lock_profiles(session, user_id)
+    owned = await session.scalar(
+        select(func.count()).select_from(Profile).where(Profile.user_id == user_id)
+    )
+    if int(owned or 0) >= MAX_PROFILES_PER_USER:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, detail="Слишком много профилей, удалите лишние."
+        )
+    profile = Profile(
+        user_id=user_id, name=spec.name, spec=spec.model_dump(mode="json"), icon=icon, color=color
+    )
+    session.add(profile)
+    await session.flush()
+    await session.refresh(profile)
+    await _taste_changed(session, cache, user_id)
+    return profile
 
 
 @router.post("/profiles", status_code=status.HTTP_201_CREATED, dependencies=[_write_limit])
 async def create_profile(
     spec: ProfileSpec, session: SessionDep, user: CurrentUser, cache: CacheDep
 ) -> ProfileOut:
-    owned = await session.scalar(
-        select(func.count()).select_from(Profile).where(Profile.user_id == user.id)
-    )
-    if int(owned or 0) >= MAX_PROFILES_PER_USER:
-        raise HTTPException(
-            status.HTTP_409_CONFLICT, detail="Слишком много профилей, удалите лишние."
-        )
-    profile = Profile(user_id=user.id, name=spec.name, spec=spec.model_dump(mode="json"))
-    session.add(profile)
-    await session.flush()
-    await session.refresh(profile)
-    await _taste_changed(session, cache, user.id)
-    return _out(profile)
+    return _out(await _add(session, cache, user.id, spec))
 
 
 @router.get("/profiles/{profile_id}")
@@ -121,6 +164,117 @@ async def update_profile(
         await session.flush()
         await session.refresh(profile)
         await _taste_changed(session, cache, user.id)
+    return _out(profile)
+
+
+@router.patch("/profiles/{profile_id}/look", dependencies=[_write_limit])
+async def set_look(
+    profile_id: uuid.UUID, look: ProfileLook, session: SessionDep, user: CurrentUser
+) -> ProfileOut:
+    """The icon and colour; the profile's content and version stay as they are."""
+    profile = await _get(session, user, profile_id)
+    profile.icon, profile.color = look.icon, look.color
+    await session.commit()
+    await session.refresh(profile)
+    return _out(profile)
+
+
+@router.post("/profiles/{profile_id}/share", dependencies=[_write_limit])
+async def share_profile(
+    profile_id: uuid.UUID, session: SessionDep, user: CurrentUser
+) -> ProfileOut:
+    """The profile's link: made on the first call, the same one after that."""
+    # One statement, so two clicks at once cannot hand out two links of which
+    # only the second works.
+    await session.execute(
+        update(Profile)
+        .where(Profile.id == profile_id, Profile.user_id == user.id)
+        .values(
+            share_token=func.coalesce(Profile.share_token, secrets.token_urlsafe(SHARE_TOKEN_BYTES))
+        )
+    )
+    await session.commit()
+    profile = await _get(session, user, profile_id)
+    await session.refresh(profile)
+    return _out(profile)
+
+
+@router.delete("/profiles/{profile_id}/share", dependencies=[_write_limit])
+async def unshare_profile(
+    profile_id: uuid.UUID, session: SessionDep, user: CurrentUser
+) -> ProfileOut:
+    """Close the link. Copies already added stay with the readers who added them."""
+    profile = await _get(session, user, profile_id)
+    profile.share_token = None
+    await session.commit()
+    await session.refresh(profile)
+    return _out(profile)
+
+
+_LINK_GONE = "Ссылка больше не работает: владелец закрыл доступ или удалил профиль."
+
+
+async def _shared(session: SessionDep, token: str) -> tuple[Profile, ProfileSpec]:
+    profile = (
+        await session.execute(select(Profile).where(Profile.share_token == token))
+    ).scalar_one_or_none()
+    if profile is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=_LINK_GONE)
+    try:
+        spec = ProfileSpec.model_validate(profile.spec)
+    except ValidationError:
+        # Stored before a rule got stricter: nothing a recipient could use.
+        log.warning("shared_profile_invalid", profile_id=str(profile.id))
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=_LINK_GONE) from None
+    return profile, spec
+
+
+async def _same_as(session: SessionDep, user_id: uuid.UUID, source: Profile) -> Profile | None:
+    """The reader's profile with the content of `source`, if they have one."""
+    mine = await session.execute(
+        select(Profile).where(Profile.user_id == user_id).order_by(Profile.created_at, Profile.id)
+    )
+    return next((profile for profile in mine.scalars() if profile.spec == source.spec), None)
+
+
+@router.get("/shared-profiles/{token}", dependencies=[_share_limit])
+async def shared_profile(
+    token: ShareToken, session: SessionDep, user: CurrentUser
+) -> SharedProfileOut:
+    """What a link hands over, before the reader decides to take it."""
+    source, spec = await _shared(session, token)
+    own = await _same_as(session, user.id, source)
+    return SharedProfileOut(
+        spec=spec,
+        icon=source.icon,
+        color=source.color,
+        own_id=own.id if own else None,
+    )
+
+
+@router.post(
+    "/shared-profiles/{token}/accept",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[_share_limit],
+)
+async def accept_shared_profile(
+    token: ShareToken,
+    session: SessionDep,
+    user: CurrentUser,
+    cache: CacheDep,
+    response: Response,
+) -> ProfileOut:
+    """Add a copy of the shared profile. A second click returns the copy the
+    first one made, and the owner of the link gets their own profile back."""
+    source, spec = await _shared(session, token)
+    # Before looking for a copy: two clicks at once must find one, not make two.
+    await _lock_profiles(session, user.id)
+    own = await _same_as(session, user.id, source)
+    if own is not None:
+        response.status_code = status.HTTP_200_OK
+        return _out(own)
+    profile = await _add(session, cache, user.id, spec, icon=source.icon, color=source.color)
+    log.info("shared_profile_added", source_id=str(source.id), profile_id=str(profile.id))
     return _out(profile)
 
 

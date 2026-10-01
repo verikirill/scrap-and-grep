@@ -1,26 +1,33 @@
-/** Shared easing: quick start, soft landing. Used for every entrance. */
-export const EASE = [0.22, 1, 0.36, 1] as const
+/** Material 3 emphasized easing: quick start, long soft landing. Every entrance uses it. */
+export const EASE = [0.2, 0, 0, 1] as const
+/** Material 3 durations, in seconds. */
+export const DURATION = { short: 0.2, medium: 0.3, long: 0.45 } as const
 
+/** Material 3 outlined text field. */
 export const INPUT_CLASS =
-  'w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-text ' +
-  'placeholder:text-faint transition-colors hover:border-faint focus:border-accent focus:outline-none'
+  'w-full h-11 rounded-xl border border-outline bg-transparent px-3.5 text-sm text-foreground ' +
+  'placeholder:text-outline transition-[border-color,box-shadow] duration-200 ' +
+  'hover:border-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary ' +
+  'disabled:opacity-40'
 
 /** Entrance for list rows: fade and rise, staggered only for the first screen. */
 export function rowMotion(index: number) {
   return {
-    initial: { opacity: 0, y: 10 },
+    initial: { opacity: 0, y: 12 },
     animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.35, ease: EASE, delay: Math.min(index, 10) * 0.035 },
+    transition: { duration: DURATION.medium, ease: EASE, delay: Math.min(index, 10) * 0.035 },
   }
 }
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
+export type ButtonVariant = 'primary' | 'tonal' | 'secondary' | 'ghost' | 'danger'
 
+// Material 3 buttons: filled, tonal, outlined, text, and text in the error role.
 const BUTTON_STYLES: Record<ButtonVariant, string> = {
-  primary: 'bg-accent text-white shadow-sm hover:brightness-110 dark:text-[#0b0f17]',
-  secondary: 'bg-surface text-text border border-line hover:border-faint',
-  ghost: 'text-muted hover:text-text hover:bg-sunken',
-  danger: 'text-danger hover:bg-danger-soft',
+  primary: 'bg-primary text-primary-foreground hover:shadow-elevation-1',
+  tonal: 'bg-secondary-container text-on-secondary-container hover:shadow-elevation-1',
+  secondary: 'border border-outline text-primary',
+  ghost: 'text-primary',
+  danger: 'text-destructive',
 }
 
 /** Button look for anything clickable: a real button, a download link, a route link. */
@@ -29,10 +36,11 @@ export function buttonClass(
   size: 'sm' | 'md' = 'md',
 ): string {
   return [
-    'inline-flex items-center justify-center gap-2 rounded-lg font-medium whitespace-nowrap',
-    'transition-[filter,background-color,border-color,color,transform] duration-150',
-    'active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50',
-    size === 'sm' ? 'h-8 px-2.5 text-[13px]' : 'h-10 px-4 text-sm',
+    'state-layer relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full',
+    'font-medium tracking-[0.01em] whitespace-nowrap select-none',
+    'transition-[box-shadow,background-color,color,opacity] duration-200',
+    'disabled:pointer-events-none disabled:opacity-40',
+    size === 'sm' ? 'h-8 px-3.5 text-[13px]' : 'h-10 px-5 text-sm',
     BUTTON_STYLES[variant],
   ].join(' ')
 }

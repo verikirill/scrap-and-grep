@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { Bookmark, FileUp, RefreshCw, SlidersHorizontal, Sparkles } from 'lucide-react'
+import { Bookmark, FileUp, RefreshCw, SlidersHorizontal, Sparkles } from '../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
@@ -90,7 +90,7 @@ export function FeedPage() {
       />
 
       <div
-        className="mb-5 inline-flex gap-1 rounded-xl bg-sunken p-1"
+        className="mb-5 inline-flex gap-1 rounded-xl bg-surface-container p-1"
         role="group"
         aria-label="Раздел"
       >
@@ -102,13 +102,15 @@ export function FeedPage() {
             onClick={() => setSearch(id === 'feed' ? {} : { tab: id })}
             className={clsx(
               'relative inline-flex items-center gap-2 rounded-lg px-4 py-1.5 text-sm font-medium transition-colors',
-              tab === id ? 'text-text' : 'text-muted hover:text-text',
+              tab === id
+                ? 'text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground',
             )}
           >
             {tab === id && (
               <motion.span
                 layoutId="feed-tab"
-                className="absolute inset-0 rounded-lg bg-surface shadow-sm"
+                className="absolute inset-0 rounded-lg bg-primary shadow-elevation-1"
                 transition={{ type: 'spring', stiffness: 480, damping: 38 }}
               />
             )}
@@ -131,7 +133,7 @@ export function FeedPage() {
                 transition={{ duration: 0.25, ease: EASE }}
                 className="overflow-hidden"
               >
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-accent-soft px-4 py-2.5 text-sm text-accent-text">
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-primary-container px-4 py-2.5 text-sm text-on-primary-container">
                   <span>
                     {pendingSignals} {plural(pendingSignals, ['оценка', 'оценки', 'оценок'])}{' '}
                     {plural(pendingSignals, ['учтена', 'учтены', 'учтено'])}. Порядок на экране не
@@ -148,7 +150,7 @@ export function FeedPage() {
           {tab === 'feed' && taste.isSuccess && !knowsReader && (
             <Card className="p-5">
               <h2 className="text-base font-semibold">Лента пока не знает, что вам интересно</h2>
-              <p className="mt-1 text-sm text-muted">
+              <p className="mt-1 text-sm text-muted-foreground">
                 Ниже просто свежие публикации. Загрузите резюме или задайте интересы, и порядок
                 станет вашим.
               </p>
@@ -204,7 +206,7 @@ export function FeedPage() {
             </>
           )}
           {tab === 'feed' && generatedAt && items.length > 0 && (
-            <p className="pt-1 text-center text-xs text-faint">
+            <p className="pt-1 text-center text-xs text-outline">
               Лента собрана {formatRelative(generatedAt)}
             </p>
           )}

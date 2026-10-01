@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import BaseModel
 
 from radar.api.deps import CacheDep, CurrentUser, SessionDep, SettingsDep, user_rate_limit
+from radar.api.reading import measure_soon
 from radar.logging import get_logger
 from radar.recsys import service, store
 from radar.recsys.service import FeedItem, TasteOut
@@ -59,6 +60,7 @@ async def get_feed(
         offset=offset,
         snapshot=snapshot,
     )
+    await measure_soon(item.article_id for item in items if item.reading_minutes is None)
     return FeedOut(
         items=items,
         total=total,

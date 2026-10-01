@@ -13,9 +13,11 @@ from radar.cache import Cache
 from radar.config import get_settings
 from radar.db import session_scope
 from radar.db.models import Source
+from radar.images.extract import from_page
 from radar.ingest.feeds import CONTENT_LIMIT, FeedResult, fetch_feed
 from radar.ingest.net import safe_get
 from radar.logging import get_logger
+from radar.reading import word_count
 from radar.store import articles as article_store
 from radar.store.articles import NewArticle
 from radar.text import content_hash
@@ -112,10 +114,19 @@ async def _with_full_text(items: list[NewArticle], client: httpx.AsyncClient) ->
                     "fulltext_failed", url=item.url, error=f"{type(exc).__name__}: {exc}"[:200]
                 )
                 return item
+        # The page is here anyway: its og:image is the story's picture when
+        # the feed carried none.
+        image_url = item.image_url or from_page(response.text, item.url)
         if not text or len(text) < 200:
-            return item
+            return replace(item, image_url=image_url)
         body = text[:CONTENT_LIMIT]
-        return replace(item, content=body, content_hash=content_hash(item.title, body))
+        return replace(
+            item,
+            content=body,
+            content_hash=content_hash(item.title, body),
+            image_url=image_url,
+            word_count=word_count(text),
+        )
 
     return list(await asyncio.gather(*(enrich(item) for item in items)))
 

@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { FileUp, ScanText } from 'lucide-react'
+import { FileUp, ScanText } from '../../components/icons'
 import { motion } from 'motion/react'
 import { useRef, useState } from 'react'
 import type { DragEvent } from 'react'
@@ -78,23 +78,25 @@ export function ResumeDrop({ meta, isBusy, onFile }: Props) {
         className={clsx(
           'flex w-full flex-col items-center rounded-2xl border-2 border-dashed px-6 py-10 text-center',
           'transition-colors duration-200 disabled:pointer-events-none disabled:opacity-60',
-          isOver ? 'border-accent bg-accent-soft' : 'border-line bg-surface hover:border-faint',
+          isOver
+            ? 'border-primary bg-primary-container'
+            : 'border-outline-variant bg-card hover:border-outline',
         )}
       >
         <motion.span
           animate={{ y: isOver ? -4 : 0 }}
           transition={{ type: 'spring', stiffness: 420, damping: 24 }}
-          className="mb-4 grid size-12 place-items-center rounded-2xl bg-sunken text-accent-text"
+          className="mb-4 grid size-12 place-items-center rounded-2xl bg-surface-container text-on-primary-container"
         >
           <FileUp size={22} />
         </motion.span>
         <span className="text-base font-semibold">Перетащите резюме сюда</span>
-        <span className="mt-1 text-sm text-muted">или нажмите, чтобы выбрать файл</span>
-        <span className="mt-4 text-xs text-faint">
+        <span className="mt-1 text-sm text-muted-foreground">или нажмите, чтобы выбрать файл</span>
+        <span className="mt-4 text-xs text-outline">
           {formatList} · до {megabytes(limit)} МБ
         </span>
         {hasOcr && (
-          <span className="mt-2 inline-flex items-center gap-1.5 text-xs text-faint">
+          <span className="mt-2 inline-flex items-center gap-1.5 text-xs text-outline">
             <ScanText size={13} />
             Сканы и фотографии страниц читаются распознаванием текста
           </span>
@@ -113,7 +115,7 @@ export function ResumeDrop({ meta, isBusy, onFile }: Props) {
         }}
       />
       {problem && (
-        <p role="alert" className="mt-2 text-sm text-danger">
+        <p role="alert" className="mt-2 text-sm text-destructive">
           {problem}
         </p>
       )}

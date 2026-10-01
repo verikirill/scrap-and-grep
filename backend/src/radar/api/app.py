@@ -14,11 +14,23 @@ from fastapi.responses import JSONResponse
 from prometheus_client import Counter, Histogram
 from starlette.routing import Match
 
-from radar.api.routes import auth, catalog, digests, feed, profiles, resume, shorts, system
+from radar.api.routes import (
+    auth,
+    catalog,
+    digests,
+    feed,
+    mcp_keys,
+    profiles,
+    publishing,
+    resume,
+    shorts,
+    system,
+)
 from radar.cache import get_redis
 from radar.config import get_settings
 from radar.db import get_engine
 from radar.logging import configure_logging, get_logger
+from radar.mcp_server import server as mcp_server
 from radar.worker.brokers import digest_broker, ingest_broker, profile_broker
 
 log = get_logger(__name__)
@@ -63,7 +75,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await digest_broker.startup()
     await profile_broker.startup()
     log.info("api_started", embedding=settings.embedding_provider, llm=settings.llm_provider)
-    yield
+    # The MCP endpoint is a mounted app: its session manager runs here, since
+    # a mounted app's own lifespan is not called.
+    async with app.state.mcp_sessions.run():
+        yield
     await profile_broker.shutdown()
     await digest_broker.shutdown()
     await ingest_broker.shutdown()
@@ -83,7 +98,7 @@ def _route_template(request: Request) -> str:
 def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(
-        title="Радар: дайджесты ИТ и ИБ",
+        title="Tail&Grep: дайджесты ИТ и ИБ",
         version="0.1.0",
         lifespan=lifespan,
         docs_url="/api/docs",
@@ -125,7 +140,8 @@ def create_app() -> FastAPI:
     @app.exception_handler(Exception)
     async def unhandled(request: Request, exc: Exception) -> JSONResponse:
         # Details stay in the log; the client gets a stable, non-revealing message.
-        log.exception("unhandled_error", path=request.url.path)
+        # The template, not the path: a path may carry a share link's token.
+        log.exception("unhandled_error", path=_route_template(request))
         return JSONResponse(status_code=500, content={"detail": "Внутренняя ошибка сервиса."})
 
     app.include_router(system.router)
@@ -137,8 +153,13 @@ def create_app() -> FastAPI:
         resume.router,
         shorts.router,
         feed.router,
+        publishing.router,
+        mcp_keys.router,
     ):
         app.include_router(router, prefix="/api/v1")
+    # Assistants reach the reader's news here, with a key made on the account page.
+    mcp_app, app.state.mcp_sessions = mcp_server.build()
+    app.mount("/api/mcp", mcp_app)
     return app
 
 

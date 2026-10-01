@@ -43,6 +43,8 @@ export const beatSchema = z
     url: sourceUrl.nullable(),
     /** When it was published, e.g. "29 сентября". */
     date: line(24).nullable(),
+    /** The article's picture as the render server holds it; null when it has none. */
+    imageSrc: z.string().max(200).nullable().default(null),
     startMs: ms,
     endMs: ms,
   })
