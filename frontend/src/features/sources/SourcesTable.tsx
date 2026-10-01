@@ -6,7 +6,7 @@ import type { FormEvent } from 'react'
 import { Segmented } from '../../components/Segmented'
 import { EASE, INPUT_CLASS } from '../../components/tokens'
 import { Button, Card, Chip, ErrorNote, Field, Toggle } from '../../components/ui'
-import type { Source, SourceCategory, SourceCreate, SourceKind } from '../../lib/api'
+import type { Source, SourceCategory, SourceCreate } from '../../lib/api'
 import { CATEGORY_LABELS, externalHref, formatNumber, formatRelative } from '../../lib/format'
 import { useSourceMutations } from '../../lib/queries'
 
@@ -42,7 +42,7 @@ const KINDS = [
 ] as const
 
 type SourceForm = {
-  kind: SourceKind
+  kind: SourceCreate['kind']
   name: string
   /** The feed's address, or the channel: "@name" or its t.me link. */
   address: string

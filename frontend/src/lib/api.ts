@@ -80,7 +80,8 @@ export interface SharedProfile {
   own_id: string | null
 }
 
-export type SourceKind = 'rss' | 'telegram'
+/** A feed, a public Telegram channel, or the trending vulnerabilities page of PT. */
+export type SourceKind = 'rss' | 'telegram' | 'pt_trending'
 
 export interface Source {
   id: number
