@@ -359,7 +359,8 @@ async def main(args: argparse.Namespace) -> None:
         for profile_owner in PERSONAS:
             report += rows_of(await run(week, embedder, reader, profile_owner.profile, grades))
     text = "\n".join(report) + "\n"
-    (out / "adaptation.md").write_text(text, "utf-8")
+    # LF on every system: Windows would write CRLF into a file kept in git.
+    (out / "adaptation.md").write_text(text, "utf-8", newline="\n")
     print(text.encode("utf-8", "replace").decode("ascii", "replace") if args.quiet else text)
 
 
