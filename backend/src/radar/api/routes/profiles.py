@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 
 from radar.ai.factory import get_embedder
 from radar.api.deps import CacheDep, CurrentUser, SessionDep, SettingsDep, user_rate_limit
-from radar.api.schemas import PreviewItem, PreviewOut, PreviewRequest, ProfileOut
+from radar.api.schemas import PreviewItem, PreviewOut, PreviewRequest, ProfileLook, ProfileOut
 from radar.db.models import Profile
 from radar.domain import ProfileSpec
 from radar.logging import get_logger
@@ -40,6 +40,8 @@ def _out(profile: Profile) -> ProfileOut:
         id=profile.id,
         version=profile.version,
         spec=ProfileSpec.model_validate(profile.spec),
+        icon=profile.icon,
+        color=profile.color,
         created_at=profile.created_at,
         updated_at=profile.updated_at,
     )
@@ -74,7 +76,7 @@ async def _taste_changed(session: SessionDep, cache: CacheDep, user_id: uuid.UUI
 @router.get("/profiles")
 async def list_profiles(session: SessionDep, user: CurrentUser) -> list[ProfileOut]:
     rows = await session.execute(
-        select(Profile).where(Profile.user_id == user.id).order_by(Profile.created_at)
+        select(Profile).where(Profile.user_id == user.id).order_by(Profile.created_at, Profile.id)
     )
     return [_out(profile) for profile in rows.scalars()]
 
@@ -121,6 +123,18 @@ async def update_profile(
         await session.flush()
         await session.refresh(profile)
         await _taste_changed(session, cache, user.id)
+    return _out(profile)
+
+
+@router.patch("/profiles/{profile_id}/look", dependencies=[_write_limit])
+async def set_look(
+    profile_id: uuid.UUID, look: ProfileLook, session: SessionDep, user: CurrentUser
+) -> ProfileOut:
+    """The icon and colour; the profile's content and version stay as they are."""
+    profile = await _get(session, user, profile_id)
+    profile.icon, profile.color = look.icon, look.color
+    await session.commit()
+    await session.refresh(profile)
     return _out(profile)
 
 

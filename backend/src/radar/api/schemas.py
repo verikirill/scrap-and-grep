@@ -102,8 +102,17 @@ class ProfileOut(BaseModel):
     id: uuid.UUID
     version: int
     spec: ProfileSpec
+    icon: str | None = None
+    color: str | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class ProfileLook(BaseModel):
+    """A profile's icon and colour: keys of the sets the web app draws."""
+
+    icon: str | None = Field(default=None, pattern=r"^[a-z][a-z_]{1,23}$")
+    color: str | None = Field(default=None, pattern=r"^[a-z]{3,12}$")
 
 
 class DigestCreate(BaseModel):

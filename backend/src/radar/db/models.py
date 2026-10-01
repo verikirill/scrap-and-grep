@@ -246,6 +246,10 @@ class Profile(Base):
     name: Mapped[str] = mapped_column(String(120))
     spec: Mapped[dict[str, Any]] = mapped_column(JSONB)
     version: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    # How the profile looks in lists: names from the app's icon and colour sets.
+    # Not part of the spec, so a new icon is not a new version of the profile.
+    icon: Mapped[str | None] = mapped_column(String(24))
+    color: Mapped[str | None] = mapped_column(String(12))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

@@ -83,11 +83,21 @@ async def create_guest(session: AsyncSession) -> User:
     if template is not None:
         examples = (
             await session.execute(
-                select(Profile).where(Profile.user_id == template).order_by(Profile.created_at)
+                select(Profile)
+                .where(Profile.user_id == template)
+                .order_by(Profile.created_at, Profile.id)
             )
         ).scalars()
         for example in examples:
-            session.add(Profile(user_id=guest.id, name=example.name, spec=example.spec))
+            session.add(
+                Profile(
+                    user_id=guest.id,
+                    name=example.name,
+                    spec=example.spec,
+                    icon=example.icon,
+                    color=example.color,
+                )
+            )
         await session.flush()
     return guest
 

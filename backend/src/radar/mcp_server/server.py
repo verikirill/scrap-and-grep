@@ -221,7 +221,11 @@ async def read_digest(digest_id: str = Field(description="id из my_digests")) 
 async def my_interests() -> Interests:
     """Профили интересов читателя: роль, темы с ключевыми словами, что не показывать."""
     async with session_scope() as session:
-        rows = await session.scalars(select(Profile).where(Profile.user_id == _reader()))
+        rows = await session.scalars(
+            select(Profile)
+            .where(Profile.user_id == _reader())
+            .order_by(Profile.created_at, Profile.id)
+        )
         specs = [ProfileSpec.model_validate(row.spec) for row in rows]
     return Interests(
         profiles=[

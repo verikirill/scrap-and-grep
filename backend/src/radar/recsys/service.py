@@ -218,7 +218,9 @@ async def _declared(
     """
     profiles = (
         await session.execute(
-            select(Profile).where(Profile.user_id == user_id).order_by(Profile.created_at)
+            select(Profile)
+            .where(Profile.user_id == user_id)
+            .order_by(Profile.created_at, Profile.id)
         )
     ).scalars()
     specs = [ProfileSpec.model_validate(profile.spec) for profile in profiles]
