@@ -22,7 +22,8 @@ from radar.pipeline.ports import QueryEmbedder
 from radar.pipeline.sql_store import CachedQueryEmbedder
 from radar.reading import reading_minutes
 from radar.recsys import store
-from radar.recsys.model import Personal
+from radar.recsys.adaptation import learned_interests
+from radar.recsys.model import Personal, adapted_weight
 from radar.recsys.ranking import (
     Evidence,
     Ranked,
@@ -210,35 +211,50 @@ def _load(raw: dict[str, Any]) -> Reader:
 
 
 async def _declared(
-    session: AsyncSession, user_id: uuid.UUID, embed_queries: QueryEmbedder
+    session: AsyncSession, user_id: uuid.UUID, embed_queries: QueryEmbedder, model: str
 ) -> tuple[list[Facet], tuple[str, ...], tuple[str, ...], tuple[str, ...], bool]:
     """Facets the reader stated: interests of every profile and the resume.
 
     The last value is True when the facets could not be embedded.
     """
     profiles = (
-        await session.execute(
-            select(Profile)
-            .where(Profile.user_id == user_id)
-            .order_by(Profile.created_at, Profile.id)
+        (
+            await session.execute(
+                select(Profile)
+                .where(Profile.user_id == user_id)
+                .order_by(Profile.created_at, Profile.id)
+            )
         )
-    ).scalars()
+        .scalars()
+        .all()
+    )
     specs = [ProfileSpec.model_validate(profile.spec) for profile in profiles]
+    # Adaptive profiles bring their interests as the reader's marks shaped
+    # them: weighted by how well each one does, searching where the liked
+    # articles were.
+    learned = await learned_interests(session, profiles, model)
+    moved: dict[str, list[float]] = {}
     # The same interest in two profiles is one facet, with the higher weight.
     interests: dict[str, tuple[str, Facet]] = {}
-    for spec in specs:
+    for profile, spec in zip(profiles, specs, strict=True):
         for interest in spec.interests:
             text = interest.as_query()
+            own = learned.get((profile.id, interest.id))
+            weight = adapted_weight(interest.weight, own)
             known = interests.get(text)
-            if known is not None and known[1].weight >= interest.weight:
+            if known is not None and known[1].weight >= weight:
                 continue
+            if own is not None and own.vector is not None:
+                moved[text] = own.vector
+            else:
+                moved.pop(text, None)
             interests[text] = (
                 text,
                 Facet(
                     key=f"interest:{interest.id}",
                     kind="interest",
                     label=interest.title,
-                    weight=interest.weight,
+                    weight=weight,
                     query=keyword_query(interest.keywords or (interest.title,)),
                 ),
             )
@@ -290,11 +306,13 @@ async def _declared(
             facet.key,
             facet.kind,
             facet.label,
-            np.asarray(vectors[index], dtype=np.float32) if vectors is not None else None,
+            np.asarray(moved.get(text, vectors[index]), dtype=np.float32)
+            if vectors is not None
+            else None,
             facet.weight,
             facet.query,
         )
-        for index, (_, facet) in enumerate(declared)
+        for index, (text, facet) in enumerate(declared)
     ]
     exclusions = tuple(
         dict.fromkeys(
@@ -322,7 +340,7 @@ async def load_reader(
         return _load(cached)
     embed_queries = embed_queries or CachedQueryEmbedder(embedder, cache)
     facets, exclusions, languages, skills, degraded = await _declared(
-        session, user_id, embed_queries
+        session, user_id, embed_queries, embedder.model_id
     )
     signals = await store.load_signals(session, user_id, embedder.model_id)
     rejected = await store.rejected_ids(session, user_id)
@@ -344,7 +362,7 @@ def _reasons(
     source_name: str,
 ) -> list[Reason]:
     if ranked.explore:
-        return [Reason(kind="explore", text="Вне ваших привычных тем, для расширения кругозора")]
+        return [Reason(kind="explore", text="Что-то новое для вас")]
     if not ranked.parts:
         # Listed, not ranked: a saved article has no score to explain.
         return []

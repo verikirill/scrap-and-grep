@@ -7,7 +7,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Response, status
 from pydantic import ValidationError
-from sqlalchemy import func, select, text, update
+from sqlalchemy import func, select, update
 
 from radar.ai.factory import get_embedder
 from radar.api.deps import CacheDep, CurrentUser, SessionDep, SettingsDep, user_rate_limit
@@ -25,6 +25,7 @@ from radar.logging import get_logger
 from radar.pipeline.sql_store import CachedQueryEmbedder
 from radar.recsys.service import forget_taste
 from radar.selection.preview import build_preview
+from radar.store.profiles import lock_profiles
 from radar.worker.tasks import refresh_taste
 
 router = APIRouter(tags=["profiles"])
@@ -49,7 +50,7 @@ PREVIEW_WINDOW_STEP_MINUTES = 5
 PREVIEW_TTL_SECONDS = 60
 
 
-def _out(profile: Profile) -> ProfileOut:
+def profile_out(profile: Profile) -> ProfileOut:
     return ProfileOut(
         id=profile.id,
         version=profile.version,
@@ -57,12 +58,13 @@ def _out(profile: Profile) -> ProfileOut:
         icon=profile.icon,
         color=profile.color,
         share_token=profile.share_token,
+        adaptive=profile.adaptive,
         created_at=profile.created_at,
         updated_at=profile.updated_at,
     )
 
 
-async def _get(session: SessionDep, user: CurrentUser, profile_id: uuid.UUID) -> Profile:
+async def get_owned(session: SessionDep, user: CurrentUser, profile_id: uuid.UUID) -> Profile:
     """The reader's own profile. Someone else's is reported as missing, so the
     answer does not confirm that the id exists."""
     profile = (
@@ -75,7 +77,7 @@ async def _get(session: SessionDep, user: CurrentUser, profile_id: uuid.UUID) ->
     return profile
 
 
-async def _taste_changed(session: SessionDep, cache: CacheDep, user_id: uuid.UUID) -> None:
+async def taste_changed(session: SessionDep, cache: CacheDep, user_id: uuid.UUID) -> None:
     """Interests are part of the taste. Commit first, then let caches go:
     the other way round, a request in between would cache the old version.
     """
@@ -93,18 +95,7 @@ async def list_profiles(session: SessionDep, user: CurrentUser) -> list[ProfileO
     rows = await session.execute(
         select(Profile).where(Profile.user_id == user.id).order_by(Profile.created_at, Profile.id)
     )
-    return [_out(profile) for profile in rows.scalars()]
-
-
-async def _lock_profiles(session: SessionDep, user_id: uuid.UUID) -> None:
-    """Hold the reader's profile list until the transaction ends.
-
-    Without it, parallel requests all count the profiles before any of them
-    inserts, and pass the limit or add the same shared profile twice.
-    """
-    await session.execute(
-        text("SELECT pg_advisory_xact_lock(hashtext(:key))").bindparams(key=f"profiles:{user_id}")
-    )
+    return [profile_out(profile) for profile in rows.scalars()]
 
 
 async def _add(
@@ -116,7 +107,7 @@ async def _add(
     icon: str | None = None,
     color: str | None = None,
 ) -> Profile:
-    await _lock_profiles(session, user_id)
+    await lock_profiles(session, user_id)
     owned = await session.scalar(
         select(func.count()).select_from(Profile).where(Profile.user_id == user_id)
     )
@@ -130,7 +121,7 @@ async def _add(
     session.add(profile)
     await session.flush()
     await session.refresh(profile)
-    await _taste_changed(session, cache, user_id)
+    await taste_changed(session, cache, user_id)
     return profile
 
 
@@ -138,12 +129,12 @@ async def _add(
 async def create_profile(
     spec: ProfileSpec, session: SessionDep, user: CurrentUser, cache: CacheDep
 ) -> ProfileOut:
-    return _out(await _add(session, cache, user.id, spec))
+    return profile_out(await _add(session, cache, user.id, spec))
 
 
 @router.get("/profiles/{profile_id}")
 async def get_profile(profile_id: uuid.UUID, session: SessionDep, user: CurrentUser) -> ProfileOut:
-    return _out(await _get(session, user, profile_id))
+    return profile_out(await get_owned(session, user, profile_id))
 
 
 @router.put("/profiles/{profile_id}", dependencies=[_write_limit])
@@ -155,7 +146,8 @@ async def update_profile(
     cache: CacheDep,
 ) -> ProfileOut:
     """Replace the profile. The version grows only when the content changed."""
-    profile = await _get(session, user, profile_id)
+    await lock_profiles(session, user.id)
+    profile = await get_owned(session, user, profile_id)
     new_spec = spec.model_dump(mode="json")
     if new_spec != profile.spec:
         profile.name = spec.name
@@ -163,8 +155,8 @@ async def update_profile(
         profile.version += 1
         await session.flush()
         await session.refresh(profile)
-        await _taste_changed(session, cache, user.id)
-    return _out(profile)
+        await taste_changed(session, cache, user.id)
+    return profile_out(profile)
 
 
 @router.patch("/profiles/{profile_id}/look", dependencies=[_write_limit])
@@ -172,11 +164,11 @@ async def set_look(
     profile_id: uuid.UUID, look: ProfileLook, session: SessionDep, user: CurrentUser
 ) -> ProfileOut:
     """The icon and colour; the profile's content and version stay as they are."""
-    profile = await _get(session, user, profile_id)
+    profile = await get_owned(session, user, profile_id)
     profile.icon, profile.color = look.icon, look.color
     await session.commit()
     await session.refresh(profile)
-    return _out(profile)
+    return profile_out(profile)
 
 
 @router.post("/profiles/{profile_id}/share", dependencies=[_write_limit])
@@ -194,9 +186,9 @@ async def share_profile(
         )
     )
     await session.commit()
-    profile = await _get(session, user, profile_id)
+    profile = await get_owned(session, user, profile_id)
     await session.refresh(profile)
-    return _out(profile)
+    return profile_out(profile)
 
 
 @router.delete("/profiles/{profile_id}/share", dependencies=[_write_limit])
@@ -204,11 +196,11 @@ async def unshare_profile(
     profile_id: uuid.UUID, session: SessionDep, user: CurrentUser
 ) -> ProfileOut:
     """Close the link. Copies already added stay with the readers who added them."""
-    profile = await _get(session, user, profile_id)
+    profile = await get_owned(session, user, profile_id)
     profile.share_token = None
     await session.commit()
     await session.refresh(profile)
-    return _out(profile)
+    return profile_out(profile)
 
 
 _LINK_GONE = "Ссылка больше не работает: владелец закрыл доступ или удалил профиль."
@@ -268,14 +260,14 @@ async def accept_shared_profile(
     first one made, and the owner of the link gets their own profile back."""
     source, spec = await _shared(session, token)
     # Before looking for a copy: two clicks at once must find one, not make two.
-    await _lock_profiles(session, user.id)
+    await lock_profiles(session, user.id)
     own = await _same_as(session, user.id, source)
     if own is not None:
         response.status_code = status.HTTP_200_OK
-        return _out(own)
+        return profile_out(own)
     profile = await _add(session, cache, user.id, spec, icon=source.icon, color=source.color)
     log.info("shared_profile_added", source_id=str(source.id), profile_id=str(profile.id))
-    return _out(profile)
+    return profile_out(profile)
 
 
 @router.delete(
@@ -284,8 +276,8 @@ async def accept_shared_profile(
 async def delete_profile(
     profile_id: uuid.UUID, session: SessionDep, user: CurrentUser, cache: CacheDep
 ) -> Response:
-    await session.delete(await _get(session, user, profile_id))
-    await _taste_changed(session, cache, user.id)
+    await session.delete(await get_owned(session, user, profile_id))
+    await taste_changed(session, cache, user.id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

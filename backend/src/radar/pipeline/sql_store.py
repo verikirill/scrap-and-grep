@@ -12,7 +12,7 @@ from radar.cache import Cache
 from radar.db import session_scope
 from radar.domain import Candidate, DigestOverview, GradedCandidate, ProfileSpec, Topic
 from radar.ingest.service import embed_pending
-from radar.recsys.model import Personal
+from radar.recsys.model import Learned, Personal
 from radar.selection.retrieval import Window, retrieve_candidates
 from radar.store import articles as article_store
 from radar.store import digests as digest_store
@@ -59,6 +59,21 @@ class SqlPipelineStore:
         from radar.recsys.service import personal_adjustments
 
         return await personal_adjustments(uuid.UUID(user_id), article_ids, start, end)
+
+    async def learned(
+        self, user_id: str, profile_id: str, profile: ProfileSpec
+    ) -> dict[str, Learned]:
+        # Imported here like the recommender above.
+        from radar.recsys.adaptation import learned_for
+
+        async with session_scope() as session:
+            return await learned_for(
+                session,
+                uuid.UUID(user_id),
+                uuid.UUID(profile_id),
+                profile,
+                self._embedder.model_id,
+            )
 
     async def save(
         self,

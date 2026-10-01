@@ -18,11 +18,13 @@ from radar.ingest.service import embed_pending, enabled_source_ids, ingest_sourc
 from radar.logging import get_logger
 from radar.pipeline.runner import report_failure, run_digest
 from radar.publishing import service as publishing_service
+from radar.recsys import adaptation as recsys_adaptation
 from radar.recsys import service as recsys_service
 from radar.resume import service as resume_service
 from radar.shorts import service as shorts_service
 from radar.shorts.renderer import RendererBusy
 from radar.store import digests as digest_store
+from radar.store import profiles as profile_store
 from radar.worker.brokers import (
     DIGEST_IDLE_TIMEOUT_MS,
     MEDIA_IDLE_TIMEOUT_MS,
@@ -53,6 +55,9 @@ STALE_RESUME_AFTER = timedelta(milliseconds=3 * PROFILE_IDLE_TIMEOUT_MS)
 TASTE_LOCK_TTL = 60
 # Signals that keep arriving during a refresh can hold it for this many rounds.
 TASTE_MAX_ROUNDS = 3
+# Adapting asks the model to name at most NAMING_PER_RUN new interests, each
+# bounded by the model timeout; the lock outlives that.
+ADAPT_LOCK_TTL = 600
 SHORT_LOCK_TTL = MEDIA_IDLE_TIMEOUT_MS // 1000 - 60
 SHORT_RUN_LIMIT = SHORT_LOCK_TTL - 30
 SHORT_ATTEMPTS = 2
@@ -190,6 +195,27 @@ async def refresh_taste(user_id: str) -> bool:
     return True
 
 
+@profile_broker.task(task_name="adapt_profiles", retry_on_error=True, max_retries=2)
+async def adapt_profiles(user_id: str) -> bool:
+    """Let the reader's adaptive profiles learn from their marks and what they saw.
+
+    Queued after marks and batches of impressions; bursts collapse into a few
+    runs the same way as refresh_taste.
+    """
+    cache = get_cache()
+    dirty = f"adapt-dirty:{user_id}"
+    async with cache.lock(f"adapt:{user_id}", ADAPT_LOCK_TTL) as acquired:
+        if not acquired:
+            await cache.set_json(dirty, 1, ADAPT_LOCK_TTL)
+            return False
+        for _ in range(TASTE_MAX_ROUNDS):
+            await cache.delete(dirty)
+            await recsys_adaptation.adapt_reader(uuid.UUID(user_id), cache=cache)
+            if await cache.get_json(dirty) is None:
+                break
+    return True
+
+
 @media_broker.task(task_name="make_short", retry_on_error=True, max_retries=SHORT_ATTEMPTS)
 async def make_short(video_id: str, context: Context = TaskiqDepends()) -> None:
     """Write, voice and render the short video of a digest."""
@@ -256,6 +282,9 @@ async def housekeeping() -> dict[str, int]:
         guests = await auth_service.purge_guests(
             session, now - timedelta(hours=settings.guest_ttl_hours)
         )
+        impressions = await profile_store.purge_impressions(
+            session, now - timedelta(days=recsys_adaptation.SCOPE_DAYS)
+        )
     if resumes or shorts:
         log.warning("stale_work_failed", resumes=resumes, shorts=shorts)
     # Deleted guests and digests leave their video files behind.
@@ -266,7 +295,13 @@ async def housekeeping() -> dict[str, int]:
                 await refresh_short_voices.kiq()
         except Exception as exc:
             log.warning("short_purge_not_queued", error=type(exc).__name__)
-    return {"resumes": resumes, "shorts": shorts, "sessions": sessions, "guests": guests}
+    return {
+        "resumes": resumes,
+        "shorts": shorts,
+        "sessions": sessions,
+        "guests": guests,
+        "impressions": impressions,
+    }
 
 
 @ingest_broker.task(task_name="plan_posts", schedule=[{"cron": "* * * * *"}])

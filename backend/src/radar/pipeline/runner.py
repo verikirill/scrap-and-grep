@@ -138,6 +138,7 @@ async def run_digest(
         initial: DigestState = {
             "digest_id": str(digest_id),
             "user_id": str(digest.user_id),
+            "profile_id": str(digest.profile_id) if digest.profile_id else None,
             "profile": digest.profile_spec,
             "period_start": digest.period_start.isoformat(),
             "period_end": digest.period_end.isoformat(),

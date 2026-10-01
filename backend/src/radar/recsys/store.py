@@ -12,7 +12,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from radar.config import EMBEDDING_DIM
-from radar.db.models import Article, ArticleEmbedding, Interaction, UserVector
+from radar.db.models import Article, ArticleEmbedding, Impression, Interaction, UserVector
 from radar.recsys.ranking import Evidence
 from radar.recsys.signals import KIND_OPEN, KIND_SAVE, OPPOSITE, REJECTING
 from radar.recsys.taste import Facet, Signal
@@ -22,6 +22,8 @@ from radar.recsys.taste import Facet, Signal
 # push their deliberate likes and hides out of the window.
 SIGNAL_LIMIT = 200
 OPEN_LIMIT = 100
+# Seen articles an adaptation looks at, newest first.
+SEEN_LIMIT = 500
 # A reader alike must be this close on centred taste vectors (0 is "unrelated").
 COLLAB_MIN_SIMILARITY = 0.3
 COLLAB_NEIGHBOURS = 20
@@ -138,6 +140,43 @@ _COLLAB_SQL = text(
       AND i.article_id = ANY(CAST(:ids AS bigint[]))
     GROUP BY i.article_id
     HAVING count(DISTINCT i.user_id) >= :min_readers
+    """
+)
+
+
+# The same neighbours as above, but listing what they liked instead of
+# scoring given articles: material for interests the reader has not stated.
+_LIKED_BY_ALIKE_SQL = text(
+    """
+    WITH me AS (
+        SELECT embedding FROM user_vectors WHERE user_id = :user_id AND model = :model
+    ),
+    neighbours AS (
+        SELECT v.user_id, 1 - (v.embedding <=> me.embedding) AS similarity
+        FROM user_vectors v
+        CROSS JOIN me
+        JOIN users u ON u.id = v.user_id AND NOT u.is_demo
+        WHERE v.model = :model AND v.user_id <> :user_id
+        ORDER BY v.embedding <=> me.embedding
+        LIMIT :neighbours
+    )
+    SELECT i.article_id,
+           sum(n.similarity * CASE i.kind WHEN 'save' THEN 1.2 ELSE 1.0 END) AS weight
+    FROM interactions i
+    JOIN neighbours n ON n.user_id = i.user_id
+    WHERE n.similarity >= :min_similarity
+      AND i.kind IN ('like', 'save')
+      AND i.created_at >= now() - make_interval(days => :days)
+      -- A neighbour who liked it and later rejected it does not recommend it.
+      AND NOT EXISTS (
+          SELECT 1 FROM interactions r
+          WHERE r.user_id = i.user_id AND r.article_id = i.article_id
+            AND r.kind IN ('dislike', 'hide')
+      )
+    GROUP BY i.article_id
+    HAVING count(DISTINCT i.user_id) >= :min_readers
+    ORDER BY weight DESC
+    LIMIT :limit
     """
 )
 
@@ -385,3 +424,69 @@ async def save_user_vector(
         .values(user_id=user_id, model=model, **values)
         .on_conflict_do_update(index_elements=["user_id", "model"], set_=values)
     )
+
+
+async def liked_by_readers_alike(
+    session: AsyncSession, user_id: uuid.UUID, model: str, *, limit: int = 200
+) -> dict[int, float]:
+    """Articles that at least COLLAB_MIN_READERS readers alike liked or saved lately."""
+    rows = await session.execute(
+        _LIKED_BY_ALIKE_SQL,
+        {
+            "user_id": user_id,
+            "model": model,
+            "neighbours": COLLAB_NEIGHBOURS,
+            "min_similarity": COLLAB_MIN_SIMILARITY,
+            "days": COLLAB_DAYS,
+            "min_readers": COLLAB_MIN_READERS,
+            "limit": limit,
+        },
+    )
+    return {article_id: float(weight) for article_id, weight in rows.all()}
+
+
+async def record_impressions(
+    session: AsyncSession, user_id: uuid.UUID, article_ids: Sequence[int], context: str
+) -> int:
+    """Note that the reader saw these articles. Unknown ids are skipped."""
+    known = (
+        (await session.execute(select(Article.id).where(Article.id.in_(list(set(article_ids))))))
+        .scalars()
+        .all()
+    )
+    if not known:
+        return 0
+    now = datetime.now(UTC)
+    statement = insert(Impression).values(
+        [
+            {
+                "user_id": user_id,
+                "article_id": article_id,
+                "context": context,
+                "first_seen_at": now,
+                "last_seen_at": now,
+            }
+            for article_id in known
+        ]
+    )
+    await session.execute(
+        statement.on_conflict_do_update(
+            index_elements=["user_id", "article_id", "context"],
+            set_={"times": Impression.times + 1, "last_seen_at": now},
+        )
+    )
+    return len(known)
+
+
+async def seen_since(
+    session: AsyncSession, user_id: uuid.UUID, since: datetime
+) -> dict[int, tuple[int, datetime]]:
+    """Article id -> (times seen, last seen) for the reader's recent impressions."""
+    rows = await session.execute(
+        select(Impression.article_id, func.sum(Impression.times), func.max(Impression.last_seen_at))
+        .where(Impression.user_id == user_id, Impression.last_seen_at >= since)
+        .group_by(Impression.article_id)
+        .order_by(func.max(Impression.last_seen_at).desc())
+        .limit(SEEN_LIMIT)
+    )
+    return {article_id: (int(times), last) for article_id, times, last in rows.all()}

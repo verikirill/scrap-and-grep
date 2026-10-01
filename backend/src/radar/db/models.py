@@ -223,6 +223,88 @@ class Interaction(Base):
     )
 
 
+class Impression(Base):
+    """An article a reader has seen, in the feed or in a digest.
+
+    With it, an article the reader scrolled past is told apart from one they
+    never saw: a quiet "not for me" that likes alone cannot give.
+    """
+
+    __tablename__ = "impressions"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    article_id: Mapped[int] = mapped_column(
+        ForeignKey("articles.id", ondelete="CASCADE"), primary_key=True
+    )
+    context: Mapped[str] = mapped_column(String(16), primary_key=True)
+    times: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    first_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    last_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    __table_args__ = (Index("ix_impressions_user_seen", "user_id", "last_seen_at"),)
+
+
+class InterestAdaptation(Base):
+    """What a profile's interest has learned from its reader.
+
+    Recomputed from the marks as a whole, never nudged step by step, so a
+    reset or a changed interest needs no undo.
+    """
+
+    __tablename__ = "interest_adaptations"
+
+    profile_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("profiles.id", ondelete="CASCADE"), primary_key=True
+    )
+    interest_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    model: Mapped[str] = mapped_column(String(120), primary_key=True)
+    # Hash of the interest's text: an edited interest drops what the old one learned.
+    base_hash: Mapped[str] = mapped_column(String(64))
+    # Multiplies the stated weight, 0.75..1.25.
+    factor: Mapped[float] = mapped_column(Float, default=1.0)
+    # The interest's search vector moved towards what the reader liked; null
+    # while there is too little to move it.
+    vector: Mapped[Any | None] = mapped_column(Vector(EMBEDDING_DIM))
+    drift: Mapped[float] = mapped_column(Float, default=0.0)
+    positives: Mapped[float] = mapped_column(Float, default=0.0)
+    negatives: Mapped[float] = mapped_column(Float, default=0.0)
+    skipped: Mapped[int] = mapped_column(Integer, default=0)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class ProfileSuggestion(Base):
+    """A change to a profile the reader's marks point at: a new interest or a
+    new exclusion. Applied only when the reader accepts it."""
+
+    __tablename__ = "profile_suggestions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid7)
+    profile_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("profiles.id", ondelete="CASCADE"))
+    kind: Mapped[str] = mapped_column(String(16))
+    # "likes", "dislikes" or "similar_readers".
+    source: Mapped[str] = mapped_column(String(24))
+    title: Mapped[str] = mapped_column(String(120))
+    description: Mapped[str] = mapped_column(Text, default="", server_default="")
+    keywords: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list, server_default="{}")
+    # The articles behind the suggestion, shown as its evidence.
+    article_ids: Mapped[list[int]] = mapped_column(
+        ARRAY(BigInteger), default=list, server_default="{}"
+    )
+    status: Mapped[str] = mapped_column(String(16), default="open", server_default="open")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (Index("ix_profile_suggestions_profile", "profile_id", "status"),)
+
+
 class UserVector(Base):
     """A reader's taste as one vector per embedding model, for finding readers alike."""
 
@@ -253,6 +335,11 @@ class Profile(Base):
     # A link that hands a copy of the profile to another reader; null while
     # the owner shares nothing. Owners see it again, so it is kept as is.
     share_token: Mapped[str | None] = mapped_column(String(32))
+    # Whether the profile follows its reader's marks (weights and the meaning
+    # of each interest), and the moment it started to: a reset moves it on,
+    # and marks before it no longer count.
+    adaptive: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    adapt_since: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

@@ -37,6 +37,7 @@ from radar.domain import (
 )
 from radar.logging import get_logger
 from radar.pipeline.ports import PipelineDeps
+from radar.recsys.model import Learned, adapted_weight
 from radar.selection.clustering import cluster_items
 from radar.selection.retrieval import Window
 from radar.selection.scoring import final_score, rank_candidates, select
@@ -56,7 +57,12 @@ _UNPERSONALIZED = "без учёта оценок: сбой при расчёт�
 class DigestState(TypedDict, total=False):
     digest_id: str
     user_id: str
+    # The profile the digest was ordered for; None for one deleted since.
+    profile_id: str | None
     profile: dict[str, Any]
+    # What the profile's interests learned from the reader, as used here:
+    # interest id -> factor, drift and the marks behind them.
+    adaptation: dict[str, dict[str, float]]
     period_start: str
     period_end: str
     started_at: float
@@ -75,9 +81,10 @@ class DigestState(TypedDict, total=False):
     topics: list[dict[str, Any]]
 
 
-class GradeTask(TypedDict):
+class GradeTask(TypedDict, total=False):
     candidate: dict[str, Any]
     profile: dict[str, Any]
+    adaptation: dict[str, dict[str, float]]
 
 
 class SummaryTask(TypedDict):
@@ -144,6 +151,16 @@ class DigestNodes:
             log.warning("query_embedding_failed", error=f"{type(exc).__name__}: {exc}"[:300])
             interest_vectors, exclusion_vectors, lexical_only = None, None, True
 
+        learned = await self._learned(state, profile)
+        if interest_vectors is not None:
+            # Interests that learned where the reader's liked articles are search there.
+            interest_vectors = {
+                interest_id: learned[interest_id].vector or vector
+                if interest_id in learned
+                else vector
+                for interest_id, vector in interest_vectors.items()
+            }
+
         candidates, total = await self._deps.store.retrieve(
             profile, window, interest_vectors, exclusion_vectors
         )
@@ -163,13 +180,42 @@ class DigestNodes:
             "candidates": [candidate.model_dump(mode="json") for candidate in trimmed],
             "window_total": total,
             "lexical_only": lexical_only,
+            "adaptation": {
+                interest_id: {
+                    "factor": item.factor,
+                    "drift": item.drift,
+                    "positives": item.positives,
+                    "negatives": item.negatives,
+                    "skipped": float(item.skipped),
+                }
+                for interest_id, item in learned.items()
+            },
         }
+
+    async def _learned(self, state: DigestState, profile: ProfileSpec) -> dict[str, Learned]:
+        """What the profile learned from its reader. Best effort, like _personalize:
+        without it the digest follows the stated interests."""
+        user_id, profile_id = state.get("user_id"), state.get("profile_id")
+        if not user_id or not profile_id:
+            return {}
+        try:
+            return await self._deps.store.learned(user_id, profile_id, profile)
+        except Exception as exc:
+            log.warning("adaptation_unavailable", error=f"{type(exc).__name__}: {exc}"[:300])
+            return {}
 
     def fan_out_grading(self, state: DigestState) -> list[Send] | str:
         if not state["candidates"]:
             return "select"
         return [
-            Send("grade", {"candidate": candidate, "profile": state["profile"]})
+            Send(
+                "grade",
+                {
+                    "candidate": candidate,
+                    "profile": state["profile"],
+                    "adaptation": state.get("adaptation", {}),
+                },
+            )
             for candidate in state["candidates"]
         ]
 
@@ -185,10 +231,14 @@ class DigestNodes:
         else:
             verdict = await self._deps.intelligence.grade(candidate, profile)
         interest = profile.interest(verdict.interest_id or candidate.interest_id)
+        weight = 1.0
+        if interest is not None:
+            own = state.get("adaptation", {}).get(interest.id)
+            weight = adapted_weight(interest.weight, Learned(factor=own["factor"]) if own else None)
         graded = GradedCandidate(
             candidate=candidate,
             grade=verdict,
-            score=final_score(candidate, verdict, interest.weight if interest else 1.0),
+            score=final_score(candidate, verdict, weight),
         )
         _emit("grade", done=1)
         return {"graded": [graded.model_dump(mode="json")]}
@@ -423,5 +473,7 @@ def _stats(
         # Candidates whose score the reader's own behaviour moved.
         "personalized": sum(1 for item in graded if item.personal),
         "personalization_failed": any(item.personal_note == _UNPERSONALIZED for item in graded),
+        # Interests that learned from the reader, as this digest used them.
+        "adaptation": state.get("adaptation", {}),
         "duration_seconds": round(time.time() - state.get("started_at", time.time()), 1),
     }
