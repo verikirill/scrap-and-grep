@@ -12,6 +12,7 @@ from radar.ranker.train import (
     LABEL_SEEN,
     MARGIN,
     Lists,
+    Row,
     assemble,
     evaluate,
 )
@@ -20,18 +21,20 @@ from radar.recsys.ranking import Ranked
 END = datetime(2026, 9, 30, tzinfo=UTC)
 
 
-def lists_where_freshness_decides(count: int, *, seed: int = 1) -> Lists:
+def lists_where_freshness_decides(
+    count: int, *, seed: int = 1, readers: int = 25, variant: str = "hand"
+) -> Lists:
     """Served lists over two weeks. Readers act on fresh articles; the hand
     score is noise, so it knows nothing a model could not learn."""
     rng = np.random.default_rng(seed)
-    rows: list[tuple[Any, int, dict[str, float], datetime, int]] = []
+    rows: list[Row] = []
     for index in range(count):
         served_at = END - timedelta(days=14) + timedelta(days=14) * index / count
         for position in range(1, 21):
             fresh = rng.random()
             label = LABEL_LIKED if fresh > 0.8 else LABEL_OPENED if fresh > 0.6 else LABEL_SEEN
             features = {"score": rng.random(), "fresh": fresh, "confidence": 0.5}
-            rows.append((index, position, features, served_at, label))
+            rows.append((index, index % readers, variant, position, features, served_at, label))
     return assemble(rows)
 
 
@@ -55,6 +58,20 @@ def test_a_model_that_finds_what_the_hand_blend_misses_is_switched_on() -> None:
     assert outcome.booster is not None
 
 
+def test_a_win_at_a_few_readers_is_not_trusted() -> None:
+    outcome = evaluate(lists_where_freshness_decides(600, readers=3), END)
+
+    assert outcome.status == "rejected"
+    assert outcome.metrics["model_ndcg"] >= outcome.metrics["hand_ndcg"] + MARGIN
+
+
+def test_lists_a_model_ordered_do_not_judge_it() -> None:
+    outcome = evaluate(lists_where_freshness_decides(600, variant="learned"), END)
+
+    assert outcome.status == "rejected"
+    assert outcome.metrics["holdout_lists"] == 0
+
+
 def test_too_little_data_keeps_the_hand_blend() -> None:
     outcome = evaluate(lists_where_freshness_decides(40), END)
 
@@ -64,7 +81,7 @@ def test_too_little_data_keeps_the_hand_blend() -> None:
 
 
 def test_a_model_already_on_is_retired_once_it_loses_to_the_hand_blend() -> None:
-    lists = lists_where_freshness_decides(40)
+    lists = lists_where_freshness_decides(600)
     # Puts the stalest first: worse than the hand blend's noise.
     stale_first = Fixed(lambda row: -row["fresh"])
     fresh_first = Fixed(lambda row: row["fresh"])
@@ -89,4 +106,4 @@ def test_the_model_changes_the_order_but_not_the_scale_of_scores() -> None:
     # The freshest gets the best score of the pool, the stalest the worst.
     assert order == {3: 0.9, 2: 0.7, 1: 0.5}
     # A model that fails leaves the hand order alone.
-    assert broken == {}
+    assert broken is None

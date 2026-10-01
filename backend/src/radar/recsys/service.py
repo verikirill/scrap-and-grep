@@ -21,7 +21,7 @@ from radar.events.model import SLOT_EXPLORE, SLOT_NEWEST, SLOT_RANKED, SLOT_SAVE
 from radar.logging import get_logger
 from radar.pipeline.ports import QueryEmbedder
 from radar.pipeline.sql_store import CachedQueryEmbedder
-from radar.ranker.serving import VARIANT_LEARNED, assignment, learned_order
+from radar.ranker.serving import VARIANT_HAND, VARIANT_LEARNED, assignment, learned_order
 from radar.reading import reading_minutes
 from radar.recsys import store
 from radar.recsys.adaptation import learned_interests
@@ -515,7 +515,8 @@ async def build_feed(
         # Nothing is known about the reader yet: show what is new.
         newest = sorted(evidence, key=lambda item: item.age_hours)[:FEED_SIZE]
         ranked = [Ranked(item.article_id, 0.0, {}, {}, explore=True) for item in newest]
-        return await _cards(session, ranked, reader), ranking
+        # Ranked by date, not by any ranker: no side of the comparison.
+        return await _cards(session, ranked, reader), Ranking(variant=VARIANT_HAND)
 
     shared = await store.collab(
         session, user_id, embedder.model_id, [item.article_id for item in evidence]
@@ -539,13 +540,14 @@ async def build_feed(
     spare = [item for item in ranked if item.score < weights.min_score]
     vectors = await load_vectors(session, embedder.model_id, [item.article_id for item in chosen])
     sources = {item.article_id: item.source_id for item in evidence}
-    # The learned ranker reorders the pool; the variety pass and exploration
-    # work on its order the same way as on the hand one.
-    order = (
-        learned_order(arm.model, chosen, ranking.confidence)
-        if arm.variant == VARIANT_LEARNED and arm.model is not None
-        else None
-    )
+    # The learned ranker reorders what the hand blend would show (it never
+    # learned from the rest); the variety pass and exploration work on its
+    # order the same way as on the hand one.
+    order = None
+    if arm.variant == VARIANT_LEARNED and arm.model is not None:
+        order = learned_order(arm.model, chosen[:FEED_SIZE], ranking.confidence)
+        if order is None:
+            ranking = Ranking(variant=VARIANT_HAND, confidence=ranking.confidence)
     feed = rerank_for_variety(
         chosen,
         vectors,

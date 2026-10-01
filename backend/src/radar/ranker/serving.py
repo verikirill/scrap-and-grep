@@ -56,22 +56,31 @@ async def assignment(user_id: uuid.UUID) -> Assignment:
     return Assignment(VARIANT_CONTROL, model)
 
 
-def learned_order(model: Model, ranked: Sequence[Ranked], confidence: float) -> dict[int, float]:
+def learned_order(
+    model: Model, ranked: Sequence[Ranked], confidence: float
+) -> dict[int, float] | None:
     """Article id -> the score the variety pass should use, in the model's order.
 
     The model decides the order only. The pass gets evenly spaced scores from
     the best hand score of the pool down to the worst, in the range it was
     tuned for. The span is never narrower than _MIN_SPAN: many articles reach
     the hand blend's cap of 1.0, and equal scores would hand the order back to
-    the pass. An empty answer, on any failure, leaves the hand order in place.
+    the pass. None, on any failure: the caller serves the hand order and must
+    not label it as the model's.
     """
     if not ranked:
         return {}
     try:
-        predicted = model.scores([served(item.parts, item.score, confidence) for item in ranked])
+        # Rounded as the served event records the score: what training saw.
+        predicted = model.scores(
+            [served(item.parts, round(item.score, 3), confidence) for item in ranked]
+        )
     except Exception as exc:
         log.warning("ranker_failed", version=model.version, error=type(exc).__name__)
-        return {}
+        return None
+    if not np.isfinite(predicted).all():
+        log.warning("ranker_failed", version=model.version, error="not finite")
+        return None
     by_model = np.argsort(-predicted, kind="stable")
     top = max(item.score for item in ranked)
     bottom = max(0.0, min(min(item.score for item in ranked), top - _MIN_SPAN))

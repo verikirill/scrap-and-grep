@@ -177,7 +177,15 @@ async def test_a_switched_on_model_orders_the_feed_of_readers_in_its_group(
         for rank, position in enumerate(np.argsort(fresh)):
             label = 4 - rank * 5 // 20
             examples.append(
-                (index, int(position) + 1, {"fresh": float(fresh[position])}, served_at, label)
+                (
+                    index,
+                    index,
+                    "hand",
+                    int(position) + 1,
+                    {"fresh": float(fresh[position])},
+                    served_at,
+                    label,
+                )
             )
     booster = fit(assemble(examples))
     async with session_scope() as session:

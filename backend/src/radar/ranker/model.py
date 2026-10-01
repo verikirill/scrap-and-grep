@@ -35,8 +35,19 @@ class Model:
         return np.asarray(predicted, dtype=np.float64)
 
 
+class Unusable(Exception):
+    """A stored model this code cannot serve."""
+
+
 def load(version: str, text: str, names: Sequence[str]) -> Model:
-    return Model(version, lgb.Booster(model_str=text), tuple(names))
+    """A model from its stored text, tried on one row before it serves anyone."""
+    unknown = set(names) - set(features.FEATURES)
+    if unknown:
+        raise Unusable(f"features this code does not compute: {sorted(unknown)}")
+    model = Model(version, lgb.Booster(model_str=text), tuple(names))
+    if not np.isfinite(model.scores([{}])).all():
+        raise Unusable("the model scores a blank row as NaN")
+    return model
 
 
 _checked_at = -math.inf
@@ -44,7 +55,7 @@ _current: Model | None = None
 
 
 async def active() -> Model | None:
-    """The model switched on, if any. A failed refresh keeps the one in hand."""
+    """The model switched on, if any. One that cannot be read serves nobody."""
     global _checked_at, _current
     if time.monotonic() - _checked_at < _REFRESH_SECONDS:
         return _current
@@ -66,7 +77,10 @@ async def active() -> Model | None:
                 )
                 _current = load(row.version, text or "", row.features)
     except Exception as exc:
-        log.warning("ranker_not_loaded", error=f"{type(exc).__name__}: {exc}"[:200])
+        # The table says another model is on, or none, and this one cannot be
+        # read: serving a retired model would label readers wrongly.
+        log.error("ranker_not_loaded", error=f"{type(exc).__name__}: {exc}"[:200])
+        _current = None
     return _current
 
 

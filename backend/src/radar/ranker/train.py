@@ -11,12 +11,14 @@ A list is a query group for LambdaRank (LightGBM). Readers open what is on
 top more often, whatever it is; the place goes to LightGBM as a position,
 so it learns that pull apart instead of mistaking it for relevance.
 
-The last days are held out. On them the model and the hand blend both order
-every list, and nDCG@20 over the readers' own labels decides: the model is
-switched on only if it wins by a margin, with enough data on both sides. A
-model already on is checked against the same days and retired once it no
-longer wins. Clicks were collected under the hand order and favour it, so
-the test is a strict one.
+The last three full days are held out. On the lists of those days that the
+hand blend served (a model's own lists would be ranked in its favour), the
+model and the hand blend both order every list, and nDCG@20 over the
+readers' own labels decides. The gain is averaged per reader, and a
+bootstrap over readers must keep it above zero: many lists of one reader
+are not many readers. Ties are broken at random for both, not by the served
+order, which carries the clicks' pull to the top. A model already on is
+retired once it loses by the margin on enough lists.
 """
 
 import asyncio
@@ -37,19 +39,24 @@ from radar.logging import get_logger
 from radar.ranker import model as ranker_model
 from radar.ranker.features import FEATURES, matrix, position_band
 from radar.ranker.model import STATUS_ACTIVE, STATUS_REJECTED, STATUS_RETIRED
+from radar.ranker.serving import VARIANT_LEARNED
 
 log = get_logger(__name__)
 
 LABEL_REJECTED, LABEL_SEEN, LABEL_OPENED, LABEL_LIKED, LABEL_SAVED = range(5)
+# What a reader did with a list counts for a day after it was served.
 WINDOW = timedelta(hours=24)
 HOLDOUT_DAYS = 3
 DEPTH = 20
 # Less than this and a win is noise.
 MIN_TRAIN_LISTS = 200
 MIN_HOLDOUT_LISTS = 50
+MIN_HOLDOUT_READERS = 5
 MIN_ACTIONS = 300
-# nDCG@20 the model must gain over the hand blend to be switched on.
+# nDCG@20 the model must gain over the hand blend to be switched on, and lose
+# to be switched off.
 MARGIN = 0.01
+BOOTSTRAP = 1000
 MAX_ROWS = 2_000_000
 ROUNDS = 200
 PARAMS: dict[str, Any] = {
@@ -67,17 +74,20 @@ PARAMS: dict[str, Any] = {
 }
 _SCORE = FEATURES.index("score")
 
+# Newest first: past MAX_ROWS the oldest lists go, never the held-out days.
+# "newest" lists are the cold start, ranked by date and not by anything here.
 _QUERY = """
-SELECT s.request_id, s.place, s.served_features, s.served_at,
+SELECT s.request_id, s.user_id, s.list_variant, s.place, s.served_features, s.served_at,
        multiIf(a.rejected, 0, a.saved, 4, a.liked, 3, a.opened, 2, 1) AS label
 FROM
 (
     SELECT user_id, request_id, article_id,
+           any(variant) AS list_variant,
            min(position) AS place,
            argMin(features, ts) AS served_features,
            min(ts) AS served_at
     FROM events
-    WHERE event = 'served' AND surface = 'feed' AND position > 0
+    WHERE event = 'served' AND surface = 'feed' AND position > 0 AND slot != 'newest'
       AND ts >= {start:DateTime64(3, 'UTC')} AND ts < {served_until:DateTime64(3, 'UTC')}
     GROUP BY user_id, request_id, article_id
 ) AS s
@@ -96,9 +106,11 @@ INNER JOIN
     GROUP BY user_id, request_id, article_id
 ) AS a USING (user_id, request_id, article_id)
 WHERE a.acted_at < s.served_at + INTERVAL 1 DAY
-ORDER BY s.request_id, s.place
+ORDER BY s.served_at DESC
 LIMIT {limit:UInt64}
 """
+
+Row = tuple[Any, Any, str, int, dict[str, float], datetime, int]
 
 
 @dataclass(frozen=True, slots=True)
@@ -108,9 +120,11 @@ class Lists:
     features: np.ndarray
     labels: np.ndarray
     positions: np.ndarray
-    # Rows per list, and when each list was served.
+    # Per list: its rows, when it was served, to whom, by which ranker.
     sizes: np.ndarray
     served_at: list[datetime] = field(default_factory=list)
+    readers: list[Any] = field(default_factory=list)
+    variants: list[str] = field(default_factory=list)
 
     @property
     def rows(self) -> int:
@@ -119,36 +133,46 @@ class Lists:
     def starts(self) -> np.ndarray:
         return np.concatenate(([0], np.cumsum(self.sizes)[:-1])).astype(int)
 
-    def take(self, keep: np.ndarray) -> Lists:
+    def take(self, keep: Sequence[bool]) -> Lists:
         """The lists where `keep` is true."""
-        mask = np.repeat(keep, self.sizes)
+        kept = np.asarray(keep, dtype=bool)
+        mask = np.repeat(kept, self.sizes)
         return Lists(
             self.features[mask],
             self.labels[mask],
             self.positions[mask],
-            self.sizes[keep],
-            [moment for moment, kept in zip(self.served_at, keep, strict=True) if kept],
+            self.sizes[kept],
+            [value for value, on in zip(self.served_at, kept, strict=True) if on],
+            [value for value, on in zip(self.readers, kept, strict=True) if on],
+            [value for value, on in zip(self.variants, kept, strict=True) if on],
         )
 
 
-def assemble(rows: Sequence[tuple[Any, int, dict[str, float], datetime, int]]) -> Lists:
-    """Lists from (list id, position, features, served at, label) rows sorted by list."""
-    groups: dict[Any, list[tuple[int, dict[str, float], datetime, int]]] = {}
-    for list_id, position, features, served_at, label in rows:
-        groups.setdefault(list_id, []).append((position, features, served_at, label))
+def assemble(rows: Sequence[Row]) -> Lists:
+    """Lists from (list id, reader, ranker, position, features, served at, label) rows."""
+    groups: dict[Any, list[Row]] = {}
+    for row in rows:
+        groups.setdefault(row[0], []).append(row)
     # A list of one article has nothing to order.
     ordered = sorted(
         (items for items in groups.values() if len(items) > 1),
-        key=lambda items: min(item[2] for item in items),
+        key=lambda items: min(item[5] for item in items),
     )
-    flat = [item for items in ordered for item in sorted(items, key=lambda item: item[0])]
+    flat = [item for items in ordered for item in sorted(items, key=lambda item: item[3])]
     return Lists(
-        features=matrix([item[1] for item in flat]),
-        labels=np.array([item[3] for item in flat], dtype=np.int32),
-        positions=np.array([item[0] for item in flat], dtype=np.int32),
+        features=matrix([item[4] for item in flat]),
+        labels=np.array([item[6] for item in flat], dtype=np.int32),
+        positions=np.array([item[3] for item in flat], dtype=np.int32),
         sizes=np.array([len(items) for items in ordered], dtype=np.int32),
-        served_at=[min(item[2] for item in items) for items in ordered],
+        served_at=[min(item[5] for item in items) for items in ordered],
+        readers=[items[0][1] for items in ordered],
+        variants=[items[0][2] for items in ordered],
     )
+
+
+def holdout_from(end: datetime) -> datetime:
+    """Lists served after this are held out: the last full days with a day to act on."""
+    return end - WINDOW - timedelta(days=HOLDOUT_DAYS)
 
 
 async def load(start: datetime, end: datetime) -> Lists:
@@ -163,7 +187,14 @@ async def load(start: datetime, end: datetime) -> Lists:
             },
         )
         rows = result.result_rows
-    return assemble([(row[0], row[1], row[2], row[3].replace(tzinfo=UTC), row[4]) for row in rows])
+    if len(rows) >= MAX_ROWS:
+        log.warning("ranker_rows_cut", limit=MAX_ROWS)
+    return assemble(
+        [
+            (row[0], row[1], row[2], row[3], row[4], row[5].replace(tzinfo=UTC), row[6])
+            for row in rows
+        ]
+    )
 
 
 def ndcg(labels_in_order: np.ndarray, depth: int = DEPTH) -> float:
@@ -174,18 +205,61 @@ def ndcg(labels_in_order: np.ndarray, depth: int = DEPTH) -> float:
     return float(gains[:depth] @ discounts[: min(depth, len(gains))]) / best if best else 0.0
 
 
-def mean_ndcg(lists: Lists, scores: np.ndarray) -> float:
-    """Average nDCG@20 when every list is ordered by `scores`, over the lists
-    where the order matters (not all labels alike)."""
-    values = []
-    for start, size in zip(lists.starts(), lists.sizes, strict=True):
+def list_ndcg(lists: Lists, scores: np.ndarray, tiebreak: np.ndarray) -> np.ndarray:
+    """nDCG@20 of every list ordered by `scores`; NaN where all labels are alike
+    and the order cannot matter."""
+    values = np.full(len(lists.sizes), np.nan)
+    for index, (start, size) in enumerate(zip(lists.starts(), lists.sizes, strict=True)):
         labels = lists.labels[start : start + size]
         if labels.min() == labels.max():
             continue
-        # Ties keep the served order.
-        order = np.lexsort((lists.positions[start : start + size], -scores[start : start + size]))
-        values.append(ndcg(labels[order]))
-    return float(np.mean(values)) if values else 0.0
+        order = np.lexsort((tiebreak[start : start + size], -scores[start : start + size]))
+        values[index] = ndcg(labels[order])
+    return values
+
+
+def mean_ndcg(lists: Lists, scores: np.ndarray, seed: int = 0) -> float:
+    tiebreak = np.random.default_rng(seed).random(lists.rows)
+    values = list_ndcg(lists, scores, tiebreak)
+    return float(np.nanmean(values)) if np.isfinite(values).any() else 0.0
+
+
+@dataclass(frozen=True, slots=True)
+class Comparison:
+    hand: float
+    model: float
+    # The gain averaged per reader, and the 5th percentile of its bootstrap.
+    gain: float
+    gain_low: float
+    lists: int
+    readers: int
+
+
+def compare(lists: Lists, model_scores: np.ndarray, seed: int = 0) -> Comparison:
+    """The model against the hand blend on the same lists, reader by reader."""
+    rng = np.random.default_rng(seed)
+    tiebreak = rng.random(lists.rows)
+    hand = list_ndcg(lists, lists.features[:, _SCORE], tiebreak)
+    model = list_ndcg(lists, model_scores, tiebreak)
+    counted = np.isfinite(hand)
+    by_reader: dict[Any, list[float]] = {}
+    for reader, difference, on in zip(lists.readers, model - hand, counted, strict=True):
+        if on:
+            by_reader.setdefault(reader, []).append(float(difference))
+    gains = np.array([np.mean(values) for values in by_reader.values()])
+    if len(gains) < MIN_HOLDOUT_READERS:
+        low = -np.inf
+    else:
+        draws = rng.choice(gains, size=(BOOTSTRAP, len(gains)), replace=True).mean(axis=1)
+        low = float(np.percentile(draws, 5))
+    return Comparison(
+        hand=float(np.mean(hand[counted])) if counted.any() else 0.0,
+        model=float(np.mean(model[counted])) if counted.any() else 0.0,
+        gain=float(gains.mean()) if len(gains) else 0.0,
+        gain_low=low,
+        lists=int(counted.sum()),
+        readers=len(gains),
+    )
 
 
 def fit(lists: Lists, *, debias: bool = True) -> lgb.Booster:
@@ -202,6 +276,10 @@ def fit(lists: Lists, *, debias: bool = True) -> lgb.Booster:
     return lgb.train(PARAMS, data, num_boost_round=ROUNDS)
 
 
+def predict(booster: lgb.Booster, lists: Lists) -> np.ndarray:
+    return np.asarray(booster.predict(lists.features, num_threads=1), dtype=np.float64)
+
+
 @dataclass(frozen=True, slots=True)
 class Outcome:
     status: str
@@ -210,57 +288,75 @@ class Outcome:
     lists: int
     rows: int
     booster: lgb.Booster | None = None
-    # Whether the model already on still beats the hand blend on these days.
+    # Whether the model already on still holds against the hand blend.
     keep_active: bool = True
+
+
+def _rows(lists: Lists) -> list[dict[str, float]]:
+    return [dict(zip(FEATURES, map(float, row), strict=True)) for row in lists.features]
 
 
 def evaluate(lists: Lists, end: datetime, current: ranker_model.Model | None = None) -> Outcome:
     """Fit on all but the last days, compare with the hand blend on those days."""
     if not lists.sizes.size:
         return Outcome(STATUS_REJECTED, "Событий пока нет.", {}, 0, 0)
-    held = np.array([moment >= end - timedelta(days=HOLDOUT_DAYS) for moment in lists.served_at])
-    train, holdout = lists.take(~held), lists.take(held)
+    held = [moment >= holdout_from(end) for moment in lists.served_at]
+    train = lists.take([not on for on in held])
+    # Lists a model ordered favour it: only the hand blend's lists judge.
+    judged = lists.take(
+        [
+            on and variant != VARIANT_LEARNED
+            for on, variant in zip(held, lists.variants, strict=True)
+        ]
+    )
     actions = int((train.labels >= LABEL_OPENED).sum())
     metrics: dict[str, float] = {
         "train_lists": float(len(train.sizes)),
-        "holdout_lists": float(len(holdout.sizes)),
+        "holdout_lists": float(len(judged.sizes)),
         "actions": float(actions),
     }
+    enough_holdout = len(judged.sizes) >= MIN_HOLDOUT_LISTS
     keep = True
-    if current is not None and holdout.rows:
-        hand = mean_ndcg(holdout, holdout.features[:, _SCORE])
-        metrics["current_ndcg"] = mean_ndcg(holdout, current.scores(_rows(holdout)))
-        keep = metrics["current_ndcg"] >= hand
-    if (
-        len(train.sizes) < MIN_TRAIN_LISTS
-        or len(holdout.sizes) < MIN_HOLDOUT_LISTS
-        or actions < MIN_ACTIONS
-    ):
+    if current is not None and enough_holdout:
+        try:
+            standing = compare(judged, current.scores(_rows(judged)))
+            metrics["current_ndcg"] = standing.model
+            keep = standing.gain > -MARGIN
+        except Exception as exc:
+            log.warning("ranker_current_not_scored", error=type(exc).__name__)
+            keep = False
+    if len(train.sizes) < MIN_TRAIN_LISTS or not enough_holdout or actions < MIN_ACTIONS:
         note = (
             f"Мало данных: списков для обучения {len(train.sizes)} из {MIN_TRAIN_LISTS}, "
-            f"для проверки {len(holdout.sizes)} из {MIN_HOLDOUT_LISTS}, "
+            f"для проверки {len(judged.sizes)} из {MIN_HOLDOUT_LISTS}, "
             f"открытий и отметок {actions} из {MIN_ACTIONS}."
         )
         return Outcome(
             STATUS_REJECTED, note, metrics, len(lists.sizes), lists.rows, keep_active=keep
         )
     booster = fit(train)
-    metrics["hand_ndcg"] = mean_ndcg(holdout, holdout.features[:, _SCORE])
-    metrics["model_ndcg"] = mean_ndcg(
-        holdout, np.asarray(booster.predict(holdout.features, num_threads=1), dtype=np.float64)
-    )
-    gain = metrics["model_ndcg"] - metrics["hand_ndcg"]
-    if gain >= MARGIN:
-        note = f"Модель лучше ручных весов на {gain:+.3f} nDCG@{DEPTH} на последних днях."
+    result = compare(judged, predict(booster, judged))
+    metrics |= {
+        "hand_ndcg": result.hand,
+        "model_ndcg": result.model,
+        "gain": result.gain,
+        "gain_low": max(result.gain_low, -1.0),
+        "readers": float(result.readers),
+    }
+    if result.gain >= MARGIN and result.gain_low > 0:
+        note = (
+            f"Модель лучше ручных весов на {result.gain:+.3f} nDCG@{DEPTH} "
+            f"на последних днях, у {result.readers} читателей."
+        )
         status = STATUS_ACTIVE
     else:
-        note = f"Модель не обогнала ручные веса: {gain:+.3f} nDCG@{DEPTH}, нужно {MARGIN:+.3f}."
+        note = (
+            f"Модель не обогнала ручные веса: {result.gain:+.3f} nDCG@{DEPTH} "
+            f"(нижняя граница {max(result.gain_low, -1.0):+.3f}), нужно {MARGIN:+.3f} "
+            "и граница выше нуля."
+        )
         status = STATUS_REJECTED
     return Outcome(status, note, metrics, len(lists.sizes), lists.rows, booster, keep)
-
-
-def _rows(lists: Lists) -> list[dict[str, float]]:
-    return [dict(zip(FEATURES, map(float, row), strict=True)) for row in lists.features]
 
 
 async def train(now: datetime | None = None) -> RankerModel:
@@ -274,7 +370,7 @@ async def train(now: datetime | None = None) -> RankerModel:
         version=f"{end:%Y%m%d-%H%M%S}",
         status=outcome.status,
         trained_from=start,
-        trained_to=end - timedelta(days=HOLDOUT_DAYS),
+        trained_to=holdout_from(end),
         lists=outcome.lists,
         rows=outcome.rows,
         metrics={key: round(value, 4) for key, value in outcome.metrics.items()},
@@ -283,8 +379,7 @@ async def train(now: datetime | None = None) -> RankerModel:
         note=outcome.note,
     )
     async with session_scope() as session:
-        retire = outcome.status == STATUS_ACTIVE or not outcome.keep_active
-        if retire:
+        if outcome.status == STATUS_ACTIVE or not outcome.keep_active:
             await session.execute(
                 update(RankerModel)
                 .where(RankerModel.status == STATUS_ACTIVE)
