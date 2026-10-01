@@ -11,13 +11,16 @@ import logging
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Annotated, Literal
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel, Field, StringConstraints
 
-from radar_tts.engine import Config, Engine, UnknownSpeaker
+from radar_tts.check import checker_from_env
+from radar_tts.engine import VOICE_ID_RE, Config, Engine, UnknownSpeaker, load_voices
+from radar_tts.paths import model_kind
 
 log = logging.getLogger("radar_tts")
 
@@ -27,9 +30,15 @@ MAX_SENTENCES = 12
 MAX_CHARS = 400
 # Requests waiting for the model at once; more would only time out.
 MAX_WAITING = 4
-# The 0.6B model fits next to the digest LLM on a 12 GB card (docs/DECISIONS.md).
-DEFAULT_MODEL = "Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice"
-DEFAULT_SPEAKER = "Aiden"
+# A 0.6B model fits next to the digest LLM on a 12 GB card. The Base model
+# speaks with the voices in voices/, designed as native Russian speakers;
+# the built-in speakers of the CustomVoice model are not, and once in a while
+# drifted into no language at all (docs/DECISIONS.md).
+DEFAULT_MODEL = "Qwen/Qwen3-TTS-12Hz-0.6B-Base"
+# TTS_SPEAKER, when unset: a voice from voices/ for a Base model, a built-in
+# speaker for a CustomVoice one.
+DEFAULT_SPEAKERS = {"base": "anchor", "custom_voice": "Aiden"}
+# Only the 1.7B CustomVoice model follows a style instruction.
 DEFAULT_INSTRUCT = "Energetic news anchor, clear diction, fast pace."
 
 Sentence = Annotated[
@@ -41,7 +50,7 @@ Language = Literal["Auto", "Russian", "English"]
 class SpeechIn(BaseModel):
     sentences: list[Sentence] = Field(min_length=1, max_length=MAX_SENTENCES)
     language: Language = "Russian"
-    voice: Annotated[str, StringConstraints(max_length=40, pattern=r"^[A-Za-z_]+$")] | None = None
+    voice: Annotated[str, StringConstraints(pattern=VOICE_ID_RE.pattern)] | None = None
     gap_ms: int = Field(default=380, ge=0, le=2000)
 
 
@@ -62,17 +71,28 @@ def _env(name: str, default: str) -> str:
     return os.environ.get(name) or default
 
 
-def _config() -> Config:
+def _config(model: str, kind: str | None) -> Config:
     return Config(
-        model=_env("TTS_MODEL", DEFAULT_MODEL),
-        speaker=_env("TTS_SPEAKER", DEFAULT_SPEAKER),
+        model=model,
+        speaker=_env("TTS_SPEAKER", DEFAULT_SPEAKERS.get(kind or "", "Aiden")),
         instruct=_env("TTS_INSTRUCT", DEFAULT_INSTRUCT),
         device=_env("TTS_DEVICE", "auto"),
         keep_alive_seconds=float(_env("TTS_KEEP_ALIVE_SECONDS", "600")),
     )
 
 
-engine = Engine(_config())
+def _voices_dir() -> Path:
+    # tts/voices in the repository; the image sets TTS_VOICES_DIR.
+    return Path(_env("TTS_VOICES_DIR", str(Path(__file__).resolve().parents[2] / "voices")))
+
+
+_model = _env("TTS_MODEL", DEFAULT_MODEL)
+_kind = model_kind(_model)
+if _kind is None:
+    # Without the type the voice list stays empty and a Base model is not
+    # checked for its voices at start; say so before the first request fails.
+    log.warning("model_kind_unknown: no readable config.json for %s", _model)
+engine = Engine(_config(_model, _kind), load_voices(_voices_dir()), checker_from_env(), kind=_kind)
 _waiting = 0
 
 
@@ -96,6 +116,24 @@ async def health() -> dict[str, object]:
         "device": engine.device,
         "loaded": engine.loaded,
     }
+
+
+class VoiceOut(BaseModel):
+    id: str
+    title: str
+    default: bool
+
+
+@app.get("/v1/voices")
+async def voices() -> list[VoiceOut]:
+    """The cloned voices this service can speak with, and the default one.
+    Empty for a model with built-in speakers: there is nothing to choose."""
+    if not engine.clones_voices:
+        return []
+    return [
+        VoiceOut(id=voice.id, title=voice.title, default=voice.id == engine.config.speaker)
+        for voice in engine.voices.values()
+    ]
 
 
 @app.post("/v1/speech")

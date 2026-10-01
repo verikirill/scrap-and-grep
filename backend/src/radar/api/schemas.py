@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
 from radar.auth.passwords import PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH
 from radar.domain import ProfileSpec, SourceCategory
+from radar.shorts.voice import VoiceOption
 from radar.views import ItemView
 
 
@@ -192,3 +193,5 @@ class MetaOut(BaseModel):
     # Short videos of digests can be ordered, and whether they get a voice.
     shorts: bool = False
     shorts_voice: bool = False
+    # Voices a reader can pick; empty when the voice service offers no choice.
+    short_voices: list[VoiceOption] = []

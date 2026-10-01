@@ -679,3 +679,49 @@ async def test_a_reader_makes_one_video_at_a_time_and_a_new_cut_replaces_the_old
         assert await service.purge_files() == 1
         assert not service.video_path(old_id).exists()
         assert service.video_path(new_id).is_file()
+
+
+async def test_a_reader_picks_a_voice_from_the_ones_the_service_offers(
+    api: str, shorts_on: list[dict[str, Any]], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from radar.cache import get_cache
+    from radar.config import get_settings
+    from radar.shorts.service import VOICES_KEY
+
+    monkeypatch.setenv("RADAR_TTS_URL", "http://tts.test")
+    get_settings.cache_clear()
+    offered = [
+        {"id": "anchor", "title": "Ведущий", "default": True},
+        {"id": "blogger", "title": "Блогер", "default": False},
+    ]
+    await get_cache().set_json(VOICES_KEY, offered, 60)
+
+    async with register(api, "tamara") as reader, register(api, "stranger") as stranger:
+        digest_id = await finished_digest(reader, await seed_articles())
+        meta = (await reader.get("/meta")).json()
+        unknown = await reader.post(f"/digests/{digest_id}/short", json={"voice": "robot"})
+        foreign = await stranger.post(f"/digests/{digest_id}/short", json={"voice": "robot"})
+        picked = await reader.post(f"/digests/{digest_id}/short", json={"voice": "blogger"})
+
+    assert [voice["id"] for voice in meta["short_voices"]] == ["anchor", "blogger"]
+    assert unknown.status_code == 400
+    # Someone else's digest is missing, whatever voice is asked for.
+    assert foreign.status_code == 404
+    assert picked.status_code == 202
+    assert picked.json()["requested_voice"] == "blogger"
+
+
+async def test_a_voice_is_taken_on_trust_before_the_worker_lists_them(
+    api: str, shorts_on: list[dict[str, Any]]
+) -> None:
+    from radar.cache import get_cache
+    from radar.shorts.service import VOICES_KEY
+
+    await get_cache().delete(VOICES_KEY)
+
+    async with register(api, "ulyana") as reader:
+        digest_id = await finished_digest(reader, await seed_articles())
+        picked = await reader.post(f"/digests/{digest_id}/short", json={"voice": "anchor-2"})
+
+    assert picked.status_code == 202
+    assert picked.json()["requested_voice"] == "anchor-2"

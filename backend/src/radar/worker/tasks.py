@@ -4,7 +4,7 @@ import asyncio
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from taskiq import Context, TaskiqDepends
+from taskiq import Context, TaskiqDepends, TaskiqEvents, TaskiqState
 
 from radar.ai.factory import get_embedder
 from radar.auth import service as auth_service
@@ -214,6 +214,25 @@ async def purge_short_files() -> int:
     return removed
 
 
+@media_broker.task(task_name="refresh_short_voices")
+async def refresh_short_voices() -> int:
+    """Pass the voice service's list of voices on to the api through the cache.
+    The media worker is the only role that can reach the voice service."""
+    voices = await shorts_service.refresh_voices(get_cache())
+    return len(voices)
+
+
+@media_broker.on_event(TaskiqEvents.WORKER_STARTUP)
+async def _voices_at_start(state: TaskiqState) -> None:
+    # Readers get the voice choice as soon as the worker is up, not after the
+    # next housekeeping round. The voice service may still be starting; the
+    # next round fills the list in then.
+    try:
+        await shorts_service.refresh_voices(get_cache())
+    except Exception as exc:
+        log.warning("short_voices_not_refreshed", error=type(exc).__name__)
+
+
 @ingest_broker.task(task_name="housekeeping", schedule=[{"cron": "*/10 * * * *"}])
 async def housekeeping() -> dict[str, int]:
     """Give up on resumes and videos no worker finished, drop expired sessions
@@ -233,6 +252,8 @@ async def housekeeping() -> dict[str, int]:
     if settings.shorts_url:
         try:
             await purge_short_files.kiq()
+            if settings.tts_url:
+                await refresh_short_voices.kiq()
         except Exception as exc:
             log.warning("short_purge_not_queued", error=type(exc).__name__)
     return {"resumes": resumes, "shorts": shorts, "sessions": sessions, "guests": guests}

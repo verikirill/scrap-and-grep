@@ -340,6 +340,8 @@ class Video(Base):
     script: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     # "qwen3-tts:<speaker>" or NULL for a silent video with captions only.
     voice: Mapped[str | None] = mapped_column(String(80))
+    # The voice the reader picked; NULL is the voice service's default.
+    requested_voice: Mapped[str | None] = mapped_column(String(40))
     # False when the offline writer produced the script.
     by_model: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     duration_ms: Mapped[int | None] = mapped_column(Integer)

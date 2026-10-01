@@ -7,18 +7,33 @@ holds its memory only while videos are being made (TTS_KEEP_ALIVE_SECONDS).
 import asyncio
 import gc
 import io
+import json
 import logging
-import os
+import re
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import numpy as np
 import soundfile as sf
 import torch
-from huggingface_hub import snapshot_download
+
+from radar_tts.check import Checker, CheckerUnavailable
+from radar_tts.paths import model_path
 
 log = logging.getLogger("radar_tts")
+
+# A line whose transcript differs from its text by more than this share of
+# characters is generated again (check.py has the measurements).
+CHECK_THRESHOLD = 0.45
+CHECK_RETRIES = 2
+# Time all the regenerations of one request may take. A clean short needs
+# none; the budget keeps a request with many bad lines inside the caller's
+# timeout (RADAR_TTS_TIMEOUT_SECONDS, 300 s).
+CHECK_BUDGET_SECONDS = 90.0
+
+VOICE_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,40}$")
 
 # Loudness of every line, so a quiet sentence does not follow a loud one.
 TARGET_RMS = 0.08
@@ -31,7 +46,7 @@ LEAD_IN_MS = 150
 
 
 class UnknownSpeaker(ValueError):
-    """The requested speaker is not one of the model's voices."""
+    """The requested voice is not one this service can speak with."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,16 +67,30 @@ class Speech:
     wav: bytes
 
 
-def model_path(model: str) -> str:
-    """A local directory for the model, downloading it only when allowed.
+@dataclass(frozen=True, slots=True)
+class Voice:
+    """A voice to clone: a clip of it and what is said in the clip."""
 
-    transformers 4.57.3, which qwen-tts pins, asks the Hub about a repo id
-    while loading the tokenizer even with HF_HUB_OFFLINE set, and fails in a
-    container without network. A local path it takes as it is.
-    """
-    if os.path.isdir(model):
-        return model
-    return snapshot_download(model, local_files_only=bool(os.environ.get("HF_HUB_OFFLINE")))
+    id: str
+    title: str
+    audio: Path
+    text: str
+
+
+def load_voices(directory: Path) -> dict[str, Voice]:
+    """Voices listed in voices.json next to their clips; none if the file is absent."""
+    listing = directory / "voices.json"
+    if not listing.is_file():
+        return {}
+    voices = {}
+    for entry in json.loads(listing.read_text("utf-8")):
+        voice = Voice(entry["id"], entry["title"], directory / entry["file"], entry["text"])
+        if not VOICE_ID_RE.fullmatch(voice.id):
+            raise ValueError(f"voice id {voice.id!r}: use 1-40 Latin letters, digits, _ or -")
+        if not voice.audio.is_file():
+            raise FileNotFoundError(f"voice {voice.id}: {voice.audio} is missing")
+        voices[voice.id] = voice
+    return voices
 
 
 def pick_device(requested: str) -> str:
@@ -123,16 +152,41 @@ def encode_wav(wave: np.ndarray, sample_rate: int) -> bytes:
 
 
 class Engine:
-    def __init__(self, config: Config) -> None:
+    def __init__(
+        self,
+        config: Config,
+        voices: dict[str, Voice],
+        checker: Checker | None = None,
+        kind: str | None = None,
+    ) -> None:
+        """kind is the model's tts_model_type (paths.model_kind), known
+        before the weights are loaded."""
+        if kind == "base" and config.speaker not in voices:
+            # A Base model has no voice of its own: without a clip to clone
+            # every request would fail, so the service does not start.
+            raise ValueError(
+                f"{config.model} clones voices; default {config.speaker!r} is not among "
+                f"{sorted(voices) or 'the voices in TTS_VOICES_DIR (none found)'}"
+            )
         self.config = config
+        self.kind = kind
         self.device = pick_device(config.device)
+        self.voices = voices
+        self._checker = checker
         self._model: Any = None
+        # Clone prompts are computed once per voice and model load.
+        self._prompts: dict[str, Any] = {}
         self._lock = asyncio.Lock()
         self._last_used = time.monotonic()
 
     @property
     def loaded(self) -> bool:
         return self._model is not None
+
+    @property
+    def clones_voices(self) -> bool:
+        """The model speaks with the listed voices, so there is a choice."""
+        return self.kind == "base" and bool(self.voices)
 
     def _load(self) -> Any:
         if self._model is None:
@@ -156,16 +210,39 @@ class Engine:
 
     def _unload(self) -> None:
         self._model = None
+        self._prompts.clear()
         gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
         log.info("model_unloaded")
 
+    def _validate(self, model: Any, voice: str) -> None:
+        kind = model.model.tts_model_type
+        if kind == "base" and voice not in self.voices:
+            raise UnknownSpeaker(f"unknown voice {voice!r}; known: {sorted(self.voices)}")
+        if kind == "custom_voice":
+            known = {name.lower() for name in model.get_supported_speakers() or []}
+            if voice.lower() not in known:
+                raise UnknownSpeaker(f"unknown speaker {voice!r}; known: {sorted(known)}")
+
+    def _prompt(self, model: Any, voice: str) -> Any:
+        if voice not in self._prompts:
+            clip = self.voices[voice]
+            self._prompts[voice] = model.create_voice_clone_prompt(
+                ref_audio=str(clip.audio), ref_text=clip.text
+            )
+        return self._prompts[voice]
+
     def _generate_batch(
-        self, model: Any, sentences: list[str], language: str, speaker: str
+        self, model: Any, sentences: list[str], language: str, voice: str
     ) -> tuple[list[Any], int]:
         with torch.inference_mode():
-            if model.model.tts_model_type == "voice_design":
+            kind = model.model.tts_model_type
+            if kind == "base":
+                waves, sample_rate = model.generate_voice_clone(
+                    text=sentences, language=language, voice_clone_prompt=self._prompt(model, voice)
+                )
+            elif kind == "voice_design":
                 waves, sample_rate = model.generate_voice_design(
                     text=sentences, language=language, instruct=self.config.instruct
                 )
@@ -173,33 +250,100 @@ class Engine:
                 waves, sample_rate = model.generate_custom_voice(
                     text=sentences,
                     language=language,
-                    speaker=speaker,
+                    speaker=voice,
                     instruct=self.config.instruct or None,
                 )
-        return list(waves), int(sample_rate)
+        return [np.asarray(wave, dtype=np.float32) for wave in waves], int(sample_rate)
+
+    def _generate_all(
+        self, model: Any, sentences: list[str], language: str, voice: str
+    ) -> tuple[list[np.ndarray], int]:
+        """All lines in one batch, or in halves when the card runs out of memory.
+
+        The card is shared with the language model of the digests. A batch is
+        several times faster than single lines (0.70 s of generation per second
+        of speech for six lines, 2.80 for one at a time), but a clone decodes
+        its reference clip with every line: six lines peak at 6.2 GB, three at
+        4.1 GB, one at 2.8 GB (docs/DECISIONS.md).
+        """
+        try:
+            return self._generate_batch(model, sentences, language, voice)
+        except torch.OutOfMemoryError:
+            if len(sentences) == 1:
+                raise
+            log.warning("out_of_memory: splitting a batch of %d lines", len(sentences))
+        # Outside the handler, so the tensors of the failed batch are freed first.
+        torch.cuda.empty_cache()
+        half = (len(sentences) + 1) // 2
+        first, sample_rate = self._generate_all(model, sentences[:half], language, voice)
+        second, _ = self._generate_all(model, sentences[half:], language, voice)
+        return first + second, sample_rate
+
+    def _checked(
+        self,
+        model: Any,
+        waves: list[np.ndarray],
+        sample_rate: int,
+        sentences: list[str],
+        language: str,
+        voice: str,
+    ) -> list[np.ndarray]:
+        """Lines that do not say what they should are generated again; the
+        take closest to the text is kept.
+
+        The check only improves the narration: if Whisper fails, the lines
+        are kept as generated, and regeneration stops when its time budget
+        is spent."""
+        checker = self._checker
+        if checker is None:
+            return waves
+        kept = list(waves)
+        deadline = time.monotonic() + CHECK_BUDGET_SECONDS
+        try:
+            for index, sentence in enumerate(sentences):
+                if time.monotonic() >= deadline:
+                    log.warning("check_budget_spent: %d lines unchecked", len(sentences) - index)
+                    break
+                best = checker.error_rate(kept[index], sample_rate, sentence)
+                attempts = 0
+                while (
+                    best > CHECK_THRESHOLD
+                    and attempts < CHECK_RETRIES
+                    and time.monotonic() < deadline
+                ):
+                    attempts += 1
+                    (take,), _ = self._generate_batch(model, [sentence], language, voice)
+                    rate = checker.error_rate(take, sample_rate, sentence)
+                    if rate < best:
+                        kept[index], best = take, rate
+                if attempts or best > CHECK_THRESHOLD:
+                    log.warning(
+                        "line_regenerated index=%d attempts=%d error_rate=%.2f",
+                        index,
+                        attempts,
+                        best,
+                    )
+        except CheckerUnavailable as exc:
+            log.warning("check_skipped: %s", exc)
+        except torch.OutOfMemoryError:
+            log.warning("out_of_memory: the remaining lines are kept unchecked")
+        except Exception:
+            log.exception("check_failed: the remaining lines are kept unchecked")
+        return kept
 
     def _generate(
-        self, sentences: list[str], language: str, speaker: str
+        self, sentences: list[str], language: str, voice: str
     ) -> tuple[list[np.ndarray], int]:
         model = self._load()
-        is_custom = model.model.tts_model_type != "voice_design"
-        known = (
-            {name.lower() for name in model.get_supported_speakers() or []} if is_custom else set()
-        )
-        if is_custom and speaker.lower() not in known:
-            raise UnknownSpeaker(f"unknown speaker {speaker!r}; known: {sorted(known)}")
+        self._validate(model, voice)
         try:
-            waves, sample_rate = self._generate_batch(model, sentences, language, speaker)
-        except torch.OutOfMemoryError:
-            # The card is shared with the language model of the digests. One
-            # line at a time needs a fraction of the memory of the batch.
-            torch.cuda.empty_cache()
-            log.warning("out_of_memory: generating %d lines one by one", len(sentences))
-            waves, sample_rate = [], 0
-            for sentence in sentences:
-                one, sample_rate = self._generate_batch(model, [sentence], language, speaker)
-                waves.extend(one)
-        return [np.asarray(wave, dtype=np.float32) for wave in waves], sample_rate
+            waves, sample_rate = self._generate_all(model, sentences, language, voice)
+            return self._checked(model, waves, sample_rate, sentences, language, voice), sample_rate
+        finally:
+            # The weights stay loaded until the idle unload; the memory the
+            # batch took goes back to the card for the language model.
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
 
     @staticmethod
     def _finish(waves: list[np.ndarray], sample_rate: int, voice: str, gap_ms: int) -> Speech:

@@ -316,6 +316,9 @@ services:
     environment:
       TTS_SPEAKER: ${TTS_SPEAKER:-}
       TTS_KEEP_ALIVE_SECONDS: ${TTS_KEEP_ALIVE_SECONDS:-600}
+      TTS_CHECK_MODEL: ${TTS_CHECK_MODEL:-}
+      # Whisper checks every line on the CPU, beside the voice on the GPU.
+      TTS_CHECK_THREADS: ${TTS_CPUS:-4}
       # PyTorch 2.14 replaces some CUDA ops with Triton kernels compiled on
       # first use, which needs a C compiler and a writable cache that this
       # image does not have. The plain CUDA kernels are what was measured.

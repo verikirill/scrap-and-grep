@@ -8,19 +8,27 @@ import type { Word } from '../types'
 // A page holds what is said in about a second: two to four words, the
 // rhythm viewers of short videos are used to.
 const PAGE_MS = 1000
+const CAPTION_WIDTH = 960
+const CAPTION_SIZE = 76
+// Width of an uppercase letter of the caption font at weight 900, in em, with
+// a margin: «СПЕЦИАЛИЗИРОВАННЫХ», 18 letters, is 902 px wide at 66 px (0.76 em).
+const LETTER_EM = 0.8
 
 function CaptionPage({ page }: { page: TikTokPage }) {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
   const nowMs = page.startMs + (frame / fps) * 1000
   const enter = spring({ frame, fps, config: { damping: 14, stiffness: 220 } })
+  // A word does not wrap, so a long one shrinks the page to fit the frame.
+  const longest = Math.max(1, ...page.tokens.map((token) => token.text.trim().length))
+  const fontSize = Math.min(CAPTION_SIZE, Math.floor(CAPTION_WIDTH / (LETTER_EM * longest)))
 
   return (
     <AbsoluteFill style={{ justifyContent: 'flex-end', alignItems: 'center' }}>
       <div
         style={{
           marginBottom: SAFE.bottom + 40,
-          maxWidth: 960,
+          maxWidth: CAPTION_WIDTH,
           display: 'flex',
           flexWrap: 'wrap',
           justifyContent: 'center',
@@ -29,7 +37,7 @@ function CaptionPage({ page }: { page: TikTokPage }) {
           columnGap: '0.32em',
           fontFamily: TEXT_FONT,
           fontWeight: 900,
-          fontSize: 76,
+          fontSize,
           lineHeight: 1.15,
           textTransform: 'uppercase',
           transform: `scale(${0.85 + enter * 0.15})`,

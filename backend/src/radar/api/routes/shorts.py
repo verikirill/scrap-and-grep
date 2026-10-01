@@ -7,13 +7,14 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, StringConstraints
 
-from radar.api.deps import CurrentUser, SessionDep, SettingsDep, user_rate_limit
+from radar.api.deps import CacheDep, CurrentUser, SessionDep, SettingsDep, user_rate_limit
 from radar.db.models import Video
 from radar.logging import get_logger
 from radar.shorts import service
 from radar.shorts.model import ACTIVE_STATUSES, STATUS_DONE
+from radar.shorts.voice import VOICE_ID_PATTERN
 from radar.store import digests as digest_store
 from radar.worker.tasks import make_short
 
@@ -25,12 +26,19 @@ _short_limit = Depends(
 )
 
 
+class ShortCreate(BaseModel):
+    # One of meta.short_voices; none is the voice service's default.
+    voice: Annotated[str, StringConstraints(pattern=VOICE_ID_PATTERN)] | None = None
+
+
 class VideoOut(BaseModel):
     status: str
     stage: str | None
     progress: float
     error: str | None
     voice: str | None
+    # The voice the reader picked, as in meta.short_voices.
+    requested_voice: str | None
     by_model: bool
     duration_ms: int | None
     size_bytes: int | None
@@ -51,6 +59,7 @@ def _out(video: Video) -> VideoOut:
         progress=video.progress,
         error=video.error,
         voice=video.voice,
+        requested_voice=video.requested_voice,
         by_model=video.by_model,
         duration_ms=video.duration_ms,
         size_bytes=video.size_bytes,
@@ -64,7 +73,12 @@ def _out(video: Video) -> VideoOut:
     "/digests/{digest_id}/short", status_code=status.HTTP_202_ACCEPTED, dependencies=[_short_limit]
 )
 async def create_short(
-    digest_id: uuid.UUID, session: SessionDep, settings: SettingsDep, user: CurrentUser
+    digest_id: uuid.UUID,
+    session: SessionDep,
+    settings: SettingsDep,
+    cache: CacheDep,
+    user: CurrentUser,
+    payload: ShortCreate | None = None,
 ) -> VideoOut:
     """Queue a short video of a finished digest. A new request replaces the
     previous video of the same digest."""
@@ -77,6 +91,12 @@ async def create_short(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Дайджест не найден.")
     if digest.status != digest_store.STATUS_DONE:
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Дайджест ещё не готов.")
+    voice = payload.voice if payload is not None else None
+    known = {item.id for item in await service.known_voices(cache)}
+    # With no list at hand (the worker has not reported yet) the voice is
+    # taken on trust: the worker falls back to the default if it is refused.
+    if voice is not None and known and voice not in known:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Такого голоса нет.")
     current = await service.get(session, digest_id, user.id)
     if current is not None and current.status in ACTIVE_STATUSES:
         return _out(current)
@@ -89,7 +109,7 @@ async def create_short(
             headers={"Retry-After": "120"},
         )
     try:
-        video = await service.request(session, digest_id, user.id)
+        video = await service.request(session, digest_id, user.id, voice)
     except service.AlreadyMaking as exc:
         raise HTTPException(
             status.HTTP_429_TOO_MANY_REQUESTS,

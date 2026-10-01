@@ -7,6 +7,26 @@ export const MAX_DURATION_MS = 120_000
 const ms = z.number().int().min(0).max(MAX_DURATION_MS)
 const line = (max: number) => z.string().trim().min(1).max(max)
 
+/** What the news is about; picks the picture and the colour of its card. */
+export const VISUALS = [
+  'vulnerability',
+  'attack',
+  'incident',
+  'regulation',
+  'release',
+  'research',
+  'energy',
+  'other',
+] as const
+
+// The QR code on the card: a plain web address, short enough to stay
+// readable as a code on a phone screen.
+const MAX_URL = 400
+const sourceUrl = z
+  .string()
+  .max(MAX_URL)
+  .refine((value) => /^https?:\/\/[^\s]+$/i.test(value), 'the source address must be http or https')
+
 export const beatSchema = z
   .object({
     /** Two or three words above the title, e.g. "Уязвимость". */
@@ -15,7 +35,14 @@ export const beatSchema = z
     title: line(140),
     /** A number or identifier worth a big card, e.g. "CVE-2026-20411"; null when there is none. */
     fact: line(32).nullable(),
+    visual: z.enum(VISUALS),
+    /** Up to three short facts shown one by one while the item is narrated. */
+    points: z.array(line(60)).max(3),
     source: line(60),
+    /** The article itself, for the QR code; null when there is no usable address. */
+    url: sourceUrl.nullable(),
+    /** When it was published, e.g. "29 сентября". */
+    date: line(24).nullable(),
     startMs: ms,
     endMs: ms,
   })

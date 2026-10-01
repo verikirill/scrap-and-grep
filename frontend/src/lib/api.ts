@@ -229,6 +229,14 @@ export interface Meta {
   shorts: boolean
   /** ...and they get a voice; without it captions carry the story. */
   shorts_voice: boolean
+  /** Voices a reader can pick; empty when there is no choice to give. */
+  short_voices: VoiceOption[]
+}
+
+export interface VoiceOption {
+  id: string
+  title: string
+  default: boolean
 }
 
 export type VideoStage = 'script' | 'voice' | 'render'
@@ -240,6 +248,8 @@ export interface Video {
   error: string | null
   /** "qwen3-tts:<speaker>", or null for a silent video with captions. */
   voice: string | null
+  /** The voice the reader picked, one of Meta.short_voices. */
+  requested_voice: string | null
   by_model: boolean
   duration_ms: number | null
   size_bytes: number | null
@@ -492,8 +502,8 @@ export const api = {
 
   /** `null` when no video of the digest was ordered. */
   short: (digestId: string) => request<Video | null>(`/digests/${digestId}/short`),
-  createShort: (digestId: string) =>
-    request<Video>(`/digests/${digestId}/short`, { method: 'POST' }),
+  createShort: (digestId: string, voice: string | null) =>
+    request<Video>(`/digests/${digestId}/short`, json('POST', { voice })),
 
   exportUrl: (id: string, format: 'md' | 'docx') => `${API_BASE}/digests/${id}/export.${format}`,
   eventsUrl: (id: string) => `${API_BASE}/digests/${id}/events`,
