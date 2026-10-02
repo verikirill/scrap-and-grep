@@ -318,7 +318,7 @@ docker compose up -d --scale api=4 --scale worker-ingest=2 --scale worker-digest
 
 | Проверка | Результат |
 |---|---|
-| Тесты бэкенда, `uv run pytest` | 429 тестов; 43 из них идут через HTTP на отдельной базе PostgreSQL, 11 требуют ClickHouse (своя база `radar_test`), ещё один требует Valkey; без них они пропускаются |
+| Тесты бэкенда, `uv run pytest` | 454 теста; 65 из них идут через HTTP на отдельной базе PostgreSQL, 7 требуют ClickHouse (своя база `radar_test`), ещё один требует Valkey; без них они пропускаются |
 | Линтер и типы бэкенда, `ruff` и `mypy --strict` | без замечаний |
 | Фронтенд: `tsc`, `oxlint`, `vitest` | без ошибок, 28 тестов; четыре предупреждения `only-export-components` в сгенерированных файлах shadcn |
 | Сервис рендера и сервис голоса | `tsc` и 20 тестов `node --test`; `ruff`, `mypy --strict` и 17 тестов `pytest` |
