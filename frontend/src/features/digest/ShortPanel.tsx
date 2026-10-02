@@ -79,7 +79,7 @@ function Progress({ video }: { video: Video }) {
         })}
       </ol>
       <p className="mt-4 text-xs text-muted-foreground">
-        Обычно это занимает одну-три минуты. Можно читать выпуск: видео появится здесь.
+        Обычно это занимает 1-3 минуты. Можно читать выпуск: видео появится здесь.
       </p>
     </div>
   )
@@ -210,7 +210,7 @@ export function ShortPanel({ digestId }: { digestId: string }) {
             {hasVoice ? <Mic size={13} aria-hidden /> : <Captions size={13} aria-hidden />}
             {hasVoice
               ? 'Озвучка Qwen3-TTS'
-              : 'Озвучка на этом сервере не подключена: историю рассказывают субтитры'}
+              : 'Озвучка на этом сервере не подключена: в видео будут только субтитры'}
           </p>
           {!isBusy && voices.length > 0 && (
             <VoicePicker

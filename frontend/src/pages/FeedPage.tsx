@@ -1,17 +1,34 @@
 import clsx from 'clsx'
-import { Bookmark, FileUp, RefreshCw, SlidersHorizontal, Sparkles } from '../components/icons'
+import {
+  Bookmark,
+  FileUp,
+  Psychology,
+  RefreshCw,
+  SlidersHorizontal,
+  Sparkles,
+} from '../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { Link, useSearchParams } from 'react-router'
 import { EASE, buttonClass } from '../components/tokens'
 import { Button, Card, EmptyState, ErrorNote, PageHeader } from '../components/ui'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '../components/ui/sheet'
 import { FeedCard } from '../features/feed/FeedCard'
 import { PostCard } from '../features/feed/PostCard'
 import { TastePanel } from '../features/feed/TastePanel'
 import type { FeedItem, FeedView, Placement, ReactionKind } from '../lib/api'
 import { formatRelative, plural } from '../lib/format'
 import { keys, useFeed, useFeedback, useMe, useSaved, useTaste } from '../lib/queries'
+import { useMediaQuery } from '../lib/useMediaQuery'
 
 const TABS = [
   { id: 'feed', label: 'Лента', icon: Sparkles },
@@ -20,6 +37,11 @@ const TABS = [
 
 // Signals that change what the next feed looks like.
 const TEACHING: ReactionKind[] = ['like', 'dislike', 'save', 'hide']
+// What a mark does, said where the reader is; a hidden card says it in its own place.
+const MARKED: Partial<Record<ReactionKind, string>> = {
+  like: 'Учтено: похожего станет больше',
+  save: 'Сохранено, лежит во вкладке «Сохранённое»',
+}
 
 function Skeletons({ view }: { view: FeedView }) {
   if (view === 'telegram') {
@@ -47,7 +69,7 @@ function Skeletons({ view }: { view: FeedView }) {
 function PostColumn({ view, children }: { view: FeedView; children: React.ReactNode }) {
   if (view !== 'telegram') return <div className="space-y-3">{children}</div>
   return (
-    <div className="chat-wallpaper -mx-4 px-3 py-4 sm:mx-0 sm:rounded-3xl sm:px-5 sm:py-5">
+    <div className="chat-wallpaper -mx-4 px-2 py-3 sm:mx-0 sm:rounded-3xl sm:px-5 sm:py-5">
       <div className="mx-auto max-w-[600px] space-y-3">{children}</div>
     </div>
   )
@@ -103,10 +125,32 @@ export function FeedPage() {
       {
         onSuccess: () => {
           if (TEACHING.includes(kind)) setPendingSignals((count) => count + 1)
+          const said = MARKED[kind]
+          if (isActive && said) toast.success(said)
         },
       },
     )
   }
+
+  // On a desktop it stands beside the feed; narrower, it opens from a button
+  // instead of waiting after the whole feed.
+  const isWide = useMediaQuery('(min-width: 1280px)')
+  const tastePanel = (
+    <>
+      {taste.isError ? (
+        <Card className="space-y-3 p-5">
+          <ErrorNote error={taste.error} />
+          <Button size="sm" onClick={() => void taste.refetch()}>
+            Повторить
+          </Button>
+        </Card>
+      ) : taste.data ? (
+        <TastePanel taste={taste.data} />
+      ) : (
+        <div className="skeleton h-72" />
+      )}
+    </>
+  )
 
   /** Start over from the first page of a freshly ranked feed. */
   const rebuild = () => {
@@ -119,7 +163,7 @@ export function FeedPage() {
     <>
       <PageHeader
         title="Для вас"
-        subtitle="Публикации последних двух недель в порядке, который подобран под вас: по интересам, по резюме и по тому, что вы отмечали раньше. У каждой видно, почему она здесь."
+        subtitle="Публикации за две недели, упорядоченные под вас: по интересам, резюме и прошлым отметкам. У каждой видно, почему она здесь."
         actions={
           <Button
             icon={<RefreshCw size={15} />}
@@ -162,6 +206,22 @@ export function FeedPage() {
           </button>
         ))}
       </div>
+      {!isWide && (
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button size="sm" variant="ghost" icon={<Psychology size={16} />} className="mb-5 ml-2">
+              Что лента знает о вас
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto rounded-t-3xl">
+            <SheetHeader className="sr-only">
+              <SheetTitle>Что лента знает о вас</SheetTitle>
+              <SheetDescription>Интересы, резюме и выученные по отметкам темы</SheetDescription>
+            </SheetHeader>
+            <div className="p-4 pt-2">{tastePanel}</div>
+          </SheetContent>
+        </Sheet>
+      )}
 
       <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_19rem]">
         <div className="min-w-0 space-y-3">
@@ -178,7 +238,7 @@ export function FeedPage() {
               >
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-primary-container px-4 py-2.5 text-sm text-on-primary-container">
                   <span>
-                    {pendingSignals} {plural(pendingSignals, ['оценка', 'оценки', 'оценок'])}{' '}
+                    {pendingSignals} {plural(pendingSignals, ['отметка', 'отметки', 'отметок'])}{' '}
                     {plural(pendingSignals, ['учтена', 'учтены', 'учтено'])}. Порядок на экране не
                     меняется, пока вы читаете.
                   </span>
@@ -218,8 +278,8 @@ export function FeedPage() {
             <Card>
               {tab === 'saved' ? (
                 <EmptyState icon={<Bookmark size={22} />} title="Сохранённого пока нет">
-                  Закладка на карточке откладывает публикацию сюда и заодно говорит ленте, что тема
-                  вам важна.
+                  Кнопка «Сохранить» на карточке откладывает публикацию сюда и заодно говорит ленте,
+                  что тема вам важна.
                 </EmptyState>
               ) : (
                 <EmptyState icon={<Sparkles size={22} />} title="Подходящих публикаций не нашлось">
@@ -258,20 +318,7 @@ export function FeedPage() {
           )}
         </div>
 
-        <aside className="xl:sticky xl:top-9 xl:self-start">
-          {taste.isError ? (
-            <Card className="space-y-3 p-5">
-              <ErrorNote error={taste.error} />
-              <Button size="sm" onClick={() => void taste.refetch()}>
-                Повторить
-              </Button>
-            </Card>
-          ) : taste.data ? (
-            <TastePanel taste={taste.data} />
-          ) : (
-            <div className="skeleton h-72" />
-          )}
-        </aside>
+        {isWide && <aside className="sticky top-9 self-start">{tastePanel}</aside>}
       </div>
     </>
   )

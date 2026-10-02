@@ -217,7 +217,7 @@ function AccountButton({ compact }: { compact?: boolean }) {
       to="/account"
       onPointerEnter={() => prefetchRoute('/account')}
       aria-label={`Аккаунт: ${me.display_name}`}
-      title={me.is_demo ? 'Демо-аккаунт' : me.email}
+      title={me.is_demo ? 'Временный аккаунт' : me.email}
       className={({ isActive }) =>
         clsx(
           'grid size-10 place-items-center rounded-full transition-shadow',
@@ -239,18 +239,20 @@ function ThemeButton({ dark, onToggle }: { dark: boolean; onToggle: () => void }
     <button
       type="button"
       onClick={onToggle}
-      aria-label={dark ? 'Светлая тема' : 'Тёмная тема'}
+      // The icon and the name both say where a press leads, not where one is.
+      aria-label={dark ? 'Включить светлую тему' : 'Включить тёмную тему'}
+      title={dark ? 'Включить светлую тему' : 'Включить тёмную тему'}
       className="state-layer relative grid size-10 shrink-0 place-items-center overflow-hidden rounded-full text-on-surface-variant"
     >
       <AnimatePresence mode="wait" initial={false}>
         <motion.span
-          key={dark ? 'moon' : 'sun'}
+          key={dark ? 'sun' : 'moon'}
           initial={{ rotate: -90, scale: 0.6, opacity: 0 }}
           animate={{ rotate: 0, scale: 1, opacity: 1 }}
           exit={{ rotate: 90, scale: 0.6, opacity: 0 }}
           transition={{ duration: DURATION.short, ease: EASE }}
         >
-          {dark ? <Moon size={19} /> : <Sun size={19} />}
+          {dark ? <Sun size={19} /> : <Moon size={19} />}
         </motion.span>
       </AnimatePresence>
     </button>

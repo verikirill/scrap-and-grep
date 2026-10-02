@@ -169,7 +169,7 @@ function PostRow({
                   })
                 }
               >
-                Сейчас
+                Отправить сейчас
               </Button>
             )}
             {!['sent', 'sending'].includes(post.status) && (

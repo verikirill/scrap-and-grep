@@ -117,7 +117,8 @@ export function ArticlesList() {
               })}
             </div>
           </div>
-          <div className="w-full sm:w-56">
+          {/* While searching, the results matter more than the chart: on a phone it steps aside. */}
+          <div className={clsx('w-full sm:block sm:w-56', q && 'hidden')}>
             <p className="mb-1.5 text-xs text-muted-foreground">Публикаций за 14 дней</p>
             {timeline.data ? (
               <Timeline points={timeline.data} />

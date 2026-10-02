@@ -35,7 +35,7 @@ function ResumeSection() {
     <Card className="p-5 sm:p-6">
       <h2 className="text-base font-semibold">Резюме</h2>
       <p className="mt-1 mb-4 text-sm text-muted-foreground">
-        По резюме определяется специализация. Она участвует в ленте наравне с интересами.
+        По резюме определяется специализация. Лента учитывает её наравне с интересами.
       </p>
 
       {isProcessing ? (
@@ -139,7 +139,7 @@ function DangerZone({ me }: { me: Me }) {
     <Card className="p-5">
       <h2 className="text-base font-semibold">Удаление аккаунта</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Вместе с аккаунтом удаляются профили, выпуски, данные резюме и все оценки. Восстановить их
+        Вместе с аккаунтом удаляются профили, выпуски, данные резюме и все отметки. Восстановить их
         будет нельзя.
       </p>
       {isOpen ? (
@@ -225,7 +225,7 @@ function Identity({ me }: { me: Me }) {
       <p className="mt-3 max-w-full truncate text-base font-semibold">{me.display_name}</p>
       <p className="max-w-full truncate text-sm text-muted-foreground">
         {/* A guest's address is made up: it says nothing to the reader. */}
-        {me.is_demo ? 'Гостевой вход, без почты и пароля' : me.email}
+        {me.is_demo ? 'Без почты и пароля' : me.email}
       </p>
       {(me.is_demo || me.is_admin) && (
         <div className="mt-2 flex flex-wrap justify-center gap-1.5">
@@ -254,7 +254,7 @@ function Identity({ me }: { me: Me }) {
         )}
       </div>
       <p className="mt-1 text-xs text-outline">
-        JPEG, PNG, WebP или GIF до 5 МБ. Мы обрежем его до квадрата и уберём данные о съёмке.
+        JPEG, PNG, WebP или GIF до 5 МБ. Фото обрежем до квадрата и уберём данные о съёмке.
       </p>
       <div className="mt-2 w-full">
         <ErrorNote error={upload.error ?? remove.error} />
@@ -278,7 +278,15 @@ export function AccountPage() {
           <Button
             icon={<LogOut size={15} />}
             isBusy={logout.isPending}
-            onClick={() => logout.mutate()}
+            onClick={() => {
+              // A temporary account has no password: once left, it cannot be opened again.
+              const isSure =
+                !user.is_demo ||
+                window.confirm(
+                  'Во временный аккаунт нельзя войти снова: профили, выпуски и отметки останутся недоступны. Выйти?',
+                )
+              if (isSure) logout.mutate()
+            }}
           >
             Выйти
           </Button>

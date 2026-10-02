@@ -101,7 +101,7 @@ export function ShareProfileButton({ profile }: { profile: Profile }) {
                   onClick={() => void copy()}
                   className="shrink-0"
                 >
-                  {isCopied ? 'Готово' : 'Копировать'}
+                  {isCopied ? 'Скопировано' : 'Копировать'}
                 </Button>
               </div>
               <p className="text-xs text-on-surface-variant">

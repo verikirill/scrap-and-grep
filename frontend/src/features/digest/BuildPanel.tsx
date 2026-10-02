@@ -37,6 +37,8 @@ const Calendar = lazy(() =>
 type Props = {
   profiles: Profile[]
   initialProfileId?: string | null
+  /** The issue on screen is still being built: a second press would start another. */
+  isBuilding?: boolean
   onCreated: (digestId: string) => void
 }
 
@@ -62,7 +64,7 @@ function periodOf(
   return { start, end: end > now ? now : end }
 }
 
-export function BuildPanel({ profiles, initialProfileId, onCreated }: Props) {
+export function BuildPanel({ profiles, initialProfileId, isBuilding = false, onCreated }: Props) {
   const [profileId, setProfileId] = useState<string | null>(null)
   const [period, setPeriod] = useState<PeriodValue>('7')
   const [range, setRange] = useState<DateRange | undefined>()
@@ -145,7 +147,7 @@ export function BuildPanel({ profiles, initialProfileId, onCreated }: Props) {
                 )}
                 <ProfileAvatar profile={profile} />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium">{profile.spec.name}</span>
+                  <span className="line-clamp-2 text-sm font-medium">{profile.spec.name}</span>
                   <span
                     className={clsx(
                       'mt-0.5 block text-xs',
@@ -246,12 +248,12 @@ export function BuildPanel({ profiles, initialProfileId, onCreated }: Props) {
         <Button
           variant="primary"
           icon={<Newspaper size={18} />}
-          isBusy={create.isPending}
+          isBusy={create.isPending || isBuilding}
           disabled={!selectedId || !chosen}
           onClick={submit}
           className="ml-auto"
         >
-          Собрать дайджест
+          {isBuilding ? 'Собираем выпуск' : 'Собрать выпуск'}
         </Button>
       </div>
       {create.error && (

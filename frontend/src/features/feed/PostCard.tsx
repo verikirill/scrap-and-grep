@@ -50,13 +50,16 @@ export function PostCard({ item, index, placement, onReact }: FeedCardProps) {
       ref={seenRef}
       {...rowMotion(index)}
       aria-label={item.title}
-      className="group flex items-end gap-2 sm:gap-2.5"
+      className="group flex items-end sm:gap-2.5"
     >
-      <SourceAvatar
-        sourceId={item.source_id}
-        name={item.source_name}
-        className="size-9 text-[13px] sm:size-10 sm:text-sm"
-      />
+      {/* On a phone the width goes to the text: the source is named in the post. */}
+      <span className="hidden shrink-0 sm:block">
+        <SourceAvatar
+          sourceId={item.source_id}
+          name={item.source_name}
+          className="size-10 text-sm"
+        />
+      </span>
       <div className="min-w-0 flex-1 overflow-hidden rounded-2xl rounded-bl-md bg-surface-container-lowest shadow-[0_1px_2px_rgb(0_0_0/0.13)] dark:bg-surface-container-high">
         {hasPicture && (
           // The headline below is the link a screen reader and the keyboard use.
@@ -90,8 +93,7 @@ export function PostCard({ item, index, placement, onReact }: FeedCardProps) {
             <span className="shrink-0 text-muted-foreground">
               {CATEGORY_LABELS[item.source_category] ?? item.source_category}
             </span>
-            <span className="ml-auto flex shrink-0 items-center gap-1 text-muted-foreground">
-              <ReadingTime minutes={item.reading_minutes} />
+            <span className="ml-auto flex shrink-0 items-center text-muted-foreground">
               <OriginalLink url={item.url} title={item.title} onOpen={markRead} />
             </span>
           </div>
@@ -165,7 +167,8 @@ export function PostCard({ item, index, placement, onReact }: FeedCardProps) {
               onReact={onReact}
               look="pills"
             />
-            <span className="ml-auto flex shrink-0 items-center gap-1 pb-0.5 text-[12px] text-muted-foreground">
+            <span className="ml-auto flex shrink-0 items-center gap-2 pb-0.5 text-[12px] text-muted-foreground">
+              <ReadingTime minutes={item.reading_minutes} />
               {isRead && <Eye size={13} aria-label="Прочитано" />}
               <time dateTime={item.published_at}>{formatPostTime(item.published_at)}</time>
             </span>

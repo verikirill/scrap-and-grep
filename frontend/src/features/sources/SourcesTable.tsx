@@ -63,9 +63,12 @@ function toRequest(form: SourceForm): SourceCreate {
 function ArticleCount({ source }: { source: Source }) {
   return (
     <>
-      {formatNumber(source.articles)}
+      <span title="Публикаций всего">{formatNumber(source.articles)}</span>
       {source.articles_last_day > 0 && (
-        <span className="ml-1.5 text-success">+{source.articles_last_day}</span>
+        <span className="ml-1.5 text-success" title="Публикаций за последние сутки">
+          +{source.articles_last_day}
+          <span className="sr-only"> за сутки</span>
+        </span>
       )}
     </>
   )
@@ -247,6 +250,10 @@ export function SourcesTable({ sources, canEdit }: Props) {
               из {sources.length} источников включено · опрос каждые 15 минут
             </>
           )}
+          <span className="mt-0.5 block text-xs text-outline">
+            Число у источника - публикаций всего, <span className="text-success">+N</span> за сутки.
+            {!canEdit && ' Включает и отключает источники администратор.'}
+          </span>
         </p>
         <div className={clsx('flex gap-2', !canEdit && 'hidden')}>
           <Button
@@ -420,12 +427,16 @@ export function SourcesTable({ sources, canEdit }: Props) {
                     <Trash2 size={13} />
                   </button>
                 </div>
-                <Toggle
-                  label={`${source.enabled ? 'Отключить' : 'Включить'} ${source.name}`}
-                  checked={source.enabled}
-                  disabled={!canEdit}
-                  onChange={(enabled) => toggle.mutate({ id: source.id, enabled })}
-                />
+                {canEdit ? (
+                  <Toggle
+                    label={`${source.enabled ? 'Отключить' : 'Включить'} ${source.name}`}
+                    checked={source.enabled}
+                    onChange={(enabled) => toggle.mutate({ id: source.id, enabled })}
+                  />
+                ) : (
+                  // A switch that cannot be switched only puzzles: an off source says so in words.
+                  !source.enabled && <span className="shrink-0 text-xs text-outline">выключен</span>
+                )}
               </li>
             ))}
           </ul>

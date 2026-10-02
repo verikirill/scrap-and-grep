@@ -106,7 +106,7 @@ export function WelcomePage() {
           <Wordmark className="text-[17px]" />
         </span>
         <Link to="/profiles" className={buttonClass('ghost', 'sm')}>
-          Настрою интересы вручную
+          Настроить интересы вручную
         </Link>
       </header>
 

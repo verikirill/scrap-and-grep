@@ -27,15 +27,20 @@ export function AddChannelDialog() {
 
   return (
     <>
-      <Button
-        variant="primary"
-        icon={<Plus size={18} />}
-        disabled={!bots?.length}
-        title={bots?.length ? undefined : 'Сначала подключите бота'}
-        onClick={() => setOpen(true)}
-      >
-        Канал
-      </Button>
+      <div className="flex flex-col items-end gap-1">
+        <Button
+          variant="primary"
+          icon={<Plus size={18} />}
+          disabled={!bots?.length}
+          onClick={() => setOpen(true)}
+        >
+          Добавить канал
+        </Button>
+        {/* A disabled button says why next to it, not in a tooltip a phone never shows. */}
+        {bots?.length === 0 && (
+          <span className="text-xs text-muted-foreground">Сначала подключите бота</span>
+        )}
+      </div>
       <Dialog
         open={open}
         onOpenChange={(next) => {
@@ -90,7 +95,7 @@ export function AddChannelDialog() {
                 autoFocus
               />
             </Field>
-            <Field label="Аудитория" hint="чьи интересы выбирают новости">
+            <Field label="Аудитория" hint="по чьему профилю отбирать новости">
               <select
                 value={profile}
                 onChange={(event) => setProfileId(event.target.value)}

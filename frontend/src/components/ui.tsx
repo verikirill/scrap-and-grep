@@ -243,7 +243,7 @@ export function Toggle({
   )
 }
 
-/** "4 мин": how long the full article takes to read; nothing while it is not known. */
+/** "4 мин чтения": how long the full article takes to read; nothing while it is not known. */
 export function ReadingTime({ minutes }: { minutes: number | null | undefined }) {
   if (!minutes) return null
   return (
@@ -252,7 +252,7 @@ export function ReadingTime({ minutes }: { minutes: number | null | undefined })
       title="Время чтения полной статьи"
     >
       <Schedule size={14} />
-      {minutes} мин
+      {minutes} мин чтения
     </span>
   )
 }
@@ -312,7 +312,12 @@ export function PageHeader({
         <h1 className="text-[28px] leading-9 font-normal tracking-tight text-on-surface">
           {title}
         </h1>
-        {subtitle && <p className="mt-1.5 max-w-2xl text-sm text-muted-foreground">{subtitle}</p>}
+        {/* Two lines on a phone: the page itself should start on the first screen. */}
+        {subtitle && (
+          <p className="mt-1.5 line-clamp-2 max-w-2xl text-sm text-muted-foreground sm:line-clamp-none">
+            {subtitle}
+          </p>
+        )}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </header>

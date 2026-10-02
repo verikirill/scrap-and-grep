@@ -85,7 +85,10 @@ export function ReactionBar({
             onClick={() => onReact(kind, !isActive)}
             className={clsx(
               'grid place-items-center transition-colors duration-150 disabled:opacity-40',
-              look === 'pills' ? 'h-8 min-w-11 rounded-full px-3' : 'size-8 rounded-lg',
+              // A finger needs 40 px; a mouse does with 32.
+              look === 'pills'
+                ? 'h-10 min-w-11 rounded-full px-3 md:h-8'
+                : 'size-10 rounded-lg md:size-8',
               isActive
                 ? activeClass
                 : look === 'pills'
