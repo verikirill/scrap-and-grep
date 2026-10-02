@@ -18,6 +18,8 @@ from typing import Any
 
 # In the order of the tables: the main model first, the offline mode last.
 MODELS = {
+    # A model of the finals, locally; the card is in <name>.hardware.json.
+    "qwen3.6-35b-a3b": ("`qwen3.6:35b-a3b`", "в стеке, Ollama"),
     "gpt-oss-120b": ("`gpt-oss:120b`", "облако Ollama"),
     # The same model once more: how far two runs of one model drift apart.
     "gpt-oss-120b-repeat": ("`gpt-oss:120b`, повтор", "облако Ollama"),
