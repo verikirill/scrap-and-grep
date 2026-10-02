@@ -321,6 +321,8 @@ export interface Topic {
 export interface Digest extends DigestSummary {
   profile: ProfileSpec
   highlights: string[]
+  /** Management only: what the period means for the company. */
+  implications: string[]
   topics: Topic[]
   rejected: DigestItem[]
 }

@@ -311,6 +311,8 @@ class TopicName(BaseModel):
 class DigestOverview(BaseModel):
     title: str
     highlights: tuple[str, ...] = ()
+    # Management only: what the period means for the company, two or three points.
+    implications: tuple[str, ...] = ()
     by_model: bool = False
 
 

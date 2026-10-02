@@ -299,6 +299,75 @@ def unsupported_figures(text: str, allowed: set[str]) -> set[str]:
     return numbers(text) - allowed
 
 
+# --- Plain language for management -------------------------------------------
+
+# What a manager is not given in the text: identifiers, scores, indicators,
+# addresses and version numbers. The links to the details stay.
+_TECHNICAL = [
+    re.compile(r"\bCVE-\d{4}-\d{4,}\b", re.IGNORECASE),
+    re.compile(r"\bBDU:\d{4}-\d{5}\b", re.IGNORECASE),
+    re.compile(r"\b(?:CVSS|IoCs?|IOCs?)\b"),
+    re.compile(r"\b(?:[a-f0-9]{64}|[a-f0-9]{40}|[a-f0-9]{32})\b", re.IGNORECASE),
+    re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b"),
+]
+# Three numbers and more through dots; a date has the same shape and is no version.
+_VERSION = re.compile(r"\b\d+(?:\.\d+){2,}\b")
+_DATE = re.compile(r"^(?:[0-2]?\d|3[01])\.(?:0?\d|1[0-2])\.(?:\d{2}|\d{4})$")
+PLAIN_SENTENCES = 2
+PLAIN_LINE = 160
+
+
+def technical_tokens(text: str) -> list[str]:
+    """Technical details in a text for management, in the order found."""
+    found: list[str] = []
+    rest = text
+    for pattern in _TECHNICAL:
+        found += pattern.findall(rest)
+        # An IP address is not counted again as a version.
+        rest = pattern.sub(" ", rest)
+    found += [match for match in _VERSION.findall(rest) if not _DATE.match(match)]
+    return list(dict.fromkeys(found))
+
+
+def _without_tokens(text: str) -> str:
+    for token in technical_tokens(text):
+        text = text.replace(token, "")
+    text = re.sub(r"\(\s*[,;]?\s*\)", "", text)
+    text = re.sub(r"\s+([,.;:!?])", r"\1", text)
+    return re.sub(r"\s{2,}", " ", text).strip()
+
+
+def plain_brief(text: ItemSummary) -> ItemSummary:
+    """A brief for management: two sentences at most, none with technical
+    details; when every sentence has them, the first one without them."""
+    sentences = split_sentences(text.summary)
+    plain = [sentence for sentence in sentences if not technical_tokens(sentence)]
+    if not plain and sentences:
+        plain = [_without_tokens(sentences[0])]
+    headline = _without_tokens(text.headline) if technical_tokens(text.headline) else text.headline
+    return text.model_copy(
+        update={
+            "headline": headline,
+            "summary": " ".join(plain[:PLAIN_SENTENCES]),
+            "why": "" if technical_tokens(text.why) else text.why,
+        }
+    )
+
+
+def _one_line(line: str) -> str:
+    first = (split_sentences(line) or [""])[0].strip()
+    if len(first) <= PLAIN_LINE:
+        return first
+    cut = first[: PLAIN_LINE - 1].rsplit(" ", 1)[0].rstrip(" ,;:-")
+    return f"{cut}…"
+
+
+def plain_lines(lines: Sequence[str], limit: int) -> tuple[str, ...]:
+    """Theses for management: one sentence each, no technical details."""
+    kept = (_one_line(line) for line in lines if line.strip())
+    return tuple(line for line in kept if line and not technical_tokens(line))[:limit]
+
+
 # --- Links of a Telegram post -------------------------------------------------
 
 

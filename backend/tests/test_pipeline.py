@@ -389,6 +389,29 @@ async def test_a_management_digest_has_topics_and_tags_instead_of_cards(
     assert all(entry and entry.tags and entry.attack is None for entry in entries)
 
 
+async def test_management_reads_no_identifiers_even_from_an_offline_digest(
+    profile: ProfileSpec, security_week: list[ArticleRef]
+) -> None:
+    from radar.cards import technical_tokens
+    from radar.text import split_sentences
+
+    store = FakeStore(security_week)
+    graph = build_graph(_deps(store, HeuristicIntelligence())).compile(checkpointer=InMemorySaver())
+    management = profile.model_copy(update={"max_items": 10, "audience": "management"})
+
+    await graph.ainvoke(_input(management), CONFIG)
+
+    assert store.saved is not None
+    entries = [item.text for topic in store.saved["topics"] for item in topic.items]
+    assert entries
+    for entry in entries:
+        assert entry is not None
+        assert technical_tokens(f"{entry.headline} {entry.summary} {entry.why}") == []
+        assert len(split_sentences(entry.summary)) <= 2
+    overview = store.saved["overview"]
+    assert all(technical_tokens(line) == [] for line in overview.highlights)
+
+
 async def test_a_vulnerability_the_text_is_quiet_about_is_raised_by_the_catalogue(
     profile: ProfileSpec, make_article: ArticleFactory
 ) -> None:

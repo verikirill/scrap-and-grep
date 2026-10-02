@@ -34,6 +34,8 @@ from radar.cards import (
     SECTION_TITLES,
     card_ids,
     check_entry,
+    plain_brief,
+    plain_lines,
     priority,
     section_overview,
     source_text,
@@ -380,6 +382,9 @@ class DigestNodes:
             [source, *(reference.text() for reference in written.references if reference.found)]
         )
         text = check_entry(written, evidence)
+        # Past the cache as well: a brief written before the rule keeps to it.
+        if profile.audience == "management":
+            text = plain_brief(text)
         _emit("summarize", done=1)
         return {"summaries": [{"article_id": item.article.id, "text": text.model_dump()}]}
 
@@ -454,6 +459,14 @@ class DigestNodes:
             overview = await self._deps.intelligence.overview(topics, profile)
         else:
             overview = DigestOverview(title=f"Дайджест для профиля «{profile.name}»")
+        if profile.audience == "management":
+            # The offline overview takes headlines, which may carry a CVE.
+            overview = overview.model_copy(
+                update={
+                    "highlights": plain_lines(overview.highlights, 5),
+                    "implications": plain_lines(overview.implications, 3),
+                }
+            )
         return {
             "overview": overview.model_dump(mode="json"),
             "topics": [topic.model_dump(mode="json") for topic in topics],

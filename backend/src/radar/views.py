@@ -112,6 +112,8 @@ class DigestSummaryView(BaseModel):
 class DigestView(DigestSummaryView):
     profile: ProfileSpec
     highlights: list[str]
+    # Management only: what the period means for the company.
+    implications: list[str] = []
     topics: list[TopicView]
     rejected: list[ItemView]
 
@@ -195,6 +197,7 @@ def digest_view(digest: Digest) -> DigestView:
         **digest_summary(digest).model_dump(),
         profile=profile,
         highlights=list(digest.highlights),
+        implications=list(digest.implications),
         topics=[
             TopicView(title=topic.title, overview=topic.overview, items=by_topic.get(topic.id, []))
             for topic in digest.topics
