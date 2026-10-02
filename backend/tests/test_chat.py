@@ -146,6 +146,27 @@ async def test_a_server_that_stays_busy_or_breaks_fails_the_call(
     assert len(broken.requests) == 1
 
 
+async def test_once_a_call_runs_out_of_retries_the_queue_behind_it_fails_at_once(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(llm, "RATE_LIMIT_PAUSE_SECONDS", 0.0)
+    ok = '{"relevance": 2, "reason": "по теме"}'
+    server = Server(*[429] * (llm.RATE_LIMIT_RETRIES + 1), 429, ok, 429, ok)
+    model = chat(server)
+
+    with pytest.raises(ResponseError):
+        await model.ask(Verdict, "Оцени.", "Статья")
+    # The server is still full: the next call does not wait out its own retries,
+    # so the breaker hears of it in seconds and the digest falls back in time.
+    with pytest.raises(ResponseError):
+        await model.ask(Verdict, "Оцени.", "Статья")
+    assert len(server.requests) == llm.RATE_LIMIT_RETRIES + 2
+    # An answer means the server has room again, and retries come back.
+    await model.ask(Verdict, "Оцени.", "Статья")
+    assert await model.ask(Verdict, "Оцени.", "Статья") == Verdict(relevance=2, reason="по теме")
+    assert len(server.requests) == llm.RATE_LIMIT_RETRIES + 5
+
+
 async def test_json_that_is_only_broken_is_mended_without_asking_again() -> None:
     # A missing comma, as gpt-oss once wrote a list of highlights.
     server = Server('{"relevance": 2 "reason": "по теме"}')

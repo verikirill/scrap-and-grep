@@ -157,6 +157,8 @@ class ModelChat:
         # keeps the queue short and the timeouts honest.
         self._slots = asyncio.Semaphore(concurrency)
         self._timeout = timeout
+        # Up while the server keeps answering 429 after all the retries (see _invoke).
+        self._is_full = False
 
     async def ask[T: BaseModel](
         self, schema: type[T], system: str, user: str, tools: Sequence[ChatTool] = ()
@@ -220,21 +222,34 @@ class ModelChat:
 
     async def _invoke[R](self, model: Runnable[Any, R], messages: list[BaseMessage]) -> R:
         """One request; a full server is asked again after a growing pause.
-        The slot stays taken meanwhile, which is what a full server needs."""
-        for attempt in range(RATE_LIMIT_RETRIES):
+        The slot stays taken meanwhile, which is what a full server needs.
+
+        A call that ran out of retries leaves the server marked full until
+        something is answered. Every grading of a digest is queued before the
+        breaker has heard anything, and sixty of them waiting a minute and a
+        half each would outlast the build's time limit: while the mark is up
+        they fail at once, the breaker opens and the digest falls back.
+        """
+        retries = 0 if self._is_full else RATE_LIMIT_RETRIES
+        for attempt in range(retries + 1):
             try:
                 async with asyncio.timeout(self._timeout):
-                    return await model.ainvoke(messages)
+                    reply = await model.ainvoke(messages)
             except Exception as error:
                 if not _rate_limited(error):
                     raise
+                if attempt == retries:
+                    self._is_full = True
+                    raise
+            else:
+                self._is_full = False
+                return reply
             # Spread out, so the requests that were refused together do not return together.
             step = min(RATE_LIMIT_PAUSE_SECONDS * 2**attempt, RATE_LIMIT_MAX_PAUSE_SECONDS)
             pause = step * random.uniform(0.5, 1.5)  # noqa: S311
             log.info("llm_busy", model=self.name, attempt=attempt + 1, pause=round(pause, 1))
             await asyncio.sleep(pause)
-        async with asyncio.timeout(self._timeout):
-            return await model.ainvoke(messages)
+        raise AssertionError("the last attempt returns or raises")
 
 
 def ollama_chat(
