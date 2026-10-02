@@ -225,6 +225,28 @@ export function useSourceMutations() {
   }
 }
 
+/** How often the worker's answer about an address is asked for while it looks. */
+const DETECT_POLL_MS = 1_500
+
+/**
+ * What an address is and how to read it. The ingest worker finds out, a
+ * protected site in the browser, so the answer is asked for until it comes.
+ */
+export function useSourceDetection() {
+  const start = useMutation({
+    mutationFn: ({ address, linkSelector }: { address: string; linkSelector?: string }) =>
+      api.detectSource(address, linkSelector),
+  })
+  const requestId = start.data?.request_id
+  const result = useQuery({
+    queryKey: ['source-detect', requestId],
+    queryFn: () => api.detectResult(requestId as string),
+    enabled: Boolean(requestId),
+    refetchInterval: (query) => (query.state.data?.status === 'done' ? false : DETECT_POLL_MS),
+  })
+  return { start, result }
+}
+
 /** An article as the reader shows it; the page behind it is read once, by the API. */
 export const useArticle = (id: number, isEnabled: boolean) =>
   useQuery({

@@ -1,12 +1,45 @@
-import type { Source, SourceCategory, SourceKind } from './api'
+import type { FetchMethod, Source, SourceCategory, SourceKind } from './api'
 import { CATEGORY_LABELS } from './format'
 
 /** Words a source of each kind is also found by. */
 const KIND_WORDS: Record<SourceKind, string> = {
   rss: 'rss atom лента',
   telegram: 'telegram телеграм канал',
+  page: 'страница сайт без ленты',
+  wordpress: 'wordpress api',
   pt_trending: 'positive technologies трендовые уязвимости',
 }
+
+/** What a source is, in a word, where it is not a plain feed. */
+export const KIND_LABELS: Partial<Record<SourceKind, string>> = {
+  page: 'Страница',
+  wordpress: 'WordPress API',
+  pt_trending: 'Страница',
+}
+
+/** The fetch ladder's steps above a plain request, as a reader would name them. */
+const FETCH_LABELS: Record<Exclude<FetchMethod, 'plain'>, string> = {
+  browser_headers: 'Заголовки браузера',
+  impersonate: 'Отпечаток Chrome',
+  browser: 'Браузер',
+  solver: 'FlareSolverr',
+}
+
+/**
+ * How a site that refuses a bot is read: the step of the ladder and its
+ * reason, or null for a source a plain request reads.
+ */
+export function readVia(
+  source: Pick<Source, 'fetch_method' | 'fetch_note' | 'fetch_via_proxy'>,
+): { label: string; note: string | null } | null {
+  const method = source.fetch_method
+  const step = method && method !== 'plain' ? FETCH_LABELS[method] : null
+  const label = [step, source.fetch_via_proxy ? 'через прокси' : null].filter(Boolean).join(', ')
+  return label ? { label, note: source.fetch_note ?? null } : null
+}
+
+/** A source behind protection: read above a plain request or through a proxy. */
+export const isProtected = (source: Source): boolean => readVia(source) !== null
 
 function normalize(text: string): string {
   return text.toLowerCase().replaceAll('ё', 'е')
@@ -52,7 +85,7 @@ export type SourceGroup = { key: string; label: string; sources: Source[] }
 
 // The PT page is a site too: only Telegram channels stand apart.
 const KIND_GROUPS: { key: string; label: string; kinds: SourceKind[] }[] = [
-  { key: 'web', label: 'Сайты', kinds: ['rss', 'pt_trending'] },
+  { key: 'web', label: 'Сайты', kinds: ['rss', 'page', 'wordpress', 'pt_trending'] },
   { key: 'telegram', label: 'Telegram-каналы', kinds: ['telegram'] },
 ]
 

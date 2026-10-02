@@ -84,8 +84,14 @@ export interface SharedProfile {
   own_id: string | null
 }
 
-/** A feed, a public Telegram channel, or the trending vulnerabilities page of PT. */
-export type SourceKind = 'rss' | 'telegram' | 'pt_trending'
+/**
+ * A feed, a public Telegram channel, a site's news page without a feed, a
+ * WordPress site's API, or the trending vulnerabilities page of PT.
+ */
+export type SourceKind = 'rss' | 'telegram' | 'page' | 'wordpress' | 'pt_trending'
+
+/** The step of the fetch ladder that reads a source (backend ingest/fetch.py). */
+export type FetchMethod = 'plain' | 'browser_headers' | 'impersonate' | 'browser' | 'solver'
 
 export interface Source {
   id: number
@@ -102,8 +108,34 @@ export interface Source {
   last_status: string | null
   last_error: string | null
   consecutive_failures: number
+  /** How the source is read, and why not by a plain request. */
+  fetch_method?: FetchMethod | null
+  fetch_note?: string | null
+  fetch_via_proxy?: boolean
   articles: number
   articles_last_day: number
+  /** The reader may change and remove it: an administrator, or its author. */
+  can_edit?: boolean
+}
+
+export interface DetectedSource {
+  kind: 'rss' | 'telegram' | 'page' | 'wordpress'
+  /** What is polled: the feed, the page, the API, or a channel's name. */
+  address: string
+  name: string
+  site_url: string | null
+  language: string
+  link_selector: string | null
+  fetch_method: FetchMethod | null
+  fetch_note: string | null
+  samples: { title: string; url: string; published_at: string | null }[]
+}
+
+/** The worker's answer about an address, or that it is still looking. */
+export interface DetectResult {
+  status: 'pending' | 'done'
+  found: DetectedSource | null
+  error: string | null
 }
 
 type SourceCreateCommon = {
@@ -114,6 +146,14 @@ type SourceCreateCommon = {
 
 export type SourceCreate =
   | (SourceCreateCommon & { kind: 'rss'; name: string; feed_url: string })
+  | (SourceCreateCommon & {
+      kind: 'page' | 'wordpress'
+      name: string
+      /** The news page, or the WordPress posts API. */
+      feed_url: string
+      site_url?: string
+      link_selector?: string
+    })
   | (SourceCreateCommon & {
       kind: 'telegram'
       /** "@name" or the channel's t.me address. */
@@ -372,6 +412,8 @@ export interface Meta {
   registration_open: boolean
   /** False: a visitor without a session is entered as a guest, no sign-in screen. */
   sign_in_required: boolean
+  /** Every reader may add sources, not only the administrator. */
+  open_catalog: boolean
   resume_parser: 'builtin' | 'docling'
   resume_formats: string[]
   resume_max_bytes: number
@@ -811,6 +853,13 @@ export const api = {
   /** Source id -> version of its picture, for the sources that have one. */
   sourceAvatars: () => request<Record<string, string>>('/sources/avatars'),
   createSource: (source: SourceCreate) => request<Source>('/sources', json('POST', source)),
+  detectSource: (address: string, linkSelector?: string) =>
+    request<{ request_id: string }>(
+      '/sources/detect',
+      json('POST', { address, link_selector: linkSelector || null }),
+    ),
+  detectResult: (requestId: string) =>
+    request<DetectResult>(`/sources/detect/${encodeURIComponent(requestId)}`),
   updateSource: (id: number, patch: Partial<Pick<Source, 'enabled' | 'fetch_full_text'>>) =>
     request<Source>(`/sources/${id}`, json('PATCH', patch)),
   deleteSource: (id: number) => request<void>(`/sources/${id}`, { method: 'DELETE' }),

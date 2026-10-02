@@ -10,9 +10,18 @@ import { Button, Card, Chip, ErrorNote, Field, Toggle } from '../../components/u
 import type { Source, SourceCategory, SourceCreate } from '../../lib/api'
 import { CATEGORY_LABELS, externalHref, formatNumber, formatRelative } from '../../lib/format'
 import { useSourceMutations } from '../../lib/queries'
-import { CATEGORY_ORDER, groupSources, matchesSource, queryWords } from '../../lib/sourceList'
+import {
+  CATEGORY_ORDER,
+  KIND_LABELS,
+  groupSources,
+  isProtected,
+  matchesSource,
+  queryWords,
+  readVia,
+} from '../../lib/sourceList'
 import type { SourceGrouping, SourceOrder } from '../../lib/sourceList'
 import { SourceAvatar } from '../feed/SourceAvatar'
+import { DetectSourceForm } from './DetectSourceForm'
 
 function StatusDot({ source }: { source: Source }) {
   const failing = source.last_status === 'error'
@@ -38,13 +47,17 @@ function StatusDot({ source }: { source: Source }) {
   )
 }
 
-const KINDS = [
+// Any address first: the worker tells what it is. A feed or a channel by hand
+// stays for those who know what they have.
+const MODES = [
+  { value: 'any', label: 'Любой адрес', short: 'Адрес' },
   { value: 'rss', label: 'Лента RSS или Atom', short: 'RSS' },
   { value: 'telegram', label: 'Telegram-канал', short: 'Telegram' },
 ] as const
+type AddMode = (typeof MODES)[number]['value']
 
 type SourceForm = {
-  kind: SourceCreate['kind']
+  kind: 'rss' | 'telegram'
   name: string
   /** The feed's address, or the channel: "@name" or its t.me link. */
   address: string
@@ -77,6 +90,7 @@ function ArticleCount({ source }: { source: Source }) {
 
 function AddSourceForm({ onDone, onAdded }: { onDone: () => void; onAdded: () => void }) {
   const { create } = useSourceMutations()
+  const [mode, setMode] = useState<AddMode>('any')
   const [form, setForm] = useState<SourceForm>({
     kind: 'rss',
     name: '',
@@ -98,19 +112,34 @@ function AddSourceForm({ onDone, onAdded }: { onDone: () => void; onAdded: () =>
     })
   }
 
+  const modes = (
+    <Segmented
+      label="Что добавить"
+      value={mode}
+      options={MODES}
+      // An address of one kind means nothing to the other. A channel's short
+      // posts mostly point to articles, which are worth opening.
+      onChange={(next) => {
+        setMode(next)
+        if (next !== 'any') {
+          setForm({ ...form, kind: next, address: '', fetch_full_text: next === 'telegram' })
+        }
+      }}
+      className="sm:max-w-lg"
+    />
+  )
+  if (mode === 'any') {
+    return (
+      <div className="border-b border-outline-variant">
+        <div className="px-5 pt-5">{modes}</div>
+        <DetectSourceForm onDone={onDone} onAdded={onAdded} />
+      </div>
+    )
+  }
+
   return (
     <form onSubmit={submit} className="space-y-4 border-b border-outline-variant p-5">
-      <Segmented
-        label="Что добавить"
-        value={form.kind}
-        options={KINDS}
-        // An address of one kind means nothing to the other. A channel's short
-        // posts mostly point to articles, which are worth opening.
-        onChange={(kind) =>
-          setForm({ ...form, kind, address: '', fetch_full_text: kind === 'telegram' })
-        }
-        className="sm:max-w-md"
-      />
+      {modes}
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Название" hint={isChannel ? 'необязательно' : undefined}>
           <input
@@ -203,20 +232,47 @@ const ORDERS = [
   { value: 'least', label: 'Меньше новостей', short: 'Меньше' },
 ] as const satisfies readonly { value: SourceOrder; label: string; short: string }[]
 
+const SHOWN = [
+  { value: 'all', label: 'Все', short: 'Все' },
+  { value: 'protected', label: 'Защищённые', short: 'Защищ.' },
+] as const
+
 type Props = {
   sources: Source[]
-  /** The catalogue is shared; only an administrator may change it. */
-  canEdit: boolean
+  /** Polls the whole catalogue at once. */
+  isAdmin: boolean
+  /** May add sources: an administrator, or anyone in an open catalogue. */
+  canAdd: boolean
 }
 
-export function SourcesTable({ sources, canEdit }: Props) {
+/** How a source is read, where it is not a plain feed or a plain request. */
+function ReadBadges({ source }: { source: Source }) {
+  const kind = KIND_LABELS[source.kind]
+  const via = readVia(source)
+  return (
+    <>
+      {kind && <Chip className="max-sm:hidden">{kind}</Chip>}
+      {via && (
+        <Chip tone="spark" title={via.note ?? undefined} className="max-sm:hidden">
+          {via.label}
+        </Chip>
+      )}
+    </>
+  )
+}
+
+export function SourcesTable({ sources, isAdmin, canAdd }: Props) {
   const { toggle, remove, refreshOne, refreshAll } = useSourceMutations()
   const [adding, setAdding] = useState(false)
   // In the address, so a search survives a reload and can be sent on.
   const [params, setParams] = useSearchParams()
   const query = params.get('q') ?? ''
   const isSearching = queryWords(query).length > 0
-  const found = sources.filter((source) => matchesSource(source, query))
+  // Sites that refuse a bot and are read a step up the ladder or through a proxy.
+  const shown = params.get('show') === 'protected' ? 'protected' : 'all'
+  const found = sources.filter(
+    (source) => matchesSource(source, query) && (shown === 'all' || isProtected(source)),
+  )
   const searchBox = useRef<HTMLInputElement>(null)
   const grouping: SourceGrouping = params.get('group') === 'kind' ? 'kind' : 'category'
   const order = ORDERS.find((item) => item.value === params.get('order'))?.value ?? 'name'
@@ -253,12 +309,16 @@ export function SourcesTable({ sources, canEdit }: Props) {
           )}
           <span className="mt-0.5 block text-xs text-outline">
             Число у источника - публикаций всего, <span className="text-success">+N</span> за сутки.
-            {!canEdit && ' Включает и отключает источники администратор.'}
+            {!isAdmin &&
+              (canAdd
+                ? ' Добавить можно любой сайт или канал; свои источники вы отключаете и удаляете сами.'
+                : ' Включает и отключает источники администратор.')}
           </span>
         </p>
-        <div className={clsx('flex gap-2', !canEdit && 'hidden')}>
+        <div className={clsx('flex gap-2', !canAdd && 'hidden')}>
           <Button
             size="sm"
+            className={clsx(!isAdmin && 'hidden')}
             icon={<RefreshCw size={14} className={clsx(refreshAll.isPending && 'animate-spin')} />}
             onClick={() =>
               refreshAll.mutate(undefined, {
@@ -308,6 +368,12 @@ export function SourcesTable({ sources, canEdit }: Props) {
             value={order}
             options={ORDERS}
             onChange={(value) => setParam('order', value === 'name' ? '' : value)}
+          />
+          <Segmented
+            label="Показать"
+            value={shown}
+            options={SHOWN}
+            onChange={(value) => setParam('show', value === 'all' ? '' : value)}
           />
         </div>
         {/* Read out only while searching, and only the count. */}
@@ -400,7 +466,8 @@ export function SourcesTable({ sources, canEdit }: Props) {
                         : 'ещё не опрашивался'}
                   </p>
                 </div>
-                {/* On a phone the name needs the room more than the language does. */}
+                {/* On a phone the name needs the room more than these do. */}
+                <ReadBadges source={source} />
                 <Chip className="max-sm:hidden">{source.language.toUpperCase()}</Chip>
                 <span className="tabular w-24 shrink-0 text-right text-xs text-muted-foreground max-sm:hidden">
                   <ArticleCount source={source} />
@@ -409,7 +476,7 @@ export function SourcesTable({ sources, canEdit }: Props) {
                   className={clsx(
                     // Shown on hover with a mouse; a touch screen has no hover, so there they stay.
                     'flex items-center gap-0.5 transition-opacity pointer-fine:opacity-0 pointer-fine:group-focus-within:opacity-100 pointer-fine:group-hover:opacity-100',
-                    !canEdit && 'hidden',
+                    !source.can_edit && 'hidden',
                   )}
                 >
                   <button
@@ -433,7 +500,7 @@ export function SourcesTable({ sources, canEdit }: Props) {
                     <Trash2 size={13} />
                   </button>
                 </div>
-                {canEdit ? (
+                {source.can_edit ? (
                   <Toggle
                     label={`${source.enabled ? 'Отключить' : 'Включить'} ${source.name}`}
                     checked={source.enabled}
