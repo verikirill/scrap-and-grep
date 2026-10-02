@@ -98,6 +98,10 @@ class Renderer:
         async with self._starting:
             if self._browser is not None and self._browser.is_connected():
                 return
+            if self._browser is not None:
+                # The browser died (out of memory, for one): its driver goes
+                # with it, and both are started anew.
+                await self._stop()
             if self._playwright is None:
                 self._playwright = await async_playwright().start()
             browser = await AsyncNewBrowser(
@@ -123,11 +127,16 @@ class Renderer:
             self._browser = browser
 
     async def close(self) -> None:
+        async with self._starting:
+            await self._stop()
+
+    async def _stop(self) -> None:
         if self._browser is not None:
             with contextlib.suppress(Exception):
                 await self._browser.close()
         if self._playwright is not None:
-            await self._playwright.stop()
+            with contextlib.suppress(Exception):
+                await self._playwright.stop()
         self._browser = self._playwright = None
 
     async def render(
@@ -150,19 +159,30 @@ class Renderer:
                 raise RenderFailed("the browser is not running")
             started = time.monotonic()
             async with asyncio.timeout(seconds + 5), FilteringProxy(guard, proxy) as way_out:
-                context = await self._browser.new_context(
-                    proxy={"server": way_out.url},
-                    locale="ru-RU",
-                    timezone_id="Europe/Moscow",
-                    service_workers="block",
-                )
                 try:
-                    national = _NationalCa(self._national_ca, national_ca_hosts, guard, proxy)
+                    context = await self._context(way_out.url)
+                except Exception:
+                    # The browser went away between the check and the tab.
+                    await self.start()
+                    context = await self._context(way_out.url)
+                national = _NationalCa(self._national_ca, national_ca_hosts, guard, proxy)
+                try:
                     await context.route("**/*", lambda route: _route(route, guard, national))
                     return await _open(context, url, guard, seconds, started)
                 finally:
                     with contextlib.suppress(Exception):
                         await context.close()
+                    await national.aclose()
+
+    async def _context(self, proxy: str) -> Any:
+        if self._browser is None or not self._browser.is_connected():
+            raise RenderFailed("the browser is not running")
+        return await self._browser.new_context(
+            proxy={"server": proxy},
+            locale="ru-RU",
+            timezone_id="Europe/Moscow",
+            service_workers="block",
+        )
 
 
 async def _open(context: Any, url: str, guard: Guard, seconds: float, started: float) -> Rendered:
@@ -201,6 +221,13 @@ async def _open(context: Any, url: str, guard: Guard, seconds: float, started: f
         await asyncio.sleep(0.5)
     if not challenge:
         html = await _drawn(page, html, min(deadline, time.monotonic() + DRAW_SECONDS))
+        route = urlsplit(url).fragment
+        if route.startswith(("/", "!")) and urlsplit(page.url).fragment != route:
+            # An application that signed in came back to its front page: now
+            # that it knows the browser, it is asked for the route again.
+            with contextlib.suppress(Exception):
+                await page.goto(url, wait_until="domcontentloaded", timeout=10_000)
+                html = await _drawn(page, html, min(deadline, time.monotonic() + DRAW_SECONDS))
     if led_inside:
         raise Refused(f"{url} led to an internal address")
     final = page.url
@@ -228,23 +255,27 @@ async def _open(context: Any, url: str, guard: Guard, seconds: float, started: f
 
 
 async def _drawn(page: Any, html: str, until: float) -> str:
-    """The page once its scripts have drawn some text, or as it is at `until`.
+    """The page once its scripts have drawn it, or as it is at `until`.
 
     Quiet on the network is not enough: an application may sign in through
-    a redirect, or a guard may set a cookie and reload, after a pause.
+    a redirect, or a guard may set a cookie and reload, after a pause; and
+    its menu may be drawn well before its list. So the page is taken when
+    it has some text and the text has stopped growing.
     """
+    last = -1
     while True:
         with contextlib.suppress(Exception):
             await page.wait_for_load_state("networkidle", timeout=2000)
         with contextlib.suppress(Exception):
             # Fails while the page navigates.
             html = await page.content()
-            text = await page.evaluate("document.body ? document.body.innerText.length : 0")
-            if int(text) >= DRAWN_CHARS:
+            text = int(await page.evaluate("document.body ? document.body.innerText.length : 0"))
+            if text >= DRAWN_CHARS and text == last:
                 return html
+            last = text
         if time.monotonic() >= until:
             return html
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.75)
 
 
 # Cookies a guard sets for a client that passed its check.
@@ -299,6 +330,26 @@ class _NationalCa:
         self._hosts = tuple(host.lower().strip(".") for host in hosts if "." in host)
         self._guard = guard
         self._proxy = proxy
+        # A client per host: an app asks for dozens of scripts at once, and a
+        # new TLS connection for each was refused now and then. Per host, as
+        # a connection pinned to an address must not serve another name.
+        self._clients: dict[str, httpx.AsyncClient] = {}
+
+    async def aclose(self) -> None:
+        clients, self._clients = self._clients, {}
+        for client in clients.values():
+            await client.aclose()
+
+    def _client(self, host: str) -> httpx.AsyncClient:
+        if host not in self._clients:
+            self._clients[host] = httpx.AsyncClient(
+                verify=_national_context(str(self._bundle)),
+                proxy=self._proxy,
+                trust_env=False,
+                timeout=20.0,
+                limits=httpx.Limits(max_connections=6, max_keepalive_connections=6),
+            )
+        return self._clients[host]
 
     def covers(self, host: str) -> bool:
         name = host.lower().rstrip(".")
@@ -317,35 +368,29 @@ class _NationalCa:
         }
         method, body, url = request.method, request.post_data_buffer, request.url
         try:
-            async with httpx.AsyncClient(
-                verify=_national_context(str(self._bundle)),
-                proxy=self._proxy,
-                trust_env=False,
-                timeout=20.0,
-            ) as client:
-                for _ in range(MAX_REDIRECTS + 1):
-                    response = await self._send(client, method, url, headers, body)
-                    following = _redirect(url, response)
-                    if following is None or not self.covers(urlsplit(following).hostname or ""):
-                        # Not a redirect, or one elsewhere: the browser follows it
-                        # itself, through the proxy.
-                        break
-                    if request.is_navigation_request():
-                        # A redirect the browser follows skips the routing, and
-                        # the browser would meet the national CA on its own. A
-                        # new navigation is routed: the page says where to go.
-                        await route.fulfill(
-                            status=200,
-                            headers={
-                                "Content-Type": "text/html; charset=utf-8",
-                                **_cookies(response),
-                            },
-                            body=_REFRESH.format(url=html.escape(following, quote=True)),
-                        )
-                        return
-                    url = following
-                    if response.status_code == 303 or method == "POST":
-                        method, body = "GET", None
+            for _ in range(MAX_REDIRECTS + 1):
+                response = await self._send(method, url, headers, body)
+                following = _redirect(url, response)
+                if following is None or not self.covers(urlsplit(following).hostname or ""):
+                    # Not a redirect, or one elsewhere: the browser follows it
+                    # itself, through the proxy.
+                    break
+                if request.is_navigation_request():
+                    # A redirect the browser follows skips the routing, and
+                    # the browser would meet the national CA on its own. A
+                    # new navigation is routed: the page says where to go.
+                    await route.fulfill(
+                        status=200,
+                        headers={
+                            "Content-Type": "text/html; charset=utf-8",
+                            **_cookies(response),
+                        },
+                        body=_REFRESH.format(url=html.escape(following, quote=True)),
+                    )
+                    return
+                url = following
+                if response.status_code == 303 or method == "POST":
+                    method, body = "GET", None
         except httpx.HTTPError, Refused:
             await route.abort("failed")
             return
@@ -356,29 +401,32 @@ class _NationalCa:
         )
 
     async def _send(
-        self,
-        client: httpx.AsyncClient,
-        method: str,
-        url: str,
-        headers: dict[str, str],
-        body: bytes | None,
+        self, method: str, url: str, headers: dict[str, str], body: bytes | None
     ) -> httpx.Response:
         parts = urlsplit(url)
         host = parts.hostname or ""
         address = await self._guard.address(host, parts.port or 443)
-        if self._proxy:
-            # The proxy connects by name, and TLS through it checks the name.
-            return await client.request(method, url, headers=headers, content=body)
-        literal = f"[{address}]" if ":" in address else address
-        netloc = f"{literal}:{parts.port}" if parts.port else literal
-        target = urlunsplit((parts.scheme, netloc, parts.path, parts.query, ""))
-        return await client.request(
-            method,
-            target,
-            headers={**headers, "Host": parts.netloc},
-            content=body,
-            extensions={"sni_hostname": host},
-        )
+        client = self._client(host)
+        for attempt in range(2):
+            try:
+                if self._proxy:
+                    # The proxy connects by name, and TLS through it checks the name.
+                    return await client.request(method, url, headers=headers, content=body)
+                literal = f"[{address}]" if ":" in address else address
+                netloc = f"{literal}:{parts.port}" if parts.port else literal
+                target = urlunsplit((parts.scheme, netloc, parts.path, parts.query, ""))
+                return await client.request(
+                    method,
+                    target,
+                    headers={**headers, "Host": parts.netloc},
+                    content=body,
+                    extensions={"sni_hostname": host},
+                )
+            except httpx.TransportError:
+                # Once more: a dropped connection of the pool is no answer.
+                if attempt:
+                    raise
+        raise AssertionError("unreachable")
 
 
 _REFRESH = '<!doctype html><meta http-equiv="refresh" content="0;url={url}">'
