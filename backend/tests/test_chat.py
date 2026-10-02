@@ -1,6 +1,7 @@
 """The model connection: what goes to the server and what is accepted back."""
 
 import json
+import os
 from typing import Any
 
 import httpx
@@ -116,6 +117,22 @@ def test_a_cloud_model_without_a_key_stops_the_start() -> None:
     # Offline and local models need no key.
     Settings(llm_provider="heuristic", llm_api_key=None)
     Settings(llm_provider="ollama", llm_base_url="", llm_api_key=None)
+
+
+def test_the_model_mode_asks_a_local_model_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    for name in [name for name in os.environ if name.startswith("RADAR_LLM_")]:
+        monkeypatch.delenv(name)
+
+    settings = Settings(_env_file=None, llm_provider="ollama")  # type: ignore[call-arg]
+
+    # The finals forbid closed external APIs: by default nothing leaves the stack.
+    assert settings.llm_base_url == ""
+    assert settings.llm_model == "qwen3.6:35b-a3b"
+    assert settings.llm_api_key is None
+    # Qwen answers a schema as well without hidden reasoning, and one GPU
+    # serves requests one after another.
+    assert settings.llm_reasoning == "off"
+    assert settings.llm_concurrency == 2
 
 
 async def test_a_busy_server_is_asked_again_after_a_pause(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -22,12 +22,11 @@
    ```
    RADAR_EMBEDDING_PROVIDER=ollama
    RADAR_LLM_PROVIDER=ollama
-   RADAR_LLM_MODEL=gpt-oss:120b
-   RADAR_LLM_BASE_URL=https://ollama.com
-   RADAR_LLM_REASONING=low
-   RADAR_LLM_CONCURRENCY=4
-   RADAR_LLM_API_KEY=<ключ с ollama.com/settings/keys>
+   RADAR_LLM_MODEL=qwen3.6:35b-a3b
+   RADAR_LLM_BASE_URL=
    ```
+
+   Модель локальная, в Ollama внутри стека: `docker compose -f docker-compose.yml -f docker-compose.gpu.yml --profile ollama up -d`.
 
 2. Аккаунт для показа готовит скрипт, около 6 минут:
 

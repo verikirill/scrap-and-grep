@@ -26,14 +26,14 @@ x-backend: &backend
     RADAR_EMBEDDING_PROVIDER: ${RADAR_EMBEDDING_PROVIDER:-hashing}
     RADAR_EMBEDDING_MODEL: ${RADAR_EMBEDDING_MODEL:-embeddinggemma:300m}
     RADAR_LLM_PROVIDER: ${RADAR_LLM_PROVIDER:-heuristic}
-    # gpt-oss-120b in Ollama's cloud. An empty base URL asks the bundled
-    # Ollama instead, which then also pulls the model (see .env.example).
-    RADAR_LLM_MODEL: ${RADAR_LLM_MODEL:-gpt-oss:120b}
-    RADAR_LLM_BASE_URL: ${RADAR_LLM_BASE_URL-https://ollama.com}
+    # A local model of the finals in the bundled Ollama, which also pulls it.
+    # vLLM and other servers are set by the base URL (see .env.example).
+    RADAR_LLM_MODEL: ${RADAR_LLM_MODEL:-qwen3.6:35b-a3b}
+    RADAR_LLM_BASE_URL: ${RADAR_LLM_BASE_URL:-}
     RADAR_LLM_API_KEY: ${RADAR_LLM_API_KEY:-}
     RADAR_LLM_PROJECT: ${RADAR_LLM_PROJECT:-}
-    RADAR_LLM_REASONING: ${RADAR_LLM_REASONING:-low}
-    RADAR_LLM_CONCURRENCY: ${RADAR_LLM_CONCURRENCY:-4}
+    RADAR_LLM_REASONING: ${RADAR_LLM_REASONING:-off}
+    RADAR_LLM_CONCURRENCY: ${RADAR_LLM_CONCURRENCY:-2}
     RADAR_INGEST_CRON: ${RADAR_INGEST_CRON:-*/15 * * * *}
     # Proxies for reading sources: one for every request (the corporate one),
     # or a pool tried when a site refuses the server (see .env.example).
@@ -437,11 +437,12 @@ services:
       OLLAMA_HOST: http://ollama:11434
     entrypoint: ["/bin/sh", "-c"]
     command:
-      # The language model is pulled only when it runs here, not in the cloud.
+      # The language model is pulled only when it runs in this Ollama, not
+      # in vLLM or elsewhere; the embedder alone needs no 22.6 GB.
       - >-
         ollama pull ${RADAR_EMBEDDING_MODEL:-embeddinggemma:300m}
-        && if [ -z "${RADAR_LLM_BASE_URL-https://ollama.com}" ];
-        then ollama pull ${RADAR_LLM_MODEL:-gpt-oss:120b}; fi
+        && if [ "${RADAR_LLM_PROVIDER:-heuristic}" = ollama ] && [ -z "${RADAR_LLM_BASE_URL:-}" ];
+        then ollama pull ${RADAR_LLM_MODEL:-qwen3.6:35b-a3b}; fi
     depends_on:
       ollama:
         condition: service_healthy
