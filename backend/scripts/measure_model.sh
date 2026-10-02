@@ -52,7 +52,7 @@ else
 fi
 case "$(uname -s)" in
   MINGW* | MSYS* | CYGWIN*)
-    cpu=$(powershell -NoProfile -Command '(Get-CimInstance Win32_Processor).Name' | tr -d '\r')
+    cpu=$(powershell -NoProfile -Command '(Get-CimInstance Win32_Processor).Name.Trim()' | tr -d '\r')
     ram=$(powershell -NoProfile -Command '[math]::Round((Get-CimInstance Win32_PhysicalMemory | Measure-Object Capacity -Sum).Sum / 1GB)' | tr -d '\r')
     ;;
   *)
