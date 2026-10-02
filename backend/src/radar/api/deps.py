@@ -76,6 +76,21 @@ async def admin_user(user: CurrentUser) -> AuthUser:
 AdminUser = Annotated[AuthUser, Depends(admin_user)]
 
 
+def is_admin(user: AuthUser) -> bool:
+    # A guest is never an administrator, whatever its row says.
+    return user.is_admin and not user.is_demo
+
+
+async def catalog_writer(user: CurrentUser, settings: SettingsDep) -> AuthUser:
+    """Who may add a source: an administrator, or anyone in an open catalogue."""
+    if settings.open_catalog or is_admin(user):
+        return user
+    raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Источники добавляет администратор.")
+
+
+CatalogWriter = Annotated[AuthUser, Depends(catalog_writer)]
+
+
 def user_rate_limit(
     bucket: str, per_minute: Callable[[Settings], int]
 ) -> Callable[..., Awaitable[None]]:

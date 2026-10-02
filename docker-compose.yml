@@ -54,6 +54,8 @@ x-backend: &backend
     RADAR_DEMO_LOGIN: ${RADAR_DEMO_LOGIN:-true}
     # No sign-in screen: a visitor is entered as a guest of their own.
     RADAR_AUTH: ${RADAR_AUTH:-off}
+    # Every reader may add a source; its author may change and remove it.
+    RADAR_OPEN_CATALOG: ${RADAR_OPEN_CATALOG:-true}
     RADAR_REGISTRATION_OPEN: ${RADAR_REGISTRATION_OPEN:-true}
     RADAR_COOKIE_SECURE: ${RADAR_COOKIE_SECURE:-false}
     # Empty: resumes are read by the built-in parser. With the docling

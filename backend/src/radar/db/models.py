@@ -86,6 +86,9 @@ class Source(Base):
     # and when one was stored, which also tells a page to fetch it anew.
     avatar_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     avatar_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Who added it, in an open catalogue (RADAR_OPEN_CATALOG): the author may
+    # change and remove it. Empty for the catalogue's own sources.
+    added_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
