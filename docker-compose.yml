@@ -411,9 +411,15 @@ services:
       retries: 12
       start_period: 30s
 
+  # The embedding model is inside the image: a start without internet pulls
+  # nothing, the language model comes in a volume or a directory of models.
   ollama:
     profiles: ["ollama"]
-    image: ollama/ollama:0.35.0
+    build: &ollama-build
+      context: ./ollama
+      args:
+        EMBEDDING_MODEL: ${RADAR_EMBEDDING_MODEL:-embeddinggemma:300m}
+    image: radar-ollama:local
     restart: unless-stopped
     environment:
       # Parallel slots did not raise throughput on one GPU (76 vs 84 tokens/s
@@ -421,8 +427,14 @@ services:
       OLLAMA_NUM_PARALLEL: ${OLLAMA_NUM_PARALLEL:-2}
       OLLAMA_MAX_LOADED_MODELS: "2"
       OLLAMA_KEEP_ALIVE: 30m
+      # Ollama 0.35 asks ollama.com for cloud models and recommendations at
+      # start; nothing here needs them. The cloud model for development is
+      # asked by the backend directly, not through this Ollama.
+      OLLAMA_NO_CLOUD: "1"
     volumes:
-      - ollama:/root/.ollama
+      # A volume by default. In a closed network: the directory the models
+      # were unpacked to from the delivery archive (scripts/offline_bundle.sh).
+      - ${OLLAMA_MODELS_DIR:-ollama}:/root/.ollama
     healthcheck:
       test: ["CMD", "ollama", "list"]
       interval: 10s
@@ -431,18 +443,24 @@ services:
 
   ollama-pull:
     profiles: ["ollama"]
-    image: ollama/ollama:0.35.0
+    build: *ollama-build
+    image: radar-ollama:local
     restart: "no"
     environment:
       OLLAMA_HOST: http://ollama:11434
     entrypoint: ["/bin/sh", "-c"]
     command:
-      # The language model is pulled only when it runs in this Ollama, not
-      # in vLLM or elsewhere; the embedder alone needs no 22.6 GB.
+      # Pulls only what Ollama lacks, so a start without internet passes once
+      # the models are there. The language model is pulled only when it runs
+      # in this Ollama, not in vLLM or elsewhere; the embedder alone needs no 22.6 GB.
       - >-
-        ollama pull ${RADAR_EMBEDDING_MODEL:-embeddinggemma:300m}
-        && if [ "${RADAR_LLM_PROVIDER:-heuristic}" = ollama ] && [ -z "${RADAR_LLM_BASE_URL:-}" ];
-        then ollama pull ${RADAR_LLM_MODEL:-qwen3.6:35b-a3b}; fi
+        set -e;
+        have() { ollama show "$$1" >/dev/null 2>&1; };
+        have ${RADAR_EMBEDDING_MODEL:-embeddinggemma:300m}
+        || ollama pull ${RADAR_EMBEDDING_MODEL:-embeddinggemma:300m};
+        if [ "${RADAR_LLM_PROVIDER:-heuristic}" = ollama ] && [ -z "${RADAR_LLM_BASE_URL:-}" ];
+        then have ${RADAR_LLM_MODEL:-qwen3.6:35b-a3b}
+        || ollama pull ${RADAR_LLM_MODEL:-qwen3.6:35b-a3b}; fi
     depends_on:
       ollama:
         condition: service_healthy
