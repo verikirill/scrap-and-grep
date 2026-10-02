@@ -54,7 +54,8 @@ function InterestEditor({
         className="flex w-full items-center gap-3 px-4 py-3 text-left"
       >
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium">
+          {/* Two lines, not one: next to the weight chip a phone left "Безопасность АСУ ТП и ...". */}
+          <span className="line-clamp-2 text-sm font-medium break-words">
             {interest.title || 'Новый интерес'}
           </span>
           {!isOpen && (
