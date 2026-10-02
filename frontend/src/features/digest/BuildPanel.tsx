@@ -271,26 +271,28 @@ export function BuildPanel({ profiles, initialProfileId, isBuilding = false, onC
           </PopoverContent>
         </Popover>
 
-        <Button
-          variant="tonal"
-          icon={<DynamicFeed size={18} />}
-          isBusy={createBoth.isPending}
-          disabled={!selectedId || !chosen || isPending || isBuilding}
-          onClick={submitBoth}
-          className="ml-auto"
-          title="Один сбор и одна оценка, два выпуска: специалисту и руководству"
-        >
-          Обеим аудиториям
-        </Button>
-        <Button
-          variant="primary"
-          icon={<Newspaper size={18} />}
-          isBusy={create.isPending || isBuilding}
-          disabled={!selectedId || !chosen || createBoth.isPending}
-          onClick={submit}
-        >
-          {isBuilding ? 'Собираем выпуск' : 'Собрать выпуск'}
-        </Button>
+        {/* The two ways to build stay together and wrap as one, to the right. */}
+        <div className="ml-auto flex flex-wrap justify-end gap-2">
+          <Button
+            variant="tonal"
+            icon={<DynamicFeed size={18} />}
+            isBusy={createBoth.isPending}
+            disabled={!selectedId || !chosen || isPending || isBuilding}
+            onClick={submitBoth}
+            title="Один сбор и одна оценка, два выпуска: специалисту и руководству"
+          >
+            Обеим аудиториям
+          </Button>
+          <Button
+            variant="primary"
+            icon={<Newspaper size={18} />}
+            isBusy={create.isPending || isBuilding}
+            disabled={!selectedId || !chosen || createBoth.isPending}
+            onClick={submit}
+          >
+            {isBuilding ? 'Собираем выпуск' : 'Собрать выпуск'}
+          </Button>
+        </div>
       </div>
       {(create.error || createBoth.error) && (
         <div className="mt-3">
