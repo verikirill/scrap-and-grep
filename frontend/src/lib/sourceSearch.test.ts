@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Source } from './api'
-import { matchesSource } from './sourceSearch'
+import { matchesSource, queryWords } from './sourceSearch'
 
 function source(fields: Partial<Source>): Source {
   return {
@@ -56,5 +56,7 @@ describe('matchesSource', () => {
 
   it('lets everything through an empty query', () => {
     expect(matchesSource(bdu, '   ')).toBe(true)
+    // A lone @ is no word either, so the list is not counted as a search.
+    expect(queryWords(' @ ')).toEqual([])
   })
 })
