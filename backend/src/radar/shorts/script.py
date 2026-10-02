@@ -31,7 +31,7 @@ from radar.text import content_tokens, numbers, split_sentences, untracked_url
 from radar.views import DigestView, ItemView
 
 if TYPE_CHECKING:
-    from radar.ai.ollama import OllamaChat
+    from radar.ai.llm import ModelChat
 
 log = get_logger(__name__)
 
@@ -404,7 +404,7 @@ def _model_beat(item: ItemView, out: _BeatOut, fallback: Beat) -> Beat:
 
 
 class OllamaScriptWriter:
-    def __init__(self, chat: OllamaChat) -> None:
+    def __init__(self, chat: ModelChat) -> None:
         self.name = chat.name
         self._chat = chat
 

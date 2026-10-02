@@ -23,7 +23,7 @@ from radar.shorts.speech import is_grounded
 from radar.text import numbers, split_sentences, truncate
 
 if TYPE_CHECKING:
-    from radar.ai.ollama import OllamaChat
+    from radar.ai.llm import ModelChat
 
 log = get_logger(__name__)
 
@@ -360,7 +360,7 @@ def check_digest(out: _DigestOut, stories: list[Story]) -> DigestDraft:
 
 
 class OllamaPostWriter:
-    def __init__(self, chat: OllamaChat) -> None:
+    def __init__(self, chat: ModelChat) -> None:
         self.name = chat.name
         self._chat = chat
 

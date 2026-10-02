@@ -7,7 +7,7 @@ import httpx
 import pytest
 from pydantic import BaseModel, Field, ValidationError
 
-from radar.ai.ollama import ChatTool, OllamaChat
+from radar.ai.llm import ChatTool, ModelChat, ollama_chat, openai_chat
 from radar.config import Settings
 
 
@@ -47,8 +47,8 @@ class Server:
         return body
 
 
-def chat(server: Server, **options: Any) -> OllamaChat:
-    return OllamaChat(
+def chat(server: Server, **options: Any) -> ModelChat:
+    return ollama_chat(
         "gpt-oss:120b", "https://ollama.com", transport=httpx.MockTransport(server), **options
     )
 
@@ -177,3 +177,76 @@ async def test_a_tool_that_fails_is_told_to_the_model_not_raised() -> None:
 
     assert verdict.relevance == 2
     assert "недоступна" in server.body(1)["messages"][-1]["content"]
+
+
+class OpenAIServer:
+    """An OpenAI-compatible Chat Completions server: answers in turn, keeps requests."""
+
+    def __init__(self, *answers: str | dict[str, Any]) -> None:
+        self.answers = list(answers)
+        self.requests: list[httpx.Request] = []
+
+    def __call__(self, request: httpx.Request) -> httpx.Response:
+        self.requests.append(request)
+        answer = self.answers.pop(0)
+        message: dict[str, Any] = {"role": "assistant", "content": answer}
+        if isinstance(answer, dict):
+            message = {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {
+                        "id": "call_1",
+                        "type": "function",
+                        "function": {
+                            "name": answer["name"],
+                            "arguments": json.dumps(answer["arguments"]),
+                        },
+                    }
+                ],
+            }
+        body = {
+            "id": "chatcmpl-1",
+            "object": "chat.completion",
+            "created": 0,
+            "model": "qwen3.6-35b-a3b",
+            "choices": [{"index": 0, "message": message, "finish_reason": "stop"}],
+            "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+        }
+        return httpx.Response(200, json=body)
+
+    def body(self, index: int) -> dict[str, Any]:
+        body: dict[str, Any] = json.loads(self.requests[index].content)
+        return body
+
+
+async def test_an_openai_compatible_server_gets_the_key_the_folder_and_no_schema_field() -> None:
+    server = OpenAIServer(
+        {"name": "lookup", "arguments": {"identifier": "CVE-2026-88772"}},
+        '```json\n{"relevance": 3, "reason": "в каталоге KEV"}\n```',
+    )
+
+    async def lookup(arguments: dict[str, Any]) -> str:
+        return "CVE-2026-88772: в каталоге CISA KEV с 27.09.2026: используется в атаках"
+
+    tool = ChatTool({"type": "function", "function": {"name": "lookup", "parameters": {}}}, lookup)
+    model = openai_chat(
+        "gpt://b1g/qwen3.6-35b-a3b/latest",
+        "https://llm.example/v1",
+        api_key="secret",
+        project="b1g",
+        transport=httpx.MockTransport(server),
+    )
+
+    verdict = await model.ask(Verdict, "Оцени.", "Статья", (tool,))
+
+    assert verdict == Verdict(relevance=3, reason="в каталоге KEV")
+    first = server.requests[0]
+    assert first.url.path == "/v1/chat/completions"
+    assert first.headers["authorization"] == "Bearer secret"
+    # Yandex AI Studio wants the folder id as the project.
+    assert first.headers["openai-project"] == "b1g"
+    assert server.body(0)["model"] == "gpt://b1g/qwen3.6-35b-a3b/latest"
+    # Not every such server takes json_schema: the prompt carries the schema.
+    assert "response_format" not in server.body(0)
+    assert server.body(1)["messages"][-1]["role"] == "tool"

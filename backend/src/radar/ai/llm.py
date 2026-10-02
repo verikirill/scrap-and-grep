@@ -1,4 +1,4 @@
-"""Model-backed judgement and writing through Ollama and LangChain."""
+"""Model-backed judgement and writing through LangChain: Ollama or an OpenAI-compatible server."""
 
 import asyncio
 import json
@@ -8,6 +8,7 @@ from typing import Any, Literal
 
 import httpx
 import json_repair
+from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import (
     AIMessage,
     BaseMessage,
@@ -16,7 +17,8 @@ from langchain_core.messages import (
     ToolMessage,
 )
 from langchain_ollama import ChatOllama
-from pydantic import BaseModel, ValidationError
+from langchain_openai import ChatOpenAI
+from pydantic import BaseModel, SecretStr, ValidationError
 
 from radar import cards
 from radar.ai import prompts
@@ -109,49 +111,34 @@ async def _run(tool: ChatTool | None, arguments: Any) -> str:
         return "Справка сейчас недоступна, ответь по тексту публикации."
 
 
-class OllamaChat:
+class ModelChat:
     """One schema-constrained question to the model. Shared by every step that
     talks to it, so the concurrency bound covers them all.
 
-    The schema goes both ways. A local Ollama holds the answer to it as
-    `format`; the cloud takes the field and ignores it, and gpt-oss there
+    The model behind it is any LangChain chat model: Ollama, local or in its
+    cloud, or an OpenAI-compatible server such as Yandex AI Studio or vLLM.
+    The schema goes both ways. Ollama holds the answer to it as `format`
+    where it can; the cloud takes the field and ignores it, and gpt-oss there
     answers in markdown unless the prompt itself asks for JSON. So the prompt
     carries the schema too, the answer is checked here, and one that does not
-    fit is sent back once with what is wrong in it.
+    fit is sent back once with what is wrong in it. That is also all an
+    OpenAI-compatible server is asked for: not every one takes `json_schema`.
     """
 
     def __init__(
         self,
-        model: str,
-        base_url: str,
+        llm: BaseChatModel,
+        name: str,
         *,
-        api_key: str | None = None,
-        reasoning: Literal["off", "low", "medium", "high"] = "off",
-        temperature: float = 0.1,
-        num_ctx: int = 8192,
-        keep_alive: int = 1800,
+        schema_field: str | None = None,
         concurrency: int = 4,
         timeout: float = 120.0,
-        transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
-        self.name = f"ollama:{model}"
-        self._llm = ChatOllama(
-            model=model,
-            base_url=base_url,
-            temperature=temperature,
-            num_ctx=num_ctx,
-            keep_alive=keep_alive,
-            # Hidden reasoning multiplies latency for batch grading. A model
-            # that has it built in, as gpt-oss, gets the lowest level instead.
-            reasoning=False if reasoning == "off" else reasoning,
-            # The key goes to this server only, not to the Ollama of the embeddings.
-            client_kwargs={
-                "timeout": timeout,
-                "headers": {"Authorization": f"Bearer {api_key}"} if api_key else {},
-            },
-            async_client_kwargs={"transport": transport} if transport else {},
-        )
-        # Ollama queues requests beyond OLLAMA_NUM_PARALLEL; bounding them here
+        self.name = name
+        self._llm = llm
+        # The request field that holds the reply to the schema, where there is one.
+        self._schema_field = schema_field
+        # A server queues requests beyond its own limit; bounding them here
         # keeps the queue short and the timeouts honest.
         self._slots = asyncio.Semaphore(concurrency)
         self._timeout = timeout
@@ -213,17 +200,89 @@ class OllamaChat:
     async def _answer(self, messages: list[BaseMessage], shape: dict[str, Any]) -> str:
         # The clock starts once a slot is free: time spent queueing behind
         # other calls is not the model being slow and must not trip the breaker.
+        model = self._llm.bind(**{self._schema_field: shape}) if self._schema_field else self._llm
         async with asyncio.timeout(self._timeout):
-            reply = await self._llm.ainvoke(messages, format=shape)
+            reply = await model.ainvoke(messages)
         return _json_text(reply.text)
+
+
+def ollama_chat(
+    model: str,
+    base_url: str,
+    *,
+    api_key: str | None = None,
+    reasoning: Literal["off", "low", "medium", "high"] = "off",
+    temperature: float = 0.1,
+    num_ctx: int = 8192,
+    keep_alive: int = 1800,
+    concurrency: int = 4,
+    timeout: float = 120.0,
+    transport: httpx.AsyncBaseTransport | None = None,
+) -> ModelChat:
+    """A model of a local Ollama or of Ollama's cloud."""
+    llm = ChatOllama(
+        model=model,
+        base_url=base_url,
+        temperature=temperature,
+        num_ctx=num_ctx,
+        keep_alive=keep_alive,
+        # Hidden reasoning multiplies latency for batch grading. A model
+        # that has it built in, as gpt-oss, gets the lowest level instead.
+        reasoning=False if reasoning == "off" else reasoning,
+        # The key goes to this server only, not to the Ollama of the embeddings.
+        client_kwargs={
+            "timeout": timeout,
+            "headers": {"Authorization": f"Bearer {api_key}"} if api_key else {},
+        },
+        async_client_kwargs={"transport": transport} if transport else {},
+    )
+    return ModelChat(
+        llm,
+        f"ollama:{model}",
+        schema_field="format",
+        concurrency=concurrency,
+        timeout=timeout,
+    )
+
+
+def openai_chat(
+    model: str,
+    base_url: str,
+    *,
+    api_key: str | None = None,
+    project: str = "",
+    reasoning: Literal["off", "low", "medium", "high"] = "off",
+    temperature: float = 0.1,
+    concurrency: int = 4,
+    timeout: float = 120.0,
+    transport: httpx.AsyncBaseTransport | None = None,
+) -> ModelChat:
+    """A model behind an OpenAI-compatible Chat Completions API: Yandex AI
+    Studio (the project is the folder id), vLLM, Ollama's /v1."""
+    llm = ChatOpenAI(
+        model=model,
+        base_url=base_url,
+        # A local vLLM takes any key; the client wants one all the same.
+        api_key=SecretStr(api_key or "not-needed"),
+        temperature=temperature,
+        reasoning_effort=None if reasoning == "off" else reasoning,
+        default_headers={"OpenAI-Project": project} if project else None,
+        # Chat Completions, not the Responses API: that is what such servers share.
+        use_responses_api=False,
+        timeout=timeout,
+        # The circuit breaker decides about retries; the client must not wait them out.
+        max_retries=1,
+        http_async_client=httpx.AsyncClient(transport=transport) if transport else None,
+    )
+    return ModelChat(llm, f"openai:{model}", concurrency=concurrency, timeout=timeout)
 
 
 # Looks vulnerabilities up in the reference bases by their ids.
 Lookup = Callable[[Sequence[str]], Awaitable[list[VulnerabilityReference]]]
 
 
-class OllamaIntelligence:
-    def __init__(self, chat: OllamaChat, lookup: Lookup | None = None) -> None:
+class ModelIntelligence:
+    def __init__(self, chat: ModelChat, lookup: Lookup | None = None) -> None:
         self.name = chat.name
         self._ask = chat.ask
         self._lookup = lookup
