@@ -9,7 +9,15 @@ and the fallback when the model server goes down mid-run.
 from collections import Counter
 from collections.abc import Sequence
 
+from radar.cards import (
+    guess_kind,
+    offline_attack,
+    offline_tags,
+    offline_vulnerability,
+    source_text,
+)
 from radar.domain import (
+    ArticleRef,
     Candidate,
     DigestOverview,
     Grade,
@@ -41,6 +49,7 @@ class HeuristicIntelligence:
             relevance=relevance_from_score(candidate.retrieval_score),
             interest_id=candidate.interest_id,
             reason=f"Интерес «{title}»: {evidence}.",
+            kind=guess_kind(candidate.article.title, candidate.article.body(4000)),
             by_model=False,
         )
 
@@ -48,9 +57,20 @@ class HeuristicIntelligence:
         self, item: SelectedItem, profile: ProfileSpec, interest: Interest | None
     ) -> ItemSummary:
         article = item.article
-        summary = truncate(_lead(article.title, article.summary, article.content), SUMMARY_LIMIT)
+        source = source_text(article.title, article.summary, article.content)
+        kind = item.graded.grade.kind
+        specialist = profile.audience == "specialist"
         return ItemSummary(
-            headline=article.title, summary=summary, why=item.graded.grade.reason, by_model=False
+            headline=article.title,
+            summary=extractive_summary(article),
+            why=item.graded.grade.reason,
+            by_model=False,
+            # What a card can hold without a model: ids, CVSS, exploit, tags by words.
+            attack=offline_attack(source) if specialist and kind == "attack" else None,
+            vulnerability=(
+                offline_vulnerability(source) if specialist and kind == "vulnerability" else None
+            ),
+            tags=() if specialist else offline_tags(source),
         )
 
     async def name_topic(self, items: Sequence[SelectedItem], profile: ProfileSpec) -> TopicName:
@@ -95,6 +115,11 @@ def _matched_keywords(candidate: Candidate, interest: Interest | None) -> list[s
         if (tokens := tokenize(keyword)) and all(present(token) for token in tokens)
     ]
     return hits[:4]
+
+
+def extractive_summary(article: ArticleRef) -> str:
+    """The article's own first sentences: the entry text when no model writes one."""
+    return truncate(_lead(article.title, article.summary, article.content), SUMMARY_LIMIT)
 
 
 def _lead(title: str, summary: str, content: str | None) -> str:

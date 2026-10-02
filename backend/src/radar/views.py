@@ -6,8 +6,17 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from radar.cards import TAG_LABELS, attack_rows, priority_reason, vulnerability_rows
 from radar.db.models import Digest, DigestItem
-from radar.domain import ProfileSpec
+from radar.domain import (
+    AttackCard,
+    ItemSummary,
+    ManagementTag,
+    Priority,
+    ProfileSpec,
+    RecordKind,
+    VulnerabilityCard,
+)
 from radar.reading import reading_minutes
 
 
@@ -15,6 +24,11 @@ class DuplicateView(BaseModel):
     title: str
     url: str
     source_name: str
+
+
+class CardField(BaseModel):
+    label: str
+    value: str
 
 
 class ItemView(BaseModel):
@@ -39,6 +53,20 @@ class ItemView(BaseModel):
     duplicates: list[DuplicateView] = []
     reject_reason: str | None = None
     reading_minutes: int | None = None
+    # The organizers' dataset: what the publication reports, its priority and card.
+    kind: RecordKind = "news"
+    priority: Priority | None = None
+    priority_reason: str = ""
+    attack: AttackCard | None = None
+    vulnerability: VulnerabilityCard | None = None
+    tags: list[ManagementTag] = []
+    # What the check against the article's text took out of the entry.
+    unsupported: list[str] = []
+    # Addresses a Telegram post cites.
+    links: list[str] = []
+    # The card as label and value, in the dataset's order, and the tags in words.
+    fields: list[CardField] = []
+    tag_labels: list[str] = []
 
 
 class TopicView(BaseModel):
@@ -73,9 +101,16 @@ class DigestView(DigestSummaryView):
     rejected: list[ItemView]
 
 
+# Stored as plain strings; read back as the values the domain knows.
+_KINDS: dict[str, RecordKind] = {"attack": "attack", "vulnerability": "vulnerability"}
+_PRIORITIES: dict[str, Priority] = {"high": "high", "medium": "medium", "low": "low"}
+
+
 def _item_view(item: DigestItem, profile: ProfileSpec) -> ItemView:
     article = item.article
     interest = profile.interest(item.interest_id)
+    card = ItemSummary.model_validate({"summary": item.summary, **(item.card or {})})
+    kind = _KINDS.get(item.kind, "news")
     return ItemView(
         article_id=article.id,
         url=article.url,
@@ -98,7 +133,25 @@ def _item_view(item: DigestItem, profile: ProfileSpec) -> ItemView:
         duplicates=[DuplicateView.model_validate(dup) for dup in item.duplicates],
         reject_reason=item.reject_reason,
         reading_minutes=reading_minutes(article.word_count, article.language),
+        kind=kind,
+        priority=_PRIORITIES.get(item.priority or ""),
+        priority_reason=priority_reason(kind, card) if item.priority else "",
+        attack=card.attack,
+        vulnerability=card.vulnerability,
+        tags=list(card.tags),
+        unsupported=list(card.unsupported),
+        links=list(article.links or []),
+        fields=[CardField(label=label, value=value) for label, value in _rows(card)],
+        tag_labels=[TAG_LABELS[tag] for tag in card.tags],
     )
+
+
+def _rows(card: ItemSummary) -> list[tuple[str, str]]:
+    if card.attack is not None:
+        return attack_rows(card.attack)
+    if card.vulnerability is not None:
+        return vulnerability_rows(card.vulnerability)
+    return []
 
 
 def digest_summary(digest: Digest) -> DigestSummaryView:

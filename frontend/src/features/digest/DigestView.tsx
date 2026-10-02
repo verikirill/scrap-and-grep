@@ -27,6 +27,7 @@ import { useFeedback, useReactions } from '../../lib/queries'
 import { ReactionBar } from '../feed/ReactionBar'
 import { OriginalLink } from '../reader/OriginalLink'
 import { articlePath } from '../reader/paths'
+import { EntryDetails, PriorityChip } from './EntryCard'
 import { ShortPanel } from './ShortPanel'
 
 function Funnel({ digest }: { digest: Digest }) {
@@ -101,6 +102,7 @@ function ItemCard({ item, index, placement, reactions, onReact }: ItemCardProps)
         <span className="font-medium text-foreground">{item.source_name}</span>
         <span>{formatDate(item.published_at)}</span>
         <ReadingTime minutes={item.reading_minutes} />
+        <PriorityChip item={item} />
         <ScoreBar score={item.score} />
         {item.interest_title && <Chip tone="accent">{item.interest_title}</Chip>}
         {personal !== 0 && (
@@ -124,6 +126,7 @@ function ItemCard({ item, index, placement, reactions, onReact }: ItemCardProps)
       </div>
       {translated && <p className="mt-1.5 text-xs text-outline">Оригинал: {item.title}</p>}
       {item.summary && <p className="mt-2.5 text-sm text-foreground/90">{item.summary}</p>}
+      <EntryDetails item={item} />
       {item.why && (
         <p className="mt-2.5 border-l-2 border-spark pl-3 text-sm text-muted-foreground">
           <span className="font-medium text-foreground">Почему важно. </span>

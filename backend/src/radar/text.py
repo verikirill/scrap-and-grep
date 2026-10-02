@@ -117,3 +117,15 @@ def detect_language(text: str) -> str:
 
 def stable_hash(*parts: str) -> str:
     return hashlib.sha256("\x1f".join(parts).encode("utf-8")).hexdigest()[:32]
+
+
+# Whole numbers with their decimals: "9.8" must not be found inside "19.85".
+_NUMBER_RE = re.compile(r"(?<![\d.,])\d+(?:[.,]\d+)?(?!\d)")
+# "7 000" and "7000" are one number; a space before three digits joins them.
+_THOUSANDS_RE = re.compile(r"(?<=\d)[ \u00a0\u202f](?=\d{3}(?!\d))")
+
+
+def numbers(text: str) -> set[str]:
+    """The figures in a text, "9,8" written as "9.8", "7 000" as "7000"."""
+    joined = _THOUSANDS_RE.sub("", text)
+    return {number.replace(",", ".") for number in _NUMBER_RE.findall(joined)}

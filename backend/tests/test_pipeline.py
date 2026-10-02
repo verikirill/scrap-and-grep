@@ -324,3 +324,56 @@ async def test_a_profile_that_learned_from_its_reader_weighs_its_interests_accor
     assert score(runs["learned"], linux) == pytest.approx(score(runs["stated"], linux) * 0.75)
     assert runs["learned"]["stats"]["adaptation"]["ics"]["factor"] == 1.25
     assert runs["stated"]["stats"]["adaptation"] == {}
+
+
+@pytest.fixture
+def security_week(make_article: ArticleFactory) -> list[ArticleRef]:
+    return [
+        make_article(
+            "Атака группировки на SCADA ритейлера в Европе", "Хакеры зашифровали серверы."
+        ),
+        make_article(
+            "Атака группировки на SCADA электросетей",
+            "Пострадала российская электросетевая компания, вход был через подрядчика.",
+        ),
+        make_article(
+            "Уязвимость SCADA-сервера CVE-2026-1111", "Эксплойт: существует в открытом доступе."
+        ),
+        make_article("Уязвимость в веб-интерфейсе SCADA", "Производитель выпустил патч."),
+        make_article("Обзор рынка SCADA за год", "Аналитики оценили рынок АСУ ТП."),
+    ]
+
+
+async def test_a_specialist_digest_opens_with_attacks_and_vulnerabilities_by_priority(
+    profile: ProfileSpec, security_week: list[ArticleRef]
+) -> None:
+    abroad, energy, exploited, patched, market = security_week
+    store = FakeStore(security_week)
+    graph = build_graph(_deps(store, HeuristicIntelligence())).compile(checkpointer=InMemorySaver())
+
+    await graph.ainvoke(_input(profile.model_copy(update={"max_items": 10})), CONFIG)
+
+    assert store.saved is not None
+    topics: list[Topic] = store.saved["topics"]
+    assert [topic.title for topic in topics[:2]] == ["Атаки", "Уязвимости"]
+    # The dataset's rules: Russian energy above abroad, an exploit above a patch.
+    assert [item.article.id for item in topics[0].items] == [energy.id, abroad.id]
+    assert [item.article.id for item in topics[1].items] == [exploited.id, patched.id]
+    assert market.id in {item.article.id for topic in topics[2:] for item in topic.items}
+    assert store.saved["stats"]["priorities"] == {"high": 2, "medium": 1, "low": 1}
+
+
+async def test_a_management_digest_has_topics_and_tags_instead_of_cards(
+    profile: ProfileSpec, security_week: list[ArticleRef]
+) -> None:
+    store = FakeStore(security_week)
+    graph = build_graph(_deps(store, HeuristicIntelligence())).compile(checkpointer=InMemorySaver())
+    management = profile.model_copy(update={"max_items": 10, "audience": "management"})
+
+    await graph.ainvoke(_input(management), CONFIG)
+
+    assert store.saved is not None
+    topics: list[Topic] = store.saved["topics"]
+    assert not {"Атаки", "Уязвимости"} & {topic.title for topic in topics}
+    entries = [item.text for topic in topics for item in topic.items]
+    assert all(entry and entry.tags and entry.attack is None for entry in entries)

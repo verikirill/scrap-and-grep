@@ -25,6 +25,7 @@ const BLANK: ProfileSpec = {
   max_items: 20,
   languages: ['ru', 'en'],
   categories: [],
+  audience: 'specialist',
 }
 
 /** What the API would reject; shown next to the save button instead of a 422. */

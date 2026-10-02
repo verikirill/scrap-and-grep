@@ -166,6 +166,8 @@ class CachedIntelligence:
         key = "summary:" + stable_hash(
             self.name,
             SUMMARY_PROMPT_VERSION,
+            profile.audience,
+            item.graded.grade.kind,
             profile.role,
             interest.model_dump_json() if interest else "",
             item.article.content_hash,

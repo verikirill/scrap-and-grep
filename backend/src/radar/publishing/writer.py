@@ -19,8 +19,8 @@ from pydantic import BaseModel, Field
 from radar.ai.resilient import CircuitBreaker
 from radar.logging import get_logger
 from radar.publishing.settings import Links, Style
-from radar.shorts.speech import is_grounded, numbers
-from radar.text import split_sentences, truncate
+from radar.shorts.speech import is_grounded
+from radar.text import numbers, split_sentences, truncate
 
 if TYPE_CHECKING:
     from radar.ai.ollama import OllamaChat

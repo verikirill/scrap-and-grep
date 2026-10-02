@@ -107,3 +107,13 @@ def test_a_cloud_model_without_a_key_stops_the_start() -> None:
     # Offline and local models need no key.
     Settings(llm_provider="heuristic", llm_api_key=None)
     Settings(llm_provider="ollama", llm_base_url="", llm_api_key=None)
+
+
+async def test_json_that_is_only_broken_is_mended_without_asking_again() -> None:
+    # A missing comma, as gpt-oss once wrote a list of highlights.
+    server = Server('{"relevance": 2 "reason": "по теме"}')
+
+    verdict = await chat(server).ask(Verdict, "Оцени.", "Статья")
+
+    assert verdict == Verdict(relevance=2, reason="по теме")
+    assert len(server.requests) == 1

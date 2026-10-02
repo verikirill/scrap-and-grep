@@ -7,7 +7,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import { ChipsInput } from '../../components/ChipsInput'
 import { EASE, INPUT_CLASS, TEXTAREA_CLASS, shortId } from '../../components/tokens'
 import { Button, Card, Chip, Field } from '../../components/ui'
-import type { Interest, ProfileSpec, SourceCategory } from '../../lib/api'
+import type { Audience, Interest, ProfileSpec, SourceCategory } from '../../lib/api'
 import { CATEGORY_LABELS } from '../../lib/format'
 
 const WEIGHT_LABELS: [number, string][] = [
@@ -148,6 +148,20 @@ function InterestEditor({
 
 const CATEGORIES = Object.keys(CATEGORY_LABELS) as SourceCategory[]
 
+// The two kinds of digest in the organizers' dataset.
+const AUDIENCES: { id: Audience; title: string; description: string }[] = [
+  {
+    id: 'specialist',
+    title: 'Специалисту',
+    description: 'Атаки и уязвимости карточками с приоритетом, остальное по темам',
+  },
+  {
+    id: 'management',
+    title: 'Руководству',
+    description: 'Коротко и без жаргона, с признаками: в РФ, ущерб, утечка, энергетика',
+  },
+]
+
 export function ProfileForm({
   spec,
   onChange,
@@ -206,6 +220,38 @@ export function ProfileForm({
             maxLength={600}
             onChange={(event) => onChange({ ...spec, role: event.target.value })}
           />
+        </Field>
+        <Field isGroup label="Формат выпуска" hint="как в датасете организаторов">
+          <div role="radiogroup" aria-label="Формат выпуска" className="grid gap-2 sm:grid-cols-2">
+            {AUDIENCES.map((option) => {
+              const active = spec.audience === option.id
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => onChange({ ...spec, audience: option.id })}
+                  className={clsx(
+                    'rounded-xl border px-3.5 py-2.5 text-left transition-colors duration-150',
+                    active
+                      ? 'border-primary bg-primary-container text-on-primary-container'
+                      : 'border-outline-variant hover:border-outline',
+                  )}
+                >
+                  <span className="block text-sm font-medium">{option.title}</span>
+                  <span
+                    className={clsx(
+                      'mt-0.5 block text-xs',
+                      active ? 'text-on-primary-container/80' : 'text-muted-foreground',
+                    )}
+                  >
+                    {option.description}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
         </Field>
       </Card>
 

@@ -18,6 +18,29 @@ SourceKind = Literal["rss", "telegram", "pt_trending"]
 # What an administrator can add; the PT page comes with the defaults.
 AddableSourceKind = Literal["rss", "telegram"]
 Language = Literal["ru", "en"]
+# Who reads the digest, as in the organizers' dataset: specialists get a card
+# per attack and vulnerability, management a short brief with tags.
+Audience = Literal["specialist", "management"]
+# What a publication reports, the dataset's grouping for specialists.
+RecordKind = Literal["attack", "vulnerability", "news"]
+Priority = Literal["high", "medium", "low"]
+# in_the_wild: used in attacks; public: a proof of concept is out.
+Exploit = Literal["in_the_wild", "public", "none", "unknown"]
+# The dataset's grouping features for management, in its order.
+ManagementTag = Literal[
+    "ru",
+    "abroad",
+    "financial_loss",
+    "critical_infrastructure",
+    "energy",
+    "industry",
+    "reputation",
+    "data_leak",
+    "government_law",
+    "mass_service",
+    "people_events",
+    "curious",
+]
 
 
 class Interest(BaseModel):
@@ -58,6 +81,7 @@ class ProfileSpec(BaseModel):
     max_items: int = Field(default=20, ge=3, le=60)
     languages: tuple[Language, ...] = Field(default=("ru", "en"), min_length=1, max_length=2)
     categories: tuple[SourceCategory, ...] = Field(default=(), max_length=5)
+    audience: Audience = "specialist"
 
     @field_validator("interests")
     @classmethod
@@ -77,7 +101,10 @@ class ProfileSpec(BaseModel):
 
     def fingerprint(self) -> str:
         """Changes whenever anything that affects grading changes."""
-        return stable_hash(self.model_dump_json(exclude={"name", "max_items", "min_score"}))
+        # The audience changes how an entry is written, not how it is graded.
+        return stable_hash(
+            self.model_dump_json(exclude={"name", "max_items", "min_score", "audience"})
+        )
 
     def interest(self, interest_id: str | None) -> Interest | None:
         return next((item for item in self.interests if item.id == interest_id), None)
@@ -96,6 +123,8 @@ class ArticleRef(BaseModel):
     language: str
     published_at: datetime
     content_hash: str
+    # Addresses a Telegram post points to, besides the post itself.
+    links: tuple[str, ...] = ()
 
     def body(self, limit: int) -> str:
         return (self.content or self.summary or "")[:limit]
@@ -123,6 +152,7 @@ class Grade(BaseModel):
     relevance: int = Field(ge=0, le=3)
     interest_id: str | None = None
     reason: str = ""
+    kind: RecordKind = "news"
     by_model: bool = False
 
 
@@ -151,11 +181,45 @@ class DuplicateRef(BaseModel):
     source_name: str
 
 
+class AttackCard(BaseModel):
+    """The dataset's card of an attack. Empty means the text does not say."""
+
+    victim_country: str = ""
+    victim_in_russia: bool | None = None
+    group: str = ""
+    attack_date: str = ""
+    sectors: str = ""
+    energy_sector: bool | None = None
+    initial_access: str = ""
+    tools: tuple[str, ...] = ()
+    vulnerabilities: tuple[str, ...] = ()
+    iocs: bool | None = None
+
+
+class VulnerabilityCard(BaseModel):
+    """The dataset's card of a vulnerability; the entry's summary describes it."""
+
+    name: str = ""
+    affected: str = ""
+    fix: str = ""
+    workaround: str = ""
+    exploit: Exploit = "unknown"
+    ids: tuple[str, ...] = ()
+    cvss_score: str = ""
+    cvss_vector: str = ""
+    impact: str = ""
+
+
 class ItemSummary(BaseModel):
     headline: str = ""
     summary: str
     why: str = ""
     by_model: bool = False
+    attack: AttackCard | None = None
+    vulnerability: VulnerabilityCard | None = None
+    tags: tuple[ManagementTag, ...] = ()
+    # Card fields and claims the check against the article's text took out.
+    unsupported: tuple[str, ...] = ()
 
 
 class SelectedItem(BaseModel):
