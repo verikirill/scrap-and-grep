@@ -165,63 +165,87 @@ export function FeedPage() {
         title="Для вас"
         subtitle="Публикации за две недели, упорядоченные под вас: по интересам, резюме и прошлым отметкам. У каждой видно, почему она здесь."
         actions={
-          <Button
-            icon={<RefreshCw size={15} />}
-            isBusy={feed.isRefetching}
-            onClick={rebuild}
-            disabled={tab !== 'feed'}
-          >
-            Пересобрать
-          </Button>
+          // On a phone the button joins the row of tabs as an icon: the header
+          // stays two lines instead of four.
+          <span className="hidden sm:block">
+            <Button
+              icon={<RefreshCw size={15} />}
+              isBusy={feed.isRefetching}
+              onClick={rebuild}
+              disabled={tab !== 'feed'}
+            >
+              Пересобрать
+            </Button>
+          </span>
         }
       />
 
-      <div
-        className="mb-5 inline-flex gap-1 rounded-xl bg-surface-container p-1"
-        role="group"
-        aria-label="Раздел"
-      >
-        {TABS.map(({ id, label, icon: Icon }) => (
+      <div className="mb-5 flex items-center gap-2">
+        <div
+          className="inline-flex gap-1 rounded-xl bg-surface-container p-1"
+          role="group"
+          aria-label="Раздел"
+        >
+          {TABS.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              type="button"
+              aria-pressed={tab === id}
+              onClick={() => setSearch(id === 'feed' ? {} : { tab: id })}
+              className={clsx(
+                'relative inline-flex items-center gap-2 rounded-lg px-4 py-1.5 text-sm font-medium transition-colors',
+                tab === id
+                  ? 'text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              {tab === id && (
+                <motion.span
+                  layoutId="feed-tab"
+                  className="absolute inset-0 rounded-lg bg-primary shadow-elevation-1"
+                  transition={{ type: 'spring', stiffness: 480, damping: 38 }}
+                />
+              )}
+              <Icon size={15} className="relative" />
+              <span className="relative">{label}</span>
+            </button>
+          ))}
+        </div>
+        <div className="ml-auto flex items-center gap-1">
+          {!isWide && (
+            <Sheet>
+              <SheetTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Что лента знает о вас"
+                  title="Что лента знает о вас"
+                  className="state-layer relative inline-flex h-10 items-center gap-2 overflow-hidden rounded-full px-2.5 text-sm font-medium text-primary sm:px-4"
+                >
+                  <Psychology size={19} />
+                  <span className="hidden sm:inline">Что лента знает о вас</span>
+                </button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto rounded-t-3xl">
+                <SheetHeader className="sr-only">
+                  <SheetTitle>Что лента знает о вас</SheetTitle>
+                  <SheetDescription>Интересы, резюме и выученные по отметкам темы</SheetDescription>
+                </SheetHeader>
+                <div className="p-4 pt-2">{tastePanel}</div>
+              </SheetContent>
+            </Sheet>
+          )}
           <button
-            key={id}
             type="button"
-            aria-pressed={tab === id}
-            onClick={() => setSearch(id === 'feed' ? {} : { tab: id })}
-            className={clsx(
-              'relative inline-flex items-center gap-2 rounded-lg px-4 py-1.5 text-sm font-medium transition-colors',
-              tab === id
-                ? 'text-primary-foreground'
-                : 'text-muted-foreground hover:text-foreground',
-            )}
+            onClick={rebuild}
+            disabled={tab !== 'feed' || feed.isRefetching}
+            aria-label="Пересобрать ленту"
+            title="Пересобрать ленту"
+            className="state-layer relative grid size-10 place-items-center overflow-hidden rounded-full text-primary disabled:opacity-40 sm:hidden"
           >
-            {tab === id && (
-              <motion.span
-                layoutId="feed-tab"
-                className="absolute inset-0 rounded-lg bg-primary shadow-elevation-1"
-                transition={{ type: 'spring', stiffness: 480, damping: 38 }}
-              />
-            )}
-            <Icon size={15} className="relative" />
-            <span className="relative">{label}</span>
+            <RefreshCw size={19} className={clsx(feed.isRefetching && 'animate-spin')} />
           </button>
-        ))}
+        </div>
       </div>
-      {!isWide && (
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button size="sm" variant="ghost" icon={<Psychology size={16} />} className="mb-5 ml-2">
-              Что лента знает о вас
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto rounded-t-3xl">
-            <SheetHeader className="sr-only">
-              <SheetTitle>Что лента знает о вас</SheetTitle>
-              <SheetDescription>Интересы, резюме и выученные по отметкам темы</SheetDescription>
-            </SheetHeader>
-            <div className="p-4 pt-2">{tastePanel}</div>
-          </SheetContent>
-        </Sheet>
-      )}
 
       <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_19rem]">
         <div className="min-w-0 space-y-3">
