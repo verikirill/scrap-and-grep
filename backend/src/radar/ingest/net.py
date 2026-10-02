@@ -15,6 +15,7 @@ import socket
 import ssl
 from functools import cache
 from importlib.resources import files
+from typing import Any
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
 import certifi
@@ -71,23 +72,53 @@ async def ensure_public_url(url: str) -> None:
     await resolve_public(url)
 
 
-def build_client() -> httpx.AsyncClient:
+class GuardedClient(httpx.AsyncClient):
+    """The fetcher's client, which knows whether it goes through a proxy."""
+
+    def __init__(self, *, proxy: str | None, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self.proxy_url = proxy
+
+
+def build_client(proxy: str | None = None) -> GuardedClient:
+    """The client every outbound request goes through.
+
+    `proxy` defaults to RADAR_HTTP_PROXY; an empty string means none.
+    """
     settings = get_settings()
+    chosen = (settings.http_proxy if proxy is None else proxy) or None
     # No keep-alive: connections are made to pinned addresses, and a pooled
     # one must not be reused for another host name behind the same address.
     limits = httpx.Limits(max_connections=20, max_keepalive_connections=0)
-    return httpx.AsyncClient(
+    return GuardedClient(
+        proxy=chosen,
         timeout=httpx.Timeout(settings.http_timeout_seconds, connect=10.0),
         headers={"User-Agent": settings.http_user_agent, "Accept-Encoding": "gzip, deflate"},
         transport=TrustByHost(
-            usual=httpx.AsyncHTTPTransport(verify=_tls(national=False), limits=limits),
-            national=httpx.AsyncHTTPTransport(verify=_tls(national=True), limits=limits),
+            usual=httpx.AsyncHTTPTransport(
+                verify=_tls(national=False), limits=limits, proxy=chosen
+            ),
+            national=httpx.AsyncHTTPTransport(
+                verify=_tls(national=True), limits=limits, proxy=chosen
+            ),
         ),
         follow_redirects=False,
         # Proxies from the environment are not used: their transport would
         # skip the pools above, the national CA and keep-alive limits included.
+        # A proxy is set in RADAR_HTTP_PROXY and goes through both pools.
         trust_env=False,
     )
+
+
+def proxy_name(proxy: str) -> str:
+    """The proxy without its password, fit for a log or a page."""
+    parts = urlsplit(proxy)
+    port = f":{parts.port}" if parts.port else ""
+    return f"{parts.scheme}://{parts.hostname}{port}"
+
+
+def proxy_of(client: httpx.AsyncClient) -> str | None:
+    return client.proxy_url if isinstance(client, GuardedClient) else None
 
 
 @cache
@@ -143,13 +174,24 @@ async def safe_get(
     *,
     headers: dict[str, str] | None = None,
     max_bytes: int | None = None,
+    retry: bool = True,
 ) -> httpx.Response:
-    """GET with per-hop URL validation, a size cap and retries on transient errors."""
+    """GET with per-hop URL validation, a size cap and retries on transient errors.
+
+    Without `retry` a 5xx or 429 comes back as a response: the fetch ladder
+    (ingest/fetch.py) decides itself whether to ask again, and how.
+    """
     limit = max_bytes or get_settings().max_feed_bytes
+    get = _get_retrying if retry else _get_once
     current = url
     for _ in range(MAX_REDIRECTS + 1):
         address = await resolve_public(current)
-        response = await _get_once(client, current, address, headers or {}, limit)
+        if proxy_of(client):
+            # The proxy connects by name: the address is checked before the
+            # request is handed to it, and the URL goes out as it is, so that
+            # TLS through the tunnel still checks the site's own name.
+            address = None
+        response = await get(client, current, address, headers or {}, limit, raise_transient=retry)
         if response.status_code not in _REDIRECT_CODES:
             return response
         location = response.headers.get("location")
@@ -185,13 +227,14 @@ def _pinned(url: str, address: str | None) -> tuple[str, dict[str, str], dict[st
     return target, {"Host": host_header}, {"sni_hostname": host}
 
 
-@stamina.retry(on=_is_transient, attempts=3, timeout=90.0)
 async def _get_once(
     client: httpx.AsyncClient,
     url: str,
     address: str | None,
     headers: dict[str, str],
     limit: int,
+    *,
+    raise_transient: bool,
 ) -> httpx.Response:
     target, host_header, extensions = _pinned(url, address)
     async with (
@@ -200,7 +243,7 @@ async def _get_once(
             "GET", target, headers={**headers, **host_header}, extensions=extensions
         ) as response,
     ):
-        if response.status_code >= 500 or response.status_code == 429:
+        if raise_transient and (response.status_code >= 500 or response.status_code == 429):
             response.raise_for_status()
         body = bytearray()
         async for chunk in response.aiter_bytes():
@@ -222,3 +265,6 @@ async def _get_once(
             content=bytes(body),
             request=httpx.Request("GET", url),
         )
+
+
+_get_retrying = stamina.retry(on=_is_transient, attempts=3, timeout=90.0)(_get_once)

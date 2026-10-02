@@ -19,11 +19,10 @@ from datetime import UTC, date, datetime, time, timedelta, timezone
 from itertools import pairwise
 from urllib.parse import quote, urljoin, urlsplit
 
-import httpx
 from selectolax.lexbor import LexborHTMLParser, LexborNode
 
 from radar.ingest.feeds import MAX_URL_LENGTH, SUMMARY_LIMIT, FeedResult
-from radar.ingest.net import safe_get
+from radar.ingest.fetch import Ladder
 from radar.ingest.pages import MarkupChanged
 from radar.reading import word_count
 from radar.store.articles import NewArticle
@@ -207,14 +206,14 @@ def to_article(item: Trending, now: datetime) -> NewArticle:
 
 
 async def fetch_trending(
-    client: httpx.AsyncClient, url: str, *, etag: str | None, last_modified: str | None
+    ladder: Ladder, url: str, *, etag: str | None, last_modified: str | None
 ) -> FeedResult:
     headers = {}
     if etag:
         headers["If-None-Match"] = etag
     if last_modified:
         headers["If-Modified-Since"] = last_modified
-    response = await safe_get(client, url, headers=headers, max_bytes=PAGE_MAX_BYTES)
+    response = await ladder.get(url, headers=headers, max_bytes=PAGE_MAX_BYTES, expect="page")
     if response.status_code == 304:
         return FeedResult(status="not_modified", etag=etag, last_modified=last_modified)
     response.raise_for_status()

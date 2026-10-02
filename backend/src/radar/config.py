@@ -1,15 +1,24 @@
 """Runtime configuration, read once from the environment."""
 
 from functools import lru_cache
-from typing import Literal, Self
+from typing import Annotated, Literal, Self
 from urllib.parse import urlsplit
 
 from pydantic import Field, SecretStr, computed_field, field_validator, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 # Every stored vector has this width. Smaller models are zero-padded (cosine
 # similarity is unchanged), larger ones are truncated and re-normalised.
 EMBEDDING_DIM = 1024
+PROXY_SCHEMES = frozenset({"http", "https", "socks5", "socks5h"})
+
+
+def check_proxy_url(url: str) -> str:
+    """A proxy address as httpx and curl take it, or ValueError."""
+    parts = urlsplit(url)
+    if parts.scheme not in PROXY_SCHEMES or not parts.hostname or parts.path not in {"", "/"}:
+        raise ValueError("a proxy is scheme://[user:password@]host:port: http, https or socks5")
+    return url
 
 
 class Settings(BaseSettings):
@@ -91,6 +100,32 @@ class Settings(BaseSettings):
     telegram_preview_urls: list[str] = Field(
         default_factory=lambda: ["https://t.me", "https://telegram.me"], min_length=1
     )
+
+    # Reading sites that refuse a bot (ingest/fetch.py). A page that answers
+    # 401/403/429/503 or a challenge is asked again a step up the ladder:
+    # browser headers, the TLS fingerprint of Chrome, FlareSolverr.
+    # What a browser sends on the second step and later.
+    browser_user_agent: str = (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        " (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+    )
+    # The third step: curl_cffi with the TLS and HTTP/2 fingerprint of Chrome.
+    fetch_impersonate: bool = True
+    # FlareSolverr inside the stack (the solver profile) for pages that stop
+    # curl_cffi too: http://flaresolverr:8191. Empty turns the step off.
+    flaresolverr_url: str = ""
+    flaresolverr_timeout_seconds: float = Field(default=60.0, ge=10)
+    # An article page whose text is shorter than this is taken for a stub.
+    fetch_min_article_chars: int = Field(default=300, ge=0)
+    # Politeness: the least pause between two requests to one host, plus up
+    # to half of it at random, within one process.
+    fetch_host_interval_seconds: float = Field(default=1.0, ge=0)
+    # A proxy for every request, the corporate one in a closed network:
+    # http://, https:// or socks5://. A source may have its own instead.
+    http_proxy: str = ""
+    # Proxies tried in turn when a site refuses every step without one
+    # (403, 429 or no answer), comma-separated: for geo-blocks and limits.
+    http_proxies: Annotated[list[str], NoDecode] = Field(default_factory=list)
 
     # Longest a digest build may run. A build whose worker died is handed to
     # another worker after this long, and resumes from its last checkpoint.
@@ -227,6 +262,25 @@ class Settings(BaseSettings):
             ):
                 raise ValueError(f"not a base address for t.me pages: {url!r}")
         return urls
+
+    @field_validator("http_proxies", mode="before")
+    @classmethod
+    def _proxy_list(cls, value: object) -> object:
+        if isinstance(value, str):
+            return [part.strip() for part in value.split(",") if part.strip()]
+        return value
+
+    @field_validator("http_proxies")
+    @classmethod
+    def _proxy_pool(cls, urls: list[str]) -> list[str]:
+        for url in urls:
+            check_proxy_url(url)
+        return urls
+
+    @field_validator("http_proxy")
+    @classmethod
+    def _one_proxy(cls, url: str) -> str:
+        return check_proxy_url(url) if url else url
 
     @field_validator("llm_api_key", mode="before")
     @classmethod

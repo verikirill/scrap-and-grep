@@ -144,3 +144,87 @@ async def test_the_trending_page_of_pt_comes_with_the_defaults_and_is_read(
         )
     assert (report.status, report.new_articles) == ("ok", 3)
     assert "Трендовая уязвимость CVE-2026-99002 в Microsoft Windows" in titles
+
+
+async def test_a_feed_that_refuses_the_bot_remembers_how_it_was_read(
+    api: str, offline: None
+) -> None:
+    from radar.cache import get_cache
+    from radar.db import session_scope
+    from radar.db.models import Source
+    from radar.ingest.service import ingest_source
+
+    async with session_scope() as session:
+        source = Source(
+            slug="waf-feed",
+            name="Сайт за WAF",
+            feed_url="https://waf.example/feed",
+            category="security",
+        )
+        session.add(source)
+        await session.flush()
+        source_id = source.id
+    feed = (
+        '<?xml version="1.0"?><rss version="2.0"><channel><title>WAF</title>'
+        "<item><title>Новость</title><link>https://waf.example/news/1</link>"
+        "<pubDate>Wed, 30 Sep 2026 10:00:00 GMT</pubDate></item></channel></rss>"
+    )
+    agents: list[str] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/robots.txt":
+            return httpx.Response(404)
+        agents.append(request.headers["user-agent"])
+        if "Chrome/" not in request.headers["user-agent"]:
+            return httpx.Response(403, text="Forbidden")
+        return httpx.Response(200, text=feed)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
+        first = await ingest_source(source_id, client, get_cache())
+        second = await ingest_source(source_id, client, get_cache())
+
+    async with session_scope() as session:
+        source = await session.get(Source, source_id)
+    assert (first.status, first.new_articles) == ("ok", 1)
+    assert second.status == "ok"
+    assert source is not None
+    assert source.fetch_method == "browser_headers"
+    assert source.fetch_note == "403 на шаге «обычный запрос», прочитан через заголовки браузера"
+    # The next run starts on the step that worked.
+    assert ["Chrome/" in agent for agent in agents] == [False, True, True]
+
+
+async def test_a_source_gets_its_own_proxy_and_its_password_is_not_shown(
+    api: str, monkeypatch: pytest.MonkeyPatch, offline: None
+) -> None:
+    from radar.db import session_scope
+    from radar.db.models import Source
+    from radar.worker import tasks
+
+    monkeypatch.setattr(tasks.ingest_source_task, "kiq", AsyncMock())
+    feed = {
+        "kind": "rss",
+        "name": "Сайт с гео-блокировкой",
+        "feed_url": "https://geo.example.com/feed",
+        "category": "security",
+        "proxy_url": "socks5://reader:secret@proxy.example.net:1080",
+    }
+    async with administrator(api) as admin:
+        added = await admin.post("/sources", json=feed)
+        wrong = await admin.post(
+            "/sources",
+            json={**feed, "feed_url": "https://b.example.com/feed", "proxy_url": "ftp://x"},
+        )
+        source_id = added.json()["id"]
+        listed = (await admin.get("/sources")).json()
+        cleared = await admin.patch(f"/sources/{source_id}", json={"proxy_url": ""})
+
+    assert added.status_code == 201, added.text
+    assert added.json()["proxy"] == "socks5://proxy.example.net:1080"
+    assert "secret" not in str(listed)
+    assert wrong.status_code == 422
+    assert cleared.json()["proxy"] is None
+    async with session_scope() as session:
+        source = await session.get(Source, source_id)
+    assert source is not None
+    assert source.proxy_url is None

@@ -225,8 +225,9 @@ async def test_a_page_read_before_keeps_its_text_when_a_new_reading_fails(
     assert after == before
     assert again == before
     assert status == "stale"
-    # Tried once after the change, then left alone until RETRY_AFTER.
-    assert site["hits"]["/story"] == 2
+    # Tried once after the change, plainly and with a browser's headers (503
+    # may be a refusal of the bot), then left alone until RETRY_AFTER.
+    assert site["hits"]["/story"] == 3
 
 
 async def test_a_picture_the_site_refused_is_not_asked_for_again_at_once(

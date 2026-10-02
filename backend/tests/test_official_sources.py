@@ -14,6 +14,7 @@ from pydantic import ValidationError
 
 from radar.config import Settings
 from radar.ingest import bdu
+from radar.ingest.fetch import Ladder
 from radar.ingest.net import RUSSIAN_CA_BUNDLE, TrustByHost, trusts_russian_ca
 from radar.ingest.pages import MarkupChanged, page_text
 from radar.ingest.ptsecurity import fetch_trending, parse_trending, to_article
@@ -246,8 +247,9 @@ async def test_an_unchanged_trending_page_is_not_read_again(offline: None) -> No
         return httpx.Response(200, text=PT_PAGE, headers={"etag": '"v1"'})
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as http:
-        first = await fetch_trending(http, PT_URL, etag=None, last_modified=None)
-        again = await fetch_trending(http, PT_URL, etag=first.etag, last_modified=None)
+        ladder = Ladder(http)
+        first = await fetch_trending(ladder, PT_URL, etag=None, last_modified=None)
+        again = await fetch_trending(ladder, PT_URL, etag=first.etag, last_modified=None)
 
     assert (first.status, len(first.articles), first.etag) == ("ok", 3, '"v1"')
     assert again.status == "not_modified"

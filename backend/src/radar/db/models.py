@@ -63,6 +63,20 @@ class Source(Base):
     last_status: Mapped[str | None] = mapped_column(String(32))
     last_error: Mapped[str | None] = mapped_column(Text)
     consecutive_failures: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    # The step of the fetch ladder (ingest/fetch.py) that read the source last,
+    # where the next run starts; why the steps below it did not do, and when
+    # the step last changed.
+    fetch_method: Mapped[str | None] = mapped_column(String(16))
+    fetch_note: Mapped[str | None] = mapped_column(Text)
+    fetch_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # The source's own proxy, for a site that blocks the server's country;
+    # and whether the source was read through a proxy last time.
+    proxy_url: Mapped[str | None] = mapped_column(Text)
+    fetch_via_proxy: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    # A source failing again and again rests until then (ingest/service.py),
+    # and what its robots.txt says of the feed: recorded, not obeyed.
+    retry_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    robots_allowed: Mapped[bool | None] = mapped_column(Boolean)
     # The source's picture (ingest/avatars.py): when it was last looked for,
     # and when one was stored, which also tells a page to fetch it anew.
     avatar_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

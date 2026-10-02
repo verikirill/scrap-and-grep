@@ -7,10 +7,9 @@ from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
 import feedparser
-import httpx
 
 from radar.images.extract import from_entry
-from radar.ingest.net import safe_get
+from radar.ingest.fetch import Ladder
 from radar.reading import word_count
 from radar.store.articles import NewArticle
 from radar.text import canonical_url, content_hash, detect_language, strip_html, truncate
@@ -33,7 +32,7 @@ class FeedResult:
 
 
 async def fetch_feed(
-    client: httpx.AsyncClient,
+    ladder: Ladder,
     feed_url: str,
     *,
     language: str,
@@ -45,7 +44,7 @@ async def fetch_feed(
         headers["If-None-Match"] = etag
     if last_modified:
         headers["If-Modified-Since"] = last_modified
-    response = await safe_get(client, feed_url, headers=headers)
+    response = await ladder.get(feed_url, headers=headers, expect="feed")
     if response.status_code == 304:
         return FeedResult(status="not_modified", etag=etag, last_modified=last_modified)
     response.raise_for_status()
