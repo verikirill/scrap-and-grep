@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Source } from './api'
-import { matchesSource, queryWords } from './sourceSearch'
+import { groupSources, matchesSource, queryWords } from './sourceList'
 
 function source(fields: Partial<Source>): Source {
   return {
@@ -58,5 +58,34 @@ describe('matchesSource', () => {
     expect(matchesSource(bdu, '   ')).toBe(true)
     // A lone @ is no word either, so the list is not counted as a search.
     expect(queryWords(' @ ')).toEqual([])
+  })
+})
+
+describe('groupSources', () => {
+  const xakep = source({ id: 2, name: 'Хакер', articles: 20 })
+  const pt = source({ id: 3, name: 'PT: трендовые уязвимости', kind: 'pt_trending', articles: 10 })
+  const quiet = source({ id: 4, name: 'Ещё канал', kind: 'telegram', articles: 2 })
+  const all = [{ ...channel, articles: 15 }, bdu, xakep, pt, quiet]
+
+  it('splits Telegram channels from sites, the PT page among the sites', () => {
+    const groups = groupSources(all, 'kind', 'name')
+
+    expect(groups.map((group) => group.label)).toEqual(['Сайты', 'Telegram-каналы'])
+    expect(groups[1].sources.map((item) => item.name)).toEqual(['Ещё канал', 'SecAtor'])
+    expect(groups[0].sources).toContain(pt)
+  })
+
+  it('puts the sources with more articles first or last, as asked', () => {
+    const most = groupSources(all, 'kind', 'most')
+    const least = groupSources(all, 'kind', 'least')
+
+    expect(most[0].sources.map((item) => item.articles)).toEqual([20, 10, 0])
+    expect(least[1].sources.map((item) => item.name)).toEqual(['Ещё канал', 'SecAtor'])
+  })
+
+  it('leaves out a category with nothing in it', () => {
+    const groups = groupSources([bdu, xakep], 'category', 'name')
+
+    expect(groups.map((group) => group.key)).toEqual(['security', 'regulator'])
   })
 })

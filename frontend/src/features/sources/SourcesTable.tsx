@@ -10,9 +10,8 @@ import { Button, Card, Chip, ErrorNote, Field, Toggle } from '../../components/u
 import type { Source, SourceCategory, SourceCreate } from '../../lib/api'
 import { CATEGORY_LABELS, externalHref, formatNumber, formatRelative } from '../../lib/format'
 import { useSourceMutations } from '../../lib/queries'
-import { matchesSource, queryWords } from '../../lib/sourceSearch'
-
-const CATEGORY_ORDER: SourceCategory[] = ['security', 'ics', 'energy', 'it', 'regulator']
+import { CATEGORY_ORDER, groupSources, matchesSource, queryWords } from '../../lib/sourceList'
+import type { SourceGrouping, SourceOrder } from '../../lib/sourceList'
 
 function StatusDot({ source }: { source: Source }) {
   const failing = source.last_status === 'error'
@@ -189,6 +188,17 @@ function AddSourceForm({ onDone, onAdded }: { onDone: () => void; onAdded: () =>
   )
 }
 
+const GROUPINGS = [
+  { value: 'category', label: 'По темам', short: 'Темы' },
+  { value: 'kind', label: 'Сайты и Telegram', short: 'Откуда' },
+] as const satisfies readonly { value: SourceGrouping; label: string; short: string }[]
+
+const ORDERS = [
+  { value: 'name', label: 'По названию', short: 'А-Я' },
+  { value: 'most', label: 'Больше новостей', short: 'Больше' },
+  { value: 'least', label: 'Меньше новостей', short: 'Меньше' },
+] as const satisfies readonly { value: SourceOrder; label: string; short: string }[]
+
 type Props = {
   sources: Source[]
   /** The catalogue is shared; only an administrator may change it. */
@@ -204,16 +214,21 @@ export function SourcesTable({ sources, canEdit }: Props) {
   const isSearching = queryWords(query).length > 0
   const found = sources.filter((source) => matchesSource(source, query))
   const searchBox = useRef<HTMLInputElement>(null)
-  const setQuery = (value: string) =>
+  const grouping: SourceGrouping = params.get('group') === 'kind' ? 'kind' : 'category'
+  const order = ORDERS.find((item) => item.value === params.get('order'))?.value ?? 'name'
+  const groups = groupSources(found, grouping, order)
+  // An empty value leaves the address, so the defaults keep it clean.
+  const setParam = (key: string, value: string) =>
     setParams(
       (current) => {
         const next = new URLSearchParams(current)
-        if (value) next.set('q', value)
-        else next.delete('q')
+        if (value) next.set(key, value)
+        else next.delete(key)
         return next
       },
       { replace: true },
     )
+  const setQuery = (value: string) => setParam('q', value)
 
   return (
     <Card className="overflow-hidden">
@@ -273,6 +288,20 @@ export function SourcesTable({ sources, canEdit }: Props) {
             className="w-full rounded-lg border border-outline-variant bg-card py-2.5 pr-3 pl-9 text-sm placeholder:text-outline hover:border-outline focus:border-primary focus:outline-none"
           />
         </div>
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
+          <Segmented
+            label="Группировать"
+            value={grouping}
+            options={GROUPINGS}
+            onChange={(value) => setParam('group', value === 'category' ? '' : value)}
+          />
+          <Segmented
+            label="Порядок"
+            value={order}
+            options={ORDERS}
+            onChange={(value) => setParam('order', value === 'name' ? '' : value)}
+          />
+        </div>
         {/* Read out only while searching, and only the count. */}
         <p className="sr-only" aria-live="polite">
           {isSearching ? `Найдено ${found.length} из ${sources.length}` : ''}
@@ -313,98 +342,95 @@ export function SourcesTable({ sources, canEdit }: Props) {
         </p>
       )}
 
-      {CATEGORY_ORDER.map((category) => {
-        const group = found.filter((source) => source.category === category)
-        if (group.length === 0) return null
-        return (
-          <section key={category}>
-            <h3 className="bg-surface-container px-5 py-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-              {CATEGORY_LABELS[category]}
-            </h3>
-            <ul className="divide-y divide-outline-variant">
-              {group.map((source) => (
-                <li
-                  key={source.id}
+      {groups.map((group) => (
+        <section key={group.key}>
+          <h3 className="flex justify-between bg-surface-container px-5 py-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+            {group.label}
+            <span className="tabular font-normal normal-case">{group.sources.length}</span>
+          </h3>
+          <ul className="divide-y divide-outline-variant">
+            {group.sources.map((source) => (
+              <li
+                key={source.id}
+                className={clsx(
+                  'group flex items-center gap-3 px-5 py-2.5 transition-opacity',
+                  !source.enabled && 'opacity-55',
+                )}
+              >
+                <StatusDot source={source} />
+                <div className="min-w-0 flex-1">
+                  <a
+                    href={externalHref(source.site_url ?? source.feed_url)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-sm font-medium hover:text-on-primary-container"
+                  >
+                    {source.kind === 'telegram' && (
+                      <Send
+                        size={14}
+                        aria-label="Telegram-канал"
+                        className="shrink-0 text-outline"
+                      />
+                    )}
+                    <span className="truncate">{source.name}</span>
+                  </a>
+                  <p className="truncate text-xs text-outline">
+                    {/* On a phone the count moves here, under the name. */}
+                    <span className="tabular sm:hidden">
+                      <ArticleCount source={source} />
+                      {' · '}
+                    </span>
+                    {source.last_status === 'error'
+                      ? (source.last_error ?? 'ошибка опроса')
+                      : source.last_fetched_at
+                        ? `опрошен ${formatRelative(source.last_fetched_at)}`
+                        : 'ещё не опрашивался'}
+                  </p>
+                </div>
+                {/* On a phone the name needs the room more than the language does. */}
+                <Chip className="max-sm:hidden">{source.language.toUpperCase()}</Chip>
+                <span className="tabular w-24 shrink-0 text-right text-xs text-muted-foreground max-sm:hidden">
+                  <ArticleCount source={source} />
+                </span>
+                <div
                   className={clsx(
-                    'group flex items-center gap-3 px-5 py-2.5 transition-opacity',
-                    !source.enabled && 'opacity-55',
+                    // Shown on hover with a mouse; a touch screen has no hover, so there they stay.
+                    'flex items-center gap-0.5 transition-opacity pointer-fine:opacity-0 pointer-fine:group-focus-within:opacity-100 pointer-fine:group-hover:opacity-100',
+                    !canEdit && 'hidden',
                   )}
                 >
-                  <StatusDot source={source} />
-                  <div className="min-w-0 flex-1">
-                    <a
-                      href={externalHref(source.site_url ?? source.feed_url)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 text-sm font-medium hover:text-on-primary-container"
-                    >
-                      {source.kind === 'telegram' && (
-                        <Send
-                          size={14}
-                          aria-label="Telegram-канал"
-                          className="shrink-0 text-outline"
-                        />
-                      )}
-                      <span className="truncate">{source.name}</span>
-                    </a>
-                    <p className="truncate text-xs text-outline">
-                      {/* On a phone the count moves here, under the name. */}
-                      <span className="tabular sm:hidden">
-                        <ArticleCount source={source} />
-                        {' · '}
-                      </span>
-                      {source.last_status === 'error'
-                        ? (source.last_error ?? 'ошибка опроса')
-                        : source.last_fetched_at
-                          ? `опрошен ${formatRelative(source.last_fetched_at)}`
-                          : 'ещё не опрашивался'}
-                    </p>
-                  </div>
-                  {/* On a phone the name needs the room more than the language does. */}
-                  <Chip className="max-sm:hidden">{source.language.toUpperCase()}</Chip>
-                  <span className="tabular w-24 shrink-0 text-right text-xs text-muted-foreground max-sm:hidden">
-                    <ArticleCount source={source} />
-                  </span>
-                  <div
-                    className={clsx(
-                      // Shown on hover with a mouse; a touch screen has no hover, so there they stay.
-                      'flex items-center gap-0.5 transition-opacity pointer-fine:opacity-0 pointer-fine:group-focus-within:opacity-100 pointer-fine:group-hover:opacity-100',
-                      !canEdit && 'hidden',
-                    )}
+                  <button
+                    type="button"
+                    aria-label="Опросить источник"
+                    onClick={() => refreshOne.mutate(source.id)}
+                    className="grid size-7 place-items-center rounded-md text-outline hover:bg-surface-container hover:text-foreground"
                   >
-                    <button
-                      type="button"
-                      aria-label="Опросить источник"
-                      onClick={() => refreshOne.mutate(source.id)}
-                      className="grid size-7 place-items-center rounded-md text-outline hover:bg-surface-container hover:text-foreground"
-                    >
-                      <RefreshCw size={13} />
-                    </button>
-                    <button
-                      type="button"
-                      aria-label="Удалить источник"
-                      onClick={() => {
-                        if (window.confirm(`Удалить «${source.name}» вместе с его публикациями?`)) {
-                          remove.mutate(source.id)
-                        }
-                      }}
-                      className="grid size-7 place-items-center rounded-md text-outline hover:bg-error-container hover:text-destructive"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                  <Toggle
-                    label={`${source.enabled ? 'Отключить' : 'Включить'} ${source.name}`}
-                    checked={source.enabled}
-                    disabled={!canEdit}
-                    onChange={(enabled) => toggle.mutate({ id: source.id, enabled })}
-                  />
-                </li>
-              ))}
-            </ul>
-          </section>
-        )
-      })}
+                    <RefreshCw size={13} />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Удалить источник"
+                    onClick={() => {
+                      if (window.confirm(`Удалить «${source.name}» вместе с его публикациями?`)) {
+                        remove.mutate(source.id)
+                      }
+                    }}
+                    className="grid size-7 place-items-center rounded-md text-outline hover:bg-error-container hover:text-destructive"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+                <Toggle
+                  label={`${source.enabled ? 'Отключить' : 'Включить'} ${source.name}`}
+                  checked={source.enabled}
+                  disabled={!canEdit}
+                  onChange={(enabled) => toggle.mutate({ id: source.id, enabled })}
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
     </Card>
   )
 }
