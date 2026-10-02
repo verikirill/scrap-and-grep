@@ -9,7 +9,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import httpx
 import pytest
 
-from radar.ingest import fetch, solver
+from radar.ingest import fetch, polite, solver
 from radar.ingest.fetch import Blocked, Ladder, impersonated_get, refusal
 from radar.ingest.net import UnsafeUrlError
 from tests.test_telegram import offline  # noqa: F401
@@ -218,9 +218,17 @@ def local_site() -> Iterator[int]:
 
 
 @pytest.fixture
-def names(monkeypatch: pytest.MonkeyPatch) -> None:
-    """site.test resolves to the local server; intranet.test is internal."""
+def names(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """site.test resolves to the local server; intranet.test is internal.
+
+    No pause between requests to one host here: pacing has its own tests.
+    """
+    from radar.config import get_settings
     from radar.ingest import net
+
+    monkeypatch.setenv("RADAR_FETCH_HOST_INTERVAL_SECONDS", "0")
+    get_settings.cache_clear()
+    polite.PACER.clear()
 
     async def resolve(url: str) -> str | None:
         host = httpx.URL(url).host
@@ -231,6 +239,8 @@ def names(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(net, "resolve_public", resolve)
     monkeypatch.setattr(fetch, "resolve_public", resolve)
     monkeypatch.setattr(solver, "resolve_public", resolve)
+    yield
+    get_settings.cache_clear()
 
 
 async def test_a_site_that_checks_the_fingerprint_is_read_by_curl_pinned_to_the_address(

@@ -10,6 +10,7 @@ import pytest
 import stamina
 
 from radar.images.service import Picture, mirror
+from radar.ingest import polite
 from radar.ingest.pages import MarkupChanged
 from radar.ingest.telegram import (
     ChannelUnavailable,
@@ -61,6 +62,11 @@ def offline(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     # curl_cffi does not go through the mock transport: it would ask the
     # real network for the test's hosts.
     monkeypatch.setenv("RADAR_FETCH_IMPERSONATE", "false")
+    # No pause between requests to one host, and nothing remembered of
+    # hosts from another test.
+    monkeypatch.setenv("RADAR_FETCH_HOST_INTERVAL_SECONDS", "0")
+    polite.PACER.clear()
+    polite._robots.clear()
     get_settings.cache_clear()
     with stamina.set_testing(True, attempts=1):
         yield

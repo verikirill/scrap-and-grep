@@ -117,6 +117,9 @@ class Settings(BaseSettings):
     flaresolverr_timeout_seconds: float = Field(default=60.0, ge=10)
     # An article page whose text is shorter than this is taken for a stub.
     fetch_min_article_chars: int = Field(default=300, ge=0)
+    # Politeness: the least pause between two requests to one host, plus up
+    # to half of it at random, within one process.
+    fetch_host_interval_seconds: float = Field(default=1.0, ge=0)
     # A proxy for every request, the corporate one in a closed network:
     # http://, https:// or socks5://. A source may have its own instead.
     http_proxy: str = ""

@@ -1,11 +1,12 @@
 """Ingestion use cases: pull one source, pull all, embed what is new."""
 
 import asyncio
+import random
 from dataclasses import dataclass, replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import httpx
-from sqlalchemy import select
+from sqlalchemy import or_, select
 
 from radar.ai.embedder import Embedder
 from radar.cache import Cache
@@ -16,6 +17,7 @@ from radar.images.extract import from_page
 from radar.ingest.feeds import CONTENT_LIMIT, FeedResult, fetch_feed
 from radar.ingest.fetch import Ladder, Outcome
 from radar.ingest.pages import page_text
+from radar.ingest.polite import robots_allows
 from radar.ingest.ptsecurity import fetch_trending
 from radar.ingest.telegram import fetch_channel
 from radar.logging import get_logger
@@ -30,6 +32,9 @@ LOCK_TTL_SECONDS = 300
 FULLTEXT_PER_RUN = 40
 FULLTEXT_MAX_BYTES = 3_000_000
 EMBED_CHUNK = 256
+# A source failing again and again is polled less and less often.
+BACKOFF_BASE = timedelta(minutes=15)
+BACKOFF_MAX = timedelta(hours=24)
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,7 +68,11 @@ async def ingest_source(source_id: int, client: httpx.AsyncClient, cache: Cache)
             last_post_id = source.last_post_id
             ladder = Ladder(client, remembered=source.fetch_method, proxy=source.proxy_url)
 
+        robots = None
         try:
+            if kind != "telegram":
+                # Recorded, not obeyed: see ingest/polite.py.
+                robots = await robots_allows(ladder.client, feed_url)
             if kind == "telegram":
                 feed = await fetch_channel(
                     ladder.client, feed_url, language=language, last_post_id=last_post_id
@@ -81,11 +90,11 @@ async def ingest_source(source_id: int, client: httpx.AsyncClient, cache: Cache)
             await ladder.aclose()
             error = f"{type(exc).__name__}: {exc}"[:500]
             log.warning("ingest_failed", source_id=source_id, error=error)
-            await _record(source_id, status="error", error=error, read=ladder.first)
+            await _record(source_id, status="error", error=error, read=ladder.first, robots=robots)
             return IngestReport(source_id, "error", error=error)
 
         await ladder.aclose()
-        await _record(source_id, status=feed.status, feed=feed, read=ladder.first)
+        await _record(source_id, status=feed.status, feed=feed, read=ladder.first, robots=robots)
         log.info("ingest_done", source_id=source_id, status=feed.status, new=len(new_ids))
         return IngestReport(source_id, feed.status, new_articles=len(new_ids))
 
@@ -151,6 +160,7 @@ async def _record(
     feed: FeedResult | None = None,
     error: str | None = None,
     read: Outcome | None = None,
+    robots: bool | None = None,
 ) -> None:
     async with session_scope() as session:
         source = await session.get(Source, source_id)
@@ -160,6 +170,11 @@ async def _record(
         source.last_status = status
         source.last_error = error
         source.consecutive_failures = source.consecutive_failures + 1 if error else 0
+        source.retry_at = (
+            source.last_fetched_at + backoff(source.consecutive_failures) if error else None
+        )
+        if robots is not None:
+            source.robots_allowed = robots
         if feed is not None and feed.status == "ok":
             source.etag = feed.etag
             source.last_modified = feed.last_modified
@@ -180,9 +195,31 @@ async def _record(
             source.last_post_id = feed.last_post_id
 
 
-async def enabled_source_ids() -> list[int]:
+def backoff(failures: int) -> timedelta:
+    """How long a source that failed `failures` times in a row is left alone.
+
+    One failure is let pass: the next scheduled run tries again. From the
+    second on the pause doubles, from one poll interval up to a day, with a
+    fifth of it at random so that sources failing together drift apart.
+    """
+    if failures < 2:
+        return timedelta(0)
+    pause: timedelta = min(BACKOFF_BASE * 2 ** (failures - 2), BACKOFF_MAX)
+    return pause * (0.9 + random.random() / 5)  # noqa: S311
+
+
+async def enabled_source_ids(now: datetime | None = None) -> list[int]:
+    """Sources to poll: enabled, and not resting after a series of failures.
+
+    A source an administrator refreshes by hand is read at once all the same.
+    """
+    moment = now or datetime.now(UTC)
     async with session_scope() as session:
-        result = await session.execute(select(Source.id).where(Source.enabled).order_by(Source.id))
+        result = await session.execute(
+            select(Source.id)
+            .where(Source.enabled, or_(Source.retry_at.is_(None), Source.retry_at <= moment))
+            .order_by(Source.id)
+        )
         return [row[0] for row in result.all()]
 
 

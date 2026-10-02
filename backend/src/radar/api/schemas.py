@@ -100,6 +100,9 @@ class SourceOut(BaseModel):
     fetch_note: str | None = None
     fetch_changed_at: datetime | None = None
     fetch_via_proxy: bool = False
+    # Polled again no sooner than this after a series of failures.
+    retry_at: datetime | None = None
+    robots_allowed: bool | None = None
     # The source's own proxy, its password hidden.
     proxy: str | None = Field(default=None, validation_alias="proxy_url")
     articles: int = 0

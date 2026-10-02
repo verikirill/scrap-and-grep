@@ -52,6 +52,7 @@ from radar.ingest.net import (
     safe_get,
     trusts_russian_ca,
 )
+from radar.ingest.polite import PACER, retry_after
 from radar.logging import get_logger
 
 log = get_logger(__name__)
@@ -144,6 +145,8 @@ class _Climb:
 
     outcome: Outcome
     last_error: Exception | None = None
+    # The site answered 429 with Retry-After: no other step until then.
+    told_to_wait: bool = False
     # The first answer refused only for its content: the step, the answer, why.
     thin: tuple[Step, httpx.Response, str] | None = None
 
@@ -248,12 +251,16 @@ class Ladder:
             if start in HEAVY and solver.clearance_for(url) is not None:
                 # The cookies of a passed challenge let a lighter step in.
                 start = "impersonate"
+            climb.told_to_wait = False
             for step in self._order(start):
                 if step in HEAVY and not _worth_a_browser(climb) and start != step:
                     continue
                 read = await self._try(climb, step, proxy, url, headers or {}, max_bytes, expect)
                 if read is not None:
                     return self._read(host, url, step, proxy, climb.outcome, read)
+                if climb.told_to_wait:
+                    # Another fingerprint would only dodge the limit.
+                    break
                 if pooled and _proxy_refused(climb):
                     # The site refuses this proxy too: on to the next one.
                     break
@@ -294,6 +301,10 @@ class Ladder:
         pooled = proxy is not None and proxy != self._proxy
         name = f"{step}+proxy" if pooled else step
         refusals = climb.outcome.refusals
+        host = urlsplit(url).hostname or ""
+        # Paced by host and by the way out: a proxy is another client to the site.
+        pace = f"{host} {proxy or ''}"
+        await PACER.wait(pace)
         try:
             response = await self._step(step, url, headers, max_bytes, proxy, expect)
         except UnsafeUrlError, ResponseTooLargeError:
@@ -307,7 +318,9 @@ class Ladder:
             refusals.append((name, f"ошибка соединения ({type(exc).__name__})"))
             climb.last_error = exc
             return None
-        host = urlsplit(url).hostname or ""
+        if response.status_code in {429, 503} and (wait := retry_after(response)) is not None:
+            PACER.hold(pace, wait)
+            climb.told_to_wait = response.status_code == 429
         reason = await asyncio.to_thread(refusal, response, expect)
         if reason in CONTENT_REASONS and host in self._thin_hosts:
             reason = None

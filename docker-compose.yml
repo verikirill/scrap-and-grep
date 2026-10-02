@@ -42,6 +42,7 @@ x-backend: &backend
     # With the solver profile: http://flaresolverr:8191. Only the ingest
     # worker reaches it; the reader in the api stays on the lighter steps.
     RADAR_FLARESOLVERR_URL: ${RADAR_FLARESOLVERR_URL:-}
+    RADAR_FETCH_HOST_INTERVAL_SECONDS: ${RADAR_FETCH_HOST_INTERVAL_SECONDS:-1}
     RADAR_CANDIDATE_LIMIT: ${RADAR_CANDIDATE_LIMIT:-60}
     RADAR_RATE_LIMIT_PER_MINUTE: ${RADAR_RATE_LIMIT_PER_MINUTE:-120}
     RADAR_DIGEST_TASK_TIMEOUT_SECONDS: ${RADAR_DIGEST_TASK_TIMEOUT_SECONDS:-1200}

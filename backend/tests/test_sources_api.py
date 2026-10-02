@@ -172,6 +172,8 @@ async def test_a_feed_that_refuses_the_bot_remembers_how_it_was_read(
     agents: list[str] = []
 
     def handle(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/robots.txt":
+            return httpx.Response(404)
         agents.append(request.headers["user-agent"])
         if "Chrome/" not in request.headers["user-agent"]:
             return httpx.Response(403, text="Forbidden")
