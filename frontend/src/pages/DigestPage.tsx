@@ -1,5 +1,6 @@
-import { FileText, RotateCcw } from '../components/icons'
+import { FileText, Newspaper, RotateCcw } from '../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
+import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { EASE } from '../components/tokens'
 import { Button, Card, EmptyState, ErrorNote, PageHeader } from '../components/ui'
@@ -17,6 +18,7 @@ import {
   useDigests,
   useProfiles,
 } from '../lib/queries'
+import { useMediaQuery } from '../lib/useMediaQuery'
 
 const DAY_MS = 86_400_000
 
@@ -42,6 +44,21 @@ export function DigestPage() {
   const current = digest.data
   const summary = digests.data?.find((item) => item.id === activeId)
   const isBuilding = current?.status === 'queued' || current?.status === 'running'
+
+  // On a phone the form is a screen tall: with an issue open it folds into
+  // one button, unless a profile was sent here to be built.
+  const isPhone = useMediaQuery('(max-width: 767px)')
+  const [isBuilderOpen, setIsBuilderOpen] = useState(false)
+  const showBuilder = !isPhone || !activeId || isBuilderOpen || Boolean(search.get('profile'))
+  // An issue just asked for is brought into view once, when its progress card
+  // mounts (after the previous issue has left): on a phone it would otherwise
+  // be below the fold, and nothing would seem to happen.
+  const [createdId, setCreatedId] = useState<string | null>(null)
+  const showProgress = (node: HTMLDivElement | null) => {
+    if (!node || createdId === null || createdId !== current?.id) return
+    setCreatedId(null)
+    if (isPhone) node.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
   // The issue built before this one for the same profile, for the compare link.
   const previous = digests.data?.find(
     (other) =>
@@ -76,12 +93,28 @@ export function DigestPage() {
       />
       <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_17rem]">
         <div className="min-w-0 space-y-6">
-          {profiles.data && (
+          {profiles.data && showBuilder && (
             <BuildPanel
               profiles={profiles.data}
               initialProfileId={search.get('profile')}
-              onCreated={(id) => navigate(`/digests/${id}`)}
+              isBuilding={isBuilding}
+              onCreated={(id) => {
+                setCreatedId(id)
+                setIsBuilderOpen(false)
+                navigate(`/digests/${id}`)
+              }}
             />
+          )}
+          {profiles.data && !showBuilder && (
+            <Button
+              variant="tonal"
+              icon={<Newspaper size={18} />}
+              isBusy={isBuilding}
+              onClick={() => setIsBuilderOpen(true)}
+              className="w-full"
+            >
+              {isBuilding ? 'Собираем выпуск' : 'Новый выпуск'}
+            </Button>
           )}
           <ErrorNote error={profiles.error ?? digests.error ?? remove.error ?? retry.error} />
 
@@ -113,6 +146,8 @@ export function DigestPage() {
             {current && isBuilding && (
               <motion.div
                 key={`progress-${current.id}`}
+                ref={showProgress}
+                className="scroll-mt-20"
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}

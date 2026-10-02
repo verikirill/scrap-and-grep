@@ -106,10 +106,10 @@ function ItemCard({ item, index, placement, reactions, onReact }: ItemCardProps)
         {personal !== 0 && (
           <Chip
             tone={personal > 0 ? 'ok' : 'neutral'}
-            title={`Поправка по вашим оценкам${item.personal_note ? `: ${item.personal_note}` : ''}`}
+            title={`Поправка по вашим отметкам${item.personal_note ? `: ${item.personal_note}` : ''}`}
           >
             {personal > 0 ? '+' : ''}
-            {personal.toFixed(2)} по вашим оценкам
+            {personal.toFixed(2)} по вашим отметкам
           </Chip>
         )}
         <ReactionBar
@@ -173,11 +173,17 @@ function TopicSection({
   return (
     <section>
       <div className="sticky top-14 z-10 -mx-1 bg-background/90 px-1 py-2 backdrop-blur md:top-0">
-        <h3 className="flex items-baseline gap-2.5 font-serif text-xl font-semibold tracking-tight">
+        <h3 className="flex items-baseline gap-2.5 font-serif text-lg font-semibold tracking-tight md:text-xl">
           <span className="tabular font-sans text-sm font-medium text-spark">
             {String(number).padStart(2, '0')}
           </span>
-          {topic.title}
+          {/* Stuck over the text on a phone, a heading of three lines would hide it. */}
+          <span
+            title={topic.title}
+            className="min-w-0 truncate md:overflow-visible md:whitespace-normal"
+          >
+            {topic.title}
+          </span>
           <span className="tabular font-sans text-xs font-normal text-outline">
             {topic.items.length}
           </span>
@@ -300,7 +306,8 @@ export function DigestView({ digest, previousId }: { digest: Digest; previousId?
                 to={`/compare?base=${previousId}&other=${digest.id}`}
                 className={buttonClass('ghost', 'sm')}
               >
-                <GitCompareArrows size={15} />С предыдущим
+                <GitCompareArrows size={15} />
+                Сравнить с предыдущим
               </Link>
             )}
             <a
@@ -362,7 +369,7 @@ export function DigestView({ digest, previousId }: { digest: Digest; previousId?
           {modelLabel(stats.llm)} · {stats.sources ?? 0}{' '}
           {plural(stats.sources ?? 0, ['источник', 'источника', 'источников'])}
           {stats.duplicates_merged ? ` · объединено повторов: ${stats.duplicates_merged}` : ''}
-          {stats.personalized ? ` · поправок по вашим оценкам: ${stats.personalized}` : ''}
+          {stats.personalized ? ` · поправок по вашим отметкам: ${stats.personalized}` : ''}
           {adapted > 0 ? ` · интересов подстроено под ваши отметки: ${adapted}` : ''}
           {stats.duration_seconds ? ` · ${Math.round(stats.duration_seconds)} с` : ''}
           {digest.finished_at && ` · ${formatDateTime(digest.finished_at)}`}

@@ -47,7 +47,7 @@ export function ChannelsPage() {
           {channels?.length === 0 && (
             <Card variant="outlined">
               <EmptyState icon={<Send size={22} />} title="Каналов пока нет">
-                Подключите бота, добавьте его администратором в канал и нажмите «Канал».
+                Подключите бота, добавьте его администратором в канал и нажмите «Добавить канал».
               </EmptyState>
             </Card>
           )}

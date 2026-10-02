@@ -51,7 +51,8 @@ export function ChipsInput({ values, onChange, placeholder, label, max = 30 }: P
               type="button"
               aria-label={`Убрать «${value}»`}
               onClick={() => onChange(values.filter((item) => item !== value))}
-              className="grid size-4 place-items-center rounded text-outline hover:bg-outline-variant hover:text-foreground"
+              // Drawn small, pressed large: the hit area reaches past the cross.
+              className="relative grid size-4 place-items-center rounded text-outline after:absolute after:-inset-3 after:content-[''] hover:bg-outline-variant hover:text-foreground"
             >
               <X size={11} strokeWidth={2.5} />
             </button>

@@ -26,7 +26,7 @@ import {
 
 const SOURCE: Record<Suggestion['source'], string> = {
   likes: 'по вашим отметкам',
-  similar_readers: 'читают похожие читатели',
+  similar_readers: 'читают коллеги с похожими интересами',
   dislikes: 'по тому, что вы отклонили',
 }
 // The weight factor runs 0.9..1.1; the bar shows it around the middle.
@@ -90,8 +90,8 @@ function FactorBar({ factor }: { factor: number }) {
 function InterestRow({ item }: { item: InterestLearning }) {
   const moved = Math.abs(item.weight - item.stated_weight) >= 0.01
   const marks = [
-    item.positives > 0 && `нравится ${amount(item.positives)}`,
-    item.negatives > 0 && `не то ${amount(item.negatives)}`,
+    item.positives > 0 && `«больше такого» ${amount(item.positives)}`,
+    item.negatives > 0 && `«меньше такого» ${amount(item.negatives)}`,
     item.skipped > 0 && `пролистано ${item.skipped}`,
   ].filter(Boolean)
   const Trend = item.weight >= item.stated_weight ? TrendingUp : TrendingDown
@@ -276,8 +276,8 @@ export function AdaptationPanel({
             {!isOn
               ? 'Выключено: лента и выпуски берут профиль таким, как он записан.'
               : hasLearned && marks
-                ? `Отметки по темам профиля: нравится ${amount(marks.positives)}, не то ${amount(marks.negatives)}, пролистано ${marks.skipped}${data?.updated_at ? ` · пересчитано ${formatRelative(data.updated_at)}` : ''}`
-                : 'Ставьте «нравится» и «не то» в ленте и выпусках: веса интересов и их смысл подстроятся, а темы, которых в профиле нет, появятся здесь предложениями.'}
+                ? `Отметки по темам профиля: «больше такого» ${amount(marks.positives)}, «меньше такого» ${amount(marks.negatives)}, пролистано ${marks.skipped}${data?.updated_at ? ` · пересчитано ${formatRelative(data.updated_at)}` : ''}`
+                : 'Отмечайте «больше такого» и «меньше такого» в ленте и выпусках: веса интересов и их смысл подстроятся, а новые темы появятся здесь предложениями.'}
           </p>
         </div>
         <M3Switch

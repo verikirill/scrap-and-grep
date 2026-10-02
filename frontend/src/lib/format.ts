@@ -93,7 +93,7 @@ export const REJECT_LABELS: Record<string, string> = {
   low_score: 'ниже порога',
   excluded: 'исключение',
   duplicate: 'повтор',
-  over_limit: 'сверх лимита',
+  over_limit: 'выпуск заполнен',
   hidden: 'скрыто вами',
 }
 

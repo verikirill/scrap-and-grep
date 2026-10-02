@@ -97,7 +97,7 @@ export function Figures({
         isRate
       />
       <Figure
-        label="Отмечают лайком или закладкой"
+        label="Отмечают «больше такого» или сохраняют"
         value={formatPercent(totals.like_rate)}
         now={totals.like_rate}
         before={rateBefore(previous?.like_rate)}
@@ -140,13 +140,13 @@ export function Funnel({ totals }: { totals: Rates }) {
     { label: 'Увидели', value: totals.seen, share: 1, tone: 'text-primary' },
     { label: 'Открыли', value: totals.opened, share: totals.ctr, tone: 'text-primary' },
     {
-      label: 'Лайк или закладка',
+      label: '«Больше такого» или сохранили',
       value: totals.liked,
       share: totals.like_rate,
       tone: 'text-spark',
     },
     {
-      label: 'Дизлайк или скрыли',
+      label: '«Меньше такого» или скрыли',
       value: totals.rejected,
       share: totals.reject_rate,
       tone: 'text-destructive',
@@ -186,7 +186,7 @@ export function Days({ daily }: { daily: Analytics['daily'] }) {
             values: daily.map((day) => (day.enough ? day.ctr : null)),
           },
           {
-            label: 'лайк или закладка',
+            label: '«больше такого» или сохранили',
             tone: 'text-spark',
             values: daily.map((day) => (day.enough ? day.like_rate : null)),
           },
@@ -213,7 +213,7 @@ export function RateRows({
         <span className="text-right">увидено</span>
         <span>доля открытий</span>
         <span className="text-right">открыли</span>
-        <span className="text-right">лайк</span>
+        <span className="text-right">«больше»</span>
       </div>
       {rows.map(({ key, label, detail, rates }) => (
         <div
@@ -248,7 +248,7 @@ export function RateRows({
             {rates.enough ? formatPercent(rates.ctr) : 'мало данных'}
           </span>
           <span className="text-right text-sm text-muted-foreground tabular-nums">
-            {rates.enough && <span className="mr-1 text-xs text-outline sm:hidden">лайк</span>}
+            {rates.enough && <span className="mr-1 text-xs text-outline sm:hidden">«больше»</span>}
             {rates.enough ? formatPercent(rates.like_rate) : ''}
           </span>
         </div>
@@ -259,10 +259,10 @@ export function RateRows({
 
 const SLOT_LABELS: Record<string, [string, string]> = {
   ranked: ['Лента по интересам', 'подобрано под читателя'],
-  explore: ['Что-то новое для вас', 'каждое седьмое место'],
+  explore: ['Что-то новое', 'каждое седьмое место'],
   newest: ['Свежее', 'пока о читателе ничего не известно'],
-  saved: ['Сохранённое', 'вкладка закладок'],
-  digest: ['Выпуски', 'статьи в дайджестах'],
+  saved: ['Сохранённое', 'вкладка «Сохранённое»'],
+  digest: ['Выпуски', 'статьи в выпусках'],
 }
 
 export function Slots({ slots }: { slots: Analytics['slots'] }) {

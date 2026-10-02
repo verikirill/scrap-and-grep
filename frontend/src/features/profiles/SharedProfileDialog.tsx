@@ -122,7 +122,7 @@ function Preview({
         </section>
       )}
       <p className="text-xs text-on-surface-variant">
-        Новости на языках: {languages}. До {spec.max_items} новостей в выпуске.
+        Языки: {languages}. До {spec.max_items} публикаций в выпуске.
       </p>
 
       {shared.own_id ? (

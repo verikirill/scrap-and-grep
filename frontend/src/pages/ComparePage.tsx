@@ -1,9 +1,17 @@
 import clsx from 'clsx'
-import { ArrowDown, ArrowRight, ArrowUp, GitCompareArrows, Minus, Plus } from '../components/icons'
+import {
+  ArrowDown,
+  ArrowRight,
+  ArrowUp,
+  GitCompareArrows,
+  Minus,
+  Newspaper,
+  Plus,
+} from '../components/icons'
 import { motion } from 'motion/react'
 import type { ReactNode } from 'react'
-import { useSearchParams } from 'react-router'
-import { INPUT_CLASS, rowMotion } from '../components/tokens'
+import { Link, useSearchParams } from 'react-router'
+import { INPUT_CLASS, buttonClass, rowMotion } from '../components/tokens'
 import { AnimatedNumber, Card, Chip, EmptyState, ErrorNote, PageHeader } from '../components/ui'
 import type { DigestItem, DigestSummary, InterestChange } from '../lib/api'
 import { externalHref, formatDateTime, SETTING_LABELS } from '../lib/format'
@@ -118,8 +126,13 @@ export function ComparePage() {
       {digests.isSuccess && done.length < 2 ? (
         <Card>
           <EmptyState icon={<GitCompareArrows size={22} />} title="Нужно два готовых выпуска">
-            Соберите дайджест, поменяйте интересы профиля и соберите ещё один. Разница появится
-            здесь.
+            Соберите выпуск, поменяйте интересы профиля и соберите ещё один. Разница появится здесь.
+            <div className="mt-4">
+              <Link to="/" className={buttonClass('primary', 'sm')}>
+                <Newspaper size={16} />
+                Собрать выпуск
+              </Link>
+            </div>
           </EmptyState>
         </Card>
       ) : (

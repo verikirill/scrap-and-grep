@@ -8,7 +8,7 @@ import { plural } from '../../lib/format'
 const GROUPS: { kind: TasteFacet['kind']; title: string; empty?: string }[] = [
   { kind: 'interest', title: 'Заявленные интересы', empty: 'Профиль интересов не задан.' },
   { kind: 'resume', title: 'Из резюме', empty: 'Резюме не загружено.' },
-  { kind: 'learned', title: 'Выучено по вашим оценкам' },
+  { kind: 'learned', title: 'Выучено по вашим отметкам' },
   { kind: 'avoid', title: 'Показываем реже' },
 ]
 
@@ -43,18 +43,18 @@ export function TastePanel({ taste }: { taste: Taste }) {
       <h2 className="text-sm font-semibold">Что лента знает о вас</h2>
       <p className="mt-1 text-xs text-muted-foreground">
         {signals === 0
-          ? 'Оценок пока нет. Отмечайте публикации: лента начнёт учитывать их с первой же.'
-          : `${signals} ${plural(signals, ['оценка', 'оценки', 'оценок'])} за последнее время. Старые оценки постепенно теряют вес.`}
+          ? 'Отметок пока нет. Отмечайте публикации: лента учтёт уже первую.'
+          : `${signals} ${plural(signals, ['отметка', 'отметки', 'отметок'])} за последнее время. Старые отметки постепенно теряют вес.`}
       </p>
 
       <div className="mt-3">
         <div className="flex items-baseline justify-between text-xs">
-          <span className="text-muted-foreground">Доверие к оценкам</span>
+          <span className="text-muted-foreground">Доверие к отметкам</span>
           <span className="tabular font-semibold">{Math.round(taste.confidence * 100)}%</span>
         </div>
         <div
           role="progressbar"
-          aria-label="Доверие к оценкам"
+          aria-label="Доверие к отметкам"
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={Math.round(taste.confidence * 100)}

@@ -198,7 +198,7 @@ export function ProfileForm({
             />
           </Field>
         </div>
-        <Field label="Кто читатель" hint="модель пишет «почему важно» под эту роль">
+        <Field label="Кто читатель" hint="по этому тексту модель пишет «почему важно»">
           <textarea
             className={cn(INPUT_CLASS, 'min-h-20 resize-y')}
             value={spec.role}

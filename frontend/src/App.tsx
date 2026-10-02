@@ -122,7 +122,8 @@ export default function App() {
             </Routes>
           </BrowserRouter>
         </MotionConfig>
-        <Toaster position="bottom-center" />
+        {/* Above the phone's navigation bar and the bars that sit on it. */}
+        <Toaster position="bottom-center" mobileOffset={{ bottom: '9rem' }} />
       </TooltipProvider>
     </QueryClientProvider>
   )

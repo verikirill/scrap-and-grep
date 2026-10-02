@@ -115,8 +115,14 @@ export function ResumeDrop({ meta, isBusy, onFile, isCompact = false }: Props) {
           >
             <FileUp size={22} />
           </motion.span>
-          <span className="text-base font-semibold">Перетащите резюме сюда</span>
-          <span className="mt-1 text-sm text-muted-foreground">
+          {/* A touch screen has nothing to drag from. */}
+          <span className="text-base font-semibold pointer-coarse:hidden">
+            Перетащите резюме сюда
+          </span>
+          <span className="hidden text-base font-semibold pointer-coarse:inline">
+            Выберите файл с резюме
+          </span>
+          <span className="mt-1 text-sm text-muted-foreground pointer-coarse:hidden">
             или нажмите, чтобы выбрать файл
           </span>
           <span className="mt-4 text-xs text-outline">
@@ -125,7 +131,7 @@ export function ResumeDrop({ meta, isBusy, onFile, isCompact = false }: Props) {
           {hasOcr && (
             <span className="mt-2 inline-flex items-center gap-1.5 text-xs text-outline">
               <ScanText size={13} />
-              Сканы и фотографии страниц читаются распознаванием текста
+              Сканы и фотографии страниц тоже подойдут: текст распознаем
             </span>
           )}
         </button>

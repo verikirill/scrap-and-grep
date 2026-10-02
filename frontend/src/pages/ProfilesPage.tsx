@@ -1,8 +1,9 @@
 import clsx from 'clsx'
 import { Plus, RotateCcw, Save, Sparkles, Trash2 } from '../components/icons'
-import { motion } from 'motion/react'
+import { AnimatePresence, motion } from 'motion/react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
+import { EASE } from '../components/tokens'
 import { Button, ErrorNote, PageHeader } from '../components/ui'
 import { AdaptationPanel } from '../features/profiles/AdaptationPanel'
 import { PreviewPanel } from '../features/profiles/PreviewPanel'
@@ -11,6 +12,7 @@ import { ProfileAvatar, ProfileLookPicker } from '../features/profiles/ProfileLo
 import { ShareProfileButton } from '../features/profiles/ShareProfile'
 import type { Profile, ProfileSpec } from '../lib/api'
 import { useDeleteProfile, useProfiles, useSaveProfile } from '../lib/queries'
+import { useConfirmLeave } from '../lib/useConfirmLeave'
 
 const NEW = 'new'
 
@@ -55,6 +57,7 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
   const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(saved), [draft, saved])
   const problem = problems(draft)
   const activeId = stored?.id ?? NEW
+  useConfirmLeave(dirty, 'Несохранённые правки пропадут. Уйти со страницы?')
 
   const persist = (then?: (id: string) => void) => {
     if (problem) return
@@ -104,7 +107,7 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
     <>
       <PageHeader
         title="Интересы"
-        subtitle="Профиль описывает читателя: что ему важно, что не показывать и насколько строго отбирать. Справа видно, как каждая правка меняет подборку."
+        subtitle="Профиль описывает читателя: что ему важно, что не показывать и насколько строго отбирать. Предпросмотр сразу показывает, как каждая правка меняет подборку."
         actions={
           <>
             {dirty && saved && (
@@ -134,7 +137,7 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
                   : navigate(`/?profile=${stored.id}`)
               }
             >
-              {dirty ? 'Сохранить и собрать' : 'Собрать дайджест'}
+              {dirty ? 'Сохранить и собрать' : 'Собрать выпуск'}
             </Button>
           </>
         }
@@ -162,7 +165,7 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
               />
             )}
             <ProfileAvatar profile={profile} size={28} />
-            <span className="relative max-w-56 truncate" title={profile.spec.name}>
+            <span className="relative max-w-80 truncate" title={profile.spec.name}>
               {profile.spec.name}
             </span>
           </button>
@@ -216,6 +219,44 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
           <PreviewPanel draft={draft} saved={saved} isDirty={dirty} />
         </div>
       </div>
+
+      {/* The save button at the top is a screen away from a slider at the
+          bottom: unsaved edits keep a bar of their own in view. */}
+      {dirty && <div aria-hidden className="h-20" />}
+      <AnimatePresence>
+        {dirty && (
+          <motion.div
+            role="region"
+            aria-label="Несохранённые правки"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 16 }}
+            transition={{ duration: 0.2, ease: EASE }}
+            className="fixed inset-x-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-20 mx-auto flex max-w-xl items-center gap-2 rounded-2xl bg-inverse-surface py-2 pr-2 pl-4 text-sm text-inverse-on-surface shadow-elevation-3 md:bottom-6"
+          >
+            <span className="min-w-0 flex-1">{problem ?? 'Правки не сохранены'}</span>
+            {saved && (
+              <button
+                type="button"
+                onClick={() => setDraft(saved)}
+                className="shrink-0 rounded-full px-3 py-2 font-medium hover:bg-inverse-on-surface/10"
+              >
+                Отменить
+              </button>
+            )}
+            <Button
+              variant="primary"
+              size="sm"
+              icon={<Save size={15} />}
+              disabled={Boolean(problem)}
+              isBusy={save.isPending}
+              onClick={() => persist()}
+            >
+              Сохранить
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   )
 }

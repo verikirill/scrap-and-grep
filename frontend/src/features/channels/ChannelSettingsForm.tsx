@@ -125,7 +125,7 @@ export function ChannelSettingsForm({
               className={cn(INPUT_CLASS, 'h-auto py-2.5')}
             />
           </Field>
-          <Field label="Аудитория" hint="пусто - роль из профиля">
+          <Field label="Для кого пишем" hint="пусто - роль из профиля">
             <input
               value={style.audience}
               maxLength={600}
@@ -205,7 +205,7 @@ export function ChannelSettingsForm({
           </Field>
           <p className="px-1 text-xs text-muted-foreground">
             «Словом» - в конце поста «Подробности - здесь», «Карточкой» - превью статьи с её
-            картинкой, «Без ссылки» - только текст. Разные каналы могут вести одну и ту же новость
+            картинкой, «Без ссылки» - только текст. Каналы могут подавать одну и ту же новость
             по-разному.
           </p>
           <div className="grid grid-cols-2 gap-4">
@@ -226,7 +226,7 @@ export function ChannelSettingsForm({
               />
             </Field>
           </div>
-          <Field label="Метки к адресу" hint="utm_source=tg&utm_medium=channel">
+          <Field label="UTM-метки" hint="utm_source=tg&utm_medium=channel">
             <input
               value={links.utm}
               maxLength={200}
@@ -494,10 +494,7 @@ export function ChannelSettingsForm({
             />
           </Field>
           {selection.network === 'spread' && (
-            <Field
-              label="Не повторять новость другого канала"
-              hint={`${selection.network_hours} ч`}
-            >
+            <Field label="Пауза между каналами" hint={`${selection.network_hours} ч`}>
               <Range
                 label="Пауза"
                 min={1}

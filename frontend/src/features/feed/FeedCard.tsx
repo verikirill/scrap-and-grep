@@ -83,10 +83,11 @@ export function FeedCard({ item, index, placement, onReact }: FeedCardProps) {
                       ? 'accent'
                       : 'neutral'
                 }
-                className="max-w-full"
+                // A long interest name wraps to a second line rather than losing its end.
+                className="h-auto min-h-7 max-w-full py-1"
               >
                 <Icon size={12} className="shrink-0" />
-                <span className="truncate">{reason.text}</span>
+                <span className="line-clamp-2">{reason.text}</span>
               </Chip>
             )
           })}
@@ -95,13 +96,12 @@ export function FeedCard({ item, index, placement, onReact }: FeedCardProps) {
               type="button"
               onClick={() => setIsWhyOpen((value) => !value)}
               aria-expanded={isWhyOpen}
-              className="inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-xs text-outline hover:text-foreground"
+              className="inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-xs font-medium text-primary hover:bg-primary/10"
             >
-              {item.score.toFixed(2)}
+              Почему здесь
               <motion.span animate={{ rotate: isWhyOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
                 <ChevronDown size={13} />
               </motion.span>
-              <span className="sr-only">Из чего сложилась оценка</span>
             </button>
           )}
         </div>

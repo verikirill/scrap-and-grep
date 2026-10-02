@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { ChevronLeft, ExternalLink, FileText } from '../components/icons'
+import { ScrollTopButton } from '../components/ScrollTopButton'
 import { buttonClass } from '../components/tokens'
 import { Button, EmptyState, ErrorNote, ReadingTime, SkeletonBlock } from '../components/ui'
 import { ArticleBlocks } from '../features/reader/ArticleBlocks'
@@ -155,6 +156,7 @@ export function ArticlePage() {
         )}
       </div>
       {content}
+      <ScrollTopButton />
     </div>
   )
 }
