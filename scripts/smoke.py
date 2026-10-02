@@ -195,7 +195,9 @@ def main() -> None:
         markdown = client.get(f"{API}/digests/{first['id']}/export.md").raise_for_status()
         docx = client.get(f"{API}/digests/{first['id']}/export.docx").raise_for_status()
         print(f"  markdown {len(markdown.content)} bytes, docx {len(docx.content)} bytes")
-        if not markdown.text.startswith("# ") or docx.content[:2] != b"PK":
+        # YAML front matter first, between two "---" lines, then the title.
+        head, _, body = markdown.text.removeprefix("---\n").partition("\n---\n")
+        if not head or not body.lstrip().startswith("# ") or docx.content[:2] != b"PK":
             fail("export format")
 
         if ready.get("shorts"):
