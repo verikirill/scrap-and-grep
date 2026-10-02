@@ -3,11 +3,11 @@
   "status": "ready",
   "error": null,
   "parser": "docling",
-  "llm": "qwen3.5:9b",
+  "llm": "gpt-oss:120b",
   "facts": {
-    "headline": "Ведущий инженер по машинному обучению",
+    "headline": "Ведущий ML-инженер",
     "seniority": "senior",
-    "summary": "Ведущий инженер по машинному обучению в электросбытовой компании. Отвечает за разработку моделей прогноза потребления электроэнергии и внедрение внутренних инструментов на базе языковых моделей для диспетчеров. Занимается построением конвейеров данных, MLOps и работой с векторными базами данных.",
+    "summary": "Ведущий ML-инженер в ИТ-подразделении энергосбытовой компании. Разрабатывает модели прогноза потребления электроэнергии и инструменты на основе языковых моделей, отвечает за построение конвейеров данных, их деплой и мониторинг в Kubernetes.",
     "skills": [
       "Python",
       "PyTorch",
@@ -29,123 +29,78 @@
     ],
     "domains": [
       "машинное обучение",
-      "прогнозирование потребления энергии",
-      "обработка естественного языка",
-      "MLOps",
-      "векторные базы данных",
-      "аналитика больших данных"
+      "прогнозирование потребления электроэнергии",
+      "RAG и NLP в энергетике",
+      "MLOps и деплой моделей",
+      "аналитика данных"
     ],
     "by_model": true
   },
   "suggestion": {
-    "name": "Ведущий инженер по машинному обучению",
-    "role": "Ведущий инженер по машинному обучению в электросбытовой компании. Отвечает за разработку моделей прогноза потребления электроэнергии и внедрение внутренних инструментов на базе языковых моделей для диспетчеров. Занимается построением конвейеров данных, MLOps и работой с векторными базами данных.",
+    "name": "Ведущий ML-инженер",
+    "role": "Ведущий ML-инженер в ИТ-подразделении энергосбытовой компании. Разрабатывает модели прогноза потребления электроэнергии и инструменты на основе языковых моделей, отвечает за построение конвейеров данных, их деплой и мониторинг в Kubernetes.",
     "interests": [
       {
         "id": "resume-1",
-        "title": "Прогнозирование нагрузки в энергосетях",
-        "description": "Публикации о методах предсказания потребления электроэнергии, оптимизации сетей и интеграции ИИ в АСУ ТП.",
+        "title": "Прогнозирование нагрузки электроэнергетических систем",
+        "description": "Публикации о методах и инструментах для построения моделей потребления электроэнергии, включая градиентный бустинг и нейросети.",
         "keywords": [
           "load forecasting",
           "energy consumption",
-          "time series",
-          "grid optimization",
-          "smart meters",
-          "AI in energy",
+          "gradient boosting",
           "PyTorch",
-          "scikit-learn",
-          "regression models",
-          "forecasting accuracy"
+          "time series",
+          "AIIS",
+          "KUE",
+          "hourly prediction"
         ],
         "weight": 1.0
       },
       {
         "id": "resume-2",
-        "title": "Языковые модели и RAG для бизнеса",
-        "description": "Материалы о применении локальных LLM, системах поиска по документации и чат-ботов в корпоративной среде.",
+        "title": "RAG-системы и LLM в промышленной документации",
+        "description": "Статьи о применении Retrieval-Augmented Generation, LangChain и векторного поиска для работы с нормативными документами энергетики.",
         "keywords": [
-          "LLM",
           "RAG",
           "LangChain",
-          "local models",
+          "LLM",
           "vector search",
-          "knowledge base",
+          "PostgreSQL",
+          "technical documentation",
           "NLP",
-          "document retrieval",
-          "chatbot",
-          "fine-tuning"
+          "energy standards"
         ],
         "weight": 1.0
       },
       {
         "id": "resume-3",
-        "title": "Инфраструктура машинного обучения",
-        "description": "Новости по инструментам MLOps, оркестрации данных и развертыванию моделей в контейнеризированных средах.",
+        "title": "MLOps и деплой моделей в Kubernetes",
+        "description": "Новости о практиках CI/CD, мониторинге и масштабировании моделей машинного обучения в контейнерных оркестраторах.",
         "keywords": [
           "MLOps",
           "Kubernetes",
-          "Airflow",
-          "data pipelines",
-          "monitoring",
-          "model deployment",
-          "CI/CD",
           "Docker",
-          "ClickHouse",
-          "Spark"
+          "model monitoring",
+          "CI/CD",
+          "pipeline",
+          "kubeflow",
+          "resource management"
         ],
         "weight": 1.0
       },
       {
         "id": "resume-4",
-        "title": "Векторные базы данных и поиск",
-        "description": "Обзоры технологий для хранения векторов, реализации семантического поиска и интеграции с SQL.",
+        "title": "Потоковые и батч-данные в энергетике",
+        "description": "Материалы о построении конвейеров данных с использованием Kafka, Airflow, Spark и ClickHouse для обработки больших объёмов измерений.",
         "keywords": [
-          "vector database",
-          "PostgreSQL",
-          "semantic search",
-          "embeddings",
-          "indexing",
-          "retrieval augmented",
-          "FAISS",
-          "Milvus",
-          "SQL integration",
-          "data warehousing"
-        ],
-        "weight": 1.0
-      },
-      {
-        "id": "resume-5",
-        "title": "Безопасность ИИ и локальные модели",
-        "description": "Статьи о защите данных при использовании LLM, приватности вычислений и работе с локальными языковыми моделями.",
-        "keywords": [
-          "AI security",
-          "local LLM",
-          "data privacy",
-          "prompt injection",
-          "model safety",
-          "on-premise AI",
-          "encryption",
-          "compliance",
-          "secure deployment",
-          "federated learning"
-        ],
-        "weight": 1.0
-      },
-      {
-        "id": "resume-6",
-        "title": "Аналитика данных и визуализация",
-        "description": "Информация о построении дашбордов, отчётности и аналитических системах для принятия решений.",
-        "keywords": [
-          "Power BI",
-          "data visualization",
-          "reporting",
-          "dashboarding",
-          "business intelligence",
-          "ETL",
-          "data cleaning",
-          "metrics",
-          "analytics platform",
-          "KPI tracking"
+          "Kafka",
+          "Airflow",
+          "Spark",
+          "ClickHouse",
+          "data pipelines",
+          "stream processing",
+          "batch processing",
+          "energy data"
         ],
         "weight": 1.0
       }
@@ -161,6 +116,7 @@
       "ru",
       "en"
     ],
-    "categories": []
+    "categories": [],
+    "audience": "specialist"
   }
 }
