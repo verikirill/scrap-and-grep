@@ -201,6 +201,20 @@
 }
 
 @layer components {
+  /* The backdrop of the feed's Telegram look: a chat's wallpaper, faint dots of the primary colour. */
+  .chat-wallpaper {
+    background-color: var(--md-surface-container);
+    background-image: radial-gradient(
+      color-mix(in oklab, var(--md-primary) 16%, transparent) 1px,
+      transparent 1.6px
+    );
+    background-size: 18px 18px;
+  }
+
+  .dark .chat-wallpaper {
+    background-color: var(--md-surface-container-lowest);
+  }
+
   /*
    * State layer: the Material way to show hover, focus and press, as a veil of
    * the content colour over the element. Any element with `.state-layer` gets it.

@@ -24,6 +24,7 @@ import type {
   ReactionKind,
   SharedProfile,
   Resume,
+  Settings,
   Source,
   SourceCreate,
   Video,
@@ -768,6 +769,31 @@ export function useDecideSuggestion() {
       // Not awaited: the caller's onSuccess (the editor's draft) must run at once.
       void client.invalidateQueries({ queryKey: adaptationKey(profileId) })
     },
+  })
+}
+
+/** The reader's settings: shown at once, put back if the server refuses them. */
+export function useUpdateSettings() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: api.updateSettings,
+    onMutate: async (settings: Settings) => {
+      await client.cancelQueries({ queryKey: keys.me })
+      const previous = client.getQueryData<Me | null>(keys.me)
+      client.setQueryData<Me | null>(keys.me, (me) => (me ? { ...me, ...settings } : me))
+      return { previous }
+    },
+    onError: (_error, _settings, context) => {
+      // Only the setting goes back: the picture may have changed meanwhile.
+      const before = context?.previous
+      if (before) {
+        client.setQueryData<Me | null>(keys.me, (me) =>
+          me ? { ...me, feed_view: before.feed_view } : me,
+        )
+      }
+    },
+    // Two quick clicks may reach the server in either order: it has the last word.
+    onSettled: () => client.invalidateQueries({ queryKey: keys.me }),
   })
 }
 

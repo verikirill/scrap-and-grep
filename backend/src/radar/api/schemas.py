@@ -43,12 +43,26 @@ class UserOut(BaseModel):
     is_demo: bool
 
 
+# How the feed looks: cards with the reasons in full, or posts as in a
+# Telegram channel, with the article's picture.
+FeedView = Literal["cards", "telegram"]
+
+
 class MeOut(UserOut):
     # What the onboarding needs to know: is there anything to build a feed from.
     profiles: int
     resume_status: str | None
     # The reader's picture; the query string changes with every new one.
     avatar_url: str | None = None
+    feed_view: FeedView = "cards"
+
+
+class SettingsIn(BaseModel):
+    feed_view: FeedView
+
+
+class SettingsOut(BaseModel):
+    feed_view: FeedView
 
 
 class AvatarOut(BaseModel):

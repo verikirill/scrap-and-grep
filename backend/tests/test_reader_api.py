@@ -43,7 +43,7 @@ def site(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, offline: None) -> dict
             page = state["page"]
             assert isinstance(page, httpx.Response)
             return page
-        if request.url.path == "/pics/scheme.png":
+        if request.url.path in {"/pics/scheme.png", "/pics/lead.jpg"}:
             return httpx.Response(200, content=PNG, headers={"Content-Type": "image/png"})
         return httpx.Response(404)
 
@@ -51,6 +51,7 @@ def site(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, offline: None) -> dict
         transport=httpx.MockTransport(handle)
     )
     monkeypatch.setattr(service, "build_client", client)
+    state["client"] = client
     store = LocalImageStore(tmp_path)
     monkeypatch.setattr(reader_routes, "get_image_store", lambda: store)
     return state

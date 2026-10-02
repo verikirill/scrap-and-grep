@@ -51,6 +51,23 @@ async def read_article(article_id: int, session: SessionDep) -> ArticleReadOut:
     )
 
 
+@router.get("/articles/{article_id}/picture", dependencies=[_picture_limit])
+async def article_picture(article_id: int, session: SessionDep, cache: CacheDep) -> Response:
+    """The article's own picture, for a post in the feed."""
+    try:
+        found = await reader.lead_picture(session, article_id, get_image_store(), cache)
+    except reader.PictureUnavailable as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail="Сайт не отдал картинку.") from exc
+    if found is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="У статьи нет картинки.")
+    # A stale address is replaced by the one the page gives now: a day, not for good.
+    return Response(
+        content=found.data,
+        media_type=found.content_type,
+        headers={**_PICTURE_HEADERS, "Cache-Control": "private, max-age=86400"},
+    )
+
+
 @router.get("/articles/{article_id}/images/{name}", dependencies=[_picture_limit])
 async def article_image(
     article_id: int,

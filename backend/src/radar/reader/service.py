@@ -15,7 +15,7 @@ from trafilatura.settings import Document
 
 from radar.cache import Cache
 from radar.db.models import Article, ArticleBody
-from radar.images.service import NotAPicture, Picture, download, image_key
+from radar.images.service import NotAPicture, Picture, download, image_key, mirror
 from radar.images.store import ImageStore
 from radar.ingest import bdu, telegram
 from radar.ingest.net import ResponseTooLargeError, UnsafeUrlError, build_client, safe_get
@@ -196,6 +196,32 @@ async def picture(
         ),
         {"name": name, "key": key, "article_id": article_id},
     )
+    return found
+
+
+async def lead_picture(
+    session: AsyncSession, article_id: int, store: ImageStore, cache: Cache
+) -> Picture | None:
+    """The article's own picture, the one a post in the feed shows; kept once fetched."""
+    article = await session.get(Article, article_id)
+    if article is None or not article.image_url:
+        return None
+    if article.image_key and (kept := await _kept(store, article.image_key)):
+        return kept
+    refused = f"reader:lead-refused:{article_id}"
+    if await cache.get_json(refused):
+        raise PictureUnavailable(article.image_url)
+    await session.commit()
+    try:
+        async with _pictures, build_client() as client:
+            # Looks the picture up again on its page when the address went stale.
+            found = await mirror(article, client, store)
+    except Exception as exc:  # the store: mirror answers the site's errors with None
+        log.warning("lead_picture_not_kept", error=type(exc).__name__)
+        found = None
+    if found is None:
+        await cache.set_json(refused, True, PICTURE_RETRY_SECONDS)
+        raise PictureUnavailable(article.image_url or "")
     return found
 
 

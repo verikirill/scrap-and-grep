@@ -161,6 +161,8 @@ class User(Base):
     is_demo: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # How the feed looks: "cards" or "telegram" (posts of a channel).
+    feed_view: Mapped[str] = mapped_column(String(16), default="cards", server_default="cards")
 
 
 class ApiKey(Base):

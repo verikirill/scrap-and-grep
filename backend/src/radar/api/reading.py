@@ -1,4 +1,4 @@
-"""Reading times that are not known yet are found in the background."""
+"""Reading times and pictures that are not known yet are found in the background."""
 
 from collections.abc import Iterable
 
@@ -10,7 +10,8 @@ log = get_logger(__name__)
 
 
 async def measure_soon(article_ids: Iterable[int]) -> None:
-    """Have the pages of these untimed articles read; the next view shows the time."""
+    """Have the pages of these articles read for their length and picture; the next
+    view shows them."""
     ids = list(dict.fromkeys(article_ids))[:MEASURE_BATCH]
     if not ids:
         return

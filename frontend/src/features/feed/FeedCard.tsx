@@ -1,131 +1,33 @@
 import clsx from 'clsx'
-import {
-  BriefcaseBusiness,
-  ChevronDown,
-  Compass,
-  Heart,
-  Rss,
-  Target,
-  Users,
-} from '../../components/icons'
-import type { IconComponent } from '../../components/icons'
+import { ChevronDown } from '../../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router'
 import { EASE, rowMotion } from '../../components/tokens'
 import { Chip, ReadingTime } from '../../components/ui'
-import type { FeedItem, FeedReason, Placement, ReactionKind } from '../../lib/api'
+import type { FeedItem, Placement, ReactionKind } from '../../lib/api'
 import { CATEGORY_LABELS, formatRelative } from '../../lib/format'
 import { useSeen } from '../../lib/impressions'
 import { OriginalLink } from '../reader/OriginalLink'
 import { articlePath } from '../reader/paths'
+import { RejectedRow, WhyPanel } from './cardParts'
 import { ReactionBar } from './ReactionBar'
+import { hasBreakdown, reasonIcon } from './reasons'
 
-const REASON_ICONS: Record<FeedReason['kind'], IconComponent> = {
-  interest: Target,
-  resume: BriefcaseBusiness,
-  learned: Heart,
-  collab: Users,
-  source: Rss,
-  explore: Compass,
-}
-
-// Parts of the score in the order they are explained, with a plain name each.
-const PARTS: [string, string][] = [
-  ['interest', 'Совпадение с интересами'],
-  ['resume', 'Близость к опыту из резюме'],
-  ['learned', 'Похоже на то, что вы отмечали'],
-  ['fresh', 'Свежесть'],
-  ['source', 'Отношение к источнику'],
-  ['collab', 'Читают коллеги'],
-  ['avoid', 'Близко к тому, что вы скрывали'],
-  ['read', 'Уже открывали'],
-]
-
-const MATCH_PARTS = new Set(['interest', 'resume', 'learned'])
-
-function WhyPanel({ item }: { item: FeedItem }) {
-  const rows = PARTS.filter(([key]) => Math.abs(item.parts[key] ?? 0) >= 0.005)
-  return (
-    <dl className="mt-3 grid gap-x-6 gap-y-1.5 rounded-xl bg-surface-container px-4 py-3 text-xs sm:grid-cols-2">
-      {rows.map(([key, label]) => {
-        const value = item.parts[key] ?? 0
-        // Matches are shown as they are (0..1); the rest are corrections to the
-        // score and carry a sign.
-        const text = MATCH_PARTS.has(key)
-          ? value.toFixed(2)
-          : `${value > 0 ? '+' : ''}${value.toFixed(2)}`
-        return (
-          <div key={key} className="flex items-baseline justify-between gap-3">
-            <dt className="text-muted-foreground">{label}</dt>
-            <dd
-              className={clsx(
-                'tabular font-semibold',
-                value < 0 ? 'text-destructive' : 'text-foreground',
-              )}
-            >
-              {text}
-            </dd>
-          </div>
-        )
-      })}
-      <div className="flex items-baseline justify-between gap-3 border-t border-outline-variant pt-1.5 sm:col-span-2">
-        <dt className="font-medium text-foreground">Итоговая оценка</dt>
-        <dd className="tabular font-semibold text-foreground">{item.score.toFixed(2)}</dd>
-      </div>
-    </dl>
-  )
-}
-
-type Props = {
+export type FeedCardProps = {
   item: FeedItem
   index: number
   placement: Placement
   onReact: (kind: ReactionKind, isActive: boolean) => void
 }
 
-/**
- * What is left of a card the reader hid or disliked. It stays in place until
- * the feed is rebuilt, so the verdict can be taken back.
- */
-function RejectedRow({ item, onReact }: Pick<Props, 'item' | 'onReact'>) {
-  const undo = useRef<HTMLButtonElement>(null)
-  const isDisliked = item.reactions.includes('dislike')
-  // The button that was pressed is gone with the card; without this, focus
-  // would fall to the page and a keyboard user would lose their place.
-  useEffect(() => {
-    if (document.activeElement === document.body) undo.current?.focus()
-  }, [])
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-outline-variant px-4 py-2.5 text-sm text-muted-foreground"
-    >
-      <span role="status" className="min-w-0 truncate">
-        {isDisliked ? 'Меньше такого: ' : 'Скрыто: '}
-        {item.title}
-      </span>
-      <button
-        ref={undo}
-        type="button"
-        onClick={() => onReact(isDisliked ? 'dislike' : 'hide', false)}
-        className="shrink-0 font-medium text-on-primary-container hover:underline"
-      >
-        Вернуть
-      </button>
-    </motion.div>
-  )
-}
-
 /** One article of the feed: what it is, why it is here, and the reader's verdict. */
-export function FeedCard({ item, index, placement, onReact }: Props) {
+export function FeedCard({ item, index, placement, onReact }: FeedCardProps) {
   const [isWhyOpen, setIsWhyOpen] = useState(false)
   // Scrolled past without a mark is a quiet "not this": adaptive profiles learn from it.
   const seenRef = useSeen(item.article_id, 'feed', item.reactions.length === 0, placement)
   const isRejected = item.reactions.includes('hide') || item.reactions.includes('dislike')
   const isRead = item.reactions.includes('open')
-  const hasBreakdown = Object.keys(item.parts).length > 0 && !item.explore
   const markRead = () => {
     if (!isRead) onReact('open', true)
   }
@@ -170,7 +72,7 @@ export function FeedCard({ item, index, placement, onReact }: Props) {
       <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <div className="flex min-w-0 flex-wrap items-center gap-1.5">
           {item.reasons.map((reason) => {
-            const Icon = REASON_ICONS[reason.kind] ?? Target
+            const Icon = reasonIcon(reason.kind)
             return (
               <Chip
                 key={`${reason.kind}-${reason.text}`}
@@ -188,7 +90,7 @@ export function FeedCard({ item, index, placement, onReact }: Props) {
               </Chip>
             )
           })}
-          {hasBreakdown && (
+          {hasBreakdown(item) && (
             <button
               type="button"
               onClick={() => setIsWhyOpen((value) => !value)}
