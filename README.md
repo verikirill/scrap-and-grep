@@ -45,6 +45,18 @@ docker compose up -d --build
 
 Откройте <http://localhost:8080> и нажмите «Войти без регистрации»: появится временный аккаунт с четырьмя примерами профилей, он удалится через сутки. Можно и зарегистрироваться, тогда следующим шагом будет загрузка резюме.
 
+### Без браузера
+
+Выпуск собирается и из терминала, файлы `.md` и `.docx` появляются в папке `out/`:
+
+```bash
+docker compose run --rm cli digest --audience specialist   # специалисту за сутки
+docker compose run --rm cli digest --audience management   # руководству за неделю
+ls out/
+```
+
+Без `--audience` собираются оба выпуска. Период меняет `--days`, свежий опрос источников перед сборкой - `--fresh`, свой профиль берётся из файла: `--profile-file profile.json` в формате [examples/profiles](examples/profiles). Пока идёт сборка, в терминале видны её этапы.
+
 При первом старте стек сам применит миграции, заведёт 67 источников и четыре примера профилей, загрузит снимок из 1728 реальных публикаций за 23 сентября - 2 октября 2026 года и поставит в очередь опрос лент. Дайджест можно собирать сразу, не дожидаясь опроса.
 
 События пишутся в ClickHouse, он входит в стек и получает до 1 ГБ памяти (`CLICKHOUSE_MEMORY`). Пустое значение `RADAR_CLICKHOUSE_URL=` в `.env` выключает события, остальное работает как раньше. Пароль ClickHouse, как и пароль PostgreSQL, на сервере стоит задать своим: `CLICKHOUSE_PASSWORD`.
@@ -416,7 +428,7 @@ cd backend
 uv sync
 uv run radar migrate --seed --sample ../data/samples/articles.jsonl
 uv run pytest && uv run ruff check src tests && uv run mypy
-uv run radar digest --profile "Специалист по ИБ АСУ ТП" --days 7 --out ../tmp
+uv run radar digest --audience specialist --out ../tmp   # или --profile "<имя>" --email <почта>
 ```
 
 Тесты через HTTP сами создают базу `radar_test` на том же сервере PostgreSQL и не трогают рабочую. Тесты событий так же заводят базу `radar_test` в ClickHouse и пропускаются, если он не запущен. Мок Bot API запускается и без Docker: `uv run radar telegram-mock --port 8089`, тогда в `.env` `RADAR_TELEGRAM_API_URL=http://127.0.0.1:8089`.
