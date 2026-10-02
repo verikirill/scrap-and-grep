@@ -2,11 +2,11 @@
 
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import Any, Self
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
-from radar.cards import TAG_LABELS, attack_rows, priority_reason, vulnerability_rows
+from radar.cards import TAG_LABELS, attack_rows, priority_reason, reference_rows, vulnerability_rows
 from radar.db.models import Digest, DigestItem
 from radar.domain import (
     AttackCard,
@@ -16,6 +16,7 @@ from radar.domain import (
     ProfileSpec,
     RecordKind,
     VulnerabilityCard,
+    VulnerabilityReference,
 )
 from radar.reading import reading_minutes
 
@@ -64,9 +65,23 @@ class ItemView(BaseModel):
     unsupported: list[str] = []
     # Addresses a Telegram post cites.
     links: list[str] = []
-    # The card as label and value, in the dataset's order, and the tags in words.
+    # The bases the card was checked against.
+    references: list[VulnerabilityReference] = []
+    # The card as label and value, in the dataset's order, and the tags in
+    # words: worked out from the fields above, for the page and the exports.
     fields: list[CardField] = []
     tag_labels: list[str] = []
+
+    @model_validator(mode="after")
+    def _derived(self) -> Self:
+        rows: list[tuple[str, str]] = []
+        if self.attack is not None:
+            rows = attack_rows(self.attack) + reference_rows(self.references)
+        elif self.vulnerability is not None:
+            rows = vulnerability_rows(self.vulnerability) + reference_rows(self.references)
+        self.fields = [CardField(label=label, value=value) for label, value in rows]
+        self.tag_labels = [TAG_LABELS[tag] for tag in self.tags]
+        return self
 
 
 class TopicView(BaseModel):
@@ -141,17 +156,8 @@ def _item_view(item: DigestItem, profile: ProfileSpec) -> ItemView:
         tags=list(card.tags),
         unsupported=list(card.unsupported),
         links=list(article.links or []),
-        fields=[CardField(label=label, value=value) for label, value in _rows(card)],
-        tag_labels=[TAG_LABELS[tag] for tag in card.tags],
+        references=list(card.references),
     )
-
-
-def _rows(card: ItemSummary) -> list[tuple[str, str]]:
-    if card.attack is not None:
-        return attack_rows(card.attack)
-    if card.vulnerability is not None:
-        return vulnerability_rows(card.vulnerability)
-    return []
 
 
 def digest_summary(digest: Digest) -> DigestSummaryView:

@@ -32,6 +32,7 @@ from radar.cards import (
     PRIORITY_ORDER,
     SECTION_KINDS,
     SECTION_TITLES,
+    card_ids,
     check_entry,
     priority,
     section_overview,
@@ -48,6 +49,7 @@ from radar.domain import (
     SelectedItem,
     Topic,
     TopicName,
+    VulnerabilityReference,
 )
 from radar.logging import get_logger
 from radar.pipeline.ports import PipelineDeps
@@ -368,12 +370,50 @@ class DigestNodes:
         profile = ProfileSpec.model_validate(state["profile"])
         interest = profile.interest(item.graded.interest_id)
         written = await self._deps.intelligence.summarize(item, profile, interest)
-        # Checked here, past the answer cache: a better check applies to answers
-        # cached before it without paying for them again.
         article = item.article
-        text = check_entry(written, source_text(article.title, article.summary, article.content))
+        source = source_text(article.title, article.summary, article.content)
+        written = await self._with_references(written, source)
+        # Checked here, past the answer cache: a better check applies to answers
+        # cached before it without paying for them again. What the reference
+        # bases said counts as evidence too.
+        evidence = "\n".join(
+            [source, *(reference.text() for reference in written.references if reference.found)]
+        )
+        text = check_entry(written, evidence)
         _emit("summarize", done=1)
         return {"summaries": [{"article_id": item.article.id, "text": text.model_dump()}]}
+
+    async def _with_references(self, text: ItemSummary, source: str) -> ItemSummary:
+        """The card's ids the model did not look up itself, looked up here: the
+        exploit sign of a card must not depend on whether the model used its
+        tool. Best effort, like personalisation: a card without them stands."""
+        ids = card_ids(text, source)
+        # What the model asked about another vulnerability of a roundup is not
+        # this card's; a CVE whose BDU entry is known covers that BDU id too.
+        # One the bases did not know is asked again: it may come from the
+        # answer cache, made before the catalogue had it.
+        kept = tuple(
+            reference
+            for reference in text.references
+            if reference.found and (reference.id in ids or reference.bdu_id in ids)
+        )
+        asked = {reference.id for reference in text.references if reference.via == "model"}
+        covered = {reference.id for reference in kept} | {reference.bdu_id for reference in kept}
+        missing = [value for value in ids if value not in covered]
+        found: list[VulnerabilityReference] = []
+        if missing:
+            try:
+                found = await self._deps.store.vulnerability_facts(missing)
+            except Exception as exc:
+                log.warning(
+                    "vulnerability_lookup_failed", error=f"{type(exc).__name__}: {exc}"[:300]
+                )
+        # Who asked first is kept for the stats: the model, if it used its tool.
+        found = [
+            reference.model_copy(update={"via": "model"}) if reference.id in asked else reference
+            for reference in found
+        ]
+        return text.model_copy(update={"references": (*kept, *found)})
 
     async def name_topic(self, state: TopicTask) -> dict[str, Any]:
         items = [SelectedItem.model_validate(item) for item in state["items"]]
@@ -483,6 +523,10 @@ def _section(kind: RecordKind, items: list[SelectedItem]) -> Topic:
     )
 
 
+def _references(items: list[SelectedItem]) -> list[VulnerabilityReference]:
+    return [reference for item in items if item.text for reference in item.text.references]
+
+
 def _unique_titles(topics: list[Topic]) -> list[Topic]:
     """Two clusters may get the same name; number the repeats so they stay apart."""
     seen: dict[str, int] = {}
@@ -528,6 +572,15 @@ def _stats(
         # The check of entries against their articles: fields taken out, entries touched.
         "unsupported_fields": sum(len(item.text.unsupported) for item in selected if item.text),
         "entries_corrected": sum(1 for item in selected if item.text and item.text.unsupported),
+        # The reference bases: ids the model asked its tool about, ids the
+        # digest looked up for it, and how many of them the bases knew.
+        "lookups_by_model": sum(
+            1 for reference in _references(selected) if reference.via == "model"
+        ),
+        "lookups_by_pipeline": sum(
+            1 for reference in _references(selected) if reference.via == "pipeline"
+        ),
+        "references_found": sum(1 for reference in _references(selected) if reference.found),
         "embedded_now": state.get("embedded_now", 0),
         "lexical_only": state.get("lexical_only", False),
         "embedding_model": deps.embedder.model_id,

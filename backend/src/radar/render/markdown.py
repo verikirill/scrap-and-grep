@@ -7,9 +7,7 @@ from radar.cards import (
     KIND_LABELS,
     PRIORITY_LABELS,
     TAG_LABELS,
-    attack_rows,
     defang,
-    vulnerability_rows,
 )
 from radar.views import DigestView, ItemView
 
@@ -112,11 +110,7 @@ def item_meta(item: ItemView) -> list[str]:
 
 def card_rows(item: ItemView) -> list[tuple[str, str]]:
     """The fields of the dataset's card, when the entry has one."""
-    if item.attack is not None:
-        return attack_rows(item.attack)
-    if item.vulnerability is not None:
-        return vulnerability_rows(item.vulnerability)
-    return []
+    return [(field.label, field.value) for field in item.fields]
 
 
 def _item(item: ItemView) -> list[str]:

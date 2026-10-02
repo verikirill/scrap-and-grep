@@ -4,7 +4,7 @@ They are plain pydantic models with no database or framework knowledge, so the
 selection logic can be tested without infrastructure.
 """
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -210,6 +210,50 @@ class VulnerabilityCard(BaseModel):
     impact: str = ""
 
 
+class VulnerabilityReference(BaseModel):
+    """What the reference bases say of one vulnerability: the CISA catalogue of
+    exploited vulnerabilities and the BDU of FSTEC of Russia."""
+
+    id: str
+    kev_added: date | None = None
+    kev_ransomware: bool = False
+    bdu_id: str = ""
+    bdu_exploit: str = ""
+    bdu_in_attacks: bool = False
+    bdu_cvss: str = ""
+    bdu_vector: str = ""
+    bdu_fix: str = ""
+    # "model" when the model asked for it with its tool, "pipeline" when the
+    # digest looked it up for an id on the card the model did not ask about.
+    via: str = "pipeline"
+
+    @property
+    def found(self) -> bool:
+        return self.kev_added is not None or bool(self.bdu_id)
+
+    def text(self) -> str:
+        """The facts in words, for the model and for the check of a card."""
+        parts = []
+        if self.kev_added is not None:
+            ransomware = ", в том числе вымогателями" if self.kev_ransomware else ""
+            added = f"{self.kev_added:%d.%m.%Y}"
+            parts.append(f"в каталоге CISA KEV с {added}: используется в атаках{ransomware}")
+        if self.bdu_id:
+            bdu = [self.bdu_id]
+            if self.bdu_exploit:
+                bdu.append(f"эксплойт: {self.bdu_exploit}")
+            if self.bdu_in_attacks:
+                bdu.append("используется в атаках")
+            if self.bdu_cvss:
+                bdu.append(f"оценка CVSS {self.bdu_cvss}")
+            if self.bdu_vector:
+                bdu.append(f"вектор {self.bdu_vector}")
+            if self.bdu_fix:
+                bdu.append(f"устранение: {self.bdu_fix}")
+            parts.append("БДУ ФСТЭК " + ", ".join(bdu))
+        return f"{self.id}: " + ("; ".join(parts) if parts else "нет в CISA KEV и БДУ ФСТЭК")
+
+
 class ItemSummary(BaseModel):
     headline: str = ""
     summary: str
@@ -220,6 +264,8 @@ class ItemSummary(BaseModel):
     tags: tuple[ManagementTag, ...] = ()
     # Card fields and claims the check against the article's text took out.
     unsupported: tuple[str, ...] = ()
+    # The bases the card was checked against, id by id.
+    references: tuple[VulnerabilityReference, ...] = ()
 
 
 class SelectedItem(BaseModel):

@@ -29,6 +29,7 @@ from radar.shorts.renderer import RendererBusy
 from radar.store import digests as digest_store
 from radar.store import profiles as profile_store
 from radar.store import schedules as schedule_store
+from radar.vulns import kev
 from radar.worker.brokers import (
     DIGEST_IDLE_TIMEOUT_MS,
     MEDIA_IDLE_TIMEOUT_MS,
@@ -275,6 +276,28 @@ async def _voices_at_start(state: TaskiqState) -> None:
         await shorts_service.refresh_voices(get_cache())
     except Exception as exc:
         log.warning("short_voices_not_refreshed", error=type(exc).__name__)
+
+
+@ingest_broker.task(task_name="refresh_kev", schedule=[{"cron": "7 * * * *"}])
+async def refresh_kev() -> int:
+    """Every hour: the CISA catalogue of exploited vulnerabilities, if it changed."""
+    url = get_settings().kev_url
+    if not url:
+        return 0
+    async with build_client() as client, session_scope() as session:
+        kept, last_modified = await kev.refresh(session, client, get_cache(), url)
+    # Remembered after the commit: a failed one must not turn the next round into a 304.
+    await kev.remember(get_cache(), last_modified)
+    return kept
+
+
+@ingest_broker.on_event(TaskiqEvents.WORKER_STARTUP)
+async def _kev_at_start(state: TaskiqState) -> None:
+    # A fresh stack looks vulnerabilities up before the first hourly round.
+    try:
+        await refresh_kev()
+    except Exception as exc:
+        log.warning("kev_not_refreshed", error=f"{type(exc).__name__}: {exc}"[:300])
 
 
 @ingest_broker.task(task_name="housekeeping", schedule=[{"cron": "*/10 * * * *"}])

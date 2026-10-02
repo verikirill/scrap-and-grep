@@ -1,5 +1,6 @@
 """Build the configured providers."""
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import TYPE_CHECKING
@@ -10,6 +11,7 @@ from radar.ai.intelligence import Intelligence
 from radar.ai.resilient import CachedIntelligence, CircuitBreaker, ResilientIntelligence
 from radar.cache import get_cache
 from radar.config import EMBEDDING_DIM, get_settings
+from radar.domain import VulnerabilityReference
 
 if TYPE_CHECKING:
     from radar.ai.ollama import OllamaChat
@@ -107,6 +109,15 @@ def get_chat(temperature: float | None = None) -> OllamaChat | None:
     )
 
 
+async def _lookup(values: Sequence[str]) -> list[VulnerabilityReference]:
+    """The reference bases, for the model's tool: a session per call."""
+    from radar.db import session_scope
+    from radar.vulns.lookup import lookup
+
+    async with session_scope() as session:
+        return await lookup(session, values)
+
+
 @lru_cache
 def get_breaker() -> CircuitBreaker:
     """One breaker per process: every step that calls the model shares the
@@ -124,5 +135,5 @@ def get_intelligence() -> Intelligence:
 
     from radar.ai.ollama import OllamaIntelligence
 
-    primary = OllamaIntelligence(chat)
+    primary = OllamaIntelligence(chat, lookup=_lookup)
     return CachedIntelligence(ResilientIntelligence(primary, fallback, get_breaker()), get_cache())
