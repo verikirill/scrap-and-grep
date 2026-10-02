@@ -50,7 +50,11 @@ def _is_tracking(key: str) -> bool:
 
 
 def canonical_url(url: str) -> str:
-    """Drop fragments and tracking parameters so reposts collapse to one URL."""
+    """Drop fragments and tracking parameters so reposts collapse to one URL.
+
+    A fragment that is a route of a single-page site ("#/news/1", "#!") is
+    the page itself, and stays.
+    """
     parts = urlsplit(url.strip())
     query = [
         (key, value)
@@ -59,7 +63,12 @@ def canonical_url(url: str) -> str:
     ]
     path = parts.path.rstrip("/") or "/"
     host = parts.netloc.lower().removeprefix("www.")
-    return urlunsplit((parts.scheme.lower(), host, path, urlencode(query), ""))
+    fragment = parts.fragment if _is_route(parts.fragment) else ""
+    return urlunsplit((parts.scheme.lower(), host, path, urlencode(query), fragment))
+
+
+def _is_route(fragment: str) -> bool:
+    return fragment.startswith("!") or (fragment.startswith("/") and fragment.strip("/") != "")
 
 
 def untracked_url(url: str) -> str:
@@ -77,7 +86,7 @@ def untracked_url(url: str) -> str:
         if pair and not _is_tracking(unquote_plus(pair.split("=", 1)[0]))
     )
     host = parts.netloc.rpartition("@")[2]
-    fragment = parts.fragment if parts.fragment.startswith(("/", "!")) else ""
+    fragment = parts.fragment if _is_route(parts.fragment) else ""
     return urlunsplit((parts.scheme, host, parts.path, query, fragment))
 
 

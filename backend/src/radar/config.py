@@ -94,7 +94,15 @@ class Settings(BaseSettings):
     allow_private_feed_hosts: bool = False
     # Sites whose certificates come from the Russian national CA (Минцифры).
     # It is trusted for these hosts and their subdomains only.
-    russian_ca_hosts: list[str] = Field(default_factory=lambda: ["bdu.fstec.ru", "ptsecurity.com"])
+    # БДУ АСУ ТП signs in its readers at bdu-ibasu.fstec.ru, also of that CA.
+    russian_ca_hosts: list[str] = Field(
+        default_factory=lambda: [
+            "bdu.fstec.ru",
+            "bduasutp.fstec.ru",
+            "bdu-ibasu.fstec.ru",
+            "ptsecurity.com",
+        ]
+    )
     # Where public Telegram channels are read (t.me/s/<name>), tried in turn.
     # Where Telegram is blocked, put a mirror of t.me first.
     telegram_preview_urls: list[str] = Field(
@@ -103,7 +111,8 @@ class Settings(BaseSettings):
 
     # Reading sites that refuse a bot (ingest/fetch.py). A page that answers
     # 401/403/429/503 or a challenge is asked again a step up the ladder:
-    # browser headers, the TLS fingerprint of Chrome, FlareSolverr.
+    # browser headers, the TLS fingerprint of Chrome, a headless browser,
+    # FlareSolverr.
     # What a browser sends on the second step and later.
     browser_user_agent: str = (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
@@ -111,8 +120,13 @@ class Settings(BaseSettings):
     )
     # The third step: curl_cffi with the TLS and HTTP/2 fingerprint of Chrome.
     fetch_impersonate: bool = True
+    # The stack's headless browser (browser/) for pages drawn by script and
+    # challenges that stop curl_cffi: http://browser:8000. Empty turns the
+    # step off. A page gets this long, its challenge included.
+    browser_url: str = ""
+    browser_timeout_seconds: float = Field(default=30.0, ge=5, le=120)
     # FlareSolverr inside the stack (the solver profile) for pages that stop
-    # curl_cffi too: http://flaresolverr:8191. Empty turns the step off.
+    # the browser too: http://flaresolverr:8191. Empty turns the step off.
     flaresolverr_url: str = ""
     flaresolverr_timeout_seconds: float = Field(default=60.0, ge=10)
     # An article page whose text is shorter than this is taken for a stub.

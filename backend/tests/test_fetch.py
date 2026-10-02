@@ -9,7 +9,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import httpx
 import pytest
 
-from radar.ingest import fetch, polite, solver
+from radar.ingest import browser, fetch, polite, solver
 from radar.ingest.fetch import Blocked, Ladder, impersonated_get, refusal
 from radar.ingest.net import UnsafeUrlError
 from tests.test_telegram import offline  # noqa: F401
@@ -239,6 +239,7 @@ def names(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     monkeypatch.setattr(net, "resolve_public", resolve)
     monkeypatch.setattr(fetch, "resolve_public", resolve)
     monkeypatch.setattr(solver, "resolve_public", resolve)
+    monkeypatch.setattr(browser, "resolve_public", resolve)
     yield
     get_settings.cache_clear()
 

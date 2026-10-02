@@ -36,11 +36,20 @@ class SolverFailed(httpx.TransportError):
 
 @dataclass(frozen=True, slots=True)
 class Clearance:
-    """What a passed challenge leaves: cookies and the browser that got them."""
+    """What a passed challenge leaves: cookies and the browser that got them.
+
+    `step` is the ladder's step that passed it: FlareSolverr's Chrome or the
+    stack's own browser (ingest/browser.py), a Firefox.
+    """
 
     cookies: dict[str, str]
     user_agent: str
     until: float
+    step: str = "solver"
+
+    @property
+    def firefox(self) -> bool:
+        return "Firefox/" in self.user_agent
 
     @property
     def cookie_header(self) -> str:
@@ -108,10 +117,8 @@ async def solve(url: str, *, proxy: str | None = None) -> Solution:
     # The browser followed redirects on its own: where it ended is checked now,
     # and a page from an internal address is not handed on.
     await resolve_public(final)
-    clearance = _clearance(solution)
-    if clearance is not None:
-        _clearances[urlsplit(final).hostname or ""] = clearance
-        _clearances[urlsplit(url).hostname or ""] = clearance
+    clearance = clearance_from(solution.get("cookies"), solution.get("userAgent"), "solver")
+    keep(clearance, url, final)
     return Solution(
         url=final,
         status=int(solution.get("status") or 200),
@@ -120,9 +127,16 @@ async def solve(url: str, *, proxy: str | None = None) -> Solution:
     )
 
 
-def _clearance(solution: dict[str, object]) -> Clearance | None:
-    cookies = solution.get("cookies")
-    agent = solution.get("userAgent")
+def keep(clearance: Clearance | None, *urls: str) -> None:
+    """Remember a passed challenge for the hosts of `urls`."""
+    if clearance is None:
+        return
+    for url in urls:
+        _clearances[urlsplit(url).hostname or ""] = clearance
+
+
+def clearance_from(cookies: object, agent: object, step: str) -> Clearance | None:
+    """The cookies a browser was given, as the ladder keeps them."""
     if not isinstance(cookies, list) or not isinstance(agent, str) or not cookies:
         return None
     jar: dict[str, str] = {}
@@ -137,7 +151,7 @@ def _clearance(solution: dict[str, object]) -> Clearance | None:
     if not jar:
         return None
     left = max(expires - time.time(), 0.0)
-    return Clearance(cookies=jar, user_agent=agent, until=time.monotonic() + left)
+    return Clearance(cookies=jar, user_agent=agent, until=time.monotonic() + left, step=step)
 
 
 def _proxy(proxy: str) -> dict[str, str]:
