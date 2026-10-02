@@ -197,7 +197,8 @@ def test_markdown_lists_the_card_in_the_datasets_order_and_defangs_post_links(
 
     block = markdown[markdown.index("Citrix закрыла уязвимость") :]
     assert "приоритет: высокий (эксплойт: используется в атаках)" in block
-    labels = [line.split(":**")[0].removeprefix("- **") for line in block.splitlines()]
+    # The card is a table: the label is the first cell of a row.
+    labels = [line.split("|")[1].strip() for line in block.splitlines() if line.startswith("| ")]
     assert [label for label in labels if label in {"Уязвимость", "Эксплойт", "CVSS"}] == [
         "Уязвимость",
         "Эксплойт",
