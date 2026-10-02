@@ -192,6 +192,12 @@
     outline: 2px solid var(--md-primary);
     outline-offset: 2px;
   }
+
+  /* Edge adds its own eye to a password field, next to the form's toggle. */
+  input::-ms-reveal,
+  input::-ms-clear {
+    display: none;
+  }
 }
 
 @layer components {

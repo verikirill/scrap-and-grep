@@ -39,6 +39,9 @@ _HASHTAG_RE = re.compile(r"^[0-9A-Za-zА-Яа-яЁё_]{2,30}$")
 # lead with the dash the post already puts there.
 _MD_BOLD_RE = re.compile(r"\*\*(.+?)\*\*|__(.+?)__")
 _MD_MARK_RE = re.compile(r"\*\*|__|`")
+# ... and *italic*, which Telegram would print with its stars. A lone star
+# ("9.8*") is not a pair and stays.
+_MD_ITALIC_RE = re.compile(r"(?<![\w*])\*(?=[^\s*])([^*\n]+?)(?<=[^\s*])\*(?![\w*])")
 _LEADING_DASH_RE = re.compile(r"^[\s—–\-:;,.]+")
 # What Telegram turns into a link by itself: addresses, bare domains, @names.
 # A hostile article can talk the model into writing one. is_grounded already
@@ -253,7 +256,7 @@ def _others_block(voice: Voice) -> str:
 
 
 def _unmarked(text: str) -> str:
-    return " ".join(_MD_MARK_RE.sub("", text).split())
+    return " ".join(_MD_MARK_RE.sub("", _MD_ITALIC_RE.sub(r"\1", text)).split())
 
 
 def _marked_phrases(parts: list[str]) -> list[str]:

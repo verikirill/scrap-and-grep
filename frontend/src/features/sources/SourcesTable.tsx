@@ -1,16 +1,17 @@
 import clsx from 'clsx'
-import { Plus, RefreshCw, Send, Trash2 } from '../../components/icons'
+import { Plus, RefreshCw, Search, Send, Trash2 } from '../../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
-import { useId, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
+import { useSearchParams } from 'react-router'
 import { Segmented } from '../../components/Segmented'
 import { EASE, INPUT_CLASS } from '../../components/tokens'
 import { Button, Card, Chip, ErrorNote, Field, Toggle } from '../../components/ui'
 import type { Source, SourceCategory, SourceCreate } from '../../lib/api'
 import { CATEGORY_LABELS, externalHref, formatNumber, formatRelative } from '../../lib/format'
 import { useSourceMutations } from '../../lib/queries'
-
-const CATEGORY_ORDER: SourceCategory[] = ['security', 'ics', 'energy', 'it', 'regulator']
+import { CATEGORY_ORDER, groupSources, matchesSource, queryWords } from '../../lib/sourceList'
+import type { SourceGrouping, SourceOrder } from '../../lib/sourceList'
 
 function StatusDot({ source }: { source: Source }) {
   const failing = source.last_status === 'error'
@@ -58,7 +59,19 @@ function toRequest(form: SourceForm): SourceCreate {
     : { ...common, kind, name: name.trim(), feed_url: address.trim() }
 }
 
-function AddSourceForm({ onDone }: { onDone: () => void }) {
+/** Articles stored from the source, and how many came in a day. */
+function ArticleCount({ source }: { source: Source }) {
+  return (
+    <>
+      {formatNumber(source.articles)}
+      {source.articles_last_day > 0 && (
+        <span className="ml-1.5 text-success">+{source.articles_last_day}</span>
+      )}
+    </>
+  )
+}
+
+function AddSourceForm({ onDone, onAdded }: { onDone: () => void; onAdded: () => void }) {
   const { create } = useSourceMutations()
   const [form, setForm] = useState<SourceForm>({
     kind: 'rss',
@@ -73,7 +86,12 @@ function AddSourceForm({ onDone }: { onDone: () => void }) {
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
-    create.mutate(toRequest(form), { onSuccess: onDone })
+    create.mutate(toRequest(form), {
+      onSuccess: () => {
+        onAdded()
+        onDone()
+      },
+    })
   }
 
   return (
@@ -170,6 +188,17 @@ function AddSourceForm({ onDone }: { onDone: () => void }) {
   )
 }
 
+const GROUPINGS = [
+  { value: 'category', label: 'По темам', short: 'Темы' },
+  { value: 'kind', label: 'Сайты и Telegram', short: 'Откуда' },
+] as const satisfies readonly { value: SourceGrouping; label: string; short: string }[]
+
+const ORDERS = [
+  { value: 'name', label: 'По названию', short: 'А-Я' },
+  { value: 'most', label: 'Больше новостей', short: 'Больше' },
+  { value: 'least', label: 'Меньше новостей', short: 'Меньше' },
+] as const satisfies readonly { value: SourceOrder; label: string; short: string }[]
+
 type Props = {
   sources: Source[]
   /** The catalogue is shared; only an administrator may change it. */
@@ -179,15 +208,45 @@ type Props = {
 export function SourcesTable({ sources, canEdit }: Props) {
   const { toggle, remove, refreshOne, refreshAll } = useSourceMutations()
   const [adding, setAdding] = useState(false)
+  // In the address, so a search survives a reload and can be sent on.
+  const [params, setParams] = useSearchParams()
+  const query = params.get('q') ?? ''
+  const isSearching = queryWords(query).length > 0
+  const found = sources.filter((source) => matchesSource(source, query))
+  const searchBox = useRef<HTMLInputElement>(null)
+  const grouping: SourceGrouping = params.get('group') === 'kind' ? 'kind' : 'category'
+  const order = ORDERS.find((item) => item.value === params.get('order'))?.value ?? 'name'
+  const groups = groupSources(found, grouping, order)
+  // An empty value leaves the address, so the defaults keep it clean.
+  const setParam = (key: string, value: string) =>
+    setParams(
+      (current) => {
+        const next = new URLSearchParams(current)
+        if (value) next.set(key, value)
+        else next.delete(key)
+        return next
+      },
+      { replace: true },
+    )
+  const setQuery = (value: string) => setParam('q', value)
 
   return (
     <Card className="overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant px-5 py-3.5">
         <p className="text-sm text-muted-foreground">
-          <span className="font-semibold text-foreground">
-            {sources.filter((s) => s.enabled).length}
-          </span>{' '}
-          из {sources.length} источников включено · опрос каждые 15 минут
+          {isSearching ? (
+            <>
+              Найдено <span className="font-semibold text-foreground">{found.length}</span> из{' '}
+              {sources.length}
+            </>
+          ) : (
+            <>
+              <span className="font-semibold text-foreground">
+                {sources.filter((s) => s.enabled).length}
+              </span>{' '}
+              из {sources.length} источников включено · опрос каждые 15 минут
+            </>
+          )}
         </p>
         <div className={clsx('flex gap-2', !canEdit && 'hidden')}>
           <Button
@@ -213,6 +272,42 @@ export function SourcesTable({ sources, canEdit }: Props) {
         </div>
       </div>
 
+      <div className="border-b border-outline-variant px-5 py-3">
+        <div className="relative">
+          <Search
+            size={16}
+            className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-outline"
+          />
+          <input
+            type="search"
+            aria-label="Поиск по источникам"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            ref={searchBox}
+            placeholder="Название, адрес или @канал"
+            className="w-full rounded-lg border border-outline-variant bg-card py-2.5 pr-3 pl-9 text-sm placeholder:text-outline hover:border-outline focus:border-primary focus:outline-none"
+          />
+        </div>
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
+          <Segmented
+            label="Группировать"
+            value={grouping}
+            options={GROUPINGS}
+            onChange={(value) => setParam('group', value === 'category' ? '' : value)}
+          />
+          <Segmented
+            label="Порядок"
+            value={order}
+            options={ORDERS}
+            onChange={(value) => setParam('order', value === 'name' ? '' : value)}
+          />
+        </div>
+        {/* Read out only while searching, and only the count. */}
+        <p className="sr-only" aria-live="polite">
+          {isSearching ? `Найдено ${found.length} из ${sources.length}` : ''}
+        </p>
+      </div>
+
       <ErrorNote error={toggle.error ?? remove.error ?? refreshOne.error ?? refreshAll.error} />
 
       <AnimatePresence initial={false}>
@@ -224,99 +319,118 @@ export function SourcesTable({ sources, canEdit }: Props) {
             transition={{ duration: 0.28, ease: EASE }}
             className="overflow-hidden"
           >
-            <AddSourceForm onDone={() => setAdding(false)} />
+            {/* A new source must not hide behind a search it does not match. */}
+            <AddSourceForm onDone={() => setAdding(false)} onAdded={() => setQuery('')} />
           </motion.div>
         )}
       </AnimatePresence>
 
-      {CATEGORY_ORDER.map((category) => {
-        const group = sources.filter((source) => source.category === category)
-        if (group.length === 0) return null
-        return (
-          <section key={category}>
-            <h3 className="bg-surface-container px-5 py-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-              {CATEGORY_LABELS[category]}
-            </h3>
-            <ul className="divide-y divide-outline-variant">
-              {group.map((source) => (
-                <li
-                  key={source.id}
+      {isSearching && found.length === 0 && (
+        <p className="px-5 py-10 text-center text-sm break-words text-muted-foreground">
+          Нет источников по запросу «{query.trim()}».{' '}
+          <button
+            type="button"
+            onClick={() => {
+              setQuery('')
+              // The button goes away with the empty list; the search box keeps the focus.
+              searchBox.current?.focus()
+            }}
+            className="font-medium text-primary hover:underline"
+          >
+            Сбросить поиск
+          </button>
+        </p>
+      )}
+
+      {groups.map((group) => (
+        <section key={group.key}>
+          <h3 className="flex justify-between bg-surface-container px-5 py-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+            {group.label}
+            <span className="tabular font-normal normal-case">{group.sources.length}</span>
+          </h3>
+          <ul className="divide-y divide-outline-variant">
+            {group.sources.map((source) => (
+              <li
+                key={source.id}
+                className={clsx(
+                  'group flex items-center gap-3 px-5 py-2.5 transition-opacity',
+                  !source.enabled && 'opacity-55',
+                )}
+              >
+                <StatusDot source={source} />
+                <div className="min-w-0 flex-1">
+                  <a
+                    href={externalHref(source.site_url ?? source.feed_url)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-sm font-medium hover:text-on-primary-container"
+                  >
+                    {source.kind === 'telegram' && (
+                      <Send
+                        size={14}
+                        aria-label="Telegram-канал"
+                        className="shrink-0 text-outline"
+                      />
+                    )}
+                    <span className="truncate">{source.name}</span>
+                  </a>
+                  <p className="truncate text-xs text-outline">
+                    {/* On a phone the count moves here, under the name. */}
+                    <span className="tabular sm:hidden">
+                      <ArticleCount source={source} />
+                      {' · '}
+                    </span>
+                    {source.last_status === 'error'
+                      ? (source.last_error ?? 'ошибка опроса')
+                      : source.last_fetched_at
+                        ? `опрошен ${formatRelative(source.last_fetched_at)}`
+                        : 'ещё не опрашивался'}
+                  </p>
+                </div>
+                {/* On a phone the name needs the room more than the language does. */}
+                <Chip className="max-sm:hidden">{source.language.toUpperCase()}</Chip>
+                <span className="tabular w-24 shrink-0 text-right text-xs text-muted-foreground max-sm:hidden">
+                  <ArticleCount source={source} />
+                </span>
+                <div
                   className={clsx(
-                    'group flex items-center gap-3 px-5 py-2.5 transition-opacity',
-                    !source.enabled && 'opacity-55',
+                    // Shown on hover with a mouse; a touch screen has no hover, so there they stay.
+                    'flex items-center gap-0.5 transition-opacity pointer-fine:opacity-0 pointer-fine:group-focus-within:opacity-100 pointer-fine:group-hover:opacity-100',
+                    !canEdit && 'hidden',
                   )}
                 >
-                  <StatusDot source={source} />
-                  <div className="min-w-0 flex-1">
-                    <a
-                      href={externalHref(source.site_url ?? source.feed_url)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 text-sm font-medium hover:text-on-primary-container"
-                    >
-                      {source.kind === 'telegram' && (
-                        <Send
-                          size={14}
-                          aria-label="Telegram-канал"
-                          className="shrink-0 text-outline"
-                        />
-                      )}
-                      <span className="truncate">{source.name}</span>
-                    </a>
-                    <p className="truncate text-xs text-outline">
-                      {source.last_status === 'error'
-                        ? (source.last_error ?? 'ошибка опроса')
-                        : source.last_fetched_at
-                          ? `опрошен ${formatRelative(source.last_fetched_at)}`
-                          : 'ещё не опрашивался'}
-                    </p>
-                  </div>
-                  <Chip>{source.language.toUpperCase()}</Chip>
-                  <span className="tabular w-14 shrink-0 text-right sm:w-24 text-xs text-muted-foreground">
-                    {formatNumber(source.articles)}
-                    {source.articles_last_day > 0 && (
-                      <span className="ml-1.5 text-success">+{source.articles_last_day}</span>
-                    )}
-                  </span>
-                  <div
-                    className={clsx(
-                      'flex items-center gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100',
-                      !canEdit && 'hidden',
-                    )}
+                  <button
+                    type="button"
+                    aria-label="Опросить источник"
+                    onClick={() => refreshOne.mutate(source.id)}
+                    className="grid size-7 place-items-center rounded-md text-outline hover:bg-surface-container hover:text-foreground"
                   >
-                    <button
-                      type="button"
-                      aria-label="Опросить источник"
-                      onClick={() => refreshOne.mutate(source.id)}
-                      className="grid size-7 place-items-center rounded-md text-outline hover:bg-surface-container hover:text-foreground"
-                    >
-                      <RefreshCw size={13} />
-                    </button>
-                    <button
-                      type="button"
-                      aria-label="Удалить источник"
-                      onClick={() => {
-                        if (window.confirm(`Удалить «${source.name}» вместе с его публикациями?`)) {
-                          remove.mutate(source.id)
-                        }
-                      }}
-                      className="grid size-7 place-items-center rounded-md text-outline hover:bg-error-container hover:text-destructive"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                  <Toggle
-                    label={`${source.enabled ? 'Отключить' : 'Включить'} ${source.name}`}
-                    checked={source.enabled}
-                    disabled={!canEdit}
-                    onChange={(enabled) => toggle.mutate({ id: source.id, enabled })}
-                  />
-                </li>
-              ))}
-            </ul>
-          </section>
-        )
-      })}
+                    <RefreshCw size={13} />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Удалить источник"
+                    onClick={() => {
+                      if (window.confirm(`Удалить «${source.name}» вместе с его публикациями?`)) {
+                        remove.mutate(source.id)
+                      }
+                    }}
+                    className="grid size-7 place-items-center rounded-md text-outline hover:bg-error-container hover:text-destructive"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+                <Toggle
+                  label={`${source.enabled ? 'Отключить' : 'Включить'} ${source.name}`}
+                  checked={source.enabled}
+                  disabled={!canEdit}
+                  onChange={(enabled) => toggle.mutate({ id: source.id, enabled })}
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
     </Card>
   )
 }

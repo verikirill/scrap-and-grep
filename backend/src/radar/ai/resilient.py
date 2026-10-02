@@ -4,7 +4,7 @@ import time
 from collections.abc import Awaitable, Callable, Sequence
 
 from radar.ai.intelligence import Intelligence
-from radar.ai.prompts import PROMPT_VERSION
+from radar.ai.prompts import PROMPT_VERSION, SUMMARY_PROMPT_VERSION
 from radar.cache import Cache
 from radar.domain import (
     Candidate,
@@ -165,7 +165,7 @@ class CachedIntelligence:
     ) -> ItemSummary:
         key = "summary:" + stable_hash(
             self.name,
-            PROMPT_VERSION,
+            SUMMARY_PROMPT_VERSION,
             profile.role,
             interest.model_dump_json() if interest else "",
             item.article.content_hash,

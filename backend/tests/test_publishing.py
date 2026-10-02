@@ -254,18 +254,27 @@ def test_markdown_from_the_model_becomes_emphasis_and_the_lead_loses_its_own_das
     out = _NewsOut(
         headline="**Siemens закрыла уязвимость в SIMATIC S7-1500**",
         lead="— атакующий мог удалённо остановить ПЛК",
-        paragraphs=["Компания выпустила **обновление 3.1**, затронуты 12 моделей."],
+        paragraphs=[
+            "Компания выпустила **обновление 3.1**, затронуты 12 моделей.",
+            "*Внутри периметра* свои риски, оценка 9.8*.",
+        ],
     )
 
-    draft = check_news(out, story(), voice())
+    draft = check_news(
+        out, story(summary="Обновление 3.1, оценка 9.8, затронуты 12 моделей."), voice()
+    )
     html = render_news(draft, voice(), None)
 
     assert draft.headline == "Siemens закрыла уязвимость в SIMATIC S7-1500"
     assert draft.lead == "атакующий мог удалённо остановить ПЛК"
-    assert draft.paragraphs == ("Компания выпустила обновление 3.1, затронуты 12 моделей.",)
+    # Italic stars go; a lone star that pairs with nothing stays as written.
+    assert draft.paragraphs == (
+        "Компания выпустила обновление 3.1, затронуты 12 моделей.",
+        "Внутри периметра свои риски, оценка 9.8*.",
+    )
     assert "S7-1500</b> — атакующий" in html
     assert "выпустила <b>обновление 3.1</b>, затронуты" in html
-    assert "*" not in html
+    assert html.count("*") == 1  # the lone one after 9.8
 
 
 def test_a_news_post_reads_like_the_channel() -> None:
