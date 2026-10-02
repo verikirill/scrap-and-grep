@@ -59,10 +59,45 @@ DEFAULT_SOURCES: tuple[tuple[str, str, str, str, str, str, bool], ...] = (
     ("bdu-incident", "БДУ ФСТЭК: уязвимости, используемые в атаках", "https://bdu.fstec.ru/ubi/vul/incident/rss", "https://bdu.fstec.ru/vul", "regulator", "ru", True),
     ("bdu-danger", "БДУ ФСТЭК: наиболее опасные уязвимости", "https://bdu.fstec.ru/ubi/vul/danger/rss", "https://bdu.fstec.ru/vul/danger", "regulator", "ru", True),
     ("pt-trending", "Positive Technologies: трендовые уязвимости", "https://ptsecurity.com/research/trending-vulnerabilities/", "https://ptsecurity.com/research/trending-vulnerabilities/", "security", "ru", False),
+    # From the source lists of the organizers' dataset (docs/task), each feed
+    # fetched and parsed on 2026-10-02. Sites without a feed are left out:
+    # BI.ZONE, PT ESC, Kaspersky press releases, Security Vision, Cybernews.
+    # CISOCLUB answers 403 to a bot that names itself; it is left out too.
+    ("solar-4rays", "Solar 4RAYS: исследования угроз", "https://rt-solar.ru/bitrix/rss.php?ID=40&TYPE=Solar4RAYS&LIMIT=20", "https://rt-solar.ru/solar-4rays/blog/", "security", "ru", False),
+    ("habr-f6", "Хабр: F6", "https://habr.com/ru/rss/companies/f6/articles/?fl=ru", "https://www.f6.ru/blog/", "security", "ru", False),
+    ("1275", "1275.ru: уязвимости и индикаторы", "https://1275.ru/feed", "https://1275.ru", "security", "ru", True),
+    ("habr-infosec-news", "Хабр: новости ИБ", "https://habr.com/ru/rss/hubs/infosecurity/news/?fl=ru", "https://habr.com/ru/hubs/infosecurity/news/", "security", "ru", False),
+    ("habr-infowatch", "Хабр: InfoWatch", "https://habr.com/ru/rss/companies/infowatch/articles/?fl=ru", "https://www.infowatch.ru/analytics/novosti-ib", "security", "ru", False),
+    ("itsec", "ITSec.ru", "https://www.itsec.ru/news/rss.xml", "https://www.itsec.ru/news/all", "security", "ru", True),
+    ("infobezopasnost", "Инфобезопасность", "https://infobezopasnost.ru/blog/news/feed/", "https://infobezopasnost.ru/blog/news/", "security", "ru", False),
+    ("google-ti", "Google Cloud: Threat Intelligence", "https://feeds.feedburner.com/threatintelligence/pvexyqv7v0v", "https://cloud.google.com/blog/topics/threat-intelligence", "security", "en", False),
+    ("microsoft-research", "Microsoft Security: исследования", "https://www.microsoft.com/en-us/security/blog/content-type/research/feed/", "https://www.microsoft.com/en-us/security/blog/content-type/research/", "security", "en", False),
+    ("checkpoint-research", "Check Point Research", "https://research.checkpoint.com/feed/", "https://research.checkpoint.com", "security", "en", False),
+    ("unit42", "Unit 42", "https://unit42.paloaltonetworks.com/category/threat-research/feed/", "https://unit42.paloaltonetworks.com/category/threat-research/", "security", "en", True),
+    ("fortiguard", "FortiGuard Labs", "https://feeds.fortinet.com/fortinet/blog/threat-research&x=1", "https://www.fortinet.com/blog/threat-research", "security", "en", True),
+    ("ahnlab-asec", "AhnLab ASEC", "https://asec.ahnlab.com/en/feed/", "https://asec.ahnlab.com/en/", "security", "en", True),
+    # Telegram channels of the dataset whose web preview is open and alive.
+    ("tg-true-secator", "SecAtor", "https://t.me/s/true_secator", "https://t.me/true_secator", "security", "ru", False),
+    ("tg-ptescalator", "PT ESC Threat Intelligence", "https://t.me/s/ptescalator", "https://t.me/ptescalator", "security", "ru", False),
+    ("tg-four-rays", "4RAYS", "https://t.me/s/four_rays", "https://t.me/four_rays", "security", "ru", False),
+    ("tg-cyberok", "CyberOK", "https://t.me/s/cyberok_news", "https://t.me/cyberok_news", "security", "ru", False),
+    ("tg-zerodayalert", "ZeroDay Alert", "https://t.me/s/ZerodayAlert", "https://t.me/ZerodayAlert", "security", "ru", False),
+    ("tg-alukatsky", "Пост Лукацкого", "https://t.me/s/alukatsky", "https://t.me/alukatsky", "security", "ru", False),
+    ("tg-purpleshift", "purple shift", "https://t.me/s/purpleshift", "https://t.me/purpleshift", "security", "ru", False),
+    ("tg-knowyouradversary", "Know Your Adversary", "https://t.me/s/knowyouradversary", "https://t.me/knowyouradversary", "security", "ru", False),
+    ("tg-cyberguerre", "Cyberguerre", "https://t.me/s/cyberguerre", "https://t.me/cyberguerre", "security", "ru", False),
+    ("tg-bitrixkiberbez", "Битрикс: кибербезопасность", "https://t.me/s/bitrixkiberbez", "https://t.me/bitrixkiberbez", "security", "ru", False),
+    ("tg-cybersquatting", "Cybersquatting", "https://t.me/s/CyberSquattingChannel", "https://t.me/CyberSquattingChannel", "security", "ru", False),
+    ("tg-poxek", "poxek", "https://t.me/s/poxek", "https://t.me/poxek", "security", "ru", False),
+    ("tg-proxy-bar", "proxy bar", "https://t.me/s/proxy_bar", "https://t.me/proxy_bar", "security", "ru", False),
+    ("tg-threathuntingfather", "Threat Hunting Father", "https://t.me/s/ThreatHuntingFather", "https://t.me/ThreatHuntingFather", "security", "ru", False),
 )  # fmt: skip
 
 # Sources that are not feeds; the rest are RSS or Atom.
-SOURCE_KINDS = {"pt-trending": "pt_trending"}
+SOURCE_KINDS = {
+    "pt-trending": "pt_trending",
+    **{slug: "telegram" for slug, *_ in DEFAULT_SOURCES if slug.startswith("tg-")},
+}
 
 # How the example profiles look in lists (see ProfileLook).
 EXAMPLE_LOOKS = {
