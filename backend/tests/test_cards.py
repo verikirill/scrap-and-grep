@@ -5,7 +5,7 @@ from typing import Any, cast
 import pytest
 from pydantic import BaseModel
 
-from radar.ai.ollama import OllamaIntelligence
+from radar.ai.llm import ModelIntelligence
 from radar.cards import (
     check_attack,
     check_entry,
@@ -144,7 +144,7 @@ async def test_a_figure_the_article_lacks_is_sent_back_once_then_replaced(
     )
     item = _selected(make_article, "vulnerability", BDU_ENTRY)
 
-    written = await OllamaIntelligence(cast(Any, model)).summarize(item, profile, None)
+    written = await ModelIntelligence(cast(Any, model)).summarize(item, profile, None)
     entry = check_entry(written, BDU_ENTRY)
 
     assert "41" in model.prompts[1]
@@ -170,7 +170,7 @@ async def test_management_gets_a_brief_with_tags_and_no_card(
     item = _selected(make_article, "attack", "Атака на российские электросети.")
     management = profile.model_copy(update={"audience": "management"})
 
-    written = await OllamaIntelligence(cast(Any, model)).summarize(item, management, None)
+    written = await ModelIntelligence(cast(Any, model)).summarize(item, management, None)
     entry = check_entry(written, "Атака на российские электросети.")
 
     assert entry.attack is None

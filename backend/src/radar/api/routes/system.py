@@ -60,7 +60,7 @@ async def meta(session: SessionDep, settings: SettingsDep, cache: CacheDep) -> M
         embedding_provider=settings.embedding_provider,
         embedding_model=embedder.model_id,
         llm_provider=settings.llm_provider,
-        llm_model=settings.llm_model if settings.llm_provider == "ollama" else "heuristic",
+        llm_model=settings.llm_model if settings.llm_provider != "heuristic" else "heuristic",
         articles=stats["articles"],
         articles_last_day=stats["last_day"],
         embedded=stats["embedded"],

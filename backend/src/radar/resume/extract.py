@@ -21,7 +21,7 @@ from radar.text import tokenize, truncate
 
 if TYPE_CHECKING:
     # Imported lazily elsewhere: the offline mode must not load the model client.
-    from radar.ai.ollama import OllamaChat
+    from radar.ai.llm import ModelChat
 
 log = get_logger(__name__)
 
@@ -247,7 +247,7 @@ def _inert(text: str) -> str:
 
 
 class OllamaResumeExtractor:
-    def __init__(self, chat: OllamaChat) -> None:
+    def __init__(self, chat: ModelChat) -> None:
         self.name = chat.name
         self._chat = chat
 

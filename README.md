@@ -38,6 +38,16 @@ docker compose -f docker-compose.yml -f docker-compose.gpu.yml --profile ollama 
 
 При первом запуске скачается модель эмбеддингов `embeddinggemma:300m` (0,6 ГБ). Второй файл Compose отдаёт ей видеокарту NVIDIA, без карты его можно убрать. Без ключа стек не запустится с `RADAR_LLM_PROVIDER=ollama`: иначе каждый запрос получал бы отказ, а выпуски молча собирались бы автономно.
 
+Модель меняется в `.env`, код не трогается. Кроме Ollama, локальной или облачной, поддерживается любой сервер с OpenAI-совместимым API: Yandex AI Studio (в финале будут модели Яндекса), vLLM, адрес `/v1` облака Ollama. Готовые блоки лежат в `.env.example`:
+
+```bash
+RADAR_LLM_PROVIDER=openai
+RADAR_LLM_BASE_URL=https://ai.api.cloud.yandex.net/v1
+RADAR_LLM_MODEL=gpt://<каталог>/qwen3.6-35b-a3b/latest
+RADAR_LLM_PROJECT=<каталог>
+RADAR_LLM_API_KEY=<ключ>
+```
+
 Закрытый контур без облака тоже поддерживается: в `.env.example` есть блок для `qwen3.5:9b` на своей видеокарте от 8 ГБ, он меняет четыре переменные. Тогда при первом запуске скачается ещё 6,6 ГБ.
 
 Разбор резюме через docling (вёрстка в две колонки, сканы и фотографии страниц, PPTX, ODT, HTML) включается отдельным профилем. В `.env` раскомментируйте `RADAR_DOCPARSER_URL=http://docparser:8000` и добавьте `--profile docling` к команде запуска. Образ разборщика занимает около 4 ГБ, модели в нём уже лежат.

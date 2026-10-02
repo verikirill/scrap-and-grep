@@ -42,7 +42,9 @@ class Settings(BaseSettings):
     embedding_query_prefix: str = ""
     embedding_document_prefix: str = ""
     embedding_batch_size: int = 32
-    llm_provider: Literal["heuristic", "ollama"] = "heuristic"
+    # "openai" is any OpenAI-compatible Chat Completions server: Yandex AI
+    # Studio, vLLM, Ollama's /v1. Its base URL is required.
+    llm_provider: Literal["heuristic", "ollama", "openai"] = "heuristic"
     # gpt-oss-120b, one of the models the task names, in Ollama's cloud. A
     # local model is the same settings with an empty base URL, see .env.example.
     llm_model: str = "gpt-oss:120b"
@@ -50,6 +52,8 @@ class Settings(BaseSettings):
     # that also makes the embeddings.
     llm_base_url: str = "https://ollama.com"
     llm_api_key: SecretStr | None = None
+    # Yandex AI Studio wants the folder id as the OpenAI project.
+    llm_project: str = ""
     # Hidden reasoning before the answer. gpt-oss cannot switch it off and
     # takes a level; qwen3.5 answers a schema as well without it.
     llm_reasoning: Literal["off", "low", "medium", "high"] = "low"
@@ -233,8 +237,10 @@ class Settings(BaseSettings):
         # Without the key every answer is a 401, the breaker quietly falls back
         # to the offline mode, and the stack looks fine while no model works.
         cloud = urlsplit(self.llm_base_url).hostname == "ollama.com"
-        if self.llm_provider == "ollama" and cloud and self.llm_api_key is None:
+        if self.llm_provider != "heuristic" and cloud and self.llm_api_key is None:
             raise ValueError("RADAR_LLM_API_KEY is required for a model in Ollama's cloud")
+        if self.llm_provider == "openai" and not self.llm_base_url:
+            raise ValueError("RADAR_LLM_BASE_URL is required for an OpenAI-compatible model")
         return self
 
     @computed_field  # type: ignore[prop-decorator]

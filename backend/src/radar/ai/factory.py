@@ -14,7 +14,7 @@ from radar.config import EMBEDDING_DIM, get_settings
 from radar.domain import VulnerabilityReference
 
 if TYPE_CHECKING:
-    from radar.ai.ollama import OllamaChat
+    from radar.ai.llm import ModelChat
 
 
 @dataclass(frozen=True, slots=True)
@@ -87,21 +87,34 @@ def get_embedder() -> Embedder:
 
 
 @lru_cache
-def get_chat(temperature: float | None = None) -> OllamaChat | None:
+def get_chat(temperature: float | None = None) -> ModelChat | None:
     """The model connection, or None in offline mode. Writing that must vary
     between calls passes its own temperature."""
     settings = get_settings()
-    if settings.llm_provider != "ollama":
+    if settings.llm_provider == "heuristic":
         return None
 
-    from radar.ai.ollama import OllamaChat
+    from radar.ai.llm import ollama_chat, openai_chat
 
-    return OllamaChat(
+    api_key = settings.llm_api_key.get_secret_value() if settings.llm_api_key else None
+    chosen = settings.llm_temperature if temperature is None else temperature
+    if settings.llm_provider == "openai":
+        return openai_chat(
+            settings.llm_model,
+            settings.llm_base_url,
+            api_key=api_key,
+            project=settings.llm_project,
+            reasoning=settings.llm_reasoning,
+            temperature=chosen,
+            concurrency=settings.llm_concurrency,
+            timeout=settings.llm_timeout_seconds,
+        )
+    return ollama_chat(
         settings.llm_model,
         settings.llm_base_url or settings.ollama_base_url,
-        api_key=settings.llm_api_key.get_secret_value() if settings.llm_api_key else None,
+        api_key=api_key,
         reasoning=settings.llm_reasoning,
-        temperature=settings.llm_temperature if temperature is None else temperature,
+        temperature=chosen,
         num_ctx=settings.llm_num_ctx,
         keep_alive=settings.ollama_keep_alive_seconds,
         concurrency=settings.llm_concurrency,
@@ -133,7 +146,7 @@ def get_intelligence() -> Intelligence:
     if chat is None:
         return fallback
 
-    from radar.ai.ollama import OllamaIntelligence
+    from radar.ai.llm import ModelIntelligence
 
-    primary = OllamaIntelligence(chat, lookup=_lookup)
+    primary = ModelIntelligence(chat, lookup=_lookup)
     return CachedIntelligence(ResilientIntelligence(primary, fallback, get_breaker()), get_cache())
