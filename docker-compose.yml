@@ -304,6 +304,8 @@ services:
     environment:
       <<: *backend-env
       RADAR_LOG_LEVEL: ${RADAR_CLI_LOG_LEVEL:-WARNING}
+      # File names carry the hour; the digests themselves say МСК.
+      TZ: Europe/Moscow
     volumes:
       - ./out:/out
     networks:
