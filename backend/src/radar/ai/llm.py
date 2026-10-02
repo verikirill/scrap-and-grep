@@ -88,10 +88,12 @@ MAX_TOOL_ROUNDS = 2
 MAX_TOOL_CALLS = 4
 
 # A server that is full answers 429. That is a queue, not a failure: the
-# request waits and goes again before the breaker hears of it. Measured on
-# Ollama's cloud, where nemotron-3-nano takes fewer parallel requests than four.
-RATE_LIMIT_RETRIES = 3
+# request waits and goes again before the breaker hears of it. On Ollama's
+# cloud nemotron-3-nano refused a third of twelve parallel gradings, and
+# 14 seconds of retries were not enough: the pauses now add up to a minute and a half.
+RATE_LIMIT_RETRIES = 6
 RATE_LIMIT_PAUSE_SECONDS = 2.0
+RATE_LIMIT_MAX_PAUSE_SECONDS = 30.0
 
 
 def _rate_limited(error: BaseException) -> bool:
@@ -227,7 +229,8 @@ class ModelChat:
                 if not _rate_limited(error):
                     raise
             # Spread out, so the requests that were refused together do not return together.
-            pause = RATE_LIMIT_PAUSE_SECONDS * 2**attempt * random.uniform(0.5, 1.5)  # noqa: S311
+            step = min(RATE_LIMIT_PAUSE_SECONDS * 2**attempt, RATE_LIMIT_MAX_PAUSE_SECONDS)
+            pause = step * random.uniform(0.5, 1.5)  # noqa: S311
             log.info("llm_busy", model=self.name, attempt=attempt + 1, pause=round(pause, 1))
             await asyncio.sleep(pause)
         async with asyncio.timeout(self._timeout):
