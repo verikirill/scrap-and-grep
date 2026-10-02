@@ -8,8 +8,12 @@ way first and climbs only when the answer is such a refusal:
 1. httpx with the honest bot User-Agent;
 2. httpx with the headers of a current Chrome;
 3. curl_cffi with the TLS (JA3/JA4) and HTTP/2 fingerprint of Chrome;
-4. FlareSolverr, a browser in the stack that passes a JS challenge
-   (ingest/solver.py); its cookies then let the lower steps in.
+4. the stack's headless browser (ingest/browser.py), a Firefox that runs
+   the page's scripts and passes a JS challenge;
+5. FlareSolverr, Chrome in the stack, for a challenge the browser did not
+   pass (ingest/solver.py).
+
+The cookies of a passed challenge let the lower steps in afterwards.
 
 The step that worked is remembered per host for the rest of the run, and the
 caller stores it per source, so the next run starts there. Every step checks
@@ -26,19 +30,19 @@ from dataclasses import dataclass, field
 from functools import cache
 from importlib.resources import files
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 from urllib.parse import urljoin, urlsplit
 
 import certifi
 import httpx
 import trafilatura
 from curl_cffi import CurlOpt
-from curl_cffi.requests import AsyncSession
+from curl_cffi.requests import AsyncSession, BrowserTypeLiteral
 from curl_cffi.requests.exceptions import RequestException
 from selectolax.lexbor import LexborHTMLParser
 
 from radar.config import get_settings
-from radar.ingest import bdu, solver
+from radar.ingest import bdu, browser, solver
 from radar.ingest.net import (
     MAX_REDIRECTS,
     RUSSIAN_CA_BUNDLE,
@@ -57,19 +61,21 @@ from radar.logging import get_logger
 
 log = get_logger(__name__)
 
-Step = Literal["plain", "browser_headers", "impersonate", "solver"]
+Step = Literal["plain", "browser_headers", "impersonate", "browser", "solver"]
 # What the caller is about to read: a refusal looks different for each.
 Expect = Literal["any", "feed", "page", "article"]
 
-LADDER: tuple[Step, ...] = ("plain", "browser_headers", "impersonate", "solver")
-# Steps that run a browser: slow, so tried only after a refusal by the site,
-# and only where the browser is reachable (the ingest worker, not the api).
-HEAVY: frozenset[Step] = frozenset({"solver"})
+LADDER: tuple[Step, ...] = ("plain", "browser_headers", "impersonate", "browser", "solver")
+# Steps that run a browser: slow, so tried only after a refusal by the site
+# or for a page drawn by script, and only where a browser is reachable (the
+# ingest worker, not the api).
+HEAVY: frozenset[Step] = frozenset({"browser", "solver"})
 LIGHT: tuple[Step, ...] = tuple(step for step in LADDER if step not in HEAVY)
 LABELS: dict[str, str] = {
     "plain": "обычный запрос",
     "browser_headers": "заголовки браузера",
     "impersonate": "curl_cffi",
+    "browser": "браузер",
     "solver": "FlareSolverr",
 }
 # What sites answer a client they will not serve.
@@ -79,6 +85,8 @@ REFUSALS = frozenset({401, 403, 429, 503})
 CHALLENGE_MAX_BYTES = 100_000
 CHALLENGES: tuple[tuple[str, str], ...] = (
     ("<title>just a moment...</title>", "заглушка Cloudflare"),
+    # The same page for a client that asks for Russian.
+    ("<title>один момент", "заглушка Cloudflare"),
     ("window._cf_chl_opt", "заглушка Cloudflare"),
     ("cf-browser-verification", "заглушка Cloudflare"),
     ("attention required! | cloudflare", "заглушка Cloudflare"),
@@ -179,6 +187,7 @@ class Ladder:
             for step in available
             if step in LADDER
             and (step != "impersonate" or settings.fetch_impersonate)
+            and (step != "browser" or settings.browser_url)
             and (step != "solver" or settings.flaresolverr_url)
         )
         self._remembered = remembered if remembered in self._steps else None
@@ -340,13 +349,16 @@ class Ladder:
         outcome: Outcome,
         response: httpx.Response,
     ) -> httpx.Response:
-        if step in {"browser_headers", "impersonate"} and solver.clearance_for(url):
-            # Let in on the cookies FlareSolverr got: the source still needs it.
-            step = "solver"
+        passed = solver.clearance_for(url)
+        if step in {"browser_headers", "impersonate"} and passed is not None:
+            # Let in on the cookies a browser got: the source still needs it.
+            step = cast(Step, passed.step)
         outcome.step = step
         outcome.proxy = proxy
-        # A solved challenge is followed by the cookies on the lighter step.
-        self._hosts[host] = ("impersonate" if step in HEAVY else step, proxy)
+        # A solved challenge is followed by the cookies on the lighter step;
+        # a page drawn by script needs the browser itself every time.
+        lighter = step in HEAVY and passed is not None
+        self._hosts[host] = ("impersonate" if lighter else step, proxy)
         if self.first is None:
             self.first = outcome
         if outcome.refusals:
@@ -375,8 +387,8 @@ class Ladder:
         proxy: str | None,
         expect: Expect = "any",
     ) -> httpx.Response:
-        if step == "solver":
-            return await self._solve(url, headers, max_bytes, proxy, expect)
+        if step in HEAVY:
+            return await self._through_browser(step, url, headers, max_bytes, proxy, expect)
         passed = solver.clearance_for(url) if step != "plain" else None
         if passed is not None:
             # A challenge passed before: its cookies, from the browser that got them.
@@ -384,47 +396,60 @@ class Ladder:
         if step == "impersonate":
             if passed is not None:
                 headers = {"User-Agent": passed.user_agent, **headers}
-            return await impersonated_get(url, headers=headers, max_bytes=max_bytes, proxy=proxy)
+            return await impersonated_get(
+                url, headers=headers, max_bytes=max_bytes, proxy=proxy, like=_like(passed)
+            )
         if step == "browser_headers":
             headers = {**browser_headers(url), **headers}
             if passed is not None:
                 headers["User-Agent"] = passed.user_agent
+                if passed.firefox:
+                    # Firefox sends no client hints.
+                    headers = {k: v for k, v in headers.items() if not k.startswith("Sec-CH-")}
         return await safe_get(
             self._client_for(proxy), url, headers=headers, max_bytes=max_bytes, retry=False
         )
 
-    async def _solve(
+    async def _through_browser(
         self,
+        step: Step,
         url: str,
         headers: dict[str, str],
         max_bytes: int | None,
         proxy: str | None,
         expect: Expect,
     ) -> httpx.Response:
-        """The page through FlareSolverr; the site's own answer with the
-        cookies it gave, when it takes them, rather than the browser's view."""
-        solution = await solver.solve(url, proxy=proxy)
-        if solution.clearance is not None:
+        """The page through a browser; the site's own answer with the cookies
+        of a passed challenge, when it takes them, rather than the browser's
+        view (a feed comes as XML, not as the browser's page of it)."""
+        if step == "browser":
+            drawn = await browser.render(url, proxy=proxy)
+            final, status, html, clearance = drawn.url, drawn.status, drawn.html, drawn.clearance
+        else:
+            solution = await solver.solve(url, proxy=proxy)
+            final, status, html = solution.url, solution.status, solution.html
+            clearance = solution.clearance
+        if clearance is not None:
             again = {
-                "Cookie": solution.clearance.cookie_header,
-                "User-Agent": solution.clearance.user_agent,
+                "Cookie": clearance.cookie_header,
+                "User-Agent": clearance.user_agent,
                 **headers,
             }
             with contextlib.suppress(httpx.TransportError, RequestException):
                 response = await impersonated_get(
-                    url, headers=again, max_bytes=max_bytes, proxy=proxy
+                    url, headers=again, max_bytes=max_bytes, proxy=proxy, like=_like(clearance)
                 )
                 if await asyncio.to_thread(refusal, response, expect) is None:
                     return response
-        page = solution.html.encode()
+        page = html.encode()
         limit = max_bytes or get_settings().max_feed_bytes
         if len(page) > limit:
             raise ResponseTooLargeError(f"{url} is larger than {limit} bytes")
         return httpx.Response(
-            status_code=solution.status,
+            status_code=status,
             headers={"Content-Type": "text/html; charset=utf-8"},
             content=page,
-            request=httpx.Request("GET", solution.url),
+            request=httpx.Request("GET", final),
         )
 
 
@@ -448,6 +473,11 @@ def _worth_a_browser(climb: _Climb) -> bool:
 def _proxy_refused(climb: _Climb) -> bool:
     reason = climb.outcome.refusals[-1][1] if climb.outcome.refusals else ""
     return reason.startswith(("403", "429")) or reason == NO_ANSWER
+
+
+def _like(passed: solver.Clearance | None) -> str:
+    """Whose TLS fingerprint goes with a browser's cookies: they are bound to it."""
+    return "firefox" if passed is not None and passed.firefox else "chrome"
 
 
 def browser_headers(url: str) -> dict[str, str]:
@@ -485,8 +515,10 @@ async def impersonated_get(
     headers: dict[str, str] | None = None,
     max_bytes: int | None = None,
     proxy: str | None = None,
+    like: str = "chrome",
 ) -> httpx.Response:
-    """GET through curl_cffi with Chrome's TLS and HTTP/2 fingerprint.
+    """GET through curl_cffi with Chrome's TLS and HTTP/2 fingerprint, or
+    Firefox's (`like`) to go with the cookies the stack's browser got.
 
     Redirects are followed by hand, each hop checked; the connection goes to
     the checked address through curl's RESOLVE, so the name stays in SNI and
@@ -498,7 +530,7 @@ async def impersonated_get(
     current = url
     for _ in range(MAX_REDIRECTS + 1):
         address = await resolve_public(current)
-        response = await _impersonated_once(current, address, headers or {}, limit, proxy)
+        response = await _impersonated_once(current, address, headers or {}, limit, proxy, like)
         location = response.headers.get("location")
         if response.status_code not in {301, 302, 303, 307, 308} or not location:
             return response
@@ -507,7 +539,12 @@ async def impersonated_get(
 
 
 async def _impersonated_once(
-    url: str, address: str | None, headers: dict[str, str], limit: int, proxy: str | None
+    url: str,
+    address: str | None,
+    headers: dict[str, str],
+    limit: int,
+    proxy: str | None,
+    like: str = "chrome",
 ) -> httpx.Response:
     parts = urlsplit(url)
     host = parts.hostname or ""
@@ -522,7 +559,7 @@ async def _impersonated_once(
     async with (
         asyncio.timeout(TOTAL_TIMEOUT_SECONDS),
         AsyncSession(
-            impersonate="chrome",
+            impersonate=_TARGETS.get(like, "chrome"),
             timeout=settings.http_timeout_seconds,
             allow_redirects=False,
             trust_env=False,
@@ -551,6 +588,10 @@ async def _impersonated_once(
             content=bytes(body),
             request=httpx.Request("GET", url),
         )
+
+
+# curl_cffi's names: "chrome" is its newest Chrome; Firefox has no such alias.
+_TARGETS: dict[str, BrowserTypeLiteral] = {"chrome": "chrome", "firefox": "firefox147"}
 
 
 @cache

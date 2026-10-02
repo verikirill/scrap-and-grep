@@ -39,8 +39,11 @@ x-backend: &backend
     # or a pool tried when a site refuses the server (see .env.example).
     RADAR_HTTP_PROXY: ${RADAR_HTTP_PROXY:-}
     RADAR_HTTP_PROXIES: ${RADAR_HTTP_PROXIES:-}
-    # With the solver profile: http://flaresolverr:8191. Only the ingest
-    # worker reaches it; the reader in the api stays on the lighter steps.
+    # The headless browser for pages drawn by script and JS challenges, on
+    # by default; empty turns the step off. Only the ingest worker reaches
+    # it and FlareSolverr (the solver profile: http://flaresolverr:8191);
+    # the reader in the api stays on the lighter steps.
+    RADAR_BROWSER_URL: ${RADAR_BROWSER_URL-http://browser:8000}
     RADAR_FLARESOLVERR_URL: ${RADAR_FLARESOLVERR_URL:-}
     RADAR_FETCH_HOST_INTERVAL_SECONDS: ${RADAR_FETCH_HOST_INTERVAL_SECONDS:-1}
     RADAR_CANDIDATE_LIMIT: ${RADAR_CANDIDATE_LIMIT:-60}
@@ -457,8 +460,39 @@ services:
     ports:
       - "127.0.0.1:8089:8089"
 
-  # FlareSolverr: Chrome that passes a JS challenge when curl_cffi is refused
-  # too (ingest/solver.py). It opens addresses from the sources, so it sits
+  # The headless browser (browser/, ingest/browser.py): Camoufox, a Firefox
+  # that hides the marks of automation, for pages drawn by script and JS
+  # challenges that stop curl_cffi. It opens addresses from the sources, so
+  # it sits on the solving network with the ingest worker only, and inside
+  # it every connection goes through a proxy that reaches public addresses
+  # only. With RADAR_BROWSER_URL empty it is not asked; then also leave it
+  # out with `docker compose up --scale browser=0`.
+  browser:
+    build:
+      context: ./browser
+      additional_contexts:
+        certs: ./backend/src/radar/ingest/certs
+    image: radar-browser:local
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: ${BROWSER_MEMORY:-1g}
+    pids_limit: 512
+    shm_size: 256m
+    environment:
+      BROWSER_TABS: ${BROWSER_TABS:-2}
+      BROWSER_TIMEOUT_SECONDS: ${BROWSER_TIMEOUT_SECONDS:-30}
+      TZ: Europe/Moscow
+    networks:
+      - solving
+
+  # FlareSolverr: Chrome that passes a JS challenge when the browser is
+  # refused too (ingest/solver.py). It opens addresses from the sources, so it sits
   # on a network of its own with the ingest worker only: no route to the
   # database, the queues or the api. Set RADAR_FLARESOLVERR_URL to use it.
   flaresolverr:
@@ -494,7 +528,8 @@ networks:
   # The media worker and the services that voice and render its videos.
   rendering:
     internal: true
-  # The ingest worker and FlareSolverr. Not internal: the browser reads sites.
+  # The ingest worker, the browser and FlareSolverr. Not internal: the
+  # browsers read sites.
   solving:
 
 volumes:
