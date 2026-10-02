@@ -115,8 +115,14 @@ async def _read(article: Article) -> tuple[Body, str]:
         return stored, "stored"
     async with _pages:
         try:
-            async with build_client() as client:
-                ladder = Ladder(client, remembered=article.source.fetch_method)
+            async with (
+                build_client() as client,
+                Ladder(
+                    client,
+                    remembered=article.source.fetch_method,
+                    proxy=article.source.proxy_url,
+                ) as ladder,
+            ):
                 response = await ladder.get(article.url, max_bytes=PAGE_MAX_BYTES, expect="article")
             response.raise_for_status()
         except _UNREACHABLE as exc:

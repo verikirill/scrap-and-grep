@@ -76,10 +76,10 @@ async def _read(
         if not needs_picture:
             return _Found()
         return _Found(picture=await telegram.post_picture(client, url), looked_for_picture=True)
-    ladder = Ladder(client)
-    response = await ladder.get(
-        url, max_bytes=PAGE_MAX_BYTES, expect="article" if needs_words else "page"
-    )
+    async with Ladder(client) as ladder:
+        response = await ladder.get(
+            url, max_bytes=PAGE_MAX_BYTES, expect="article" if needs_words else "page"
+        )
     response.raise_for_status()
     text = await asyncio.to_thread(page_text, url, response.text) if needs_words else None
     picture = from_page(response.text, url) if needs_picture else None

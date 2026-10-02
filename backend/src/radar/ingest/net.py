@@ -15,6 +15,7 @@ import socket
 import ssl
 from functools import cache
 from importlib.resources import files
+from typing import Any
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
 import certifi
@@ -71,23 +72,53 @@ async def ensure_public_url(url: str) -> None:
     await resolve_public(url)
 
 
-def build_client() -> httpx.AsyncClient:
+class GuardedClient(httpx.AsyncClient):
+    """The fetcher's client, which knows whether it goes through a proxy."""
+
+    def __init__(self, *, proxy: str | None, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self.proxy_url = proxy
+
+
+def build_client(proxy: str | None = None) -> GuardedClient:
+    """The client every outbound request goes through.
+
+    `proxy` defaults to RADAR_HTTP_PROXY; an empty string means none.
+    """
     settings = get_settings()
+    chosen = (settings.http_proxy if proxy is None else proxy) or None
     # No keep-alive: connections are made to pinned addresses, and a pooled
     # one must not be reused for another host name behind the same address.
     limits = httpx.Limits(max_connections=20, max_keepalive_connections=0)
-    return httpx.AsyncClient(
+    return GuardedClient(
+        proxy=chosen,
         timeout=httpx.Timeout(settings.http_timeout_seconds, connect=10.0),
         headers={"User-Agent": settings.http_user_agent, "Accept-Encoding": "gzip, deflate"},
         transport=TrustByHost(
-            usual=httpx.AsyncHTTPTransport(verify=_tls(national=False), limits=limits),
-            national=httpx.AsyncHTTPTransport(verify=_tls(national=True), limits=limits),
+            usual=httpx.AsyncHTTPTransport(
+                verify=_tls(national=False), limits=limits, proxy=chosen
+            ),
+            national=httpx.AsyncHTTPTransport(
+                verify=_tls(national=True), limits=limits, proxy=chosen
+            ),
         ),
         follow_redirects=False,
         # Proxies from the environment are not used: their transport would
         # skip the pools above, the national CA and keep-alive limits included.
+        # A proxy is set in RADAR_HTTP_PROXY and goes through both pools.
         trust_env=False,
     )
+
+
+def proxy_name(proxy: str) -> str:
+    """The proxy without its password, fit for a log or a page."""
+    parts = urlsplit(proxy)
+    port = f":{parts.port}" if parts.port else ""
+    return f"{parts.scheme}://{parts.hostname}{port}"
+
+
+def proxy_of(client: httpx.AsyncClient) -> str | None:
+    return client.proxy_url if isinstance(client, GuardedClient) else None
 
 
 @cache
@@ -155,6 +186,11 @@ async def safe_get(
     current = url
     for _ in range(MAX_REDIRECTS + 1):
         address = await resolve_public(current)
+        if proxy_of(client):
+            # The proxy connects by name: the address is checked before the
+            # request is handed to it, and the URL goes out as it is, so that
+            # TLS through the tunnel still checks the site's own name.
+            address = None
         response = await get(client, current, address, headers or {}, limit, raise_transient=retry)
         if response.status_code not in _REDIRECT_CODES:
             return response

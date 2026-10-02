@@ -190,3 +190,39 @@ async def test_a_feed_that_refuses_the_bot_remembers_how_it_was_read(
     assert source.fetch_note == "403 на шаге «обычный запрос», прочитан через заголовки браузера"
     # The next run starts on the step that worked.
     assert ["Chrome/" in agent for agent in agents] == [False, True, True]
+
+
+async def test_a_source_gets_its_own_proxy_and_its_password_is_not_shown(
+    api: str, monkeypatch: pytest.MonkeyPatch, offline: None
+) -> None:
+    from radar.db import session_scope
+    from radar.db.models import Source
+    from radar.worker import tasks
+
+    monkeypatch.setattr(tasks.ingest_source_task, "kiq", AsyncMock())
+    feed = {
+        "kind": "rss",
+        "name": "Сайт с гео-блокировкой",
+        "feed_url": "https://geo.example.com/feed",
+        "category": "security",
+        "proxy_url": "socks5://reader:secret@proxy.example.net:1080",
+    }
+    async with administrator(api) as admin:
+        added = await admin.post("/sources", json=feed)
+        wrong = await admin.post(
+            "/sources",
+            json={**feed, "feed_url": "https://b.example.com/feed", "proxy_url": "ftp://x"},
+        )
+        source_id = added.json()["id"]
+        listed = (await admin.get("/sources")).json()
+        cleared = await admin.patch(f"/sources/{source_id}", json={"proxy_url": ""})
+
+    assert added.status_code == 201, added.text
+    assert added.json()["proxy"] == "socks5://proxy.example.net:1080"
+    assert "secret" not in str(listed)
+    assert wrong.status_code == 422
+    assert cleared.json()["proxy"] is None
+    async with session_scope() as session:
+        source = await session.get(Source, source_id)
+    assert source is not None
+    assert source.proxy_url is None

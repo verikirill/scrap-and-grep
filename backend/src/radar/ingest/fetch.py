@@ -17,6 +17,7 @@ connection pinned to the address that passed the check.
 
 import asyncio
 import contextlib
+import itertools
 import tempfile
 from collections.abc import Sequence
 from dataclasses import dataclass, field
@@ -42,6 +43,9 @@ from radar.ingest.net import (
     TOTAL_TIMEOUT_SECONDS,
     ResponseTooLargeError,
     UnsafeUrlError,
+    build_client,
+    proxy_name,
+    proxy_of,
     resolve_public,
     safe_get,
     trusts_russian_ca,
@@ -77,6 +81,7 @@ CHALLENGES: tuple[tuple[str, str], ...] = (
     ("verifying you are human", "проверка браузера"),
     ("please enable javascript and cookies to continue", "проверка браузера"),
 )
+NO_ANSWER = "нет ответа"
 THIN_FEED = "страница вместо ленты"
 JS_SHELL = "пустая страница-приложение"
 SHORT_TEXT = "текст короче порога"
@@ -92,9 +97,15 @@ class Blocked(httpx.HTTPError):
     """Every step of the ladder was refused."""
 
     def __init__(self, url: str, attempts: Sequence[tuple[str, str]]) -> None:
-        tried = "; ".join(f"{LABELS.get(step, step)}: {reason}" for step, reason in attempts)
+        tried = "; ".join(f"{label(step)}: {reason}" for step, reason in attempts)
         super().__init__(f"{url} refused every method ({tried})")
         self.attempts = tuple(attempts)
+
+
+def label(step: str) -> str:
+    """For a person: "impersonate+proxy" is "curl_cffi через прокси"."""
+    base, _, proxied = step.partition("+")
+    return LABELS.get(base, base) + (" через прокси" if proxied else "")
 
 
 @dataclass(slots=True)
@@ -103,6 +114,8 @@ class Outcome:
 
     step: str
     refusals: list[tuple[str, str]] = field(default_factory=list)
+    # The proxy the page came through, if any.
+    proxy: str | None = None
 
     @property
     def note(self) -> str | None:
@@ -110,10 +123,18 @@ class Outcome:
         if not self.refusals:
             return None
         first_step, first_reason = self.refusals[0]
-        return (
-            f"{first_reason} на шаге «{LABELS.get(first_step, first_step)}», "
-            f"прочитан через {LABELS.get(self.step, self.step)}"
-        )
+        way = label(self.step) + (f" ({proxy_name(self.proxy)})" if self.proxy else "")
+        return f"{first_reason} на шаге «{label(first_step)}», прочитан через {way}"
+
+
+@dataclass(slots=True)
+class _Climb:
+    """What one URL's way up the ladder has met so far."""
+
+    outcome: Outcome
+    last_error: Exception | None = None
+    # The first answer refused only for its content, and by which step.
+    thin: tuple[Step, httpx.Response] | None = None
 
 
 class Ladder:
@@ -121,6 +142,11 @@ class Ladder:
 
     `remembered` is the step that worked last time for the source; the run
     starts there and climbs from it, and only then tries the steps below.
+
+    `proxy` is the source's own proxy; without it RADAR_HTTP_PROXY, when
+    set, carries every request. Otherwise a site that refused every step
+    is climbed again through the proxies of RADAR_HTTP_PROXIES, the next
+    one taken whenever a proxy is refused too.
     """
 
     def __init__(
@@ -129,6 +155,7 @@ class Ladder:
         *,
         remembered: str | None = None,
         steps: Sequence[Step] | None = None,
+        proxy: str | None = None,
     ) -> None:
         self._client = client
         settings = get_settings()
@@ -139,19 +166,46 @@ class Ladder:
             if step in LADDER and (step != "impersonate" or settings.fetch_impersonate)
         )
         self._remembered = remembered if remembered in self._steps else None
-        # The step that worked for each host during this run.
-        self._hosts: dict[str, str] = {}
+        # The proxy every request goes through, when there is one.
+        self._proxy = proxy or proxy_of(client) or settings.http_proxy or None
+        self._pool = [] if self._proxy else list(settings.http_proxies)
+        # Clients for proxies other than the given client's, closed at the end.
+        self._clients: dict[str, httpx.AsyncClient] = {}
+        # The step and the proxy that worked for each host during this run.
+        self._hosts: dict[str, tuple[Step, str | None]] = {}
         # Hosts whose pages look thin on every step: taken as they are.
         self._thin_hosts: set[str] = set()
         # How the first URL read was read: the source's own address.
         self.first: Outcome | None = None
 
-    def _order(self, host: str) -> list[Step]:
-        start = self._hosts.get(host) or self._remembered
-        if start is None:
-            return list(self._steps)
-        index = self._steps.index(start)
-        return [*self._steps[index:], *self._steps[:index]]
+    async def __aenter__(self) -> Ladder:
+        return self
+
+    async def __aexit__(self, *_: object) -> None:
+        await self.aclose()
+
+    async def aclose(self) -> None:
+        clients, self._clients = self._clients, {}
+        for client in clients.values():
+            await client.aclose()
+
+    def _order(self, start: str | None) -> list[Step]:
+        for index, step in enumerate(self._steps):
+            if step == start:
+                return [*self._steps[index:], *self._steps[:index]]
+        return list(self._steps)
+
+    def _passes(self, host: str) -> list[str | None]:
+        """The proxies to climb through: the usual way first, then the pool,
+        from the proxy that worked for the host or from the next in turn."""
+        if not self._pool:
+            return [self._proxy]
+        known = self._hosts.get(host)
+        if known is not None and known[1] in self._pool:
+            first = self._pool.index(known[1])
+        else:
+            first = next(_rotation) % len(self._pool)
+        return [None, *self._pool[first:], *self._pool[:first]]
 
     async def get(
         self,
@@ -170,78 +224,142 @@ class Ladder:
         """
         await resolve_public(url)
         host = urlsplit(url).hostname or ""
-        outcome = Outcome(step="")
-        last_error: Exception | None = None
-        # The first answer refused only for its content, and by which step.
-        thin: tuple[Step, httpx.Response] | None = None
-        for step in self._order(host):
-            try:
-                response = await self._step(step, url, headers or {}, max_bytes)
-            except UnsafeUrlError, ResponseTooLargeError:
-                raise
-            except (httpx.TimeoutException, TimeoutError) as exc:
-                # Some WAFs never answer a bot: McAfee's holds the connection open.
-                outcome.refusals.append((step, "нет ответа"))
-                last_error = exc
-                continue
-            except (httpx.TransportError, RequestException) as exc:
-                outcome.refusals.append((step, f"ошибка соединения ({type(exc).__name__})"))
-                last_error = exc
-                continue
-            reason = await asyncio.to_thread(refusal, response, expect)
-            if reason in CONTENT_REASONS and host in self._thin_hosts:
-                reason = None
-            if reason is None:
-                return self._read(host, url, step, outcome, response)
-            if reason in CONTENT_REASONS and thin is None:
-                thin = (step, response)
-            outcome.refusals.append((step, reason))
-        if thin is not None:
+        known = self._hosts.get(host)
+        climb = _Climb(Outcome(step=""))
+        for proxy in self._passes(host):
+            pooled = proxy is not None and proxy != self._proxy
+            if pooled and (climb.thin is not None or not _refused(climb)):
+                # Thin pages or a site that is down: no proxy changes that.
+                break
+            start = known[0] if known is not None and known[1] == proxy else self._remembered
+            for step in self._order(start):
+                read = await self._try(climb, step, proxy, url, headers or {}, max_bytes, expect)
+                if read is not None:
+                    return self._read(host, url, step, proxy, climb.outcome, read)
+                if pooled and _proxy_refused(climb):
+                    # The site refuses this proxy too: on to the next one.
+                    break
+        outcome = climb.outcome
+        if climb.thin is not None:
             # No step read more: the site's pages are like that, and its
             # next pages are not asked for again on every step.
-            step, response = thin
+            step, response = climb.thin
             if all(reason in CONTENT_REASONS for _, reason in outcome.refusals):
                 self._thin_hosts.add(host)
                 outcome.refusals.clear()
             else:
                 outcome.refusals = [item for item in outcome.refusals if item[0] != step]
-            return self._read(host, url, step, outcome, response)
+            return self._read(host, url, step, self._proxy, outcome, response)
         if self.first is None:
             self.first = outcome
-        if last_error is not None and all(
+        if climb.last_error is not None and all(
             reason.startswith("ошибка") for _, reason in outcome.refusals
         ):
             # Not a refusal but a site that is down or unreachable.
-            raise last_error
+            raise climb.last_error
         raise Blocked(url, outcome.refusals)
 
+    async def _try(
+        self,
+        climb: _Climb,
+        step: Step,
+        proxy: str | None,
+        url: str,
+        headers: dict[str, str],
+        max_bytes: int | None,
+        expect: Expect,
+    ) -> httpx.Response | None:
+        """The response of one step, or None after noting why it is no good."""
+        pooled = proxy is not None and proxy != self._proxy
+        name = f"{step}+proxy" if pooled else step
+        refusals = climb.outcome.refusals
+        try:
+            response = await self._step(step, url, headers, max_bytes, proxy)
+        except UnsafeUrlError, ResponseTooLargeError:
+            raise
+        except (httpx.TimeoutException, TimeoutError) as exc:
+            # Some WAFs never answer a bot: McAfee's holds the connection open.
+            refusals.append((name, NO_ANSWER))
+            climb.last_error = exc
+            return None
+        except (httpx.TransportError, RequestException) as exc:
+            refusals.append((name, f"ошибка соединения ({type(exc).__name__})"))
+            climb.last_error = exc
+            return None
+        host = urlsplit(url).hostname or ""
+        reason = await asyncio.to_thread(refusal, response, expect)
+        if reason in CONTENT_REASONS and host in self._thin_hosts:
+            reason = None
+        if reason is None:
+            return response
+        if reason in CONTENT_REASONS and climb.thin is None and not pooled:
+            climb.thin = (step, response)
+        refusals.append((name, reason))
+        return None
+
     def _read(
-        self, host: str, url: str, step: Step, outcome: Outcome, response: httpx.Response
+        self,
+        host: str,
+        url: str,
+        step: Step,
+        proxy: str | None,
+        outcome: Outcome,
+        response: httpx.Response,
     ) -> httpx.Response:
         outcome.step = step
-        self._hosts[host] = step
+        outcome.proxy = proxy
+        self._hosts[host] = (step, proxy)
         if self.first is None:
             self.first = outcome
         if outcome.refusals:
             log.info("fetch_climbed", url=url, step=step, note=outcome.note)
         return response
 
+    @property
+    def client(self) -> httpx.AsyncClient:
+        """The client for the way every request goes: the proxy, if one is set."""
+        return self._client_for(self._proxy)
+
+    def _client_for(self, proxy: str | None) -> httpx.AsyncClient:
+        if proxy == proxy_of(self._client):
+            return self._client
+        key = proxy or ""
+        if key not in self._clients:
+            self._clients[key] = build_client(proxy=key)
+        return self._clients[key]
+
     async def _step(
-        self, step: Step, url: str, headers: dict[str, str], max_bytes: int | None
+        self,
+        step: Step,
+        url: str,
+        headers: dict[str, str],
+        max_bytes: int | None,
+        proxy: str | None,
     ) -> httpx.Response:
-        if step == "plain":
-            return await safe_get(
-                self._client, url, headers=headers, max_bytes=max_bytes, retry=False
-            )
+        if step == "impersonate":
+            return await impersonated_get(url, headers=headers, max_bytes=max_bytes, proxy=proxy)
         if step == "browser_headers":
-            return await safe_get(
-                self._client,
-                url,
-                headers={**browser_headers(url), **headers},
-                max_bytes=max_bytes,
-                retry=False,
-            )
-        return await impersonated_get(url, headers=headers, max_bytes=max_bytes)
+            headers = {**browser_headers(url), **headers}
+        return await safe_get(
+            self._client_for(proxy), url, headers=headers, max_bytes=max_bytes, retry=False
+        )
+
+
+# Where the next run starts in the proxy pool, so that runs share the load.
+_rotation = itertools.count()
+
+
+def _refused(climb: _Climb) -> bool:
+    """Whether the site refused the client, rather than being down."""
+    return any(
+        reason == NO_ANSWER or reason[:3].isdigit() or reason.startswith("заглушка")
+        for _, reason in climb.outcome.refusals
+    )
+
+
+def _proxy_refused(climb: _Climb) -> bool:
+    reason = climb.outcome.refusals[-1][1] if climb.outcome.refusals else ""
+    return reason.startswith(("403", "429")) or reason == NO_ANSWER
 
 
 def browser_headers(url: str) -> dict[str, str]:
@@ -278,18 +396,21 @@ async def impersonated_get(
     *,
     headers: dict[str, str] | None = None,
     max_bytes: int | None = None,
+    proxy: str | None = None,
 ) -> httpx.Response:
     """GET through curl_cffi with Chrome's TLS and HTTP/2 fingerprint.
 
     Redirects are followed by hand, each hop checked; the connection goes to
     the checked address through curl's RESOLVE, so the name stays in SNI and
-    Host. The answer comes back as an httpx response, like the other steps.
+    Host. Through a proxy the address is checked all the same, before the
+    request is handed over. The answer comes back as an httpx response, like
+    the other steps.
     """
     limit = max_bytes or get_settings().max_feed_bytes
     current = url
     for _ in range(MAX_REDIRECTS + 1):
         address = await resolve_public(current)
-        response = await _impersonated_once(current, address, headers or {}, limit)
+        response = await _impersonated_once(current, address, headers or {}, limit, proxy)
         location = response.headers.get("location")
         if response.status_code not in {301, 302, 303, 307, 308} or not location:
             return response
@@ -298,7 +419,7 @@ async def impersonated_get(
 
 
 async def _impersonated_once(
-    url: str, address: str | None, headers: dict[str, str], limit: int
+    url: str, address: str | None, headers: dict[str, str], limit: int, proxy: str | None
 ) -> httpx.Response:
     parts = urlsplit(url)
     host = parts.hostname or ""
@@ -317,6 +438,7 @@ async def _impersonated_once(
             timeout=settings.http_timeout_seconds,
             allow_redirects=False,
             trust_env=False,
+            proxy=proxy,
             curl_options=options,
         ) as session,
     ):

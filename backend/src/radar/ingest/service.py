@@ -61,12 +61,12 @@ async def ingest_source(source_id: int, client: httpx.AsyncClient, cache: Cache)
                 source.fetch_full_text,
             )
             last_post_id = source.last_post_id
-            ladder = Ladder(client, remembered=source.fetch_method)
+            ladder = Ladder(client, remembered=source.fetch_method, proxy=source.proxy_url)
 
         try:
             if kind == "telegram":
                 feed = await fetch_channel(
-                    client, feed_url, language=language, last_post_id=last_post_id
+                    ladder.client, feed_url, language=language, last_post_id=last_post_id
                 )
             elif kind == "pt_trending":
                 feed = await fetch_trending(
@@ -78,11 +78,13 @@ async def ingest_source(source_id: int, client: httpx.AsyncClient, cache: Cache)
                 )
             new_ids = await _store(source_id, feed, ladder, full_text)
         except Exception as exc:
+            await ladder.aclose()
             error = f"{type(exc).__name__}: {exc}"[:500]
             log.warning("ingest_failed", source_id=source_id, error=error)
             await _record(source_id, status="error", error=error, read=ladder.first)
             return IngestReport(source_id, "error", error=error)
 
+        await ladder.aclose()
         await _record(source_id, status=feed.status, feed=feed, read=ladder.first)
         log.info("ingest_done", source_id=source_id, status=feed.status, new=len(new_ids))
         return IngestReport(source_id, feed.status, new_articles=len(new_ids))
@@ -172,6 +174,7 @@ async def _record(
             # A run that starts on the remembered step and is let in there
             # keeps the reason the source was moved up to it.
             source.fetch_method = read.step
+            source.fetch_via_proxy = read.proxy is not None
         if feed is not None and feed.last_post_id is not None:
             # Written after the posts are stored: a failed run reads them again.
             source.last_post_id = feed.last_post_id

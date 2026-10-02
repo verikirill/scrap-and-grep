@@ -40,6 +40,7 @@ dependencies = [
     "redis[hiredis]>=8.1.0",
     "scikit-learn>=1.9.1",
     "selectolax>=0.4.13",
+    "socksio>=1.0.0",
     "sqlalchemy[asyncio]>=2.1.1",
     "stamina>=26.1.0",
     "structlog>=26.1.0",

@@ -182,6 +182,7 @@ async def _feed(payload: SourceCreate) -> Source:
         category=payload.category,
         language=payload.language,
         fetch_full_text=payload.fetch_full_text,
+        proxy_url=payload.proxy_url,
     )
 
 
@@ -192,7 +193,7 @@ async def _channel(payload: SourceCreate) -> Source:
     except ValueError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
     try:
-        async with build_client() as client:
+        async with build_client(proxy=payload.proxy_url) as client:
             title = await telegram.channel_title(client, name)
     except telegram.ChannelUnavailable as exc:
         raise HTTPException(
@@ -223,6 +224,7 @@ async def _channel(payload: SourceCreate) -> Source:
         category=payload.category,
         language=payload.language,
         fetch_full_text=payload.fetch_full_text,
+        proxy_url=payload.proxy_url,
     )
 
 

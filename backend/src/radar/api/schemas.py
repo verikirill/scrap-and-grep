@@ -7,7 +7,9 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator, model_validator
 
 from radar.auth.passwords import PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH
+from radar.config import check_proxy_url
 from radar.domain import AddableSourceKind, ProfileSpec, SourceCategory, SourceKind
+from radar.ingest.net import proxy_name
 from radar.reader.blocks import Block
 from radar.shorts.voice import VoiceOption
 from radar.views import ItemView
@@ -97,8 +99,16 @@ class SourceOut(BaseModel):
     fetch_method: str | None = None
     fetch_note: str | None = None
     fetch_changed_at: datetime | None = None
+    fetch_via_proxy: bool = False
+    # The source's own proxy, its password hidden.
+    proxy: str | None = Field(default=None, validation_alias="proxy_url")
     articles: int = 0
     articles_last_day: int = 0
+
+    @field_validator("proxy")
+    @classmethod
+    def _hide_password(cls, url: str | None) -> str | None:
+        return proxy_name(url) if url else None
 
 
 class SourceCreate(BaseModel):
@@ -112,6 +122,13 @@ class SourceCreate(BaseModel):
     category: SourceCategory
     language: Literal["ru", "en"] = "ru"
     fetch_full_text: bool = False
+    # A proxy for this source only: http://, https:// or socks5://.
+    proxy_url: str | None = Field(default=None, max_length=500)
+
+    @field_validator("proxy_url")
+    @classmethod
+    def _proxy(cls, url: str | None) -> str | None:
+        return proxy_or_none(url)
 
     @model_validator(mode="after")
     def _address(self) -> SourceCreate:
@@ -129,6 +146,18 @@ class SourceUpdate(BaseModel):
     category: SourceCategory | None = None
     enabled: bool | None = None
     fetch_full_text: bool | None = None
+    # An empty string takes the source's proxy away.
+    proxy_url: str | None = Field(default=None, max_length=500)
+
+    @field_validator("proxy_url")
+    @classmethod
+    def _proxy(cls, url: str | None) -> str | None:
+        return proxy_or_none(url)
+
+
+def proxy_or_none(url: str | None) -> str | None:
+    """A proxy address checked, or None for an empty one."""
+    return check_proxy_url(url.strip()) if url and url.strip() else None
 
 
 class ArticleOut(BaseModel):

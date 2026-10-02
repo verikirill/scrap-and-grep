@@ -35,6 +35,10 @@ x-backend: &backend
     RADAR_LLM_REASONING: ${RADAR_LLM_REASONING:-low}
     RADAR_LLM_CONCURRENCY: ${RADAR_LLM_CONCURRENCY:-4}
     RADAR_INGEST_CRON: ${RADAR_INGEST_CRON:-*/15 * * * *}
+    # Proxies for reading sources: one for every request (the corporate one),
+    # or a pool tried when a site refuses the server (see .env.example).
+    RADAR_HTTP_PROXY: ${RADAR_HTTP_PROXY:-}
+    RADAR_HTTP_PROXIES: ${RADAR_HTTP_PROXIES:-}
     RADAR_CANDIDATE_LIMIT: ${RADAR_CANDIDATE_LIMIT:-60}
     RADAR_RATE_LIMIT_PER_MINUTE: ${RADAR_RATE_LIMIT_PER_MINUTE:-120}
     RADAR_DIGEST_TASK_TIMEOUT_SECONDS: ${RADAR_DIGEST_TASK_TIMEOUT_SECONDS:-1200}

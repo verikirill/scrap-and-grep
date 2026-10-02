@@ -258,18 +258,150 @@ async def test_curl_does_not_follow_a_redirect_to_an_internal_address(
     assert [path for path, _, _ in _Site.seen] == ["/away"]
 
 
+class _Proxy(BaseHTTPRequestHandler):
+    """A forward proxy that answers itself: `status` for every request, and
+    each request it was handed kept in `seen`."""
+
+    status = 200
+    seen: list[str] = []  # noqa: RUF012
+
+    def do_GET(self) -> None:
+        type(self).seen.append(self.path)
+        body = (ARTICLE if self.status == 200 else "Forbidden").encode()
+        self.send_response(self.status)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, *_: object) -> None:
+        pass
+
+
+def _serve(handler: type[BaseHTTPRequestHandler]) -> tuple[ThreadingHTTPServer, str]:
+    server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server, f"http://127.0.0.1:{server.server_address[1]}"
+
+
+@pytest.fixture
+def proxies() -> Iterator[list[tuple[type[_Proxy], str]]]:
+    """Two proxies: the first refused by every site, the second let in."""
+    made = []
+    servers = []
+    for status in (403, 200):
+        handler = type(f"Proxy{status}", (_Proxy,), {"status": status, "seen": []})
+        server, url = _serve(handler)
+        servers.append(server)
+        made.append((handler, url))
+    yield made
+    for server in servers:
+        server.shutdown()
+        server.server_close()
+
+
+def _settings(monkeypatch: pytest.MonkeyPatch, **values: str) -> None:
+    from radar.config import get_settings
+
+    for name, value in values.items():
+        monkeypatch.setenv(f"RADAR_{name.upper()}", value)
+    get_settings.cache_clear()
+
+
+async def test_with_a_proxy_set_every_step_goes_through_it(
+    local_site: int,
+    names: None,
+    proxies: list[tuple[type[_Proxy], str]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from radar.ingest.net import build_client
+
+    (_, _), (proxy, address) = proxies
+    _settings(monkeypatch, http_proxy=address)
+    url = f"http://site.test:{local_site}/news/1"
+    async with build_client() as client, Ladder(client) as ladder:
+        for step in fetch.LADDER:
+            response = await ladder._step(step, url, {}, None, address)
+            assert response.status_code == 200
+        read = await ladder.get(url, expect="article")
+
+    assert read.status_code == 200
+    # The proxy gets the site's name, not the address checked for it.
+    assert proxy.seen == [url] * 4
+    assert _Site.seen == []
+    assert ladder.first is not None
+    assert (ladder.first.step, ladder.first.proxy) == ("plain", address)
+
+
+async def test_a_source_with_its_own_proxy_uses_it_instead_of_the_common_one(
+    local_site: int,
+    names: None,
+    proxies: list[tuple[type[_Proxy], str]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    (common, common_address), (own, own_address) = proxies
+    _settings(monkeypatch, http_proxy=common_address)
+    url = f"http://site.test:{local_site}/news/1"
+    async with httpx.AsyncClient() as client, Ladder(client, proxy=own_address) as ladder:
+        await ladder.get(url, expect="article")
+
+    assert (common.seen, own.seen) == ([], [url])
+
+
+async def test_a_site_that_refuses_every_step_is_tried_through_the_pool_in_turn(
+    names: None,
+    proxies: list[tuple[type[_Proxy], str]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    (refused, refused_address), (let_in, let_in_address) = proxies
+    _settings(monkeypatch, http_proxies=f"{refused_address},{let_in_address}")
+    monkeypatch.setattr(fetch, "_rotation", iter([0]))
+    _Site.seen = []
+    # The site refuses both httpx steps: neither sends what it wants.
+    server, _ = _serve(_Site)
+    url = f"http://site.test:{server.server_address[1]}/news/1"
+    try:
+        async with httpx.AsyncClient() as client:
+            ladder = Ladder(client, steps=["plain", "browser_headers"])
+            async with ladder:
+                read = await ladder.get(url, expect="article")
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert read.status_code == 200
+    assert [path for path, _, _ in _Site.seen] == ["/news/1", "/news/1"]
+    # The first proxy was refused on its first step and left at once.
+    assert (refused.seen, let_in.seen) == ([url], [url])
+    assert ladder.first is not None
+    assert ladder.first.proxy == let_in_address
+    assert ladder.first.note == (
+        f"403 на шаге «обычный запрос», прочитан через обычный запрос ({let_in_address})"
+    )
+    assert ladder.first.refusals[-1] == ("plain+proxy", "403")
+
+
 @pytest.mark.parametrize(
     "url",
     ["http://127.0.0.1:{port}/news/1", "http://localhost:{port}/news/1", "http://10.0.0.1/"],
 )
-async def test_no_step_reaches_an_internal_address(local_site: int, url: str) -> None:
+async def test_no_step_reaches_an_internal_address(
+    local_site: int, url: str, proxies: list[tuple[type[_Proxy], str]]
+) -> None:
+    from radar.ingest.net import build_client
+
     target = url.format(port=local_site)
-    async with httpx.AsyncClient() as client:
-        with pytest.raises(UnsafeUrlError):
-            await Ladder(client).get(target)
-        # Each step checks the address itself, not only the ladder before it.
-        for step in fetch.LADDER:
+    (_, _), (proxy, address) = proxies
+    async with httpx.AsyncClient() as client, build_client(proxy=address) as proxied:
+        for way in (client, proxied):
             with pytest.raises(UnsafeUrlError):
-                await Ladder(client)._step(step, target, {}, None)
+                await Ladder(way).get(target)
+        # Each step checks the address itself, not only the ladder before it,
+        # and through a proxy before the request is handed to it.
+        for step in fetch.LADDER:
+            for through in (None, address):
+                with pytest.raises(UnsafeUrlError):
+                    await Ladder(client)._step(step, target, {}, None, through)
 
     assert _Site.seen == []
+    assert proxy.seen == []
