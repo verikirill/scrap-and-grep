@@ -70,7 +70,11 @@ async def test_a_cve_is_found_in_the_catalogue_and_in_the_bdu(api: str) -> None:
         # The catalogue is not cleared between tests; merge keeps the run repeatable.
         await session.merge(
             KnownExploitedVulnerability(
-                cve_id="CVE-2026-88772", date_added=date(2026, 9, 27), ransomware=False
+                cve_id="CVE-2026-88772",
+                date_added=date(2026, 9, 27),
+                ransomware=False,
+                due_date=date(2026, 10, 18),
+                cwes=["CWE-787"],
             )
         )
         source = Source(
@@ -103,6 +107,8 @@ async def test_a_cve_is_found_in_the_catalogue_and_in_the_bdu(api: str) -> None:
         known, unknown = await lookup(session, ["CVE-2026-88772", "CVE-2026-11111"])
 
     assert known.kev_added == date(2026, 9, 27)
+    assert known.kev_due == date(2026, 10, 18)
+    assert known.kev_cwes == ("CWE-787",)
     assert known.bdu_id == "BDU:2026-15497"
     assert known.bdu_in_attacks is True
     assert unknown.found is False
@@ -111,3 +117,48 @@ async def test_a_cve_is_found_in_the_catalogue_and_in_the_bdu(api: str) -> None:
 def test_a_cve_is_not_found_inside_a_longer_one() -> None:
     assert _names("Идентификаторы: CVE: CVE-2024-1234.", "CVE-2024-1234")
     assert not _names("Идентификаторы: CVE: CVE-2024-12345.", "CVE-2024-1234")
+
+
+async def test_attack_techniques_come_from_the_snapshot_then_from_mitre(api: str) -> None:
+    import httpx
+    from sqlalchemy import delete
+
+    from radar.cache import get_cache
+    from radar.db import session_scope
+    from radar.db.models import AttackTechniqueRow
+    from radar.vulns import attack
+
+    async with session_scope() as session:
+        await session.execute(delete(AttackTechniqueRow))
+    # Nothing loaded yet: the snapshot in the package answers.
+    async with session_scope() as session:
+        assert await attack.lookup(session, ["T1566", "T9999"]) == {"T1566": "Phishing"}
+
+    bundle = {
+        "objects": [
+            {
+                "type": "attack-pattern",
+                "name": "Phishing (renamed)",
+                "external_references": [{"source_name": "mitre-attack", "external_id": "T1566"}],
+            }
+        ]
+    }
+
+    def mitre(request: httpx.Request) -> httpx.Response:
+        if request.headers.get("if-none-match") == '"v1"':
+            return httpx.Response(304)
+        return httpx.Response(200, json=bundle, headers={"ETag": '"v1"'})
+
+    url = "https://mitre.example/enterprise-attack.json"
+    async with httpx.AsyncClient(transport=httpx.MockTransport(mitre)) as client:
+        async with session_scope() as session:
+            kept, etag = await attack.refresh(session, client, get_cache(), url)
+        await attack.remember(get_cache(), etag)
+        async with session_scope() as session:
+            again, unchanged = await attack.refresh(session, client, get_cache(), url)
+
+    assert (kept, etag, again, unchanged) == (1, '"v1"', 1, None)
+    # Loaded: the table answers, and only for what it has.
+    async with session_scope() as session:
+        assert await attack.lookup(session, ["T1566", "T1003"]) == {"T1566": "Phishing (renamed)"}
+        await session.execute(delete(AttackTechniqueRow))

@@ -92,6 +92,8 @@ async def lookup(session: AsyncSession, values: Sequence[str]) -> list[Vulnerabi
                 update={
                     "kev_added": known.date_added if known else None,
                     "kev_ransomware": bool(known and known.ransomware),
+                    "kev_due": known.due_date if known else None,
+                    "kev_cwes": tuple(known.cwes) if known else (),
                 }
             )
         )

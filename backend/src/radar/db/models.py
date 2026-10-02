@@ -103,6 +103,18 @@ class KnownExploitedVulnerability(Base):
     ransomware: Mapped[bool] = mapped_column(Boolean, default=False)
     description: Mapped[str] = mapped_column(Text, default="")
     action: Mapped[str] = mapped_column(Text, default="")
+    due_date: Mapped[date | None] = mapped_column(Date)
+    cwes: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list, server_default="{}")
+
+
+class AttackTechniqueRow(Base):
+    """MITRE ATT&CK techniques, refreshed from MITRE once a day; a card's
+    techniques are checked against them."""
+
+    __tablename__ = "attack_techniques"
+
+    id: Mapped[str] = mapped_column(String(16), primary_key=True)
+    name: Mapped[str] = mapped_column(Text)
 
 
 class Article(Base):

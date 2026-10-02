@@ -3,6 +3,7 @@
 import asyncio
 import json
 import random
+import re
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, replace
 from typing import Any, Literal
@@ -27,6 +28,7 @@ from radar.ai import prompts
 from radar.ai.heuristic import extractive_summary
 from radar.domain import (
     AttackCard,
+    AttackTechnique,
     Candidate,
     DigestOverview,
     Grade,
@@ -42,6 +44,8 @@ from radar.domain import (
 from radar.ingest.telegram import is_post_url
 from radar.logging import get_logger
 from radar.text import numbers, split_sentences
+
+TECHNIQUE_ID = re.compile(r"^T\d{4}(?:\.\d{3})?$")
 
 log = get_logger(__name__)
 
@@ -554,11 +558,25 @@ def _attack(out: prompts.AttackOut) -> AttackCard:
         attack_date=out.attack_date.strip(),
         sectors=out.sectors.strip(),
         energy_sector=out.energy_sector,
+        vector=out.vector.strip(),
         initial_access=out.initial_access.strip(),
+        affected=out.affected.strip(),
         tools=tuple(dict.fromkeys(tool.strip()[:80] for tool in out.tools if tool.strip())),
         vulnerabilities=tuple(out.vulnerabilities),
+        techniques=_techniques(out.techniques),
         iocs=out.iocs,
+        indicators=tuple(value.strip() for value in out.indicators if value.strip()),
     )
+
+
+def _techniques(techniques: Sequence[prompts.TechniqueOut]) -> tuple[AttackTechnique, ...]:
+    """The techniques of the ATT&CK shape; the check keeps those that exist."""
+    kept = []
+    for technique in techniques:
+        identifier = technique.id.strip().upper()
+        if TECHNIQUE_ID.match(identifier):
+            kept.append(AttackTechnique(id=identifier, name=technique.name.strip()))
+    return tuple(dict.fromkeys(kept))
 
 
 def _vulnerability(out: prompts.VulnerabilityOut) -> VulnerabilityCard:
@@ -572,4 +590,7 @@ def _vulnerability(out: prompts.VulnerabilityOut) -> VulnerabilityCard:
         cvss_score=f"{out.cvss_score:g}" if out.cvss_score is not None else "",
         cvss_vector=out.cvss_vector.strip(),
         impact=out.impact.strip(),
+        cwe=tuple(dict.fromkeys(value.strip().upper() for value in out.cwe if value.strip())),
+        equipment=out.equipment.strip(),
+        protocols=out.protocols.strip(),
     )

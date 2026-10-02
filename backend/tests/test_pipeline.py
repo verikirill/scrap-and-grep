@@ -80,6 +80,10 @@ class FakeStore:
     async def vectors(self, article_ids: Sequence[int]) -> dict[int, np.ndarray]:
         return {}
 
+    async def attack_techniques(self, ids: Sequence[str]) -> dict[str, str]:
+        known = {"T1566": "Phishing"}
+        return {value: known[value] for value in ids if value in known}
+
     async def vulnerability_facts(self, ids: Sequence[str]) -> list[VulnerabilityReference]:
         # One CVE in the CISA catalogue; the rest unknown.
         return [
