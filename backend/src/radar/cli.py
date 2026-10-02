@@ -175,14 +175,7 @@ def digest(
     email: Annotated[
         str | None, typer.Option(help="Owner of the profile; the demo account if omitted.")
     ] = None,
-    days: Annotated[
-        int | None,
-        typer.Option(
-            min=1,
-            max=90,
-            help="The period; by default a day for specialists, a week for management.",
-        ),
-    ] = None,
+    days: Annotated[int, typer.Option(min=1, max=90)] = 7,
     out: Annotated[Path, typer.Option(help="Directory for the .md and .docx files.")] = Path("."),
 ) -> None:
     """Build a digest in this process and write it as Markdown and DOCX."""
@@ -191,7 +184,7 @@ def digest(
         from radar.auth import DEMO_EMAIL
         from radar.db import session_scope
         from radar.db.models import Profile, User
-        from radar.domain import AUDIENCE_PERIOD_DAYS, ProfileSpec
+        from radar.domain import ProfileSpec
         from radar.pipeline.runner import report_failure, run_digest
         from radar.render.docx import render_docx
         from radar.render.markdown import render_markdown
@@ -207,14 +200,13 @@ def digest(
             )
             if row is None:
                 raise typer.BadParameter(f"unknown profile: {profile}")
-            spec = ProfileSpec.model_validate(row.spec)
             created = await digest_store.create(
                 session,
                 user_id=row.user_id,
                 profile_id=row.id,
-                profile=spec,
+                profile=ProfileSpec.model_validate(row.spec),
                 profile_version=row.version,
-                period_start=now - timedelta(days=days or AUDIENCE_PERIOD_DAYS[spec.audience]),
+                period_start=now - timedelta(days=days),
                 period_end=now,
             )
             digest_id: uuid.UUID = created.id
