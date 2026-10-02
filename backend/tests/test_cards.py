@@ -261,3 +261,12 @@ async def test_a_year_the_entries_do_not_have_leaves_the_title(
     assert "2024" in model.prompts[1]
     assert overview.title == "Атаки на АСУ ТП"
     assert overview.highlights == ()
+
+
+def test_industry_in_the_sectors_counts_as_the_datasets_energy_sector() -> None:
+    # PhantomCore's attack on Russian industry is a high-priority example in the dataset.
+    card = AttackCard(victim_in_russia=True, sectors="промышленность", energy_sector=False)
+
+    checked, _ = check_attack(card, "PhantomCore атаковала промышленные предприятия РФ.")
+
+    assert priority("attack", ItemSummary(summary="", attack=checked)) == "high"
