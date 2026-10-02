@@ -2,7 +2,6 @@ import clsx from 'clsx'
 import {
   ChevronDown,
   Download,
-  ExternalLink,
   FileText,
   GitCompareArrows,
   Info,
@@ -26,6 +25,8 @@ import {
 import { useSeen } from '../../lib/impressions'
 import { useFeedback, useReactions } from '../../lib/queries'
 import { ReactionBar } from '../feed/ReactionBar'
+import { OriginalLink } from '../reader/OriginalLink'
+import { articlePath } from '../reader/paths'
 import { ShortPanel } from './ShortPanel'
 
 function Funnel({ digest }: { digest: Digest }) {
@@ -81,24 +82,21 @@ function ItemCard({ item, index, placement, reactions, onReact }: ItemCardProps)
       {...rowMotion(index)}
       className="group rounded-xl border border-transparent px-4 py-4 transition-colors duration-200 hover:border-outline-variant hover:bg-card"
     >
-      <a
-        href={externalHref(item.url)}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={markRead}
-        // A middle click opens a tab too, without a click event.
-        onAuxClick={(event) => {
-          // The middle button opens a tab; the right one only a menu.
-          if (event.button === 1) markRead()
-        }}
-        className="font-serif text-[17px] leading-snug font-semibold text-foreground decoration-primary/40 underline-offset-4 hover:underline"
-      >
-        {item.headline}
-        <ExternalLink
-          size={13}
-          className="ml-1.5 inline -translate-y-px text-outline opacity-0 transition-opacity group-hover:opacity-100"
-        />
-      </a>
+      <div className="flex items-start gap-1">
+        <Link
+          to={articlePath(item.article_id)}
+          onClick={markRead}
+          // A middle click opens a tab too, without a click event.
+          onAuxClick={(event) => {
+            // The middle button opens a tab; the right one only a menu.
+            if (event.button === 1) markRead()
+          }}
+          className="min-w-0 flex-1 font-serif text-[17px] leading-snug font-semibold text-foreground decoration-primary/40 underline-offset-4 hover:underline"
+        >
+          {item.headline}
+        </Link>
+        <OriginalLink url={item.url} title={item.headline} onOpen={markRead} />
+      </div>
       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
         <span className="font-medium text-foreground">{item.source_name}</span>
         <span>{formatDate(item.published_at)}</span>
@@ -244,14 +242,12 @@ function RejectedList({ items }: { items: DigestItem[] }) {
                     {item.score.toFixed(2)}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <a
-                      href={externalHref(item.url)}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <Link
+                      to={articlePath(item.article_id)}
                       className="text-sm hover:text-on-primary-container"
                     >
                       {item.title}
-                    </a>
+                    </Link>
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       {item.source_name} · {formatDate(item.published_at)}
                       {item.reason && ` · ${item.reason}`}

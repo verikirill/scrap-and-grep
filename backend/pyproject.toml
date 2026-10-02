@@ -107,5 +107,5 @@ plugins = ["pydantic.mypy"]
 files = ["src"]
 
 [[tool.mypy.overrides]]
-module = ["feedparser.*", "trafilatura.*", "pgvector.*", "sklearn.*", "docx.*", "taskiq_redis.*"]
+module = ["feedparser.*", "trafilatura.*", "lxml.*", "pgvector.*", "sklearn.*", "docx.*", "taskiq_redis.*"]
 ignore_missing_imports = true

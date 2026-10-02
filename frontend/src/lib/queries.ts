@@ -43,6 +43,7 @@ export const keys = {
   sources: ['sources'] as const,
   digests: ['digests'] as const,
   digest: (id: string) => ['digest', id] as const,
+  article: (id: number) => ['article', id] as const,
   short: (digestId: string) => ['short', digestId] as const,
 }
 
@@ -215,6 +216,19 @@ export function useSourceMutations() {
     refreshAll: useMutation({ mutationFn: api.refreshSources }),
   }
 }
+
+/** An article as the reader shows it; the page behind it is read once, by the API. */
+export const useArticle = (id: number, isEnabled: boolean) =>
+  useQuery({
+    queryKey: keys.article(id),
+    queryFn: () => api.article(id),
+    enabled: isEnabled,
+    // A text read from its page does not change. One the site would not give
+    // is asked for again: the API reads the page again after a while.
+    staleTime: (query) => (query.state.data?.complete ? Infinity : 60_000),
+    // Another article is never shown in place of this one.
+    placeholderData: undefined,
+  })
 
 export function useArticles(params: { q: string; category: string[] }) {
   return useInfiniteQuery({

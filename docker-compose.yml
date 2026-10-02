@@ -206,9 +206,10 @@ services:
     command: ["uvicorn", "radar.api.app:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
     deploy:
       replicas: ${API_REPLICAS:-2}
-    # Serves finished videos; only the media worker writes them.
+    # Serves finished videos, which only the media worker writes, and keeps
+    # copies of the pictures of articles opened in the reader.
     volumes:
-      - media:/data/media:ro
+      - media:/data/media
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health/live', timeout=3).status == 200 else 1)"]
       interval: 10s

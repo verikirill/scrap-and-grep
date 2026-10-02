@@ -3,7 +3,6 @@ import {
   BriefcaseBusiness,
   ChevronDown,
   Compass,
-  ExternalLink,
   Heart,
   Rss,
   Target,
@@ -12,11 +11,14 @@ import {
 import type { IconComponent } from '../../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router'
 import { EASE, rowMotion } from '../../components/tokens'
 import { Chip, ReadingTime } from '../../components/ui'
 import type { FeedItem, FeedReason, Placement, ReactionKind } from '../../lib/api'
-import { CATEGORY_LABELS, externalHref, formatRelative } from '../../lib/format'
+import { CATEGORY_LABELS, formatRelative } from '../../lib/format'
 import { useSeen } from '../../lib/impressions'
+import { OriginalLink } from '../reader/OriginalLink'
+import { articlePath } from '../reader/paths'
 import { ReactionBar } from './ReactionBar'
 
 const REASON_ICONS: Record<FeedReason['kind'], IconComponent> = {
@@ -143,27 +145,24 @@ export function FeedCard({ item, index, placement, onReact }: Props) {
         <ReadingTime minutes={item.reading_minutes} />
         {isRead && <span className="text-outline">прочитано</span>}
       </div>
-      <a
-        href={externalHref(item.url)}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={markRead}
-        // A middle click opens a tab too, without a click event.
-        onAuxClick={(event) => {
-          // The middle button opens a tab; the right one only a menu.
-          if (event.button === 1) markRead()
-        }}
-        className={clsx(
-          'mt-1.5 block font-serif text-[18px] leading-snug font-semibold decoration-primary/40 underline-offset-4 hover:underline',
-          isRead ? 'text-muted-foreground' : 'text-foreground',
-        )}
-      >
-        {item.title}
-        <ExternalLink
-          size={13}
-          className="ml-1.5 inline -translate-y-px text-outline opacity-0 transition-opacity group-hover:opacity-100"
-        />
-      </a>
+      <div className="mt-1.5 flex items-start gap-1">
+        <Link
+          to={articlePath(item.article_id)}
+          onClick={markRead}
+          // A middle click opens a tab too, without a click event.
+          onAuxClick={(event) => {
+            // The middle button opens a tab; the right one only a menu.
+            if (event.button === 1) markRead()
+          }}
+          className={clsx(
+            'min-w-0 flex-1 font-serif text-[18px] leading-snug font-semibold decoration-primary/40 underline-offset-4 hover:underline',
+            isRead ? 'text-muted-foreground' : 'text-foreground',
+          )}
+        >
+          {item.title}
+        </Link>
+        <OriginalLink url={item.url} title={item.title} onOpen={markRead} />
+      </div>
       {item.summary && (
         <p className="mt-2 line-clamp-3 text-sm text-foreground/85">{item.summary}</p>
       )}

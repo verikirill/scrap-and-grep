@@ -16,6 +16,7 @@ const loaders = {
   '/welcome': () => import('./pages/WelcomePage'),
   '/share': () => import('./pages/SharePage'),
   '/analytics': () => import('./pages/AnalyticsPage'),
+  '/articles': () => import('./pages/ArticlePage'),
 } as const
 
 type Path = keyof typeof loaders
@@ -53,6 +54,9 @@ export const AccountPage = lazy(() =>
 export const SharePage = lazy(() => loaders['/share']().then((m) => ({ default: m.SharePage })))
 export const AnalyticsPage = lazy(() =>
   loaders['/analytics']().then((m) => ({ default: m.AnalyticsPage })),
+)
+export const ArticlePage = lazy(() =>
+  loaders['/articles']().then((m) => ({ default: m.ArticlePage })),
 )
 export const WelcomePage = lazy(() =>
   loaders['/welcome']().then((m) => ({ default: m.WelcomePage })),

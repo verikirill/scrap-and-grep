@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Атака на подстанцию: как это было | Новости ИБ</title>
+<meta property="og:image" content="https://news.example/pics/lead.jpg">
+<style>.ad { color: red }</style>
+<script>window.tracker = 1</script>
+</head>
+<body>
+<header><img src="https://news.example/static/logo.svg" alt="Новости ИБ"><nav><a href="/">Главная</a> <a href="/ib">ИБ</a></nav></header>
+<main>
+<article>
+<h1>Атака на подстанцию: как это было</h1>
+<figure><img src="/pics/scheme.png" alt="Схема сети подстанции с точкой входа злоумышленника"><figcaption>Схема сети</figcaption></figure>
+<p>Злоумышленники проникли в сеть <b>подстанции 110 кВ</b> через VPN-шлюз подрядчика. Подробности - в <a href="https://cert.example/advisory/42">бюллетене CERT</a>, а <a href="javascript:alert(1)">эта ссылка</a> никуда не ведёт.</p>
+<p>Уязвимость CVE-2026-11111 в шлюзе позволяла войти без пароля, если в конфигурации включён параметр <code>legacy_auth</code>. Производитель выпустил исправление ещё в августе, но обновились не все.</p>
+<h2>Содержание</h2>
+<h2>Что сделали атакующие</h2>
+<ol>
+<li>Нашли шлюз в открытом доступе.</li>
+<li>Вошли с учётной записью подрядчика.</li>
+<li>Изменили уставки релейной защиты.</li>
+</ol>
+<blockquote><p>Мы увидели изменения уставок только через сутки, когда сработала защита.</p></blockquote>
+<p>Чтобы отключить старую аутентификацию, достаточно двух команд:</p>
+<pre><code>    set legacy_auth off
+    commit</code></pre>
+<table>
+<tr><th>Версия</th><th>Исправлена</th></tr>
+<tr><td>4.2</td><td>4.2.7</td></tr>
+<tr><td>5.0</td><td>5.0.3</td></tr>
+</table>
+<p>Специалисты рекомендуют проверить журналы шлюза за последние три месяца и сменить пароли учётных записей подрядчиков, у которых был удалённый доступ.</p>
+</article>
+</main>
+<footer><p>© Новости ИБ, 2026. Все права защищены.</p></footer>
+</body>
+</html>

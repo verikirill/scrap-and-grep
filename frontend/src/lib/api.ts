@@ -130,6 +130,44 @@ export interface Article {
   language: string
   tags: string[]
   published_at: string
+  /** In a search: found by the words of the query, or only by its meaning. */
+  match?: 'words' | 'meaning' | null
+}
+
+/** A run of text with one set of marks; `href` is always http(s). */
+export interface Span {
+  text: string
+  b?: boolean
+  i?: boolean
+  code?: boolean
+  href?: string
+}
+
+export type Block =
+  | { type: 'p'; spans: Span[] }
+  | { type: 'quote'; spans: Span[] }
+  | { type: 'h'; level: 2 | 3 | 4 | 5; text: string }
+  | { type: 'list'; ordered: boolean; items: Span[][] }
+  | { type: 'code'; text: string }
+  | { type: 'image'; id: string; alt?: string }
+  | { type: 'table'; head: string[] | null; rows: string[][] }
+
+/** An article opened in the app: its text as blocks, read from its page. */
+export interface ArticleRead {
+  id: number
+  url: string
+  title: string
+  author: string | null
+  source_id: number
+  source_name: string
+  source_category: SourceCategory
+  language: string
+  tags: string[]
+  published_at: string
+  reading_minutes: number | null
+  /** False when the page could not be read and the feed's text stands in. */
+  complete: boolean
+  blocks: Block[]
 }
 
 export interface Page<T> {
@@ -732,6 +770,10 @@ export const api = {
     offset: number
   }) => request<Page<Article>>(`/articles${query(params)}`),
   timeline: (days: number) => request<TimelinePoint[]>(`/articles/timeline${query({ days })}`),
+  article: (id: number) => request<ArticleRead>(`/articles/${id}`),
+  /** A picture of an opened article, fetched by the API from the address the page gave. */
+  articleImageUrl: (articleId: number, imageId: string) =>
+    `${API_BASE}/articles/${articleId}/images/${encodeURIComponent(imageId)}`,
 
   digests: (profileId?: string) =>
     request<DigestSummary[]>(`/digests${query({ profile_id: profileId, limit: 40 })}`),

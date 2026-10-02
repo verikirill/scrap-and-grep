@@ -2,11 +2,14 @@ import clsx from 'clsx'
 import { FileText, Search } from '../../components/icons'
 import { motion } from 'motion/react'
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router'
 import { EASE, rowMotion } from '../../components/tokens'
 import { Button, Card, Chip, EmptyState, ErrorNote, Spinner } from '../../components/ui'
 import type { SourceCategory, TimelinePoint } from '../../lib/api'
-import { CATEGORY_LABELS, externalHref, formatDateTime, formatNumber } from '../../lib/format'
+import { CATEGORY_LABELS, formatDateTime, formatNumber } from '../../lib/format'
 import { useArticles, useTimeline } from '../../lib/queries'
+import { OriginalLink } from '../reader/OriginalLink'
+import { articlePath } from '../reader/paths'
 
 const CATEGORIES = Object.keys(CATEGORY_LABELS) as SourceCategory[]
 const TIMELINE_DAYS = 14
@@ -142,7 +145,8 @@ export function ArticlesList() {
       >
         {pages && items.length === 0 && (
           <EmptyState icon={<FileText size={22} />} title="Ничего не найдено">
-            Попробуйте другие слова. Поиск учитывает формы слов на русском и английском.
+            Попробуйте другие слова. Поиск учитывает формы слов и смысл запроса, в том числе на
+            другом языке.
           </EmptyState>
         )}
         {!pages && articles.isLoading && (
@@ -155,14 +159,21 @@ export function ArticlesList() {
         <ul className="divide-y divide-outline-variant">
           {items.map((article, index) => (
             <motion.li key={article.id} {...rowMotion(index % PAGE_SIZE)} className="px-5 py-3">
-              <a
-                href={externalHref(article.url)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm font-medium hover:text-on-primary-container"
-              >
-                {article.title}
-              </a>
+              {/* Matches by meaning come after those with the words, under a line of their own. */}
+              {article.match === 'meaning' && items[index - 1]?.match !== 'meaning' && (
+                <p className="-mx-5 -mt-3 mb-3 bg-surface-container px-5 py-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                  Похоже по смыслу
+                </p>
+              )}
+              <div className="group flex items-start gap-1">
+                <Link
+                  to={articlePath(article.id)}
+                  className="min-w-0 flex-1 text-sm font-medium hover:text-on-primary-container"
+                >
+                  {article.title}
+                </Link>
+                <OriginalLink url={article.url} title={article.title} />
+              </div>
               {article.summary && (
                 <p className="mt-0.5 line-clamp-2 text-[13px] text-muted-foreground">
                   {article.summary}
@@ -173,6 +184,9 @@ export function ArticlesList() {
                 <span>{formatDateTime(article.published_at)}</span>
                 <Chip>{CATEGORY_LABELS[article.source_category]}</Chip>
                 {article.has_full_text && <Chip tone="ok">полный текст</Chip>}
+                {article.match === 'meaning' && (
+                  <Chip title="Слов запроса в статье нет, но она о том же">по смыслу</Chip>
+                )}
               </p>
             </motion.li>
           ))}
