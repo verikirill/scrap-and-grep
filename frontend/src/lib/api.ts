@@ -395,6 +395,14 @@ export interface Me extends User {
   resume_status: ResumeStatus | null
   /** The reader's picture; a new one gets a new address. */
   avatar_url: string | null
+  feed_view: FeedView
+}
+
+/** How the feed looks: cards with the reasons in full, or posts as in a Telegram channel. */
+export type FeedView = 'cards' | 'telegram'
+
+export interface Settings {
+  feed_view: FeedView
 }
 
 export type Cadence = 'daily' | 'weekdays' | 'weekly'
@@ -459,6 +467,8 @@ export interface FeedItem {
   explore: boolean
   /** Minutes to read the full text; null until its page has been read. */
   reading_minutes: number | null
+  /** The article has a picture of its own, at api.articlePictureUrl. */
+  has_picture: boolean
   reasons: FeedReason[]
   /** Contribution of each part of the evidence; empty for saved items. */
   parts: Record<string, number>
@@ -657,6 +667,8 @@ export const api = {
   demoLogin: () => request<User>('/auth/demo', { method: 'POST' }),
   logout: () => request<void>('/auth/logout', { method: 'POST' }),
   deleteAccount: (password: string) => request<void>('/auth/me/delete', json('POST', { password })),
+  updateSettings: (settings: Settings) =>
+    request<Settings>('/auth/me/settings', json('PATCH', settings)),
   mcpKeys: () => request<McpKey[]>('/mcp/keys'),
   /** The picture goes as the raw body; the server squares and re-encodes it. */
   uploadAvatar: (file: File) =>
@@ -771,6 +783,8 @@ export const api = {
   }) => request<Page<Article>>(`/articles${query(params)}`),
   timeline: (days: number) => request<TimelinePoint[]>(`/articles/timeline${query({ days })}`),
   article: (id: number) => request<ArticleRead>(`/articles/${id}`),
+  /** The article's own picture, the one a post in the feed shows. */
+  articlePictureUrl: (articleId: number) => `${API_BASE}/articles/${articleId}/picture`,
   /** A picture of an opened article, fetched by the API from the address the page gave. */
   articleImageUrl: (articleId: number, imageId: string) =>
     `${API_BASE}/articles/${articleId}/images/${encodeURIComponent(imageId)}`,

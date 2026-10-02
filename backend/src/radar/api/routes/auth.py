@@ -4,7 +4,7 @@ import asyncio
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 
 from radar.api.deps import (
@@ -16,7 +16,17 @@ from radar.api.deps import (
     rate_limit,
     user_rate_limit,
 )
-from radar.api.schemas import AvatarOut, LoginIn, MeOut, PasswordIn, RegisterIn, UserOut
+from radar.api.schemas import (
+    AvatarOut,
+    FeedView,
+    LoginIn,
+    MeOut,
+    PasswordIn,
+    RegisterIn,
+    SettingsIn,
+    SettingsOut,
+    UserOut,
+)
 from radar.api.uploads import read_limited
 from radar.auth import service
 from radar.auth import sessions as auth_sessions
@@ -38,6 +48,7 @@ _auth_limit = Depends(rate_limit("auth", lambda settings: settings.auth_rate_lim
 _avatar_limit = Depends(
     user_rate_limit("avatar", lambda settings: settings.resume_rate_limit_per_minute)
 )
+_write_limit = Depends(user_rate_limit("write", lambda settings: settings.rate_limit_per_minute))
 AVATAR_PATH = "/api/v1/auth/me/avatar"
 _DECODING = asyncio.Semaphore(2)
 
@@ -178,6 +189,7 @@ async def me(user: OptionalUser, session: SessionDep) -> MeOut | None:
     avatar_at = await session.scalar(
         select(UserAvatar.updated_at).where(UserAvatar.user_id == user.id)
     )
+    feed_view = await session.scalar(select(User.feed_view).where(User.id == user.id))
     return MeOut(
         id=user.id,
         email=user.email,
@@ -187,7 +199,23 @@ async def me(user: OptionalUser, session: SessionDep) -> MeOut | None:
         profiles=int(profiles or 0),
         resume_status=resume_status,
         avatar_url=_avatar_url(avatar_at),
+        feed_view=_feed_view(feed_view),
     )
+
+
+def _feed_view(stored: str | None) -> FeedView:
+    return "telegram" if stored == "telegram" else "cards"
+
+
+@router.patch("/me/settings", dependencies=[_write_limit])
+async def update_settings(
+    payload: SettingsIn, user: CurrentUser, session: SessionDep
+) -> SettingsOut:
+    """The reader's choices about how the app looks, kept with the account."""
+    await session.execute(
+        update(User).where(User.id == user.id).values(feed_view=payload.feed_view)
+    )
+    return SettingsOut(feed_view=payload.feed_view)
 
 
 def _avatar_url(updated_at: datetime | None) -> str | None:

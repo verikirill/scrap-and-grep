@@ -1,5 +1,22 @@
 import { describe, expect, it } from 'vitest'
-import { formatDuration } from './format'
+import { formatDuration, formatPostTime } from './format'
+
+describe('formatPostTime', () => {
+  // 00:30 on 2 October in Moscow, still 1 October in UTC.
+  const now = new Date('2026-10-01T21:30:00Z')
+
+  it('shows only the time for a post of today in Moscow', () => {
+    expect(formatPostTime('2026-10-01T21:05:00Z', now)).toBe('00:05')
+  })
+
+  it('calls the Moscow day before yesterday even when UTC says today', () => {
+    expect(formatPostTime('2026-10-01T20:00:00Z', now)).toBe('вчера, 23:00')
+  })
+
+  it('gives the date for anything older', () => {
+    expect(formatPostTime('2026-09-29T08:15:00Z', now)).toBe('29 сент., 11:15')
+  })
+})
 
 describe('formatDuration', () => {
   it('shows a video length as a player does', () => {

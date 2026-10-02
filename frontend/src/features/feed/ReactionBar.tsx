@@ -51,6 +51,8 @@ type Props = {
   /** Hiding makes sense in a feed; a digest keeps every selected item in place. */
   canHide?: boolean
   isDisabled?: boolean
+  /** Square icons, or round pills under a post as Telegram draws reactions. */
+  look?: 'icons' | 'pills'
   className?: string
 }
 
@@ -61,11 +63,12 @@ export function ReactionBar({
   onReact,
   canHide = true,
   isDisabled = false,
+  look = 'icons',
   className,
 }: Props) {
   const actions = canHide ? ACTIONS : ACTIONS.filter((action) => action.kind !== 'hide')
   return (
-    <div className={clsx('flex items-center gap-0.5', className)}>
+    <div className={clsx('flex items-center', look === 'pills' ? 'gap-1.5' : 'gap-0.5', className)}>
       {actions.map(({ kind, icon: Icon, label, activeLabel, activeClass }) => {
         const isActive = reactions.includes(kind)
         return (
@@ -81,10 +84,13 @@ export function ReactionBar({
             title={isActive ? activeLabel : label}
             onClick={() => onReact(kind, !isActive)}
             className={clsx(
-              'grid size-8 place-items-center rounded-lg transition-colors duration-150 disabled:opacity-40',
+              'grid place-items-center transition-colors duration-150 disabled:opacity-40',
+              look === 'pills' ? 'h-8 min-w-11 rounded-full px-3' : 'size-8 rounded-lg',
               isActive
                 ? activeClass
-                : 'text-outline hover:bg-surface-container hover:text-foreground',
+                : look === 'pills'
+                  ? 'bg-primary/10 text-primary hover:bg-primary/15'
+                  : 'text-outline hover:bg-surface-container hover:text-foreground',
             )}
           >
             <Icon size={16} fill={isActive && kind !== 'hide' ? 'currentColor' : 'none'} />

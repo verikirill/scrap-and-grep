@@ -76,7 +76,12 @@ async def get_feed(
         offset=offset,
         snapshot=snapshot,
     )
-    await measure_soon(item.article_id for item in page.items if item.reading_minutes is None)
+    # Pages of the shown articles are read for a length or a picture they lack.
+    await measure_soon(
+        item.article_id
+        for item in page.items
+        if item.reading_minutes is None or not item.has_picture
+    )
     await record.served(session, user, page)
     return FeedOut(
         items=page.items,

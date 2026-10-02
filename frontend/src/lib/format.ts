@@ -14,6 +14,19 @@ const dateTimeFormat = new Intl.DateTimeFormat('ru-RU', {
   minute: '2-digit',
   timeZone: MOSCOW,
 })
+const timeFormat = new Intl.DateTimeFormat('ru-RU', {
+  hour: '2-digit',
+  minute: '2-digit',
+  timeZone: MOSCOW,
+})
+// A calendar day in Moscow as 2026-10-02, to tell today from yesterday.
+const dayFormat = new Intl.DateTimeFormat('en-CA', {
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  timeZone: MOSCOW,
+})
+const DAY_MS = 86_400_000
 const numberFormat = new Intl.NumberFormat('ru-RU')
 const relativeFormat = new Intl.RelativeTimeFormat('ru-RU', { numeric: 'auto' })
 
@@ -32,6 +45,17 @@ export function formatRelative(iso: string, now: number = Date.now()): string {
     if (Math.abs(seconds) >= size) return relativeFormat.format(Math.round(seconds / size), unit)
   }
   return 'только что'
+}
+
+/** When a post came out, as a chat shows it: "14:05" today, "вчера, 14:05", "30 сент., 14:05". */
+export function formatPostTime(iso: string, now: Date = new Date()): string {
+  const date = new Date(iso)
+  const day = dayFormat.format(date)
+  if (day === dayFormat.format(now)) return timeFormat.format(date)
+  if (day === dayFormat.format(new Date(now.getTime() - DAY_MS))) {
+    return `вчера, ${timeFormat.format(date)}`
+  }
+  return dateTimeFormat.format(date)
 }
 
 export function formatPeriod(startIso: string, endIso: string): string {

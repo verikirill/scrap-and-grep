@@ -7,10 +7,11 @@ import { Link, useSearchParams } from 'react-router'
 import { EASE, buttonClass } from '../components/tokens'
 import { Button, Card, EmptyState, ErrorNote, PageHeader } from '../components/ui'
 import { FeedCard } from '../features/feed/FeedCard'
+import { PostCard } from '../features/feed/PostCard'
 import { TastePanel } from '../features/feed/TastePanel'
-import type { FeedItem, Placement, ReactionKind } from '../lib/api'
+import type { FeedItem, FeedView, Placement, ReactionKind } from '../lib/api'
 import { formatRelative, plural } from '../lib/format'
-import { keys, useFeed, useFeedback, useSaved, useTaste } from '../lib/queries'
+import { keys, useFeed, useFeedback, useMe, useSaved, useTaste } from '../lib/queries'
 
 const TABS = [
   { id: 'feed', label: 'Лента', icon: Sparkles },
@@ -20,12 +21,34 @@ const TABS = [
 // Signals that change what the next feed looks like.
 const TEACHING: ReactionKind[] = ['like', 'dislike', 'save', 'hide']
 
-function Skeletons() {
+function Skeletons({ view }: { view: FeedView }) {
+  if (view === 'telegram') {
+    return (
+      <div className="space-y-3" role="status" aria-label="Собираем ленту">
+        {[0, 1, 2].map((row) => (
+          <div key={row} className="flex items-end gap-2.5">
+            <div className="skeleton size-10 shrink-0 rounded-full" />
+            <div className="skeleton h-72 flex-1 rounded-2xl rounded-bl-md" />
+          </div>
+        ))}
+      </div>
+    )
+  }
   return (
     <div className="space-y-3" role="status" aria-label="Собираем ленту">
       {[0, 1, 2, 3].map((row) => (
         <div key={row} className="skeleton h-32" />
       ))}
+    </div>
+  )
+}
+
+/** The Telegram look sits on a chat's wallpaper, in a column of a chat's width. */
+function PostColumn({ view, children }: { view: FeedView; children: React.ReactNode }) {
+  if (view !== 'telegram') return <div className="space-y-3">{children}</div>
+  return (
+    <div className="chat-wallpaper -mx-4 px-3 py-4 sm:mx-0 sm:rounded-3xl sm:px-5 sm:py-5">
+      <div className="mx-auto max-w-[600px] space-y-3">{children}</div>
     </div>
   )
 }
@@ -41,6 +64,9 @@ export function FeedPage() {
   const feed = useFeed()
   const saved = useSaved(tab === 'saved')
   const taste = useTaste()
+  // Chosen on the account page; the cards until the account says otherwise.
+  const view: FeedView = useMe().data?.feed_view ?? 'cards'
+  const Item = view === 'telegram' ? PostCard : FeedCard
   const feedback = useFeedback()
   const client = useQueryClient()
   // Reactions given since the feed was built: they are saved at once, but the
@@ -185,7 +211,9 @@ export function FeedPage() {
           )}
 
           {list.isPending ? (
-            <Skeletons />
+            <PostColumn view={view}>
+              <Skeletons view={view} />
+            </PostColumn>
           ) : items.length === 0 ? (
             <Card>
               {tab === 'saved' ? (
@@ -201,9 +229,9 @@ export function FeedPage() {
               )}
             </Card>
           ) : (
-            <>
+            <PostColumn view={view}>
               {items.map((item, index) => (
-                <FeedCard
+                <Item
                   key={item.article_id}
                   item={item}
                   index={index}
@@ -221,7 +249,7 @@ export function FeedPage() {
                   </Button>
                 </div>
               )}
-            </>
+            </PostColumn>
           )}
           {tab === 'feed' && generatedAt && items.length > 0 && (
             <p className="pt-1 text-center text-xs text-outline">

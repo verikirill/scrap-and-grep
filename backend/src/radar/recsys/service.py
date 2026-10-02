@@ -93,6 +93,9 @@ class FeedItem(BaseModel):
     reactions: list[str] = []
     # Known once the full text has been read; None for a teaser.
     reading_minutes: int | None = None
+    # The article has a picture: /articles/{id}/picture shows it. Read
+    # with each page, as one is often found after the feed was ranked.
+    has_picture: bool = False
     # Why it is in the list (ranked, explore, newest, saved) and where: the
     # reader's browser sends both back with what the reader did.
     slot: str = SLOT_RANKED
@@ -609,12 +612,14 @@ async def feed_page(
     page = items[offset : offset + limit]
     # Reactions are read live: the snapshot may be half an hour old.
     current = await store.reactions(session, user_id, [item.article_id for item in page])
+    pictured = await _pictured(session, [item.article_id for item in page])
     return FeedPage(
         items=[
             item.model_copy(
                 update={
                     "reactions": sorted(current.get(item.article_id, [])),
                     "position": offset + index + 1,
+                    "has_picture": item.article_id in pictured,
                 }
             )
             for index, item in enumerate(page)
@@ -632,6 +637,7 @@ async def saved_page(
     ranked = [Ranked(article_id, 0.0, {}, {}) for article_id in ids]
     cards = await _cards(session, ranked, Reader(taste=Taste()))
     current = await store.reactions(session, user_id, ids)
+    pictured = await _pictured(session, ids)
     return (
         [
             card.model_copy(
@@ -639,12 +645,23 @@ async def saved_page(
                     "reactions": sorted(current.get(card.article_id, [])),
                     "slot": SLOT_SAVED,
                     "position": offset + index + 1,
+                    "has_picture": card.article_id in pictured,
                 }
             )
             for index, card in enumerate(cards)
         ],
         total,
     )
+
+
+async def _pictured(session: AsyncSession, ids: Sequence[int]) -> set[int]:
+    """Those of the articles that have a picture."""
+    if not ids:
+        return set()
+    rows = await session.scalars(
+        select(Article.id).where(Article.id.in_(ids), Article.image_url.is_not(None))
+    )
+    return set(rows)
 
 
 async def taste_summary(session: AsyncSession, cache: Cache, user_id: uuid.UUID) -> TasteOut:
