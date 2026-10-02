@@ -16,6 +16,7 @@ from radar.events import enabled as events_enabled
 from radar.events import writer as event_writer
 from radar.images.store import get_image_store
 from radar.ingest import avatars
+from radar.ingest.detect import DETECT_TTL_SECONDS, NotFound, detect, detect_key, detected_json
 from radar.ingest.measure import measure
 from radar.ingest.net import build_client
 from radar.ingest.service import embed_pending, enabled_source_ids, ingest_source
@@ -98,6 +99,23 @@ async def ingest_source_task(source_id: int) -> dict[str, object]:
     if report.new_articles:
         await embed_pending_task.kiq()
     return {"source_id": source_id, "status": report.status, "new": report.new_articles}
+
+
+@ingest_broker.task(task_name="detect_source")
+async def detect_source_task(request_id: str, address: str, selector: str | None = None) -> None:
+    """What an address is and how to read it, for the api that waits on the
+    answer: it runs here, where the browser is (ingest/detect.py)."""
+    result: dict[str, object]
+    async with build_client() as client:
+        try:
+            found = await detect(address, client, selector)
+            result = {"ok": True, "found": detected_json(found)}
+        except NotFound as exc:
+            result = {"ok": False, "error": str(exc)}
+        except Exception as exc:
+            log.warning("detect_failed", address=address[:200], error=type(exc).__name__)
+            result = {"ok": False, "error": "Не удалось проверить адрес. Попробуйте ещё раз."}
+    await get_cache().set_json(detect_key(request_id), result, ttl=DETECT_TTL_SECONDS)
 
 
 @ingest_broker.task(task_name="measure_articles")
