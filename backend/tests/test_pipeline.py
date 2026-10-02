@@ -456,3 +456,41 @@ async def test_a_card_keeps_only_the_references_about_its_own_vulnerability() ->
 
     # The BDU id is covered by the CVE's entry: nothing left to look up.
     assert [reference.id for reference in entry.references] == ["CVE-2026-92370"]
+
+
+class ModelGrades(CountingIntelligence):
+    """A model's grades, as the cache keeps them: by_model is set."""
+
+    async def grade(self, candidate: Candidate, profile: ProfileSpec) -> Grade:
+        grade = await super().grade(candidate, profile)
+        return grade.model_copy(update={"by_model": True})
+
+
+async def test_the_second_audience_takes_its_grades_from_the_first(
+    profile: ProfileSpec, security_week: list[ArticleRef]
+) -> None:
+    from radar.ai.resilient import CachedIntelligence
+    from tests.test_resilience import MemoryCache
+
+    model = ModelGrades()
+    cached = CachedIntelligence(model, MemoryCache())  # type: ignore[arg-type]
+    specialist = profile.model_copy(update={"max_items": 10})
+    management = specialist.model_copy(update={"audience": "management"})
+    stores = []
+    for audience, spec in (("specialist", specialist), ("management", management)):
+        store = FakeStore(security_week)
+        graph = build_graph(_deps(store, cached)).compile(checkpointer=InMemorySaver())
+        await graph.ainvoke(_input(spec), {"configurable": {"thread_id": audience}})
+        stores.append(store)
+        if audience == "specialist":
+            graded_once, written_once = model.grade_calls, model.summary_calls
+
+    # One grading for both: the audience changes how an entry is written, not its grade.
+    assert graded_once > 0
+    assert model.grade_calls == graded_once
+    assert model.summary_calls > written_once
+    first, second = (store.saved for store in stores)
+    assert first is not None
+    assert second is not None
+    assert [topic.title for topic in first["topics"][:2]] == ["Атаки", "Уязвимости"]
+    assert not {"Атаки", "Уязвимости"} & {topic.title for topic in second["topics"]}

@@ -10,6 +10,7 @@ from radar.cards import TAG_LABELS, attack_rows, priority_reason, reference_rows
 from radar.db.models import Digest, DigestItem
 from radar.domain import (
     AttackCard,
+    Audience,
     ItemSummary,
     ManagementTag,
     Priority,
@@ -95,6 +96,9 @@ class DigestSummaryView(BaseModel):
     profile_id: uuid.UUID | None
     profile_name: str
     profile_version: int
+    # Who the digest was written for; for both audiences of one profile the
+    # two digests differ in this alone.
+    audience: Audience = "specialist"
     period_start: datetime
     period_end: datetime
     status: str
@@ -168,6 +172,7 @@ def digest_summary(digest: Digest) -> DigestSummaryView:
         profile_id=digest.profile_id,
         profile_name=digest.profile_spec.get("name", ""),
         profile_version=digest.profile_version,
+        audience=digest.profile_spec.get("audience", "specialist"),
         period_start=digest.period_start,
         period_end=digest.period_end,
         status=digest.status,

@@ -62,11 +62,14 @@ async def _load_done(session: SessionDep, user: CurrentUser, digest_id: uuid.UUI
     return digest_view(digest)
 
 
-@router.post("/digests", status_code=status.HTTP_202_ACCEPTED, dependencies=[_digest_limit])
-async def create_digest(
-    payload: DigestCreate, session: SessionDep, settings: SettingsDep, user: CurrentUser
-) -> DigestSummaryView:
-    """Register a digest and queue its build. Progress is at /digests/{id}/events."""
+async def _ready_to_build(
+    payload: DigestCreate,
+    session: SessionDep,
+    settings: SettingsDep,
+    user: CurrentUser,
+    builds: int,
+) -> Profile:
+    """The reader's profile, once there is room for this many more builds."""
     profile = (
         await session.execute(
             select(Profile).where(Profile.id == payload.profile_id, Profile.user_id == user.id)
@@ -75,14 +78,47 @@ async def create_digest(
     if profile is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Профиль не найден.")
     if (
-        await digest_store.count_active(session, user.id) >= digest_store.MAX_ACTIVE_PER_USER
-        or await digest_store.count_active(session) >= settings.max_active_digests
+        await digest_store.count_active(session, user.id) + builds
+        > digest_store.MAX_ACTIVE_PER_USER
+        or await digest_store.count_active(session) + builds > settings.max_active_digests
     ):
         raise HTTPException(
             status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Уже собирается несколько выпусков. Дождитесь их завершения.",
             headers={"Retry-After": "30"},
         )
+    return profile
+
+
+async def _queue(session: SessionDep, digests: list[Digest]) -> list[DigestSummaryView]:
+    """Queue the build of one digest, or of two, the second after the first."""
+    # The worker must find the rows, so commit before the task is queued.
+    await session.commit()
+    ids = [str(digest.id) for digest in digests]
+    try:
+        if len(ids) > 1:
+            await build_digest.kiq(ids[0], then=ids[1])
+        else:
+            await build_digest.kiq(ids[0])
+    except Exception as exc:
+        log.exception("digest_enqueue_failed", digest_ids=ids)
+        for digest in digests:
+            await digest_store.mark_failed(session, digest.id, "Очередь задач недоступна.")
+        await session.commit()
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE, detail="Очередь задач недоступна."
+        ) from exc
+    for digest in digests:
+        await session.refresh(digest)
+    return [digest_summary(digest) for digest in digests]
+
+
+@router.post("/digests", status_code=status.HTTP_202_ACCEPTED, dependencies=[_digest_limit])
+async def create_digest(
+    payload: DigestCreate, session: SessionDep, settings: SettingsDep, user: CurrentUser
+) -> DigestSummaryView:
+    """Register a digest and queue its build. Progress is at /digests/{id}/events."""
+    profile = await _ready_to_build(payload, session, settings, user, builds=1)
     spec = ProfileSpec.model_validate(profile.spec)
     end = payload.period_end or datetime.now(UTC)
     days = payload.period_days or AUDIENCE_PERIOD_DAYS[spec.audience]
@@ -96,19 +132,36 @@ async def create_digest(
         period_start=start,
         period_end=end,
     )
-    # The worker must find the row, so commit before the task is queued.
-    await session.commit()
-    try:
-        await build_digest.kiq(str(digest.id))
-    except Exception as exc:
-        log.exception("digest_enqueue_failed", digest_id=str(digest.id))
-        await digest_store.mark_failed(session, digest.id, "Очередь задач недоступна.")
-        await session.commit()
-        raise HTTPException(
-            status.HTTP_503_SERVICE_UNAVAILABLE, detail="Очередь задач недоступна."
-        ) from exc
-    await session.refresh(digest)
-    return digest_summary(digest)
+    (summary,) = await _queue(session, [digest])
+    return summary
+
+
+@router.post("/digests/both", status_code=status.HTTP_202_ACCEPTED, dependencies=[_digest_limit])
+async def create_digests_for_both_audiences(
+    payload: DigestCreate, session: SessionDep, settings: SettingsDep, user: CurrentUser
+) -> list[DigestSummaryView]:
+    """A specialist's digest and a management one from the same profile and
+    period. The second is built after the first and takes its grades from the
+    answer cache: the audience changes how an entry is written, not its grade.
+    Without a period both cover the week management reads."""
+    profile = await _ready_to_build(payload, session, settings, user, builds=2)
+    spec = ProfileSpec.model_validate(profile.spec)
+    end = payload.period_end or datetime.now(UTC)
+    days = payload.period_days or max(AUDIENCE_PERIOD_DAYS.values())
+    start = payload.period_start or end - timedelta(days=days)
+    digests = [
+        await digest_store.create(
+            session,
+            user_id=user.id,
+            profile_id=profile.id,
+            profile=spec.model_copy(update={"audience": audience}),
+            profile_version=profile.version,
+            period_start=start,
+            period_end=end,
+        )
+        for audience in ("specialist", "management")
+    ]
+    return await _queue(session, digests)
 
 
 @router.get("/digests")

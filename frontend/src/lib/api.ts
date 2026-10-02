@@ -247,6 +247,8 @@ export interface DigestSummary {
   profile_id: string | null
   profile_name: string
   profile_version: number
+  /** Who it was written for; a profile built for both audiences gives two digests. */
+  audience?: Audience
   period_start: string
   period_end: string
   status: DigestStatus
@@ -709,6 +711,17 @@ export function query(params: Record<string, string | number | string[] | undefi
   return text ? `?${text}` : ''
 }
 
+function digestBody(profileId: string, period: DigestPeriod) {
+  return 'days' in period
+    ? { profile_id: profileId, period_days: period.days }
+    : {
+        profile_id: profileId,
+        period_days: null,
+        period_start: period.start.toISOString(),
+        period_end: period.end.toISOString(),
+      }
+}
+
 export const api = {
   meta: () => request<Meta>('/meta'),
   analytics: (days: number, guests: boolean) =>
@@ -853,20 +866,11 @@ export const api = {
   digest: (id: string) => request<Digest>(`/digests/${id}`),
   /** A period is a number of days back from now, or two dates. */
   createDigest: (profileId: string, period: DigestPeriod) =>
-    request<DigestSummary>(
-      '/digests',
-      json(
-        'POST',
-        'days' in period
-          ? { profile_id: profileId, period_days: period.days }
-          : {
-              profile_id: profileId,
-              period_days: null,
-              period_start: period.start.toISOString(),
-              period_end: period.end.toISOString(),
-            },
-      ),
-    ),
+    request<DigestSummary>('/digests', json('POST', digestBody(profileId, period))),
+  /** A specialist's digest and a management one, the second built after the
+   * first on its cached grades. */
+  createDigestsForBoth: (profileId: string, period: DigestPeriod) =>
+    request<DigestSummary[]>('/digests/both', json('POST', digestBody(profileId, period))),
   deleteDigest: (id: string) => request<void>(`/digests/${id}`, { method: 'DELETE' }),
   compare: (base: string, other: string) =>
     request<Comparison>(`/digests/compare${query({ base, other })}`),

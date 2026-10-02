@@ -5,7 +5,13 @@ import { AnimatePresence, LayoutGroup, motion } from 'motion/react'
 import { Suspense, lazy, useState } from 'react'
 import type { DateRange } from 'react-day-picker'
 import { Link } from 'react-router'
-import { CalendarMonth, CircleCheck, EventRepeat, Newspaper } from '../../components/icons'
+import {
+  CalendarMonth,
+  CircleCheck,
+  DynamicFeed,
+  EventRepeat,
+  Newspaper,
+} from '../../components/icons'
 import { Segmented } from '../../components/Segmented'
 import { useRadioKeys } from '../../components/useRadioKeys'
 import { ProfileAvatar } from '../profiles/ProfileLook'
@@ -14,7 +20,7 @@ import { Button, Card, ErrorNote, Spinner } from '../../components/ui'
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover'
 import type { DigestPeriod, Profile } from '../../lib/api'
 import { plural } from '../../lib/format'
-import { useCreateDigest, useSchedules } from '../../lib/queries'
+import { useCreateDigest, useCreateDigestsForBoth, useSchedules } from '../../lib/queries'
 import { periodChoice, scheduleLabel } from '../../lib/schedule'
 import { ScheduleControl } from './ScheduleControl'
 
@@ -73,6 +79,7 @@ export function BuildPanel({ profiles, initialProfileId, isBuilding = false, onC
   // The calendar's limits: stable between renders, renewed whenever it opens.
   const [today, setToday] = useState(() => new Date())
   const create = useCreateDigest()
+  const createBoth = useCreateDigestsForBoth()
   const schedules = useSchedules()
 
   // An explicit click wins; otherwise the profile from the URL, then the first one.
@@ -107,6 +114,18 @@ export function BuildPanel({ profiles, initialProfileId, isBuilding = false, onC
       { onSuccess: (digest) => onCreated(digest.id) },
     )
   }
+
+  // One build, two digests: the specialist's opens, management's follows in the history.
+  const submitBoth = () => {
+    const pressed = periodOf(period, range, new Date())
+    if (!selectedId || !pressed) return
+    setProfileId(selectedId)
+    createBoth.mutate(
+      { profileId: selectedId, period: pressed },
+      { onSuccess: ([first]) => onCreated(first.id) },
+    )
+  }
+  const isPending = create.isPending || createBoth.isPending
 
   return (
     <Card className="p-5 sm:p-6">
@@ -253,19 +272,29 @@ export function BuildPanel({ profiles, initialProfileId, isBuilding = false, onC
         </Popover>
 
         <Button
+          variant="tonal"
+          icon={<DynamicFeed size={18} />}
+          isBusy={createBoth.isPending}
+          disabled={!selectedId || !chosen || isPending || isBuilding}
+          onClick={submitBoth}
+          className="ml-auto"
+          title="Один сбор и одна оценка, два выпуска: специалисту и руководству"
+        >
+          Обеим аудиториям
+        </Button>
+        <Button
           variant="primary"
           icon={<Newspaper size={18} />}
           isBusy={create.isPending || isBuilding}
-          disabled={!selectedId || !chosen}
+          disabled={!selectedId || !chosen || createBoth.isPending}
           onClick={submit}
-          className="ml-auto"
         >
           {isBuilding ? 'Собираем выпуск' : 'Собрать выпуск'}
         </Button>
       </div>
-      {create.error && (
+      {(create.error || createBoth.error) && (
         <div className="mt-3">
-          <ErrorNote error={create.error} />
+          <ErrorNote error={create.error ?? createBoth.error} />
         </div>
       )}
       {selected && schedules.isSuccess && (
