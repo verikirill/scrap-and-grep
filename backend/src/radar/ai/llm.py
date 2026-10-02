@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import random
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from typing import Any, Literal
@@ -16,6 +17,7 @@ from langchain_core.messages import (
     SystemMessage,
     ToolMessage,
 )
+from langchain_core.runnables import Runnable
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, SecretStr, ValidationError
@@ -84,6 +86,17 @@ def _problems(error: ValidationError) -> str:
 # Rounds of tool calls before the model must answer, and calls in one round.
 MAX_TOOL_ROUNDS = 2
 MAX_TOOL_CALLS = 4
+
+# A server that is full answers 429. That is a queue, not a failure: the
+# request waits and goes again before the breaker hears of it. Measured on
+# Ollama's cloud, where nemotron-3-nano takes fewer parallel requests than four.
+RATE_LIMIT_RETRIES = 3
+RATE_LIMIT_PAUSE_SECONDS = 2.0
+
+
+def _rate_limited(error: BaseException) -> bool:
+    """A 429 from Ollama's client or from an OpenAI-compatible server."""
+    return getattr(error, "status_code", None) == 429
 
 
 @dataclass(frozen=True, slots=True)
@@ -181,8 +194,7 @@ class ModelChat:
         by_name = {tool.name: tool for tool in tools}
         model = self._llm.bind_tools([tool.spec for tool in tools])
         for _ in range(MAX_TOOL_ROUNDS):
-            async with asyncio.timeout(self._timeout):
-                reply = await model.ainvoke(messages)
+            reply = await self._invoke(model, messages)
             if not reply.tool_calls:
                 return messages, _json_text(reply.text)
             results: list[BaseMessage] = []
@@ -201,9 +213,25 @@ class ModelChat:
         # The clock starts once a slot is free: time spent queueing behind
         # other calls is not the model being slow and must not trip the breaker.
         model = self._llm.bind(**{self._schema_field: shape}) if self._schema_field else self._llm
-        async with asyncio.timeout(self._timeout):
-            reply = await model.ainvoke(messages)
+        reply = await self._invoke(model, messages)
         return _json_text(reply.text)
+
+    async def _invoke[R](self, model: Runnable[Any, R], messages: list[BaseMessage]) -> R:
+        """One request; a full server is asked again after a growing pause.
+        The slot stays taken meanwhile, which is what a full server needs."""
+        for attempt in range(RATE_LIMIT_RETRIES):
+            try:
+                async with asyncio.timeout(self._timeout):
+                    return await model.ainvoke(messages)
+            except Exception as error:
+                if not _rate_limited(error):
+                    raise
+            # Spread out, so the requests that were refused together do not return together.
+            pause = RATE_LIMIT_PAUSE_SECONDS * 2**attempt * random.uniform(0.5, 1.5)  # noqa: S311
+            log.info("llm_busy", model=self.name, attempt=attempt + 1, pause=round(pause, 1))
+            await asyncio.sleep(pause)
+        async with asyncio.timeout(self._timeout):
+            return await model.ainvoke(messages)
 
 
 def ollama_chat(
