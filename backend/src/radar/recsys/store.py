@@ -417,8 +417,10 @@ async def corpus_mean(session: AsyncSession, model: str, since: datetime) -> np.
     Every taste vector shares this common component ("a text about IT");
     removing it is what makes two readers' vectors comparable.
     """
+    # Typed, or the average comes back as the text "[0.01,...]": SQLAlchemy
+    # does not know that avg() of a vector is a vector.
     mean = await session.scalar(
-        select(func.avg(ArticleEmbedding.embedding))
+        select(func.avg(ArticleEmbedding.embedding, type_=ArticleEmbedding.embedding.type))
         .join(Article, Article.id == ArticleEmbedding.article_id)
         .where(ArticleEmbedding.model == model, Article.published_at >= since)
     )
