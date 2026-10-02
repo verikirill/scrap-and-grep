@@ -316,19 +316,23 @@ export function SourcesTable({ sources, isAdmin, canAdd }: Props) {
           </span>
         </p>
         <div className={clsx('flex gap-2', !canAdd && 'hidden')}>
-          <Button
-            size="sm"
-            className={clsx(!isAdmin && 'hidden')}
-            icon={<RefreshCw size={14} className={clsx(refreshAll.isPending && 'animate-spin')} />}
-            onClick={() =>
-              refreshAll.mutate(undefined, {
-                // Show the confirmation briefly, then return to the normal label.
-                onSuccess: () => setTimeout(() => refreshAll.reset(), 4000),
-              })
-            }
-          >
-            {refreshAll.isSuccess ? 'Опрос запущен' : 'Опросить сейчас'}
-          </Button>
+          {/* The whole catalogue at once is the administrator's call. */}
+          {isAdmin && (
+            <Button
+              size="sm"
+              icon={
+                <RefreshCw size={14} className={clsx(refreshAll.isPending && 'animate-spin')} />
+              }
+              onClick={() =>
+                refreshAll.mutate(undefined, {
+                  // Show the confirmation briefly, then return to the normal label.
+                  onSuccess: () => setTimeout(() => refreshAll.reset(), 4000),
+                })
+              }
+            >
+              {refreshAll.isSuccess ? 'Опрос запущен' : 'Опросить сейчас'}
+            </Button>
+          )}
           <Button
             size="sm"
             variant="primary"
