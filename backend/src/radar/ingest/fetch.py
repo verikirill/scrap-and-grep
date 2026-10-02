@@ -7,7 +7,9 @@ way first and climbs only when the answer is such a refusal:
 
 1. httpx with the honest bot User-Agent;
 2. httpx with the headers of a current Chrome;
-3. curl_cffi with the TLS (JA3/JA4) and HTTP/2 fingerprint of Chrome.
+3. curl_cffi with the TLS (JA3/JA4) and HTTP/2 fingerprint of Chrome;
+4. FlareSolverr, a browser in the stack that passes a JS challenge
+   (ingest/solver.py); its cookies then let the lower steps in.
 
 The step that worked is remembered per host for the rest of the run, and the
 caller stores it per source, so the next run starts there. Every step checks
@@ -36,7 +38,7 @@ from curl_cffi.requests.exceptions import RequestException
 from selectolax.lexbor import LexborHTMLParser
 
 from radar.config import get_settings
-from radar.ingest import bdu
+from radar.ingest import bdu, solver
 from radar.ingest.net import (
     MAX_REDIRECTS,
     RUSSIAN_CA_BUNDLE,
@@ -54,15 +56,20 @@ from radar.logging import get_logger
 
 log = get_logger(__name__)
 
-Step = Literal["plain", "browser_headers", "impersonate"]
+Step = Literal["plain", "browser_headers", "impersonate", "solver"]
 # What the caller is about to read: a refusal looks different for each.
 Expect = Literal["any", "feed", "page", "article"]
 
-LADDER: tuple[Step, ...] = ("plain", "browser_headers", "impersonate")
+LADDER: tuple[Step, ...] = ("plain", "browser_headers", "impersonate", "solver")
+# Steps that run a browser: slow, so tried only after a refusal by the site,
+# and only where the browser is reachable (the ingest worker, not the api).
+HEAVY: frozenset[Step] = frozenset({"solver"})
+LIGHT: tuple[Step, ...] = tuple(step for step in LADDER if step not in HEAVY)
 LABELS: dict[str, str] = {
     "plain": "обычный запрос",
     "browser_headers": "заголовки браузера",
     "impersonate": "curl_cffi",
+    "solver": "FlareSolverr",
 }
 # What sites answer a client they will not serve.
 REFUSALS = frozenset({401, 403, 429, 503})
@@ -80,6 +87,10 @@ CHALLENGES: tuple[tuple[str, str], ...] = (
     ("checking your browser", "проверка браузера"),
     ("verifying you are human", "проверка браузера"),
     ("please enable javascript and cookies to continue", "проверка браузера"),
+    # FlareSolverr says 200 whatever the site answered: its refusal is in the page.
+    ("<title>403 forbidden</title>", "страница 403"),
+    ("<title>401 authorization required</title>", "страница 401"),
+    ("<title>access denied</title>", "страница «доступ запрещён»"),
 )
 NO_ANSWER = "нет ответа"
 THIN_FEED = "страница вместо ленты"
@@ -133,8 +144,8 @@ class _Climb:
 
     outcome: Outcome
     last_error: Exception | None = None
-    # The first answer refused only for its content, and by which step.
-    thin: tuple[Step, httpx.Response] | None = None
+    # The first answer refused only for its content: the step, the answer, why.
+    thin: tuple[Step, httpx.Response, str] | None = None
 
 
 class Ladder:
@@ -163,7 +174,9 @@ class Ladder:
         self._steps = tuple(
             step
             for step in available
-            if step in LADDER and (step != "impersonate" or settings.fetch_impersonate)
+            if step in LADDER
+            and (step != "impersonate" or settings.fetch_impersonate)
+            and (step != "solver" or settings.flaresolverr_url)
         )
         self._remembered = remembered if remembered in self._steps else None
         # The proxy every request goes through, when there is one.
@@ -232,7 +245,12 @@ class Ladder:
                 # Thin pages or a site that is down: no proxy changes that.
                 break
             start = known[0] if known is not None and known[1] == proxy else self._remembered
+            if start in HEAVY and solver.clearance_for(url) is not None:
+                # The cookies of a passed challenge let a lighter step in.
+                start = "impersonate"
             for step in self._order(start):
+                if step in HEAVY and not _worth_a_browser(climb) and start != step:
+                    continue
                 read = await self._try(climb, step, proxy, url, headers or {}, max_bytes, expect)
                 if read is not None:
                     return self._read(host, url, step, proxy, climb.outcome, read)
@@ -240,11 +258,14 @@ class Ladder:
                     # The site refuses this proxy too: on to the next one.
                     break
         outcome = climb.outcome
-        if climb.thin is not None:
+        content_only = all(reason in CONTENT_REASONS for _, reason in outcome.refusals)
+        if climb.thin is not None and (content_only or climb.thin[2] == SHORT_TEXT):
             # No step read more: the site's pages are like that, and its
-            # next pages are not asked for again on every step.
-            step, response = climb.thin
-            if all(reason in CONTENT_REASONS for _, reason in outcome.refusals):
+            # next pages are not asked for again on every step. An empty
+            # script shell or HTML for a feed after a refusal is no page,
+            # but what the site shows a client it has not let in.
+            step, response, _ = climb.thin
+            if content_only:
                 self._thin_hosts.add(host)
                 outcome.refusals.clear()
             else:
@@ -274,7 +295,7 @@ class Ladder:
         name = f"{step}+proxy" if pooled else step
         refusals = climb.outcome.refusals
         try:
-            response = await self._step(step, url, headers, max_bytes, proxy)
+            response = await self._step(step, url, headers, max_bytes, proxy, expect)
         except UnsafeUrlError, ResponseTooLargeError:
             raise
         except (httpx.TimeoutException, TimeoutError) as exc:
@@ -293,7 +314,7 @@ class Ladder:
         if reason is None:
             return response
         if reason in CONTENT_REASONS and climb.thin is None and not pooled:
-            climb.thin = (step, response)
+            climb.thin = (step, response, reason)
         refusals.append((name, reason))
         return None
 
@@ -306,9 +327,13 @@ class Ladder:
         outcome: Outcome,
         response: httpx.Response,
     ) -> httpx.Response:
+        if step in {"browser_headers", "impersonate"} and solver.clearance_for(url):
+            # Let in on the cookies FlareSolverr got: the source still needs it.
+            step = "solver"
         outcome.step = step
         outcome.proxy = proxy
-        self._hosts[host] = (step, proxy)
+        # A solved challenge is followed by the cookies on the lighter step.
+        self._hosts[host] = ("impersonate" if step in HEAVY else step, proxy)
         if self.first is None:
             self.first = outcome
         if outcome.refusals:
@@ -335,13 +360,58 @@ class Ladder:
         headers: dict[str, str],
         max_bytes: int | None,
         proxy: str | None,
+        expect: Expect = "any",
     ) -> httpx.Response:
+        if step == "solver":
+            return await self._solve(url, headers, max_bytes, proxy, expect)
+        passed = solver.clearance_for(url) if step != "plain" else None
+        if passed is not None:
+            # A challenge passed before: its cookies, from the browser that got them.
+            headers = {"Cookie": passed.cookie_header, **headers}
         if step == "impersonate":
+            if passed is not None:
+                headers = {"User-Agent": passed.user_agent, **headers}
             return await impersonated_get(url, headers=headers, max_bytes=max_bytes, proxy=proxy)
         if step == "browser_headers":
             headers = {**browser_headers(url), **headers}
+            if passed is not None:
+                headers["User-Agent"] = passed.user_agent
         return await safe_get(
             self._client_for(proxy), url, headers=headers, max_bytes=max_bytes, retry=False
+        )
+
+    async def _solve(
+        self,
+        url: str,
+        headers: dict[str, str],
+        max_bytes: int | None,
+        proxy: str | None,
+        expect: Expect,
+    ) -> httpx.Response:
+        """The page through FlareSolverr; the site's own answer with the
+        cookies it gave, when it takes them, rather than the browser's view."""
+        solution = await solver.solve(url, proxy=proxy)
+        if solution.clearance is not None:
+            again = {
+                "Cookie": solution.clearance.cookie_header,
+                "User-Agent": solution.clearance.user_agent,
+                **headers,
+            }
+            with contextlib.suppress(httpx.TransportError, RequestException):
+                response = await impersonated_get(
+                    url, headers=again, max_bytes=max_bytes, proxy=proxy
+                )
+                if await asyncio.to_thread(refusal, response, expect) is None:
+                    return response
+        page = solution.html.encode()
+        limit = max_bytes or get_settings().max_feed_bytes
+        if len(page) > limit:
+            raise ResponseTooLargeError(f"{url} is larger than {limit} bytes")
+        return httpx.Response(
+            status_code=solution.status,
+            headers={"Content-Type": "text/html; charset=utf-8"},
+            content=page,
+            request=httpx.Request("GET", solution.url),
         )
 
 
@@ -355,6 +425,11 @@ def _refused(climb: _Climb) -> bool:
         reason == NO_ANSWER or reason[:3].isdigit() or reason.startswith("заглушка")
         for _, reason in climb.outcome.refusals
     )
+
+
+def _worth_a_browser(climb: _Climb) -> bool:
+    """A refusal by the site, or a page drawn by script: what a browser helps."""
+    return _refused(climb) or any(reason == JS_SHELL for _, reason in climb.outcome.refusals)
 
 
 def _proxy_refused(climb: _Climb) -> bool:

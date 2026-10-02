@@ -9,7 +9,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import httpx
 import pytest
 
-from radar.ingest import fetch
+from radar.ingest import fetch, solver
 from radar.ingest.fetch import Blocked, Ladder, impersonated_get, refusal
 from radar.ingest.net import UnsafeUrlError
 from tests.test_telegram import offline  # noqa: F401
@@ -230,6 +230,7 @@ def names(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(net, "resolve_public", resolve)
     monkeypatch.setattr(fetch, "resolve_public", resolve)
+    monkeypatch.setattr(solver, "resolve_public", resolve)
 
 
 async def test_a_site_that_checks_the_fingerprint_is_read_by_curl_pinned_to_the_address(
@@ -320,7 +321,7 @@ async def test_with_a_proxy_set_every_step_goes_through_it(
     _settings(monkeypatch, http_proxy=address)
     url = f"http://site.test:{local_site}/news/1"
     async with build_client() as client, Ladder(client) as ladder:
-        for step in fetch.LADDER:
+        for step in fetch.LIGHT:
             response = await ladder._step(step, url, {}, None, address)
             assert response.status_code == 200
         read = await ladder.get(url, expect="article")

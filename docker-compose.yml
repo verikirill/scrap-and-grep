@@ -39,6 +39,9 @@ x-backend: &backend
     # or a pool tried when a site refuses the server (see .env.example).
     RADAR_HTTP_PROXY: ${RADAR_HTTP_PROXY:-}
     RADAR_HTTP_PROXIES: ${RADAR_HTTP_PROXIES:-}
+    # With the solver profile: http://flaresolverr:8191. Only the ingest
+    # worker reaches it; the reader in the api stays on the lighter steps.
+    RADAR_FLARESOLVERR_URL: ${RADAR_FLARESOLVERR_URL:-}
     RADAR_CANDIDATE_LIMIT: ${RADAR_CANDIDATE_LIMIT:-60}
     RADAR_RATE_LIMIT_PER_MINUTE: ${RADAR_RATE_LIMIT_PER_MINUTE:-120}
     RADAR_DIGEST_TASK_TIMEOUT_SECONDS: ${RADAR_DIGEST_TASK_TIMEOUT_SECONDS:-1200}
@@ -236,6 +239,9 @@ services:
     # Sends posts, and keeps a copy of a picture Telegram could not fetch.
     volumes:
       - media:/data/media
+    networks:
+      - default
+      - solving
 
   # Digest building: bound by the model server, scaled separately so a burst
   # of digests cannot starve ingestion.
@@ -450,6 +456,23 @@ services:
     ports:
       - "127.0.0.1:8089:8089"
 
+  # FlareSolverr: Chrome that passes a JS challenge when curl_cffi is refused
+  # too (ingest/solver.py). It opens addresses from the sources, so it sits
+  # on a network of its own with the ingest worker only: no route to the
+  # database, the queues or the api. Set RADAR_FLARESOLVERR_URL to use it.
+  flaresolverr:
+    profiles: ["solver"]
+    image: ghcr.io/flaresolverr/flaresolverr:v3.5.2
+    restart: unless-stopped
+    environment:
+      LOG_LEVEL: ${FLARESOLVERR_LOG_LEVEL:-info}
+      TZ: Europe/Moscow
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: ${FLARESOLVERR_MEMORY:-1g}
+    networks:
+      - solving
+
   # S3-compatible storage for picture copies (RADAR_IMAGE_STORE=s3). SeaweedFS
   # in its single-container mode; MinIO no longer publishes images.
   s3:
@@ -470,6 +493,8 @@ networks:
   # The media worker and the services that voice and render its videos.
   rendering:
     internal: true
+  # The ingest worker and FlareSolverr. Not internal: the browser reads sites.
+  solving:
 
 volumes:
   s3data:

@@ -103,7 +103,7 @@ class Settings(BaseSettings):
 
     # Reading sites that refuse a bot (ingest/fetch.py). A page that answers
     # 401/403/429/503 or a challenge is asked again a step up the ladder:
-    # browser headers, then the TLS fingerprint of Chrome.
+    # browser headers, the TLS fingerprint of Chrome, FlareSolverr.
     # What a browser sends on the second step and later.
     browser_user_agent: str = (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
@@ -111,6 +111,10 @@ class Settings(BaseSettings):
     )
     # The third step: curl_cffi with the TLS and HTTP/2 fingerprint of Chrome.
     fetch_impersonate: bool = True
+    # FlareSolverr inside the stack (the solver profile) for pages that stop
+    # curl_cffi too: http://flaresolverr:8191. Empty turns the step off.
+    flaresolverr_url: str = ""
+    flaresolverr_timeout_seconds: float = Field(default=60.0, ge=10)
     # An article page whose text is shorter than this is taken for a stub.
     fetch_min_article_chars: int = Field(default=300, ge=0)
     # A proxy for every request, the corporate one in a closed network:

@@ -21,7 +21,7 @@ from radar.db import session_scope
 from radar.db.models import Article
 from radar.images.extract import from_page
 from radar.ingest import telegram
-from radar.ingest.fetch import Ladder
+from radar.ingest.fetch import LIGHT, Ladder
 from radar.ingest.net import build_client
 from radar.ingest.pages import page_text
 from radar.logging import get_logger
@@ -76,7 +76,8 @@ async def _read(
         if not needs_picture:
             return _Found()
         return _Found(picture=await telegram.post_picture(client, url), looked_for_picture=True)
-    async with Ladder(client) as ladder:
+    # A reading time is not worth a browser.
+    async with Ladder(client, steps=LIGHT) as ladder:
         response = await ladder.get(
             url, max_bytes=PAGE_MAX_BYTES, expect="article" if needs_words else "page"
         )
