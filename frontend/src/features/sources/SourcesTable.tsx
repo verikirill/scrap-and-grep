@@ -1,14 +1,16 @@
 import clsx from 'clsx'
-import { Plus, RefreshCw, Send, Trash2 } from '../../components/icons'
+import { Plus, RefreshCw, Search, Send, Trash2 } from '../../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { useId, useState } from 'react'
 import type { FormEvent } from 'react'
+import { useSearchParams } from 'react-router'
 import { Segmented } from '../../components/Segmented'
 import { EASE, INPUT_CLASS } from '../../components/tokens'
 import { Button, Card, Chip, ErrorNote, Field, Toggle } from '../../components/ui'
 import type { Source, SourceCategory, SourceCreate } from '../../lib/api'
 import { CATEGORY_LABELS, externalHref, formatNumber, formatRelative } from '../../lib/format'
 import { useSourceMutations } from '../../lib/queries'
+import { matchesSource } from '../../lib/sourceSearch'
 
 const CATEGORY_ORDER: SourceCategory[] = ['security', 'ics', 'energy', 'it', 'regulator']
 
@@ -179,15 +181,38 @@ type Props = {
 export function SourcesTable({ sources, canEdit }: Props) {
   const { toggle, remove, refreshOne, refreshAll } = useSourceMutations()
   const [adding, setAdding] = useState(false)
+  // In the address, so a search survives a reload and can be sent on.
+  const [params, setParams] = useSearchParams()
+  const query = params.get('q') ?? ''
+  const found = sources.filter((source) => matchesSource(source, query))
+  const setQuery = (value: string) =>
+    setParams(
+      (current) => {
+        const next = new URLSearchParams(current)
+        if (value) next.set('q', value)
+        else next.delete('q')
+        return next
+      },
+      { replace: true },
+    )
 
   return (
     <Card className="overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant px-5 py-3.5">
-        <p className="text-sm text-muted-foreground">
-          <span className="font-semibold text-foreground">
-            {sources.filter((s) => s.enabled).length}
-          </span>{' '}
-          из {sources.length} источников включено · опрос каждые 15 минут
+        <p className="text-sm text-muted-foreground" aria-live="polite">
+          {query.trim() ? (
+            <>
+              Найдено <span className="font-semibold text-foreground">{found.length}</span> из{' '}
+              {sources.length}
+            </>
+          ) : (
+            <>
+              <span className="font-semibold text-foreground">
+                {sources.filter((s) => s.enabled).length}
+              </span>{' '}
+              из {sources.length} источников включено · опрос каждые 15 минут
+            </>
+          )}
         </p>
         <div className={clsx('flex gap-2', !canEdit && 'hidden')}>
           <Button
@@ -213,6 +238,23 @@ export function SourcesTable({ sources, canEdit }: Props) {
         </div>
       </div>
 
+      <div className="border-b border-outline-variant px-5 py-3">
+        <div className="relative">
+          <Search
+            size={16}
+            className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-outline"
+          />
+          <input
+            type="search"
+            aria-label="Поиск по источникам"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Название, адрес или @канал"
+            className="w-full rounded-lg border border-outline-variant bg-card py-2.5 pr-3 pl-9 text-sm placeholder:text-outline hover:border-outline focus:border-primary focus:outline-none"
+          />
+        </div>
+      </div>
+
       <ErrorNote error={toggle.error ?? remove.error ?? refreshOne.error ?? refreshAll.error} />
 
       <AnimatePresence initial={false}>
@@ -229,8 +271,21 @@ export function SourcesTable({ sources, canEdit }: Props) {
         )}
       </AnimatePresence>
 
+      {query.trim() && found.length === 0 && (
+        <p className="px-5 py-10 text-center text-sm text-muted-foreground">
+          Нет источников по запросу «{query.trim()}».{' '}
+          <button
+            type="button"
+            onClick={() => setQuery('')}
+            className="font-medium text-primary hover:underline"
+          >
+            Сбросить поиск
+          </button>
+        </p>
+      )}
+
       {CATEGORY_ORDER.map((category) => {
-        const group = sources.filter((source) => source.category === category)
+        const group = found.filter((source) => source.category === category)
         if (group.length === 0) return null
         return (
           <section key={category}>
@@ -264,6 +319,14 @@ export function SourcesTable({ sources, canEdit }: Props) {
                       <span className="truncate">{source.name}</span>
                     </a>
                     <p className="truncate text-xs text-outline">
+                      {/* On a phone the count moves here, under the name. */}
+                      <span className="tabular sm:hidden">
+                        {formatNumber(source.articles)}
+                        {source.articles_last_day > 0 && (
+                          <span className="text-success"> +{source.articles_last_day}</span>
+                        )}
+                        {' · '}
+                      </span>
                       {source.last_status === 'error'
                         ? (source.last_error ?? 'ошибка опроса')
                         : source.last_fetched_at
@@ -271,8 +334,9 @@ export function SourcesTable({ sources, canEdit }: Props) {
                           : 'ещё не опрашивался'}
                     </p>
                   </div>
-                  <Chip>{source.language.toUpperCase()}</Chip>
-                  <span className="tabular w-14 shrink-0 text-right sm:w-24 text-xs text-muted-foreground">
+                  {/* On a phone the name needs the room more than the language does. */}
+                  <Chip className="max-sm:hidden">{source.language.toUpperCase()}</Chip>
+                  <span className="tabular w-24 shrink-0 text-right text-xs text-muted-foreground max-sm:hidden">
                     {formatNumber(source.articles)}
                     {source.articles_last_day > 0 && (
                       <span className="ml-1.5 text-success">+{source.articles_last_day}</span>
@@ -280,7 +344,8 @@ export function SourcesTable({ sources, canEdit }: Props) {
                   </span>
                   <div
                     className={clsx(
-                      'flex items-center gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100',
+                      // Shown on hover with a mouse; a phone has no hover, so there they stay.
+                      'flex items-center gap-0.5 transition-opacity sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100',
                       !canEdit && 'hidden',
                     )}
                   >
