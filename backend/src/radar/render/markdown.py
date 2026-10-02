@@ -1,5 +1,7 @@
 """Render a digest as Markdown."""
 
+import json
+import re
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -142,9 +144,75 @@ def _item(item: ItemView) -> list[str]:
     return lines
 
 
+def _front_matter(digest: DigestView) -> list[str]:
+    """What a script needs without reading the text, as YAML front matter.
+    JSON scalars are YAML, so every value is written as JSON."""
+    stats = digest.stats
+    fields = {
+        "profile": digest.profile_name,
+        "audience": digest.profile.audience,
+        "period_start": digest.period_start.astimezone(MOSCOW).isoformat(timespec="minutes"),
+        "period_end": digest.period_end.astimezone(MOSCOW).isoformat(timespec="minutes"),
+        "built": (digest.finished_at or digest.created_at)
+        .astimezone(MOSCOW)
+        .isoformat(timespec="minutes"),
+        "model": stats.get("llm"),
+        "embeddings": stats.get("embedding_model"),
+        "sources": stats.get("sources", 0),
+        "publications": stats.get("window_total", 0),
+        "candidates": stats.get("candidates", 0),
+        "entries": stats.get("selected", 0),
+    }
+    lines = [f"{key}: {json.dumps(value, ensure_ascii=False)}" for key, value in fields.items()]
+    return ["---", *lines, "---", ""]
+
+
+# Contents are worth a line of their own from this many topics.
+CONTENTS_FROM_TOPICS = 3
+_ANCHOR_DROPS = re.compile(r"[^\w\- ]")
+
+
+def anchor(heading: str) -> str:
+    """The anchor GitLab and GitHub give a heading: lower case, punctuation
+    dropped, spaces turned into hyphens."""
+    return _ANCHOR_DROPS.sub("", heading.lower()).strip().replace(" ", "-")
+
+
+def _contents(digest: DigestView) -> list[str]:
+    if len(digest.topics) < CONTENTS_FROM_TOPICS:
+        return []
+    lines = ["## Содержание", ""]
+    for number, topic in enumerate(digest.topics, start=1):
+        heading = f"{number}. {topic.title}"
+        lines.append(f"- [{_escape(heading)}](#{anchor(heading)}) · {len(topic.items)}")
+    return [*lines, ""]
+
+
+def _rejected(digest: DigestView) -> list[str]:
+    """Every candidate left out, with its score and why: folded, as on the page."""
+    if not digest.rejected:
+        return []
+    lines = [
+        "<details>",
+        f"<summary>Не вошло в выпуск: {len(digest.rejected)} кандидатов с оценкой и причиной"
+        "</summary>",
+        "",
+    ]
+    for item in digest.rejected:
+        code = item.reject_reason or "low_score"
+        reason = REJECT_REASONS.get(code, code)
+        detail = f": {_escape(item.reason)}" if item.reason else ""
+        lines.append(
+            f"- {item.score:.2f} {_link(item.title, item.url)} "
+            f"({_escape(item.source_name)}) - {reason}{detail}"
+        )
+    return [*lines, "", "</details>", ""]
+
+
 def render_markdown(digest: DigestView) -> str:
     title = digest.title or f"Дайджест для профиля «{digest.profile_name}»"
     lines = [
+        *_front_matter(digest),
         f"# {_escape(title)}",
         "",
         f"**Профиль:** {_escape(digest.profile_name)} (версия {digest.profile_version})  ",
@@ -156,6 +224,7 @@ def render_markdown(digest: DigestView) -> str:
         lines += ["## Главное", ""]
         lines += [f"- {_escape(highlight)}" for highlight in digest.highlights]
         lines.append("")
+    lines += _contents(digest)
     if not digest.topics:
         lines += ["За выбранный период публикаций по интересам профиля не найдено.", ""]
     for number, topic in enumerate(digest.topics, start=1):
@@ -164,6 +233,7 @@ def render_markdown(digest: DigestView) -> str:
             lines += [_escape(topic.overview), ""]
         for item in topic.items:
             lines += _item(item)
+    lines += _rejected(digest)
     lines += ["---", "", "## Как составлен выпуск", ""]
     lines += [f"- {line}" for line in methodology(digest)]
     lines.append("")
