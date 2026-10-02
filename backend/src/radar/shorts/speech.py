@@ -2,7 +2,7 @@
 
 import re
 
-from radar.text import truncate
+from radar.text import numbers, truncate
 
 # Quotes, brackets and markup are not spoken, and some voices read them out.
 _UNSPOKEN_RE = re.compile(r"[«»\"“”„()\[\]{}*_#<>|~^`]")
@@ -11,8 +11,6 @@ _EMAIL_RE = re.compile(r"\b[\w.+-]+@[\w-]+\.[\w.-]+\b")
 _PHONE_RE = re.compile(r"(?:\+?\d[\s()-]*){10,}")
 # "CVE-2026-1234567" has as many digits as a phone number.
 _CVE_RE = re.compile(r"\bCVE-\d{4}-\d{4,7}\b", re.IGNORECASE)
-# Whole numbers with their decimals: "9.8" must not be found inside "19.85".
-_NUMBER_RE = re.compile(r"(?<![\d.,])\d+(?:[.,]\d+)?(?!\d)")
 
 
 def clean(text: str, limit: int, fallback: str) -> str:
@@ -27,10 +25,6 @@ def clean(text: str, limit: int, fallback: str) -> str:
 def spoken(text: str) -> str:
     """The line as it should be read aloud and shown in captions."""
     return " ".join(_UNSPOKEN_RE.sub("", text).split())
-
-
-def numbers(text: str) -> set[str]:
-    return {number.replace(",", ".") for number in _NUMBER_RE.findall(text)}
 
 
 def is_grounded(text: str, allowed: set[str]) -> bool:

@@ -11,6 +11,9 @@ export interface Interest {
   weight: number
 }
 
+/** Specialists get a card per attack and vulnerability, management a brief with tags. */
+export type Audience = 'specialist' | 'management'
+
 export interface ProfileSpec {
   name: string
   role: string
@@ -20,6 +23,7 @@ export interface ProfileSpec {
   max_items: number
   languages: string[]
   categories: SourceCategory[]
+  audience: Audience
 }
 
 export interface Profile {
@@ -270,6 +274,27 @@ export interface DigestItem {
   reject_reason: string | null
   /** Minutes to read the full text; null until its page has been read. */
   reading_minutes: number | null
+  /** What the publication reports, as the organizers' dataset groups it. */
+  kind: RecordKind
+  /** The dataset's priority of an attack or a vulnerability. */
+  priority: Priority | null
+  priority_reason: string
+  /** The card in the dataset's order; "нет данных" where the article is silent. */
+  fields: CardField[]
+  /** Management tags, in words. */
+  tag_labels: string[]
+  /** Addresses a Telegram post cites. */
+  links: string[]
+  /** What the check against the article's text took out. */
+  unsupported: string[]
+}
+
+export type RecordKind = 'attack' | 'vulnerability' | 'news'
+export type Priority = 'high' | 'medium' | 'low'
+
+export interface CardField {
+  label: string
+  value: string
 }
 
 export interface Topic {

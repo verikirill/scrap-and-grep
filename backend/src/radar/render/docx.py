@@ -10,7 +10,8 @@ from docx.oxml.ns import qn
 from docx.shared import Pt, RGBColor
 from docx.text.paragraph import Paragraph
 
-from radar.render.markdown import format_date, format_datetime, methodology
+from radar.cards import TAG_LABELS, defang
+from radar.render.markdown import card_rows, format_date, format_datetime, item_meta, methodology
 from radar.views import DigestView, ItemView
 
 _LINK_COLOR = "1F5FBF"
@@ -53,19 +54,34 @@ def _item(document: Document, item: ItemView) -> None:  # type: ignore[valid-typ
     heading.paragraph_format.keep_with_next = True
     add_hyperlink(heading, item.url, item.headline, bold=True)
 
-    meta = [item.source_name, format_date(item.published_at), f"релевантность {item.score:.2f}"]
-    if item.interest_title:
-        meta.append(f"интерес: {item.interest_title}")
-    _muted(document.add_paragraph(), " · ".join(meta))  # type: ignore[attr-defined]
+    _muted(document.add_paragraph(), " · ".join(item_meta(item)))  # type: ignore[attr-defined]
 
     if item.headline != item.title:
         _muted(document.add_paragraph(), f"Оригинал: {item.title}")  # type: ignore[attr-defined]
     if item.summary:
         document.add_paragraph(item.summary)  # type: ignore[attr-defined]
+    for label, value in card_rows(item):
+        row = document.add_paragraph(style="List Bullet")  # type: ignore[attr-defined]
+        row.add_run(f"{label}: ").bold = True
+        row.add_run(value)
+    if item.tags:
+        tags = document.add_paragraph()  # type: ignore[attr-defined]
+        tags.add_run("Признаки: ").bold = True
+        tags.add_run(" · ".join(TAG_LABELS[tag] for tag in item.tags))
     if item.why:
         why = document.add_paragraph()  # type: ignore[attr-defined]
         why.add_run("Почему важно: ").bold = True
         why.add_run(item.why)
+    if item.links:
+        _muted(
+            document.add_paragraph(),  # type: ignore[attr-defined]
+            "Ссылки из поста: " + ", ".join(defang(url) for url in item.links),
+        )
+    if item.unsupported:
+        _muted(
+            document.add_paragraph(),  # type: ignore[attr-defined]
+            f"Нет в тексте статьи, убрано проверкой: {', '.join(item.unsupported)}.",
+        )
     if item.duplicates:
         also = document.add_paragraph()  # type: ignore[attr-defined]
         also.add_run("Также об этом: ")

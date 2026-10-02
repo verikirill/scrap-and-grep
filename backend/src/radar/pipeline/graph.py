@@ -3,6 +3,10 @@
     prepare -> retrieve -> grade (one task per candidate) -> select -> cluster
             -> summarize (per item) + name_topic (per topic) -> compose -> persist
 
+A specialist's digest opens with two fixed sections, attacks and
+vulnerabilities, each in the priority order of the organizers' dataset; the
+rest of the news is clustered into topics. Management gets topics only.
+
 State holds JSON-ready dicts only. With a Postgres checkpointer every finished
 step survives a worker crash, and a redelivered task resumes from the step
 that was interrupted.
@@ -24,6 +28,15 @@ from langgraph.config import get_stream_writer
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import RetryPolicy, Send
 
+from radar.cards import (
+    PRIORITY_ORDER,
+    SECTION_KINDS,
+    SECTION_TITLES,
+    check_entry,
+    priority,
+    section_overview,
+    source_text,
+)
 from radar.domain import (
     Candidate,
     DigestOverview,
@@ -31,6 +44,7 @@ from radar.domain import (
     GradedCandidate,
     ItemSummary,
     ProfileSpec,
+    RecordKind,
     SelectedItem,
     Topic,
     TopicName,
@@ -75,6 +89,8 @@ class DigestState(TypedDict, total=False):
     selected: list[dict[str, Any]]
     rejected: dict[str, str]
     groups: list[list[int]]
+    # The record kind of a fixed section, None for a topic the model names.
+    group_kinds: list[str | None]
     summaries: Annotated[list[dict[str, Any]], operator.add]
     topic_names: Annotated[list[dict[str, Any]], operator.add]
     overview: dict[str, Any]
@@ -301,11 +317,27 @@ class DigestNodes:
         return adjusted
 
     async def cluster(self, state: DigestState) -> dict[str, Any]:
+        profile = _profile(state)
         selected = [SelectedItem.model_validate(item) for item in state["selected"]]
-        vectors = await self._deps.store.vectors([item.article.id for item in selected])
-        groups = cluster_items(selected, vectors, semantic=self._deps.embedder.semantic)
+        sections: list[list[SelectedItem]] = []
+        kinds: list[str | None] = []
+        rest = selected
+        if profile.audience == "specialist":
+            for kind in SECTION_TITLES:
+                members = [item for item in selected if item.graded.grade.kind == kind]
+                if members:
+                    sections.append(members)
+                    kinds.append(kind)
+            rest = [item for item in selected if item.graded.grade.kind not in SECTION_TITLES]
+        groups: list[list[SelectedItem]] = []
+        if rest:
+            vectors = await self._deps.store.vectors([item.article.id for item in rest])
+            groups = cluster_items(rest, vectors, semantic=self._deps.embedder.semantic)
         _emit("summarize", total=len(selected), done=0)
-        return {"groups": [[item.article.id for item in group] for group in groups]}
+        return {
+            "groups": [[item.article.id for item in group] for group in [*sections, *groups]],
+            "group_kinds": [*kinds, *[None] * len(groups)],
+        }
 
     def fan_out_writing(self, state: DigestState) -> list[Send] | str:
         if not state["selected"]:
@@ -315,6 +347,7 @@ class DigestNodes:
             Send("summarize", {"item": item, "profile": state["profile"]})
             for item in state["selected"]
         ]
+        kinds = state.get("group_kinds") or [None] * len(state["groups"])
         tasks += [
             Send(
                 "name_topic",
@@ -325,6 +358,8 @@ class DigestNodes:
                 },
             )
             for index, group in enumerate(state["groups"])
+            # A fixed section has its name already.
+            if kinds[index] is None
         ]
         return tasks
 
@@ -332,7 +367,11 @@ class DigestNodes:
         item = SelectedItem.model_validate(state["item"])
         profile = ProfileSpec.model_validate(state["profile"])
         interest = profile.interest(item.graded.interest_id)
-        text = await self._deps.intelligence.summarize(item, profile, interest)
+        written = await self._deps.intelligence.summarize(item, profile, interest)
+        # Checked here, past the answer cache: a better check applies to answers
+        # cached before it without paying for them again.
+        article = item.article
+        text = check_entry(written, source_text(article.title, article.summary, article.content))
         _emit("summarize", done=1)
         return {"summaries": [{"article_id": item.article.id, "text": text.model_dump()}]}
 
@@ -357,14 +396,18 @@ class DigestNodes:
             item.article.id: item.model_copy(update={"text": texts.get(item.article.id)})
             for item in (SelectedItem.model_validate(raw) for raw in state["selected"])
         }
+        groups = state.get("groups", [])
+        kinds = state.get("group_kinds") or [None] * len(groups)
         topics = _unique_titles(
             [
-                Topic(
+                _section(SECTION_KINDS[kind], [items[article_id] for article_id in group])
+                if kind in SECTION_KINDS
+                else Topic(
                     title=names[index].title if index in names else "Разное",
                     overview=names[index].overview if index in names else "",
                     items=tuple(items[article_id] for article_id in group),
                 )
-                for index, group in enumerate(state.get("groups", []))
+                for index, (group, kind) in enumerate(zip(groups, kinds, strict=True))
             ]
         )
         if topics:
@@ -427,6 +470,19 @@ def build_graph(deps: PipelineDeps) -> StateGraph[DigestState]:
     return graph
 
 
+def _section(kind: RecordKind, items: list[SelectedItem]) -> Topic:
+    """A fixed section of a specialist's digest, highest priority first."""
+    ordered = sorted(
+        items,
+        key=lambda item: (PRIORITY_ORDER[priority(kind, item.text)], -item.graded.score),
+    )
+    return Topic(
+        title=SECTION_TITLES[kind],
+        overview=section_overview(kind, [item.text for item in ordered]),
+        items=tuple(ordered),
+    )
+
+
 def _unique_titles(topics: list[Topic]) -> list[Topic]:
     """Two clusters may get the same name; number the repeats so they stay apart."""
     seen: dict[str, int] = {}
@@ -453,6 +509,7 @@ def _stats(
     # Excluded candidates are rejected without a model call, so they do not
     # count towards degradation.
     gradable = sum(1 for item in graded if item.candidate.excluded_by is None)
+    priorities = [priority(item.graded.grade.kind, item.text) for item in selected]
     degraded = model_expected and (
         graded_by_model < gradable or written_by_model < len(selected) or not overview.by_model
     )
@@ -463,6 +520,14 @@ def _stats(
         "topics": len(topics),
         "sources": len({item.article.source_name for item in selected}),
         "duplicates_merged": sum(len(item.duplicates) for item in selected),
+        "kinds": {
+            kind: sum(1 for item in selected if item.graded.grade.kind == kind)
+            for kind in ("attack", "vulnerability", "news")
+        },
+        "priorities": {level: priorities.count(level) for level in ("high", "medium", "low")},
+        # The check of entries against their articles: fields taken out, entries touched.
+        "unsupported_fields": sum(len(item.text.unsupported) for item in selected if item.text),
+        "entries_corrected": sum(1 for item in selected if item.text and item.text.unsupported),
         "embedded_now": state.get("embedded_now", 0),
         "lexical_only": state.get("lexical_only", False),
         "embedding_model": deps.embedder.model_id,

@@ -25,9 +25,9 @@ from radar.shorts.model import (
     ShortError,
     Visual,
 )
-from radar.shorts.speech import clean, is_grounded, numbers, spoken
+from radar.shorts.speech import clean, is_grounded, spoken
 from radar.shorts.timing import format_day
-from radar.text import content_tokens, split_sentences, untracked_url
+from radar.text import content_tokens, numbers, split_sentences, untracked_url
 from radar.views import DigestView, ItemView
 
 if TYPE_CHECKING:

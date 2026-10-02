@@ -350,6 +350,10 @@ def articles_of(
     return tuple(articles.values())
 
 
+# Enough for a card; a post of a hundred links is a list, not news.
+MAX_POST_LINKS = 10
+
+
 def to_article(post: Post, language: str, now: datetime) -> NewArticle | None:
     """The post as an article, or the page it is a teaser for; None for
     advertising and for posts with nothing to read."""
@@ -376,6 +380,8 @@ def to_article(post: Post, language: str, now: datetime) -> NewArticle | None:
         content_hash=content_hash(title, content),
         image_url=post.picture or (post.preview.picture if post.preview else None),
         word_count=word_count(content),
+        # What the post cites: the dataset's card of a channel post lists it.
+        links=tuple(dict.fromkeys(post.links))[:MAX_POST_LINKS],
     )
 
 

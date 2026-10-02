@@ -3,6 +3,14 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+from radar.cards import (
+    KIND_LABELS,
+    PRIORITY_LABELS,
+    TAG_LABELS,
+    attack_rows,
+    defang,
+    vulnerability_rows,
+)
 from radar.views import DigestView, ItemView
 
 MOSCOW = ZoneInfo("Europe/Moscow")
@@ -63,6 +71,22 @@ def methodology(digest: DigestView) -> list[str]:
     ]
     if stats.get("duplicates_merged"):
         lines.append(f"Пересказов одной новости объединено: {stats['duplicates_merged']}.")
+    priorities = stats.get("priorities") or {}
+    if any(priorities.values()):
+        lines.append(
+            "Приоритеты атак и уязвимостей по правилам датасета организаторов: "
+            + ", ".join(
+                f"{PRIORITY_LABELS[level]} {priorities.get(level, 0)}"
+                for level in ("high", "medium", "low")
+            )
+            + "."
+        )
+    if "unsupported_fields" in stats:
+        lines.append(
+            "Проверка записей по тексту статей: исправлено записей "
+            f"{stats.get('entries_corrected', 0)}, убрано полей и фраз "
+            f"{stats.get('unsupported_fields', 0)}."
+        )
     if stats.get("degraded"):
         lines.append(
             "Часть записей обработана резервным алгоритмом без языковой модели: "
@@ -72,21 +96,52 @@ def methodology(digest: DigestView) -> list[str]:
     return lines
 
 
-def _item(item: ItemView) -> list[str]:
-    meta = [
-        _escape(item.source_name),
-        format_date(item.published_at),
-        f"релевантность {item.score:.2f}",
-    ]
+def item_meta(item: ItemView) -> list[str]:
+    """The line under an entry's headline: source, date, kind and priority, score."""
+    meta = [item.source_name, format_date(item.published_at)]
+    if item.priority:
+        # Only a specialist's card has a kind and a priority to show.
+        meta.append(KIND_LABELS[item.kind])
+        reason = f" ({item.priority_reason})" if item.priority_reason else ""
+        meta.append(f"приоритет: {PRIORITY_LABELS[item.priority]}{reason}")
+    meta.append(f"релевантность {item.score:.2f}")
     if item.interest_title:
-        meta.append(f"интерес: {_escape(item.interest_title)}")
-    lines = [f"### {_link(item.headline, item.url)}", "", f"*{' · '.join(meta)}*", ""]
+        meta.append(f"интерес: {item.interest_title}")
+    return meta
+
+
+def card_rows(item: ItemView) -> list[tuple[str, str]]:
+    """The fields of the dataset's card, when the entry has one."""
+    if item.attack is not None:
+        return attack_rows(item.attack)
+    if item.vulnerability is not None:
+        return vulnerability_rows(item.vulnerability)
+    return []
+
+
+def _item(item: ItemView) -> list[str]:
+    meta = " · ".join(_escape(part) for part in item_meta(item))
+    lines = [f"### {_link(item.headline, item.url)}", "", f"*{meta}*", ""]
     if item.headline != item.title:
         lines += [f"Оригинал: {_escape(item.title)}", ""]
     if item.summary:
         lines += [_escape(item.summary), ""]
+    rows = card_rows(item)
+    if rows:
+        lines += [f"- **{label}:** {_escape(value)}" for label, value in rows]
+        lines.append("")
+    if item.tags:
+        tags = " · ".join(TAG_LABELS[tag] for tag in item.tags)
+        lines += [f"**Признаки:** {tags}", ""]
     if item.why:
         lines += [f"**Почему важно:** {_escape(item.why)}", ""]
+    if item.links:
+        # Not clickable: a post may point at a working exploit.
+        cited = ", ".join(f"`{defang(url)}`" for url in item.links)
+        lines += [f"Ссылки из поста: {cited}", ""]
+    if item.unsupported:
+        removed = ", ".join(item.unsupported)
+        lines += [f"*Нет в тексте статьи, убрано проверкой: {_escape(removed)}.*", ""]
     if item.duplicates:
         also = ", ".join(_link(dup.source_name, dup.url) for dup in item.duplicates)
         lines += [f"Также об этом: {also}", ""]

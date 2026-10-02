@@ -87,6 +87,8 @@ class Article(Base):
     image_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Words of the full text, for the reading time; None while only a teaser is known.
     word_count: Mapped[int | None] = mapped_column(Integer)
+    # Addresses a Telegram post points to, besides its own; empty for a feed item.
+    links: Mapped[list[str]] = mapped_column(JSONB, default=list, server_default="[]")
     # When the page was last read to count them, so it is not read again soon.
     measured_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     search_tsv: Mapped[Any] = mapped_column(TSVECTOR, Computed(_SEARCH_EXPR, persisted=True))
@@ -513,6 +515,12 @@ class DigestItem(Base):
     duplicates: Mapped[list[dict[str, Any]]] = mapped_column(
         JSONB, default=list, server_default="[]"
     )
+    # What the publication reports and its priority by the dataset's rules.
+    kind: Mapped[str] = mapped_column(String(16), default="news", server_default="news")
+    priority: Mapped[str | None] = mapped_column(String(8))
+    # The attack or vulnerability card, the management tags and what the
+    # check against the article took out (domain.ItemSummary).
+    card: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="{}")
 
     digest: Mapped[Digest] = relationship(back_populates="items")
     article: Mapped[Article] = relationship(lazy="joined")

@@ -9,8 +9,9 @@ from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from radar.cards import priority
 from radar.db.models import Digest, DigestItem, DigestTopic
-from radar.domain import DigestOverview, GradedCandidate, ProfileSpec, Topic
+from radar.domain import DigestOverview, GradedCandidate, ItemSummary, ProfileSpec, Topic
 
 STATUS_QUEUED = "queued"
 STATUS_RUNNING = "running"
@@ -196,6 +197,9 @@ async def save_result(
                     summary=item.text.summary if item.text else "",
                     why=item.text.why if item.text else "",
                     duplicates=[dup.model_dump() for dup in item.duplicates],
+                    kind=graded_item.grade.kind,
+                    priority=priority(graded_item.grade.kind, item.text),
+                    card=_card(item.text),
                 )
             )
             position += 1
@@ -217,6 +221,7 @@ async def save_result(
                 interest_id=graded_item.interest_id,
                 reason=graded_item.grade.reason,
                 reject_reason=rejected.get(graded_item.article.id, "low_score"),
+                kind=graded_item.grade.kind,
             )
         )
         position += 1
@@ -235,3 +240,10 @@ async def save_result(
             finished_at=datetime.now(UTC),
         )
     )
+
+
+def _card(text: ItemSummary | None) -> dict[str, Any]:
+    """The card part of an entry, as stored with it."""
+    if text is None:
+        return {}
+    return text.model_dump(mode="json", include={"attack", "vulnerability", "tags", "unsupported"})

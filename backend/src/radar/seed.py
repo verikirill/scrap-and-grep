@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -69,6 +69,7 @@ EXAMPLE_LOOKS = {
     "Специалист по ИБ АСУ ТП": ("shield", "red"),
     "Руководитель ИТ-инфраструктуры": ("servers", "blue"),
     "Директор по цифровой трансформации": ("network", "violet"),
+    "Руководство и сотрудники: кибербезопасность": ("lock", "orange"),
 }
 
 DEFAULT_PROFILES: tuple[ProfileSpec, ...] = (
@@ -200,6 +201,55 @@ DEFAULT_PROFILES: tuple[ProfileSpec, ...] = (
         exclusions=("вакансии и карьера", "обзор смартфона", "игры и киберспорт"),
         min_score=0.5,
         max_items=15,
+        # The dataset's second kind of digest: short briefs with tags, no cards.
+        audience="management",
+    ),
+    # The organizers' second dataset as a profile: what management and staff
+    # of an energy company should know about security, without the jargon.
+    ProfileSpec(
+        name="Руководство и сотрудники: кибербезопасность",
+        role=(
+            "Руководители и сотрудники энергетической компании без подготовки в ИБ. Им нужно "
+            "понимать громкие инциденты, утечки, штрафы и угрозы, которые касаются их лично."
+        ),
+        interests=(
+            Interest(
+                id="major-attacks",
+                title="Крупные кибератаки и их последствия",
+                description="Атаки на российские компании и госорганы: простои, ущерб, кто взял на себя ответственность.",
+                keywords=("кибератака", "хакерская атака", "взлом", "шифровальщик", "простой", "ущерб", "DDoS"),
+                weight=1.2,
+            ),
+            Interest(
+                id="data-leaks",
+                title="Утечки данных",
+                description="Утечки персональных данных, коммерческой и государственной тайны, штрафы за них.",
+                keywords=("утечка", "слив данных", "персональные данные", "база данных", "оборотный штраф"),
+            ),
+            Interest(
+                id="energy-industry",
+                title="Атаки на энергетику и промышленность",
+                description="Инциденты в электроэнергетике, нефтегазе и на производстве, угрозы критической инфраструктуре.",
+                keywords=("энергетика", "электросети", "КИИ", "промышленность", "SCADA", "АСУ ТП"),
+                weight=1.3,
+            ),
+            Interest(
+                id="security-law",
+                title="Законы и требования по ИБ",
+                description="Новые законы, требования к КИИ, штрафы и сроки импортозамещения.",
+                keywords=("законопроект", "Минцифры", "ФСТЭК", "КИИ", "штраф", "импортозамещение", "152-ФЗ", "187-ФЗ"),
+            ),
+            Interest(
+                id="everyday-threats",
+                title="Угрозы для сотрудников",
+                description="Фишинг, мошенничество, мобильные трояны и уязвимости сервисов, которыми пользуются все.",
+                keywords=("фишинг", "мошенники", "троян", "Android", "WhatsApp", "мессенджер", "Госуслуги"),
+            ),
+        ),
+        exclusions=("вакансии и карьера", "обзор смартфона", "игры и киберспорт"),
+        min_score=0.5,
+        max_items=15,
+        audience="management",
     ),
 )  # fmt: skip
 
@@ -226,9 +276,21 @@ async def seed_defaults(session: AsyncSession) -> dict[str, int]:
     # starts with their own, built from the resume or by hand.
     profiles_added = 0
     demo_id = await session.scalar(select(User.id).where(User.email == DEMO_EMAIL))
-    owned = select(func.count()).select_from(Profile).where(Profile.user_id == demo_id)
-    if demo_id is not None and not await session.scalar(owned):
+    if demo_id is not None:
+        existing = set(
+            await session.scalars(select(Profile.name).where(Profile.user_id == demo_id))
+        )
         for spec in DEFAULT_PROFILES:
+            if spec.name in existing:
+                # The examples are a template the code owns: guests copy them,
+                # nobody edits them. A change to a default reaches them on the
+                # next start, and so does a new example.
+                await session.execute(
+                    update(Profile)
+                    .where(Profile.user_id == demo_id, Profile.name == spec.name)
+                    .values(spec=spec.model_dump(mode="json"))
+                )
+                continue
             icon, color = EXAMPLE_LOOKS.get(spec.name, (None, None))
             session.add(
                 Profile(

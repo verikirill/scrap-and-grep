@@ -30,6 +30,7 @@ class NewArticle:
     content_hash: str
     image_url: str | None = None
     word_count: int | None = None
+    links: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -59,6 +60,7 @@ def to_ref(article: Article) -> ArticleRef:
         language=article.language,
         published_at=article.published_at,
         content_hash=article.content_hash,
+        links=tuple(article.links or ()),
     )
 
 
@@ -86,6 +88,7 @@ async def insert_new(
             "content_hash": item.content_hash,
             "image_url": item.image_url,
             "word_count": item.word_count,
+            "links": list(item.links),
         }
         for item in articles
     ]
