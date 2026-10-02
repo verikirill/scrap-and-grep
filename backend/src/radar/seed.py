@@ -93,11 +93,52 @@ DEFAULT_SOURCES: tuple[tuple[str, str, str, str, str, str, bool], ...] = (
     ("tg-poxek", "poxek", "https://t.me/s/poxek", "https://t.me/poxek", "security", "ru", False),
     ("tg-proxy-bar", "proxy bar", "https://t.me/s/proxy_bar", "https://t.me/proxy_bar", "security", "ru", False),
     ("tg-threathuntingfather", "Threat Hunting Father", "https://t.me/s/ThreatHuntingFather", "https://t.me/ThreatHuntingFather", "security", "ru", False),
+    # The rest of the organizers' lists, checked on 2026-10-03 with ingest/detect.py.
+    # Sites without a feed are read as news pages (ingest/listing.py), CISOCLUB,
+    # whose feed answers 403 to everyone, through its WordPress API. dbugs,
+    # Forbes and the ICS BDU are drawn by script and need the browser step.
+    ("dbugs-pt", "dbugs PT: уязвимости", "https://dbugs.ptsecurity.com/vulnerability", "https://dbugs.ptsecurity.com", "security", "en", False),
+    ("ctfiot", "CTFIOT", "https://www.ctfiot.com/feed/", "https://www.ctfiot.com/blog", "security", "en", True),
+    ("mcafee-labs", "McAfee Labs", "https://www.mcafee.com/blogs/other-blogs/mcafee-labs/", "https://www.mcafee.com/blogs/other-blogs/mcafee-labs/", "security", "en", False),
+    ("xlab", "XLab Qianxin", "https://blog.xlab.qianxin.com/rss/", "https://blog.xlab.qianxin.com/", "security", "en", False),
+    ("netskope", "Netskope Threat Labs", "https://www.netskope.com/feed", "https://www.netskope.com/the-lens/threat-research", "security", "en", True),
+    ("nviso", "NVISO Labs", "https://blog.nviso.eu/feed/", "https://blog.nviso.eu/", "security", "en", False),
+    ("tg-offensivetwitter", "OffensiveTwitter", "https://t.me/s/OffensiveTwitter", "https://t.me/OffensiveTwitter", "security", "ru", False),
+    ("tg-detectioneasy", "detectioneasy", "https://t.me/s/detectioneasy", "https://t.me/detectioneasy", "security", "ru", False),
+    ("tg-redteambro", "RedTeambro", "https://t.me/s/RedTeambro", "https://t.me/RedTeambro", "security", "ru", False),
+    ("ria-infosec", "РИА Новости: информационная безопасность", "https://ria.ru/product_informatsionnaya-bezopasnost/", "https://ria.ru", "security", "ru", False),
+    ("forbes-infosec", "Forbes: информационная безопасность", "https://www.forbes.ru/tegi/informacionnaya-bezopasnost", "https://www.forbes.ru", "security", "ru", False),
+    ("kaspersky-press", "Лаборатория Касперского: пресс-релизы", "https://www.kaspersky.ru/about/press-releases", "https://www.kaspersky.ru", "security", "ru", False),
+    ("securenews", "SecureNews", "https://securenews.ru/news/feed/", "https://securenews.ru/news/", "security", "ru", False),
+    ("pt-news", "Positive Technologies: новости", "https://ptsecurity.com/ru-ru/about/news/", "https://ptsecurity.com", "security", "ru", False),
+    ("security-vision", "Security Vision: новости", "https://www.securityvision.ru/news/", "https://www.securityvision.ru", "security", "ru", False),
+    ("kommersant-infosec", "Коммерсантъ: информационная безопасность", "https://www.kommersant.ru/archive/theme/1267", "https://www.kommersant.ru", "security", "ru", False),
+    ("cisoclub", "CISOCLUB", "https://cisoclub.ru/wp-json/wp/v2/posts?per_page=20&_fields=id%2Clink%2Ctitle%2Cdate_gmt%2Ccontent%2Cexcerpt&categories=2", "https://cisoclub.ru/category/news/", "security", "ru", False),
+    ("securitymedia", "SecurityMedia", "https://securitymedia.org/news/", "https://securitymedia.org", "security", "ru", False),
+    ("cybernews", "Cybernews", "https://cybernews.com/security/", "https://cybernews.com", "security", "en", False),
+    ("bdu-asutp", "БДУ ФСТЭК: АСУ ТП", "https://bduasutp.fstec.ru/#/news", "https://bduasutp.fstec.ru", "ics", "ru", False),
 )  # fmt: skip
 
 # Sources that are not feeds; the rest are RSS or Atom.
 SOURCE_KINDS = {
     "pt-trending": "pt_trending",
+    "cisoclub": "wordpress",
+    **dict.fromkeys(
+        (
+            "dbugs-pt",
+            "mcafee-labs",
+            "ria-infosec",
+            "forbes-infosec",
+            "kaspersky-press",
+            "pt-news",
+            "security-vision",
+            "kommersant-infosec",
+            "securitymedia",
+            "cybernews",
+            "bdu-asutp",
+        ),
+        "page",
+    ),
     **{slug: "telegram" for slug, *_ in DEFAULT_SOURCES if slug.startswith("tg-")},
 }
 
