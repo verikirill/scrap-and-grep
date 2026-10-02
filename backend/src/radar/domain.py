@@ -12,11 +12,12 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from radar.text import stable_hash
 
 SourceCategory = Literal["security", "ics", "it", "energy", "regulator"]
-# An RSS or Atom feed, a public Telegram channel, or the trending
-# vulnerabilities page of Positive Technologies.
-SourceKind = Literal["rss", "telegram", "pt_trending"]
-# What an administrator can add; the PT page comes with the defaults.
-AddableSourceKind = Literal["rss", "telegram"]
+# An RSS or Atom feed, a public Telegram channel, the trending
+# vulnerabilities page of Positive Technologies, the REST API of a WordPress
+# site, or a news page without a feed.
+SourceKind = Literal["rss", "telegram", "pt_trending", "wordpress", "page"]
+# What can be added; the PT page comes with the defaults.
+AddableSourceKind = Literal["rss", "telegram", "wordpress", "page"]
 Language = Literal["ru", "en"]
 # Who reads the digest, as in the organizers' dataset: specialists get a card
 # per attack and vulnerability, management a short brief with tags.

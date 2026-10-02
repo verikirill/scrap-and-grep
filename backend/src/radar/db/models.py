@@ -47,7 +47,9 @@ class Source(Base):
     name: Mapped[str] = mapped_column(String(200))
     # "rss" for RSS and Atom feeds, "telegram" for a public channel read at
     # feed_url = https://t.me/s/<name>, "pt_trending" for the trending
-    # vulnerabilities page of Positive Technologies.
+    # vulnerabilities page of Positive Technologies, "wordpress" for the REST
+    # API of a WordPress site (its posts with their text), "page" for a news
+    # page or a sitemap whose links lead to the articles (ingest/listing.py).
     kind: Mapped[str] = mapped_column(String(16), default="rss", server_default="rss")
     feed_url: Mapped[str] = mapped_column(Text, unique=True)
     site_url: Mapped[str | None] = mapped_column(Text)
@@ -55,6 +57,9 @@ class Source(Base):
     language: Mapped[str] = mapped_column(String(8), default="ru")
     enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     fetch_full_text: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    # A page source: the CSS selector of its article links, when they are
+    # not found by themselves.
+    link_selector: Mapped[str | None] = mapped_column(Text)
     etag: Mapped[str | None] = mapped_column(Text)
     last_modified: Mapped[str | None] = mapped_column(Text)
     # A channel's newest post already read; the next run starts after it.

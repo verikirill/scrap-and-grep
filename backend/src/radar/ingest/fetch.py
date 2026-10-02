@@ -25,7 +25,7 @@ import asyncio
 import contextlib
 import itertools
 import tempfile
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from functools import cache
 from importlib.resources import files
@@ -105,8 +105,10 @@ NO_ANSWER = "нет ответа"
 THIN_FEED = "страница вместо ленты"
 JS_SHELL = "пустая страница-приложение"
 SHORT_TEXT = "текст короче порога"
+# A news page whose links the caller could not find (ingest/listing.py).
+NO_LINKS = "нет ссылок на статьи"
 # Refusals judged by the page's content, not by the site's answer.
-CONTENT_REASONS = frozenset({THIN_FEED, JS_SHELL, SHORT_TEXT})
+CONTENT_REASONS = frozenset({THIN_FEED, JS_SHELL, SHORT_TEXT, NO_LINKS})
 # A page whose visible text is shorter than this, but which has scripts, is
 # an application drawn in the browser.
 JS_SHELL_CHARS = 200
@@ -239,8 +241,13 @@ class Ladder:
         headers: dict[str, str] | None = None,
         max_bytes: int | None = None,
         expect: Expect = "any",
+        wanted: Callable[[httpx.Response], bool] | None = None,
     ) -> httpx.Response:
         """The page at `url`, read by the lowest step the site accepts.
+
+        `wanted` judges the content beyond the usual: a news page whose
+        links it cannot find is asked again a step up, as a page drawn by
+        script is.
 
         A refusal on every step raises Blocked. An answer that is no refusal
         (200, 304, 404, 500) is returned as it is, for the caller to judge.
@@ -264,7 +271,9 @@ class Ladder:
             for step in self._order(start):
                 if step in HEAVY and not _worth_a_browser(climb) and start != step:
                     continue
-                read = await self._try(climb, step, proxy, url, headers or {}, max_bytes, expect)
+                read = await self._try(
+                    climb, step, proxy, url, headers or {}, max_bytes, expect, wanted
+                )
                 if read is not None:
                     return self._read(host, url, step, proxy, climb.outcome, read)
                 if climb.told_to_wait:
@@ -305,6 +314,7 @@ class Ladder:
         headers: dict[str, str],
         max_bytes: int | None,
         expect: Expect,
+        wanted: Callable[[httpx.Response], bool] | None = None,
     ) -> httpx.Response | None:
         """The response of one step, or None after noting why it is no good."""
         pooled = proxy is not None and proxy != self._proxy
@@ -331,6 +341,13 @@ class Ladder:
             PACER.hold(pace, wait)
             climb.told_to_wait = response.status_code == 429
         reason = await asyncio.to_thread(refusal, response, expect)
+        if (
+            reason is None
+            and wanted is not None
+            and response.status_code < 300
+            and not await asyncio.to_thread(wanted, response)
+        ):
+            reason = NO_LINKS
         if reason in CONTENT_REASONS and host in self._thin_hosts:
             reason = None
         if reason is None:
@@ -467,7 +484,9 @@ def _refused(climb: _Climb) -> bool:
 
 def _worth_a_browser(climb: _Climb) -> bool:
     """A refusal by the site, or a page drawn by script: what a browser helps."""
-    return _refused(climb) or any(reason == JS_SHELL for _, reason in climb.outcome.refusals)
+    return _refused(climb) or any(
+        reason in {JS_SHELL, NO_LINKS} for _, reason in climb.outcome.refusals
+    )
 
 
 def _proxy_refused(climb: _Climb) -> bool:
@@ -628,7 +647,7 @@ def refusal(response: httpx.Response, expect: Expect) -> str | None:
         ):
             return THIN_FEED
         return None
-    if expect in {"page", "article"} and _is_js_shell(response.text):
+    if expect in {"page", "article"} and is_js_shell(response.text):
         return JS_SHELL
     if expect == "article" and not bdu.is_vulnerability_page(str(response.request.url)):
         text = trafilatura.extract(response.text, include_comments=False) or ""
@@ -642,7 +661,8 @@ def _challenge(body: bytes) -> str | None:
     return next((label for marker, label in CHALLENGES if marker in lowered), None)
 
 
-def _is_js_shell(page: str) -> bool:
+def is_js_shell(page: str) -> bool:
+    """A page with scripts and next to no visible text: drawn in the browser."""
     if "<script" not in page.lower():
         return False
     tree = LexborHTMLParser(page)

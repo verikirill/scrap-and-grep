@@ -16,10 +16,11 @@ from radar.db.models import Source
 from radar.images.extract import from_page
 from radar.ingest.feeds import CONTENT_LIMIT, FeedResult, fetch_feed
 from radar.ingest.fetch import Ladder, Outcome
-from radar.ingest.pages import page_text
+from radar.ingest.pages import fetch_listing, page_text
 from radar.ingest.polite import robots_allows
 from radar.ingest.ptsecurity import fetch_trending
 from radar.ingest.telegram import fetch_channel
+from radar.ingest.wordpress import fetch_posts
 from radar.logging import get_logger
 from radar.reading import word_count
 from radar.store import articles as article_store
@@ -65,7 +66,7 @@ async def ingest_source(source_id: int, client: httpx.AsyncClient, cache: Cache)
                 source.last_modified,
                 source.fetch_full_text,
             )
-            last_post_id = source.last_post_id
+            last_post_id, selector = source.last_post_id, source.link_selector
             ladder = Ladder(client, remembered=source.fetch_method, proxy=source.proxy_url)
 
         robots = None
@@ -80,6 +81,20 @@ async def ingest_source(source_id: int, client: httpx.AsyncClient, cache: Cache)
             elif kind == "pt_trending":
                 feed = await fetch_trending(
                     ladder, feed_url, etag=etag, last_modified=last_modified
+                )
+            elif kind == "wordpress":
+                feed = await fetch_posts(
+                    ladder, feed_url, language=language, etag=etag, last_modified=last_modified
+                )
+            elif kind == "page":
+                feed = await fetch_listing(
+                    ladder,
+                    feed_url,
+                    language=language,
+                    selector=selector,
+                    etag=etag,
+                    last_modified=last_modified,
+                    known=_known_urls,
                 )
             else:
                 feed = await fetch_feed(
@@ -97,6 +112,11 @@ async def ingest_source(source_id: int, client: httpx.AsyncClient, cache: Cache)
         await _record(source_id, status=feed.status, feed=feed, read=ladder.first, robots=robots)
         log.info("ingest_done", source_id=source_id, status=feed.status, new=len(new_ids))
         return IngestReport(source_id, feed.status, new_articles=len(new_ids))
+
+
+async def _known_urls(urls: list[str]) -> set[str]:
+    async with session_scope() as session:
+        return await article_store.known_urls(session, urls)
 
 
 async def _store(source_id: int, feed: FeedResult, ladder: Ladder, full_text: bool) -> list[int]:

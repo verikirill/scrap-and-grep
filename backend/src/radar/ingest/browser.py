@@ -14,6 +14,7 @@ that connects to public addresses only, redirects included. The service
 sits on the `solving` network with the ingest worker alone.
 """
 
+import asyncio
 from dataclasses import dataclass
 
 import httpx
@@ -24,6 +25,20 @@ from radar.ingest.net import UnsafeUrlError, resolve_public
 from radar.logging import get_logger
 
 log = get_logger(__name__)
+
+
+# Pages one process asks the browser for at once: as many as it has tabs.
+# More would only wait in its queue, and the wait would eat their time.
+CONCURRENCY = 2
+_slots: dict[int, asyncio.Semaphore] = {}
+
+
+def _slot() -> asyncio.Semaphore:
+    """The semaphore of the running loop: tests and workers run several."""
+    loop = id(asyncio.get_running_loop())
+    if loop not in _slots:
+        _slots[loop] = asyncio.Semaphore(CONCURRENCY)
+    return _slots[loop]
 
 
 class BrowserFailed(httpx.TransportError):
@@ -55,9 +70,10 @@ async def render(url: str, *, proxy: str | None = None) -> Page:
     if proxy:
         command["proxy"] = proxy
     # The service is inside the stack: no address check, no proxy, no pinning.
-    async with httpx.AsyncClient(
-        timeout=settings.browser_timeout_seconds + 20, trust_env=False
-    ) as client:
+    async with (
+        _slot(),
+        httpx.AsyncClient(timeout=settings.browser_timeout_seconds + 20, trust_env=False) as client,
+    ):
         try:
             answer = await client.post(f"{settings.browser_url.rstrip('/')}/render", json=command)
         except httpx.HTTPError as exc:
