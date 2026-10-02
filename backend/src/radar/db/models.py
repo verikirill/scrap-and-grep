@@ -163,6 +163,8 @@ class User(Base):
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # How the feed looks: "cards" or "telegram" (posts of a channel).
     feed_view: Mapped[str] = mapped_column(String(16), default="cards", server_default="cards")
+    # Which order the feed opens in: "new" (relevant, newest first) or "top".
+    feed_order: Mapped[str] = mapped_column(String(8), default="new", server_default="new")
 
 
 class ApiKey(Base):

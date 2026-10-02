@@ -360,6 +360,21 @@ async def reactions(
     return found
 
 
+async def seen_ids(
+    session: AsyncSession, user_id: uuid.UUID, article_ids: Sequence[int]
+) -> set[int]:
+    """Those of the articles the reader has met: shown on screen, or marked."""
+    if not article_ids:
+        return set()
+    shown = select(Impression.article_id).where(
+        Impression.user_id == user_id, Impression.article_id.in_(article_ids)
+    )
+    marked = select(Interaction.article_id).where(
+        Interaction.user_id == user_id, Interaction.article_id.in_(article_ids)
+    )
+    return set(await session.scalars(shown.union(marked)))
+
+
 async def saved_ids(
     session: AsyncSession, user_id: uuid.UUID, limit: int, offset: int
 ) -> tuple[list[int], int]:

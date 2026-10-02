@@ -46,6 +46,8 @@ class UserOut(BaseModel):
 # How the feed looks: cards with the reasons in full, or posts as in a
 # Telegram channel, with the article's picture.
 FeedView = Literal["cards", "telegram"]
+# Which order the feed opens in: the relevant articles newest first, or by score.
+FeedOrder = Literal["new", "top"]
 
 
 class MeOut(UserOut):
@@ -55,14 +57,19 @@ class MeOut(UserOut):
     # The reader's picture; the query string changes with every new one.
     avatar_url: str | None = None
     feed_view: FeedView = "cards"
+    feed_order: FeedOrder = "new"
 
 
 class SettingsIn(BaseModel):
-    feed_view: FeedView
+    """The settings to change; those left out stay as they are."""
+
+    feed_view: FeedView | None = None
+    feed_order: FeedOrder | None = None
 
 
 class SettingsOut(BaseModel):
     feed_view: FeedView
+    feed_order: FeedOrder
 
 
 class AvatarOut(BaseModel):

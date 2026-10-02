@@ -396,13 +396,23 @@ export interface Me extends User {
   /** The reader's picture; a new one gets a new address. */
   avatar_url: string | null
   feed_view: FeedView
+  feed_order: FeedOrder
 }
 
 /** How the feed looks: cards with the reasons in full, or posts as in a Telegram channel. */
 export type FeedView = 'cards' | 'telegram'
 
+/** Which order the feed is in: the relevant articles newest first, or by score. */
+export type FeedOrder = 'new' | 'top'
+
 export interface Settings {
   feed_view: FeedView
+  feed_order: FeedOrder
+}
+
+/** Articles that arrived after the feed on screen was ranked and pass the reader's interests. */
+export interface FeedFresh {
+  fresh: number
 }
 
 export type Cadence = 'daily' | 'weekdays' | 'weekly'
@@ -469,6 +479,8 @@ export interface FeedItem {
   reading_minutes: number | null
   /** The article has a picture of its own, at api.articlePictureUrl. */
   has_picture: boolean
+  /** In the newest-first order: met before the order was made, so it comes after the rest. */
+  seen: boolean
   reasons: FeedReason[]
   /** Contribution of each part of the evidence; empty for saved items. */
   parts: Record<string, number>
@@ -511,6 +523,8 @@ export interface FeedPage {
   generated_at: string
   /** Names the ranking the page was cut from; pass it back for the next page. */
   snapshot: string | null
+  /** When that ranking was made: what arrived since is offered as new. */
+  built_at?: string | null
 }
 
 export interface TasteFacet {
@@ -667,7 +681,7 @@ export const api = {
   demoLogin: () => request<User>('/auth/demo', { method: 'POST' }),
   logout: () => request<void>('/auth/logout', { method: 'POST' }),
   deleteAccount: (password: string) => request<void>('/auth/me/delete', json('POST', { password })),
-  updateSettings: (settings: Settings) =>
+  updateSettings: (settings: Partial<Settings>) =>
     request<Settings>('/auth/me/settings', json('PATCH', settings)),
   mcpKeys: () => request<McpKey[]>('/mcp/keys'),
   /** The picture goes as the raw body; the server squares and re-encodes it. */
@@ -700,8 +714,9 @@ export const api = {
     }),
   deleteResume: () => request<void>('/resume', { method: 'DELETE' }),
 
-  feed: (limit: number, offset: number, snapshot?: string) =>
-    request<FeedPage>(`/feed${query({ limit, offset, snapshot })}`),
+  feed: (order: FeedOrder, limit: number, offset: number, snapshot?: string) =>
+    request<FeedPage>(`/feed${query({ order, limit, offset, snapshot })}`),
+  feedFresh: (since: string) => request<FeedFresh>(`/feed/fresh${query({ since })}`),
   saved: (limit: number, offset: number) =>
     request<FeedPage>(`/feed/saved${query({ limit, offset })}`),
   taste: () => request<Taste>('/taste'),
