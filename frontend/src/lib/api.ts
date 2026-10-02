@@ -130,6 +130,8 @@ export interface Article {
   language: string
   tags: string[]
   published_at: string
+  /** In a search: found by the words of the query, or only by its meaning. */
+  match?: 'words' | 'meaning' | null
 }
 
 export interface Page<T> {

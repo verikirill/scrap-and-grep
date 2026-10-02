@@ -22,6 +22,8 @@ class Embedder(Protocol):
     model_id: str
     # Cosine similarity above which two articles are treated as the same story.
     duplicate_threshold: float
+    # Cosine below which a search query and an article are not about one thing.
+    search_floor: float
     # False for embedders that only capture spelling. Their similarity cannot
     # carry a selection decision or a clustering on its own.
     semantic: bool
@@ -48,6 +50,7 @@ class HashingEmbedder:
     """Feature hashing over word unigrams and character 3-5-grams."""
 
     duplicate_threshold = 0.72
+    search_floor = 1.0
     semantic = False
 
     def __init__(self, dim: int = EMBEDDING_DIM) -> None:
@@ -97,6 +100,7 @@ class OllamaEmbedder:
         document_prefix: str = "",
         dimensions: int | None = None,
         duplicate_threshold: float = 0.88,
+        search_floor: float = 0.0,
         keep_alive: int = 1800,
         batch_size: int = 32,
     ) -> None:
@@ -104,6 +108,7 @@ class OllamaEmbedder:
 
         self.model_id = f"ollama:{model}"
         self.duplicate_threshold = duplicate_threshold
+        self.search_floor = search_floor
         self._client = OllamaEmbeddings(
             model=model, base_url=base_url, keep_alive=keep_alive, dimensions=dimensions
         )

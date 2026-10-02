@@ -1,13 +1,14 @@
 """Sources and articles: the raw material a digest is built from."""
 
 from datetime import datetime
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
 
+from radar.ai.factory import get_embedder
 from radar.api.deps import (
     SessionDep,
     SettingsDep,
@@ -22,7 +23,7 @@ from radar.ingest import telegram
 from radar.ingest.net import UnsafeUrlError, build_client, ensure_public_url
 from radar.ingest.pages import MarkupChanged
 from radar.logging import get_logger
-from radar.store.articles import ArticleFilter, list_articles
+from radar.store.articles import ArticleFilter, Meaning, find_articles
 from radar.text import stable_hash
 from radar.worker.tasks import ingest_all, ingest_source_task
 
@@ -35,7 +36,7 @@ _write_limit = Depends(user_rate_limit("write", lambda settings: settings.rate_l
 _admin = Depends(admin_user)
 
 
-def _article_out(article: Article) -> ArticleOut:
+def _article_out(article: Article, match: Literal["words", "meaning"] | None = None) -> ArticleOut:
     return ArticleOut(
         id=article.id,
         url=article.url,
@@ -48,7 +49,24 @@ def _article_out(article: Article) -> ArticleOut:
         language=article.language,
         tags=article.tags,
         published_at=article.published_at,
+        match=match,
     )
+
+
+async def _meaning(query: str | None) -> Meaning | None:
+    """The query as a vector, when the embedder understands meaning at all.
+
+    The search still answers by words when the embedding server is down.
+    """
+    embedder = get_embedder()
+    if not query or not embedder.semantic:
+        return None
+    try:
+        [vector] = await embedder.embed([query], "query")
+    except Exception as exc:
+        log.warning("search_meaning_unavailable", error=type(exc).__name__)
+        return None
+    return Meaning(vector=vector, model=embedder.model_id, floor=embedder.search_floor)
 
 
 async def _source_out(session: SessionDep, source: Source) -> SourceOut:
@@ -241,9 +259,13 @@ async def search_articles(
         since=since,
         until=until,
     )
-    articles, total = await list_articles(session, flt, limit, offset)
+    found, total = await find_articles(session, flt, limit, offset, await _meaning(flt.query))
+    words: Literal["words"] | None = "words" if flt.query else None
     return Page[ArticleOut](
-        items=[_article_out(article) for article in articles],
+        items=[
+            _article_out(article, "meaning" if by_meaning else words)
+            for article, by_meaning in found
+        ],
         total=total,
         limit=limit,
         offset=offset,

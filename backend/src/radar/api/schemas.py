@@ -117,6 +117,8 @@ class ArticleOut(BaseModel):
     language: str
     tags: list[str]
     published_at: datetime
+    # In a search: found by the words of the query, or only by its meaning.
+    match: Literal["words", "meaning"] | None = None
 
 
 class ProfileOut(BaseModel):
