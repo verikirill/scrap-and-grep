@@ -1,10 +1,10 @@
 """Runtime configuration, read once from the environment."""
 
 from functools import lru_cache
-from typing import Literal
+from typing import Literal, Self
 from urllib.parse import urlsplit
 
-from pydantic import Field, SecretStr, computed_field, field_validator
+from pydantic import Field, SecretStr, computed_field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Every stored vector has this width. Smaller models are zero-padded (cosine
@@ -43,11 +43,22 @@ class Settings(BaseSettings):
     embedding_document_prefix: str = ""
     embedding_batch_size: int = 32
     llm_provider: Literal["heuristic", "ollama"] = "heuristic"
-    llm_model: str = "qwen3.5:9b"
+    # gpt-oss-120b, one of the models the task names, in Ollama's cloud. A
+    # local model is the same settings with an empty base URL, see .env.example.
+    llm_model: str = "gpt-oss:120b"
+    # Where the language model is asked. Empty means the Ollama below, the one
+    # that also makes the embeddings.
+    llm_base_url: str = "https://ollama.com"
+    llm_api_key: SecretStr | None = None
+    # Hidden reasoning before the answer. gpt-oss cannot switch it off and
+    # takes a level; qwen3.5 answers a schema as well without it.
+    llm_reasoning: Literal["off", "low", "medium", "high"] = "low"
     llm_temperature: float = 0.1
     llm_num_ctx: int = 8192
     llm_timeout_seconds: float = 120.0
-    llm_concurrency: int = 2
+    # Requests in flight at once. The cloud serves them in parallel; one local
+    # GPU does not (see DECISIONS.md), there 2 is enough.
+    llm_concurrency: int = 4
     ollama_base_url: str = "http://127.0.0.1:11434"
     ollama_keep_alive_seconds: int = 1800
     breaker_failure_threshold: int = 3
@@ -204,6 +215,21 @@ class Settings(BaseSettings):
             ):
                 raise ValueError(f"not a base address for t.me pages: {url!r}")
         return urls
+
+    @field_validator("llm_api_key", mode="before")
+    @classmethod
+    def _unset_key(cls, value: object) -> object:
+        # Compose passes a key that is not set as an empty string.
+        return value or None
+
+    @model_validator(mode="after")
+    def _cloud_needs_a_key(self) -> Self:
+        # Without the key every answer is a 401, the breaker quietly falls back
+        # to the offline mode, and the stack looks fine while no model works.
+        cloud = urlsplit(self.llm_base_url).hostname == "ollama.com"
+        if self.llm_provider == "ollama" and cloud and self.llm_api_key is None:
+            raise ValueError("RADAR_LLM_API_KEY is required for a model in Ollama's cloud")
+        return self
 
     @computed_field  # type: ignore[prop-decorator]
     @property

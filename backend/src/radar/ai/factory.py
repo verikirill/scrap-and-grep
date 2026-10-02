@@ -96,7 +96,9 @@ def get_chat(temperature: float | None = None) -> OllamaChat | None:
 
     return OllamaChat(
         settings.llm_model,
-        settings.ollama_base_url,
+        settings.llm_base_url or settings.ollama_base_url,
+        api_key=settings.llm_api_key.get_secret_value() if settings.llm_api_key else None,
+        reasoning=settings.llm_reasoning,
         temperature=settings.llm_temperature if temperature is None else temperature,
         num_ctx=settings.llm_num_ctx,
         keep_alive=settings.ollama_keep_alive_seconds,
