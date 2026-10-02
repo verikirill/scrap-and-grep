@@ -80,7 +80,7 @@ def priority_reason(kind: RecordKind, text: ItemSummary | None) -> str:
     """Why the rule gave this priority, in the dataset's words."""
     level = priority(kind, text)
     if kind == "attack":
-        return {"high": "РФ, энергетика", "medium": "РФ, другие отрасли"}.get(
+        return {"high": "РФ, энергетика или промышленность", "medium": "РФ, другие отрасли"}.get(
             level or "", "вне РФ или страна не названа"
         )
     if kind == "vulnerability":
@@ -268,6 +268,10 @@ def _about(ids: Sequence[str], source: str) -> str:
 def check_attack(card: AttackCard, source: str) -> tuple[AttackCard, list[str]]:
     removed: list[str] = []
     updates: dict[str, object] = {}
+    # The model reads "energy_sector" by its name and leaves out industry it
+    # wrote in the sectors itself; the rule takes the sectors' words.
+    if not card.energy_sector and _ENERGY_OR_INDUSTRY_RE.search(card.sectors):
+        updates["energy_sector"] = True
     if card.group and not _mentioned(card.group, source):
         updates["group"] = ""
         removed.append("Группировка")
@@ -322,6 +326,9 @@ _ENERGY_RE = re.compile(
     r"energy sector|power grid|electric utilit",
     re.IGNORECASE,
 )
+# The dataset's "energy sector" of an attack takes industry in: PhantomCore's
+# attack on Russian industry is a high-priority example there.
+_ENERGY_OR_INDUSTRY_RE = re.compile(rf"{_ENERGY_RE.pattern}|промышлен|машиностро|завод", re.I)
 _CVSS_SCORE_RE = re.compile(r"CVSS[^\d\n]{0,40}?(\d{1,2}[.,]\d)\b", re.IGNORECASE)
 _CVSS_VECTOR_RE = re.compile(
     r"\b(?:CVSS:[34]\.\d/)?AV:[NALP]/AC:[LH]/(?:PR|Au):[NLHMS]/[A-Z:/]{10,40}[NLHPC]\b"
@@ -394,7 +401,7 @@ def offline_vulnerability(source: str) -> VulnerabilityCard:
 def offline_attack(source: str) -> AttackCard:
     return AttackCard(
         victim_in_russia=bool(_RUSSIA_RE.search(source)),
-        energy_sector=bool(_ENERGY_RE.search(source)),
+        energy_sector=bool(_ENERGY_OR_INDUSTRY_RE.search(source)),
         vulnerabilities=tuple(identifiers(source)[:5]),
         iocs=True if _IOC_RE.search(source) else None,
     )
@@ -416,7 +423,8 @@ def section_overview(kind: RecordKind, texts: list[ItemSummary | None]) -> str:
         f"{PRIORITY_LABELS[level]} приоритет: {count}" for level, count in counts.items() if count
     ]
     rule = (
-        "атака на энергетику РФ выше атаки на другие отрасли РФ, атаки вне РФ ниже всех"
+        "атака на энергетику или промышленность РФ выше атаки на другие отрасли РФ, "
+        "атаки вне РФ ниже всех"
         if kind == "attack"
         else "уязвимость с эксплойтом выше уязвимости без него"
     )

@@ -1,0 +1,1130 @@
+[
+ {
+  "example": {
+   "id": "specialist-1",
+   "audience": "specialist",
+   "grouping": "Атака",
+   "priority": "Высокий",
+   "title": "Атака PhantomCore на организации промышленного сектора РФ",
+   "date": "2026-04-17",
+   "urls": [
+    "https://www.f6.ru/blog/phantomcore-newtools/"
+   ],
+   "wanted": "1. Страна жертвы: РФ \n2. Наименование группировки: PhantomCore\n3. Предполагаемая дата атаки: 8 апреля 2026\n4. Затронутые отрасли/компании: промышленный сектор\n5. Метод первоначального доступа: фишинговые письма\n6. Используемые инструменты злоумышленником: KermitRAT, HTA-файл, PowerShell, Batch, MeshAgent\n7. Идентификатор использумых уязвимостей: информация отсутствует\n8. Наличие индекаторов компрометации : да"
+  },
+  "profile": "Специалист по ИБ АСУ ТП",
+  "pages": [
+   {
+    "url": "https://www.f6.ru/blog/phantomcore-newtools/",
+    "error": null
+   }
+  ],
+  "kind": "attack",
+  "relevance": 1,
+  "by_model": true,
+  "priority": "высокий",
+  "priority_reason": "РФ, энергетика или промышленность",
+  "headline": "«Ждите гостей»: новые инструменты и тактики PhantomCore в атаках на российские компании — F6",
+  "summary": "8 апреля 2026 г. была зафиксирована фишинговая рассылка, содержащая вредоносный HTA-файл и ярлык, направленная в российскую промышленную компанию. Рассылка была заблокирована системой F6 Managed XDR, но в ней использовался новый троян удалённого доступа KermitRAT.",
+  "why": "Для инженера ИБ в электросетевой компании важно учитывать новые фишинговые кампании и самописный RAT KermitRAT, которые могут быть адаптированы к атакам на SCADA-системы.",
+  "fields": [
+   {
+    "label": "Страна жертвы",
+    "value": "РФ"
+   },
+   {
+    "label": "Группировка",
+    "value": "PhantomCore"
+   },
+   {
+    "label": "Дата атаки",
+    "value": "8 апреля 2026 года"
+   },
+   {
+    "label": "Отрасли и компании",
+    "value": "промышленность"
+   },
+   {
+    "label": "Первоначальный доступ",
+    "value": "фишинг (рассылка вредоносных писем)"
+   },
+   {
+    "label": "Инструменты",
+    "value": "KermitRAT, HTA-файл (KNDR.hta), ярлык LNK (KNDR.lnk), PDF-приманка (01-20363.pdf)"
+   },
+   {
+    "label": "Уязвимости",
+    "value": "нет данных"
+   },
+   {
+    "label": "Индикаторы компрометации",
+    "value": "нет данных"
+   }
+  ],
+  "tags": [],
+  "tag_ids": [],
+  "links": [],
+  "unsupported": [
+   "Индикаторы компрометации"
+  ]
+ },
+ {
+  "example": {
+   "id": "specialist-2",
+   "audience": "specialist",
+   "grouping": "Атака",
+   "priority": "Высокий",
+   "title": "Атаки Head Mare на организации образования, научных учреждений, энергетики РФ",
+   "date": "2026-03-19",
+   "urls": [
+    "https://securelist.ru/head-mare-campaign-phantompxpigeon-backdoor-and-trueconf-software/114998/"
+   ],
+   "wanted": "1. Страна жертвы: РФ\n2. Наименование группировки: Head Mare\n3. Предполагаемая дата атаки: декабрь 2025 - февраль 2026\n4. Затронутые отрасли/компании: образование, научные учреждения, энергетический сектор\n5. Метод первоначального доступа: компрометация приложения TrueConf\n6. Используемые инструменты злоумышленником: бэкдор PhantomPxPigeon, подмененный дистрибутив TrueConf без цифровой подписи\n7. Идентификатор использумых уязвимостей: информация BDU:2025-10116\n8. Наличие индекаторов компрометации : да"
+  },
+  "profile": "Специалист по ИБ АСУ ТП",
+  "pages": [
+   {
+    "url": "https://securelist.ru/head-mare-campaign-phantompxpigeon-backdoor-and-trueconf-software/114998/",
+    "error": null
+   }
+  ],
+  "kind": "attack",
+  "relevance": 3,
+  "by_model": true,
+  "priority": "высокий",
+  "priority_reason": "РФ, энергетика или промышленность",
+  "headline": "Новая кампания Head Mare с бэкдором PhantomPxPigeon | Securelist",
+  "summary": "В феврале-марте 2026 г. группа Head Mare распространяла поддельные дистрибутивы TrueConf, устанавливающие бэкдор PhantomPxPigeon. Атака затронула организации энергетики, транспорта, науки и образования в России.",
+  "why": "Необходимо проверить подписи установочных пакетов TrueConf и установить обновления, чтобы предотвратить внедрение бэкдора в системы управления подстанциями.",
+  "fields": [
+   {
+    "label": "Страна жертвы",
+    "value": "Россия"
+   },
+   {
+    "label": "Группировка",
+    "value": "Head Mare"
+   },
+   {
+    "label": "Дата атаки",
+    "value": "декабрь 2025 г. – март 2026 г."
+   },
+   {
+    "label": "Отрасли и компании",
+    "value": "энергетика, транспорт, научные и образовательные учреждения"
+   },
+   {
+    "label": "Первоначальный доступ",
+    "value": "подмена клиентского дистрибутива TrueConf, установка через видеоконференцию"
+   },
+   {
+    "label": "Инструменты",
+    "value": "PhantomPxPigeon, TrueConf (подменённый)"
+   },
+   {
+    "label": "Уязвимости",
+    "value": "BDU:2025-10116"
+   },
+   {
+    "label": "Индикаторы компрометации",
+    "value": "нет данных"
+   },
+   {
+    "label": "Сверено по базам",
+    "value": "нет в CISA KEV и БДУ: BDU:2025-10116"
+   }
+  ],
+  "tags": [],
+  "tag_ids": [],
+  "links": [],
+  "unsupported": [
+   "Индикаторы компрометации"
+  ]
+ },
+ {
+  "example": {
+   "id": "specialist-3",
+   "audience": "specialist",
+   "grouping": "Атака",
+   "priority": "Высокий",
+   "title": "Атака Silver Dragon на государственные учреждения Европы и Юго-Восточной Азии",
+   "date": "2026-03-03",
+   "urls": [
+    "https://research.checkpoint.com/2026/silver-dragon-targets-organizations-in-southeast-asia-and-europe/"
+   ],
+   "wanted": "1. Страна жертвы: РФ\n2. Наименование группировки: Silver Dragon\n3. Предполагаемая дата атаки: активност наблюдается последние месяцы\n4. Затронутые отрасли/компании: государственные структуры\n5. Метод первоначального доступа: фишинговые письма\n6. Используемые инструменты злоумышленником: бэкдор GearDoor, SSHcmd, мониторинг экрана SilverScreen, згрузчик BamboLoader, загрузчик MonikerLoader, Cobalt Strike\n7. Идентификатор использумых уязвимостей: нет\n8. Наличие индекаторов компрометации : да"
+  },
+  "profile": "Специалист по ИБ АСУ ТП",
+  "pages": [
+   {
+    "url": "https://research.checkpoint.com/2026/silver-dragon-targets-organizations-in-southeast-asia-and-europe/",
+    "error": "сайт ответил HTTP 202"
+   }
+  ]
+ },
+ {
+  "example": {
+   "id": "specialist-4",
+   "audience": "specialist",
+   "grouping": "Уязвимость",
+   "priority": "Высокий",
+   "title": "Уязвиомость Axios",
+   "date": "2026-04-17",
+   "urls": [
+    "https://dbugs.ptsecurity.com/vulnerability/PT-2023-8832"
+   ],
+   "wanted": "1. Наименование уязвимости: уязвимость компонента Axios\n2. Наименование релевантного уязвимого сервиса: уязвимость затрагивает компонент Axios версий с 0.8.1 по 1.5.1\n3. Краткое описание уязвимости: уязвимость позволяет злоумышленнику получить несанкционированный доступ к XSRF-TOKEN.  Конфиденциальный XSRF-TOKEN, хранящийся в файлах cookie, случайно включается в HTTP-заголовок X-XSRF-TOKEN для каждого запроса, отправляемого на любой хост, что позволяет злоумышленникам просматривать конфиденциальную информацию.\n4. Наличие обновления: обновления на даннай момент отсутствуют\n5. Временные решения: Для версий Axios с 0.8.1 по 1.5.1 в качестве временного решения до выхода патча отключите включение XSRF-TOKEN в HTTP-заголовок X-XSRF-TOKEN для каждого запроса. Ограничьте доступ к конфиденциальной информации, хранящейся в файлах cookie, чтобы свести к минимуму риск использования уязвимости. Не используйте переменную XSRF-TOKEN в уязвимом HTTP-заголовке до устранения проблемы.\n6. Наличие эксплойта: да, публичный эксплойт\n7. Идентификатор уязвимости CVE: CVE-2025-59287\n8. Оценка CVE: 7,8\n9. Метрики CVSS: CVSS v2.0 AV:N/AC:L/Au:N/C:C/I:N/A:N\n10. Последствия компрометации сервиса: удаленный доступ к конфиденциальной информации"
+  },
+  "profile": "Специалист по ИБ АСУ ТП",
+  "pages": [
+   {
+    "url": "https://dbugs.ptsecurity.com/vulnerability/PT-2023-8832",
+    "error": null
+   }
+  ],
+  "kind": "vulnerability",
+  "relevance": 1,
+  "by_model": true,
+  "priority": "средний",
+  "priority_reason": "эксплойт: нет",
+  "headline": "Axios+2 – CSRF-уязвимость в версиях 0.8.1-1.5.1",
+  "summary": "Уязвимость позволяет удалённому атакующему получить неавторизованный доступ к XSRF-TOKEN, включаемому в заголовок X-XSRF-TOKEN для всех запросов.",
+  "why": "Для защиты АСУ ТП необходимо ограничить передачу XSRF-TOKEN и следить за обновлением библиотеки Axios.",
+  "fields": [
+   {
+    "label": "Уязвимость",
+    "value": "уязвимость в Axios+2"
+   },
+   {
+    "label": "Затронуто",
+    "value": "Axios версии 0.8.1-through-1.5.1"
+   },
+   {
+    "label": "Обновление",
+    "value": "нет данных"
+   },
+   {
+    "label": "Временные меры",
+    "value": "Отключить автоматическое включение XSRF-TOKEN в заголовок X-XSRF-TOKEN; ограничить доступ к cookie-файлам с XSRF-TOKEN; не использовать переменную XSRF-TOKEN в запросах до появления патча."
+   },
+   {
+    "label": "Эксплойт",
+    "value": "нет"
+   },
+   {
+    "label": "Идентификаторы",
+    "value": "CVE-2023-45857"
+   },
+   {
+    "label": "CVSS",
+    "value": "7.8"
+   },
+   {
+    "label": "Последствия",
+    "value": "Утечка конфиденциального XSRF-TOKEN, возможность проведения CSRF-атак и доступа к защищённым ресурсам."
+   },
+   {
+    "label": "Сверено по базам",
+    "value": "нет в CISA KEV и БДУ: CVE-2023-45857"
+   }
+  ],
+  "tags": [],
+  "tag_ids": [],
+  "links": [],
+  "unsupported": []
+ },
+ {
+  "example": {
+   "id": "specialist-5",
+   "audience": "specialist",
+   "grouping": "Уязвимость",
+   "priority": "Высокий",
+   "title": "Уязвимость Confluence",
+   "date": "2026-04-17",
+   "urls": [
+    "https://dbugs.ptsecurity.com/vulnerability/PT-2021-7092"
+   ],
+   "wanted": "1. Наименование уязвимости: уязвимость ПО Atlassian Confluence\n2. Наименование релевантного уязвимого сервиса: \nAtlassian Confluence Server and Data Center versions prior to 7.4.17\nAtlassian Confluence Server and Data Center versions 7.13.0 through 7.13.6\nAtlassian Confluence Server and Data Center versions 7.14.0 through 7.14.2\nAtlassian Confluence Server and Data Center versions 7.15.0 through 7.15.1\nAtlassian Confluence Server and Data Center versions 7.16.0 through 7.16.3\nAtlassian Confluence Server and Data Center versions 7.17.0 through 7.17.3\nAtlassian Confluence Server and Data Center version 7.18.0\n3. Краткое описание уязвимости: Проблема связана с уязвимостью, позволяющей злоумышленнику без аутентификации выполнять произвольный код на сервере Confluence или в центре обработки данных\n4. Наличие обновления: \nFor versions prior to 7.4.17, update to version 7.4.17 or later\nFor versions 7.13.0 through 7.13.6, update to version 7.13.7 or later\nFor versions 7.14.0 through 7.14.2, update to version 7.14.3 or later\nFor versions 7.15.0 through 7.15.1, update to version 7.15.2 or later\nFor versions 7.16.0 through 7.16.3, update to version 7.16.4 or later\nFor versions 7.17.0 through 7.17.3, update to version 7.17.4 or later\nFor version 7.18.0, update to version 7.18.1 or later\n5. Временные решения: ограничение доступа к сервису через Инетренет или заблокировать ссылки, содержащие - ${\n6. Наличие эксплойта: да, публичный эксплойт\n7. Идентификатор уязвимости CVE: CVE-2022-26134\n8. Оценка CVE: 10,0\n9. Метрики CVSS: CVSS v3.1 AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H\n10. Последствия компрометации сервиса: удаленный выполнения кода"
+  },
+  "profile": "Специалист по ИБ АСУ ТП",
+  "pages": [
+   {
+    "url": "https://dbugs.ptsecurity.com/vulnerability/PT-2021-7092",
+    "error": null
+   }
+  ],
+  "kind": "vulnerability",
+  "relevance": 1,
+  "by_model": true,
+  "priority": "высокий",
+  "priority_reason": "эксплойт: используется в атаках",
+  "headline": "Atlassian Confluence – удалённое выполнение кода через OGNL-инъекцию",
+  "summary": "Уязвимость позволяет неавторизованному атакующему выполнить произвольный код на сервере Confluence, что уже использовалось в реальных атаках для установки майнеров и веб-шеллов.",
+  "why": "Необходимо обновить Confluence до фиксированных версий, иначе система подвержена компрометации и потере контроля.",
+  "fields": [
+   {
+    "label": "Уязвимость",
+    "value": "уязвимость в Atlassian Confluence"
+   },
+   {
+    "label": "Затронуто",
+    "value": "Atlassian Confluence Server и Data Center версии до 7.4.17; 7.13.0-7.13.6; 7.14.0-7.14.2; 7.15.0-7.15.1; 7.16.0-7.16.3; 7.17.0-7.17.3; 7.18.0"
+   },
+   {
+    "label": "Обновление",
+    "value": "Обновить до версии 7.4.17 или новее; 7.13.7+; 7.14.3+; 7.15.2+; 7.16.4+; 7.17.4+; 7.18.1+ соответственно."
+   },
+   {
+    "label": "Временные меры",
+    "value": "Ограничить доступ к Confluence из интернета, временно отключить сервис или блокировать запросы, содержащие строку \"${\"."
+   },
+   {
+    "label": "Эксплойт",
+    "value": "используется в атаках"
+   },
+   {
+    "label": "Идентификаторы",
+    "value": "CVE-2022-26134"
+   },
+   {
+    "label": "CVSS",
+    "value": "10"
+   },
+   {
+    "label": "Последствия",
+    "value": "Удалённое выполнение произвольного кода, установка майнеров и веб-шеллов, полное компрометирование сервера."
+   },
+   {
+    "label": "Сверено по базам",
+    "value": "CVE-2022-26134: CISA KEV с 02.06.2022"
+   }
+  ],
+  "tags": [],
+  "tag_ids": [],
+  "links": [],
+  "unsupported": []
+ },
+ {
+  "example": {
+   "id": "specialist-6",
+   "audience": "specialist",
+   "grouping": "Уязвимость",
+   "priority": "Средний",
+   "title": "Уязвимость Red OS",
+   "date": "2026-04-17",
+   "urls": [
+    "https://dbugs.ptsecurity.com/vulnerability/PT-2026-30609"
+   ],
+   "wanted": "1. Наименование уязвимости: уязвимость ПО для управления активами и ИТ-инфраструктурой GLPI\n2. Наименование релевантного уязвимого сервиса: уязвимость затрагивает версии с 0.60 по 10.0.23\n3. Краткое описание уязвимости: аутентифицированный пользователь может сохранить полезную нагрузку XSS в полях поставщика.\n4. Наличие обновления: обновить до версии 10.0.24 и более позднее\n5. Временные решения: отсутствует.\n6. Наличие эксплойта: нет\n7. Идентификатор уязвимости CVE: CVE-2026-26027\n8. Оценка CVE: 7,5\n9. Метрики CVSS: CVSS v2.0 AV:N/AC:L/Au:N/C:C/I:N/A:N\n10. Последствия компрометации сервиса: удаленный доступ к конфиденциальной информации"
+  },
+  "profile": "Специалист по ИБ АСУ ТП",
+  "pages": [
+   {
+    "url": "https://dbugs.ptsecurity.com/vulnerability/PT-2026-30609",
+    "error": null
+   }
+  ],
+  "kind": "vulnerability",
+  "relevance": 1,
+  "by_model": true,
+  "priority": "средний",
+  "priority_reason": "эксплойт: нет",
+  "headline": "GLPI 11.0.0-11.0.5 – XSS через endpoint inventory",
+  "summary": "Неавторизованный пользователь может выполнить XSS, внедрив скрипт в запрос к endpoint inventory.",
+  "why": "Для инженера ИБ это значит, что злоумышленник может выполнить произвольный код в браузерах пользователей системы управления ИТ-активами.",
+  "fields": [
+   {
+    "label": "Уязвимость",
+    "value": "уязвимость в GLPI"
+   },
+   {
+    "label": "Затронуто",
+    "value": "GLPI версии 11.0.0-11.0.5"
+   },
+   {
+    "label": "Обновление",
+    "value": "Обновить до версии 11.0.6."
+   },
+   {
+    "label": "Временные меры",
+    "value": "нет данных"
+   },
+   {
+    "label": "Эксплойт",
+    "value": "нет"
+   },
+   {
+    "label": "Идентификаторы",
+    "value": "CVE-2026-26027"
+   },
+   {
+    "label": "CVSS",
+    "value": "7.5"
+   },
+   {
+    "label": "Последствия",
+    "value": "Cross-Site Scripting (XSS) – выполнение произвольного JavaScript в браузере жертвы"
+   },
+   {
+    "label": "Сверено по базам",
+    "value": "нет в CISA KEV и БДУ: CVE-2026-26027"
+   }
+  ],
+  "tags": [],
+  "tag_ids": [],
+  "links": [],
+  "unsupported": []
+ },
+ {
+  "example": {
+   "id": "specialist-7",
+   "audience": "specialist",
+   "grouping": "Уязвимость",
+   "priority": "Средний",
+   "title": "Уязвимость WSUS",
+   "date": "2025-11-28",
+   "urls": [
+    "https://securelist.ru/cve-2025-59287-wsus-exploitation-detection-in-ngfw-kes-kata-edr/114105/"
+   ],
+   "wanted": "1. Наименование уязвимости: уязвимость в службах обновления Windows Server Update Services\n2. Наименование релевантного уязвимого сервиса:\nWindows Server 2012\nWindows Server 2012 (Server Core installation)\nWindows Server 2012 R2\nWindows Server 2012 R2 (Server Core installation)\nWindows Server 2016\nWindows Server 2016 (Server Core installation)\nWindows Server 2019\nWindows Server 2019 (Server Core installation)\nWindows Server 2022\nWindows Server 2022 (Server Core installation)\nWindows Server 2022, 23H2 Edition (Server Core installation)\nWindows Server 2025\nWindows Server 2025 (Server Core installation)\n3. Краткое описание уязвимости: уязвимость в обработчике SynchronizationUpdateErrorsKey позволяющая злоумышленнику выполнять команды от имени администратора или системных учетных записей\n4. Наличие обновления: уязвимость исправлена в рамках patch Tuesday 14 октября 2025, дополнительные обновления безопасности выпущены 23 и 24 октября 2025\n5. Временные решения: отсутствует.\n6. Наличие эксплойта: нет\n7. Идентификатор уязвимости CVE: CVE-2025-59287\n8, Оценка CVE: 9,8\n9. Метрики CVSS: -\n10. Последствия компрометации сервиса: запуск процесса с повышенными привилегиями"
+  },
+  "profile": "Специалист по ИБ АСУ ТП",
+  "pages": [
+   {
+    "url": "https://securelist.ru/cve-2025-59287-wsus-exploitation-detection-in-ngfw-kes-kata-edr/114105/",
+    "error": null
+   }
+  ],
+  "kind": "vulnerability",
+  "relevance": 2,
+  "by_model": true,
+  "priority": "высокий",
+  "priority_reason": "эксплойт: используется в атаках",
+  "headline": "Как мы детектируем эксплуатацию CVE-2025-59287 | Securelist",
+  "summary": "CVE-2025-59287 позволяет выполнить произвольный код от имени службы WSUS (LocalSystem), используя уязвимость десериализации SOAP-сообщений.",
+  "why": "Для инженера ИБ подстанций это шанс удалённого повышения привилегий в инфраструктуре SCADA, требующий немедленного патча.",
+  "fields": [
+   {
+    "label": "Уязвимость",
+    "value": "уязвимость в Windows Server Update Services (WSUS)"
+   },
+   {
+    "label": "Затронуто",
+    "value": "Windows Server 2012, Windows Server 2012 (Server Core), Windows Server 2012 R2, Windows Server 2012 R2 (Server Core), Windows Server 2016, Windows Server 2016 (Server Core), Windows Server 2019, Windows Server 2019 (Server Core), Windows Server 2022, Windows Server 2022 (Server Core), Windows Server 2022, 23H2 Edition (Server Core), Windows Server 2025, Windows Server 2025 (Server Core)"
+   },
+   {
+    "label": "Обновление",
+    "value": "нет данных"
+   },
+   {
+    "label": "Временные меры",
+    "value": "нет данных"
+   },
+   {
+    "label": "Эксплойт",
+    "value": "используется в атаках"
+   },
+   {
+    "label": "Идентификаторы",
+    "value": "CVE-2025-59287"
+   },
+   {
+    "label": "CVSS",
+    "value": "9.8"
+   },
+   {
+    "label": "Последствия",
+    "value": "Удалённое выполнение кода с привилегиями LocalSystem, повышение привилегий, запуск произвольных процессов"
+   },
+   {
+    "label": "Сверено по базам",
+    "value": "CVE-2025-59287: CISA KEV с 24.10.2025"
+   }
+  ],
+  "tags": [],
+  "tag_ids": [],
+  "links": [],
+  "unsupported": []
+ },
+ {
+  "example": {
+   "id": "specialist-8",
+   "audience": "specialist",
+   "grouping": "Инфо",
+   "priority": "Новости ТГ",
+   "title": "-",
+   "date": "2026-04-17",
+   "urls": [
+    "https://t.me/true_secator/8113"
+   ],
+   "wanted": "1. Злоумышленники используют три уязвимости Windows Defender для получения прав доступа к системе или повышения прав администратора. POC для всех уязвимостей опубликован. Для одной из уязвимости выпущено обновление.\n2. Ссылки на которые ссылается пост:\nhttps://github[.]com/Nightmare-Eclipse/UnDefend\nhttps://learn.microsoft[.]com/en-us/defender-vulnerability-management/tvm-zero-day-vulnerabilities?tabs=preview-customers%2Cpreview-customers-vulnerabilities\nhttps://x[.]com/HuntressLabs/status/2044882050314817880\nhttps://x[.]com/HuntressLabs/status/2044882115574091960\nhttps://github[.]com/Nightmare-Eclipse/RedSun"
+  },
+  "profile": "Специалист по ИБ АСУ ТП",
+  "pages": [
+   {
+    "url": "https://t.me/true_secator/8113",
+    "error": null
+   }
+  ],
+  "kind": "vulnerability",
+  "relevance": 2,
+  "by_model": true,
+  "priority": "высокий",
+  "priority_reason": "эксплойт: используется в атаках",
+  "headline": "Уязвимость BlueHammer в Microsoft Defender (CVE-2026-33825) – локальное повышение привилегий до SYSTEM",
+  "summary": "Эксплойт BlueHammer позволяет злоумышленнику получить права SYSTEM в Windows 10, Windows 11 и Windows Server 2019+ при включённом Windows Defender.",
+  "why": "Необходимо установить обновления за апрель 2026 года, устраняющие CVE-2026-33825, иначе система подвержена локальному повышению привилегий.",
+  "fields": [
+   {
+    "label": "Уязвимость",
+    "value": "уязвимость в Microsoft Defender"
+   },
+   {
+    "label": "Затронуто",
+    "value": "Microsoft Defender в Windows 10, Windows 11, Windows Server 2019 и новее (при включённом Defender)."
+   },
+   {
+    "label": "Обновление",
+    "value": "Обновление до патчей April 2026 (CVE-2026-33825 исправлена)."
+   },
+   {
+    "label": "Временные меры",
+    "value": "нет данных"
+   },
+   {
+    "label": "Эксплойт",
+    "value": "используется в атаках"
+   },
+   {
+    "label": "Идентификаторы",
+    "value": "CVE-2026-33825"
+   },
+   {
+    "label": "CVSS",
+    "value": "нет данных"
+   },
+   {
+    "label": "Последствия",
+    "value": "Локальное повышение привилегий до уровня SYSTEM, возможность перезаписи системных файлов."
+   },
+   {
+    "label": "Сверено по базам",
+    "value": "CVE-2026-33825: CISA KEV с 22.04.2026"
+   }
+  ],
+  "tags": [],
+  "tag_ids": [],
+  "links": [
+   "https://github[.]com/Nightmare-Eclipse/UnDefend",
+   "https://learn[.]microsoft[.]com/en-us/defender-vulnerability-management/tvm-zero-day-vulnerabilities?tabs=preview-customers%2Cpreview-customers-vulnerabilities",
+   "https://x[.]com/HuntressLabs/status/2044882050314817880",
+   "https://x[.]com/HuntressLabs/status/2044882115574091960",
+   "https://github[.]com/Nightmare-Eclipse/RedSun"
+  ],
+  "unsupported": []
+ },
+ {
+  "example": {
+   "id": "specialist-9",
+   "audience": "specialist",
+   "grouping": "Инфо",
+   "priority": "Новости ТГ",
+   "title": "-",
+   "date": "2026-04-14",
+   "urls": [
+    "https://t.me/purpleshift/174"
+   ],
+   "wanted": "1. Служба WebClient в Windows позволяет реализовать релей-атаки на другие протоколы, если служба установлена на SCCM серверах. Рекомендуется отключить службу WebClient на SCCM-серверах или мониторить подозрительные обращения по протоколу  WebDav от SCCM-серверов.\n2. Ссылки на которые ссылается пост:\nhttps://en.hackndo[.]com/ntlm-relay/\nhttps://github[.]com/subat0mik/Misconfiguration-Manager/blob/main/attack-techniques/TAKEOVER/TAKEOVER-8/takeover-8_description.md\nhttps://specterops[.]io/blog/2026/01/14/wait-why-is-my-webclient-started-sccm-hierarchy-takeover-via-ntlm-relay-to-ldap/\nhttps://vk[.]com/video-221945088_456239513"
+  },
+  "profile": "Специалист по ИБ АСУ ТП",
+  "pages": [
+   {
+    "url": "https://t.me/purpleshift/174",
+    "error": null
+   }
+  ],
+  "kind": "attack",
+  "relevance": 1,
+  "by_model": true,
+  "priority": "низкий",
+  "priority_reason": "вне РФ или страна не названа",
+  "headline": "Атакующий использует службу WebClient Windows для компрометации серверов SCCM",
+  "summary": "Служба WebClient, реализующая протокол WebDAV, позволяет проводить релей-атаки на LDAPS и захватывать контроллеры домена через SCCM. Рекомендуется отключить WebClient на SCCM-серверах или мониторить подозрительные обращения по WebDAV.",
+  "why": "Для инженера ИБ в электросетевой компании важно отключить WebClient на SCCM-серверах и внедрить мониторинг WebDAV, чтобы предотвратить привилегированные доменные компрометации.",
+  "fields": [
+   {
+    "label": "Страна жертвы",
+    "value": "нет данных"
+   },
+   {
+    "label": "Группировка",
+    "value": "нет данных"
+   },
+   {
+    "label": "Дата атаки",
+    "value": "нет данных"
+   },
+   {
+    "label": "Отрасли и компании",
+    "value": "нет данных"
+   },
+   {
+    "label": "Первоначальный доступ",
+    "value": "Релей-атака через службу WebClient (WebDAV) и механизм client push installation в SCCM"
+   },
+   {
+    "label": "Инструменты",
+    "value": "WebClient, WebDAV, SCCM client push installation"
+   },
+   {
+    "label": "Уязвимости",
+    "value": "нет данных"
+   },
+   {
+    "label": "Индикаторы компрометации",
+    "value": "нет данных"
+   }
+  ],
+  "tags": [],
+  "tag_ids": [],
+  "links": [
+   "https://en[.]hackndo[.]com/ntlm-relay/",
+   "https://github[.]com/subat0mik/Misconfiguration-Manager/blob/main/attack-techniques/TAKEOVER/TAKEOVER-8/takeover-8_description.md",
+   "https://specterops[.]io/blog/2026/01/14/wait-why-is-my-webclient-started-sccm-hierarchy-takeover-via-ntlm-relay-to-ldap/",
+   "https://vk[.]com/video-221945088_456239513",
+   "https://vk[.]com/video-221945088_456239513"
+  ],
+  "unsupported": []
+ },
+ {
+  "example": {
+   "id": "specialist-10",
+   "audience": "specialist",
+   "grouping": "Инфо",
+   "priority": "Новости ТГ",
+   "title": "-",
+   "date": "2026-04-23",
+   "urls": [
+    "https://t.me/proxy_bar/3343"
+   ],
+   "wanted": "1. Pack2TheRoot CVE-2026-41651. Непривилегированный пользователь может установливать произвольные пакеты от root без аутентификации. Проверено на Ubuntu/Debian/RockyLinux/Fedora\n2. Ссылки на которые ссылается пост:\nhttps://github[.]com/Vozec/CVE-2026-41651"
+  },
+  "profile": "Специалист по ИБ АСУ ТП",
+  "pages": [
+   {
+    "url": "https://t.me/proxy_bar/3343",
+    "error": null
+   }
+  ],
+  "kind": "vulnerability",
+  "relevance": 2,
+  "by_model": true,
+  "priority": "средний",
+  "priority_reason": "эксплойт: нет данных",
+  "headline": "Уязвимость в Pack2TheRoot (CVE-2026-41651) – локальный привилегированный доступ к установке пакетов",
+  "summary": "Локальный непривилегированный пользователь может установить произвольные пакеты от root без аутентификации.",
+  "why": "Для инженера ИБ это значит, что любой пользователь с доступом к системе может получить root-привилегии, что требует немедленного ограничения доступа и обновления.",
+  "fields": [
+   {
+    "label": "Уязвимость",
+    "value": "уязвимость в Pack2TheRoot"
+   },
+   {
+    "label": "Затронуто",
+    "value": "Pack2TheRoot, версии не указаны, затронуты Ubuntu, Debian, Rocky Linux, Fedora"
+   },
+   {
+    "label": "Обновление",
+    "value": "нет данных"
+   },
+   {
+    "label": "Временные меры",
+    "value": "нет данных"
+   },
+   {
+    "label": "Эксплойт",
+    "value": "нет данных"
+   },
+   {
+    "label": "Идентификаторы",
+    "value": "CVE-2026-41651"
+   },
+   {
+    "label": "CVSS",
+    "value": "нет данных"
+   },
+   {
+    "label": "Последствия",
+    "value": "Эскалация привилегий, возможность установки произвольного ПО от имени root"
+   },
+   {
+    "label": "Сверено по базам",
+    "value": "нет в CISA KEV и БДУ: CVE-2026-41651"
+   }
+  ],
+  "tags": [],
+  "tag_ids": [],
+  "links": [
+   "https://github[.]com/Vozec/CVE-2026-41651"
+  ],
+  "unsupported": [
+   "Эксплойт"
+  ]
+ },
+ {
+  "example": {
+   "id": "management-1",
+   "audience": "management",
+   "grouping": "1. В РФ\n3. Крупные финансовые потери\n4. Нарушение работы критической инфраструктуры\n7. Имиджевые потери\n8. Утечки чувствительной информации (ПДн, ком. тайна, гос. тайна и т.п.)\n10. Уязвимый массовоиспользуемый простыми обывателями/топ-менеджерами (не техническими ИТ/ИБ специалистами) сервис",
+   "priority": "",
+   "title": "",
+   "date": "2025-07-28",
+   "urls": [
+    "https://cisoclub.ru/chto-izvestno-pro-hakerskuju-ataku-na-ajeroflot/",
+    "https://www.anti-malware.ru/news/2025-07-29-121598/46813"
+   ],
+   "wanted": "1) Что известно про хакерскую атаку на «Аэрофлот»?\n2) 28 июля «Аэрофлот» отменил около 50 рейсов из-за хакерской атаки, ответственность за которую взяли группировки «Киберпартизаны BY» и Silent Crow. По их заявлению, уничтожено 7000 серверов, скомпрометированы все корпоративные системы, скопированы данные, а прямой ущерб от сбоя оценивается не менее чем в 260 млн рублей.\n3) https://cisoclub.ru/chto-izvestno-pro-hakerskuju-ataku-na-ajeroflot/, https://www.anti-malware.ru/news/2025-07-29-121598/46813"
+  },
+  "profile": "Руководство и сотрудники: кибербезопасность",
+  "pages": [
+   {
+    "url": "https://cisoclub.ru/chto-izvestno-pro-hakerskuju-ataku-na-ajeroflot/",
+    "error": null
+   },
+   {
+    "url": "https://www.anti-malware.ru/news/2025-07-29-121598/46813",
+    "error": null
+   }
+  ],
+  "kind": "attack",
+  "relevance": 1,
+  "by_model": true,
+  "priority": "",
+  "priority_reason": "",
+  "headline": "Что известно про хакерскую атаку на \"Аэрофлот\"?",
+  "summary": "28 июля авиакомпания «Аэрофлот» отменила около 50 рейсов из-за массового взлома её информационных систем, за который взяли ответственность две хакерские группировки – «Киберпартизаны BY» и Silent Crow. По данным Генпрокуратуры, в результате атаки были уничтожены около 7 тыс. серверов и похищены данные о перелётах и персональные сведения клиентов. Прямые финансовые потери компании оценены минимум в 250 млн рублей. Инцидент признан тревожным для всех крупных сервисных структур, взаимодействующих с населением.",
+  "why": "Это показывает, что критически важные инфраструктурные компании, в том числе энергетические, могут стать целями масштабных кибератак, требующих готовности к защите ИТ-систем.",
+  "fields": [],
+  "tags": [
+   "В РФ",
+   "Нарушение работы критической инфраструктуры",
+   "Промышленность"
+  ],
+  "tag_ids": [
+   "ru",
+   "critical_infrastructure",
+   "industry"
+  ],
+  "links": [],
+  "unsupported": []
+ },
+ {
+  "example": {
+   "id": "management-2",
+   "audience": "management",
+   "grouping": "1. В РФ\n10. Уязвимый массовоиспользуемый простыми обывателями/топ-менеджерами (не техническими ИТ/ИБ специалистами) сервис",
+   "priority": "",
+   "title": "",
+   "date": "2025-08-25",
+   "urls": [
+    "https://cisoclub.ru/novyj-android-trojan-maskiruetsja-pod-antivirus-fsb-i-atakuet-rossijskih-top-menedzherov/"
+   ],
+   "wanted": "1) Атаки на российских топ-менеджеров\n2) Зафиксировано распространение вируса, нацеленного на руководителей российских предприятий. Вредоносное ПО маскируется под антивирус ФСБ или приложения Центрального банка, записывает разговоры, перехватывает переписку и получает доступ к камере, а его интерфейс на русском языке указывает на внутреннюю направленность атаки.\n3) https://cisoclub.ru/novyj-android-trojan-maskiruetsja-pod-antivirus-fsb-i-atakuet-rossijskih-top-menedzherov/"
+  },
+  "profile": "Руководство и сотрудники: кибербезопасность",
+  "pages": [
+   {
+    "url": "https://cisoclub.ru/novyj-android-trojan-maskiruetsja-pod-antivirus-fsb-i-atakuet-rossijskih-top-menedzherov/",
+    "error": null
+   }
+  ],
+  "kind": "attack",
+  "relevance": 3,
+  "by_model": true,
+  "priority": "",
+  "priority_reason": "",
+  "headline": "Новый Android-троян маскируется под антивирус ФСБ и атакует",
+  "summary": "Компания Dr. Web обнаружила вредоносное приложение Android.Backdoor.916.origin, которое выдаёт себя за антивирус ФСБ. Троян способен записывать разговоры, снимать видео, фиксировать клавиши и перехватывать сообщения в мессенджерах. По данным исследователей, он распространяется под названиями «GuardCB», «SECURITY_FSB» и «ФСБ», ориентируясь на руководителей и специалистов с доступом к конфиденциальной информации. С января 2025 года уже зафиксировано несколько вариантов, что свидетельствует о продолжающейся доработке вредоносного кода.",
+  "why": "Это значит, что сотрудники компании, использующие Android-устройства, могут стать целями шпионского ПО, поэтому необходимо повышать бдительность и использовать проверенные средства защиты.",
+  "fields": [],
+  "tags": [
+   "В РФ",
+   "Энергетика",
+   "Утечка чувствительной информации",
+   "Может быть интересно"
+  ],
+  "tag_ids": [
+   "ru",
+   "energy",
+   "data_leak",
+   "curious"
+  ],
+  "links": [],
+  "unsupported": []
+ },
+ {
+  "example": {
+   "id": "management-3",
+   "audience": "management",
+   "grouping": "1. В РФ\n7. Имиджевые потери\n8. Утечки чувствительной информации (ПДн, ком. тайна, гос. тайна и т.п.)\n10. Уязвимый массовоиспользуемый простыми обывателями/топ-менеджерами (не техническими ИТ/ИБ специалистами) сервис",
+   "priority": "",
+   "title": "",
+   "date": "2025-08-21",
+   "urls": [
+    "https://www.tadviser.ru/index.php/Компания:Investprojects_%28Инвестиционные_проекты%29"
+   ],
+   "wanted": "1) Атака на цифровую платформу «Инвестиционные проекты»\n2) В августе 2025 года российская цифровая платформа «Инвестиционные проекты России» (Investprojects) подверглась хакерской атаке, из-за чего сайт несколько дней не работал. Ответственность за атаку взяла группировка Cyber Anarchy Squad, заявив о частичном разрушении инфраструктуры и краже внутренних данных, однако работоспособность платформы уже восстановлена.\n3) https://www.tadviser.ru/index.php/Компания:Investprojects_%28Инвестиционные_проекты%29"
+  },
+  "profile": "Руководство и сотрудники: кибербезопасность",
+  "pages": [
+   {
+    "url": "https://www.tadviser.ru/index.php/Компания:Investprojects_%28Инвестиционные_проекты%29",
+    "error": null
+   }
+  ],
+  "kind": "attack",
+  "relevance": 1,
+  "by_model": true,
+  "priority": "",
+  "priority_reason": "",
+  "headline": "Investprojects (Инвестиционные проекты)",
+  "summary": "В августе 2025 года российскую цифровую платформу «Investprojects», используемую для привлечения инвестиций в бизнес-проекты, отключила кибергруппировка Cyber Anarchy Squad. Атака частично разрушила инфраструктуру сайта, злоумышленники получили доступ к внутренним базам данных и документам сотрудников и опубликовали их. Восстановление работы платформы началось к 21 августа, но сроки полного возвращения сервисов не уточняются. Платформой пользовались около 80 тыс. бизнес-проектов, что делает инцидент значимым для инвесторов и компаний-участников.",
+  "why": "Инцидент показывает, что даже сервисы, не связанные напрямую с ИТ, могут стать целью кибератак, что требует усиления защиты данных и резервных процедур.",
+  "fields": [],
+  "tags": [
+   "В РФ",
+   "Промышленность",
+   "Утечка чувствительной информации"
+  ],
+  "tag_ids": [
+   "ru",
+   "industry",
+   "data_leak"
+  ],
+  "links": [],
+  "unsupported": []
+ },
+ {
+  "example": {
+   "id": "management-4",
+   "audience": "management",
+   "grouping": "2. Вне РФ\n4. Нарушение работы критической инфраструктуры\n8. Утечки чувствительной информации (ПДн, ком. тайна, гос. тайна и т.п.)\n9. Госсектор и правовое поле",
+   "priority": "",
+   "title": "",
+   "date": "2025-09-04",
+   "urls": [
+    "https://www.anti-malware.ru/news/2025-09-04-111332/47220"
+   ],
+   "wanted": "1) Парализована работа целого штата Невада\n2) Хакеры осуществили крупнейшую в истории США атаку на инфраструктуру целого штата, парализовав работу правительства Невады и ключевых госслужб. Власти частично восстановили работу некоторых ведомств, но масштаб утечки персональных данных и последствия для транспорта, медицины и безопасности пока не раскрыты.\n3) https://www.anti-malware.ru/news/2025-09-04-111332/47220"
+  },
+  "profile": "Руководство и сотрудники: кибербезопасность",
+  "pages": [
+   {
+    "url": "https://www.anti-malware.ru/news/2025-09-04-111332/47220",
+    "error": null
+   }
+  ],
+  "kind": "attack",
+  "relevance": 3,
+  "by_model": true,
+  "priority": "",
+  "priority_reason": "",
+  "headline": "Хакеры парализовали штат Невада: США столкнулись с беспрецедентной атакой",
+  "summary": "Хакеры взломали правительственные сети Невады, остановив работу ключевых государственных служб, включая экстренные службы, транспорт, медицину и начисление зарплат. Атака использовала шифровальщик, и, по сообщениям, могла привести к утечке персональных данных жителей штата, хотя масштабы утечки пока неизвестны. Власти частично восстановили работу служб, но не уточнили, какие ведомства остаются парализованными.",
+  "why": "Инцидент показывает, насколько важна готовность к кибератакам и регулярное тестирование резервных копий для обеспечения непрерывности работы критических систем.",
+  "fields": [],
+  "tags": [
+   "Вне РФ",
+   "Нарушение работы критической инфраструктуры",
+   "Госсектор и правовое поле"
+  ],
+  "tag_ids": [
+   "abroad",
+   "critical_infrastructure",
+   "government_law"
+  ],
+  "links": [],
+  "unsupported": []
+ },
+ {
+  "example": {
+   "id": "management-5",
+   "audience": "management",
+   "grouping": "1. В РФ\n3. Крупные финансовые потери\n9. Госсектор и правовое поле\n11. Трудовой ресурс/громкие мероприятия и конференции из мира ИБ",
+   "priority": "",
+   "title": "",
+   "date": "2025-09-08",
+   "urls": [
+    "https://cisoclub.ru/sberbank-zafiksiroval-trillionnye-ubytki-ot-hakerskih-atak-i-predupredil-o-masshtabnoj-kibervojne-protiv-jekonomiki-rossii/"
+   ],
+   "wanted": "1) Хакерские атаки против России достигли рекордного уровня\n2) С начала 2025 года хакерская активность против российских организаций достигла беспрецедентного уровня. Как заявил на Восточном экономическом форуме заместитель председателя правления Сбербанка Станислав Кузнецов, общее количество атак за восемь месяцев выросло втрое по сравнению с прошлым годом, а совокупный ущерб российской экономике может составить около 1,5 трлн рублей.\n3) https://cisoclub.ru/sberbank-zafiksiroval-trillionnye-ubytki-ot-hakerskih-atak-i-predupredil-o-masshtabnoj-kibervojne-protiv-jekonomiki-rossii/"
+  },
+  "profile": "Руководство и сотрудники: кибербезопасность",
+  "pages": [
+   {
+    "url": "https://cisoclub.ru/sberbank-zafiksiroval-trillionnye-ubytki-ot-hakerskih-atak-i-predupredil-o-masshtabnoj-kibervojne-protiv-jekonomiki-rossii/",
+    "error": null
+   }
+  ],
+  "kind": "news",
+  "relevance": 2,
+  "by_model": true,
+  "priority": "",
+  "priority_reason": "",
+  "headline": "Сбербанк зафиксировал триллионные убытки от хакерских атак и",
+  "summary": "С начала 2025 года количество хакерских атак на российские организации утроилось, а совокупный ущерб экономике оценивается в 1,5 трлн рублей. Сбербанк зафиксировал удвоение числа атак на себя и отметил, что 53 % компаний уже пострадали, из них 48 % столкнулись с полными остановками работы. Основные сценарии — DDoS-атаки и внедрение вредоносного ПО, при этом значительная часть атак направлена на государственный сектор, вызывая репутационные и финансовые потери.",
+  "why": "Компаниям необходимо усилить защиту от DDoS-атак и вредоносного ПО, чтобы избежать простоя и финансовых потерь.",
+  "fields": [],
+  "tags": [
+   "В РФ",
+   "Крупные финансовые потери",
+   "Промышленность",
+   "Имиджевые потери"
+  ],
+  "tag_ids": [
+   "ru",
+   "financial_loss",
+   "industry",
+   "reputation"
+  ],
+  "links": [],
+  "unsupported": []
+ },
+ {
+  "example": {
+   "id": "management-6",
+   "audience": "management",
+   "grouping": "1. В РФ\n12. \"Может быть интересно\" (неожиданные/нестандартные/нетиповые/курьёзные события из мира ИБ)",
+   "priority": "",
+   "title": "",
+   "date": "2025-09-29",
+   "urls": [
+    "https://cisoclub.ru/ofisnaja-jepidemija-novogo-vremeni-zarazhenie-7644/"
+   ],
+   "wanted": "1) Офисная «эпидемия» нового времени – заражение 7644%\n2) Речь не о болезни, а о реальном офисном случае. Представьте: мы отправляем всего девять учебных фишинговых писем, имитирующих реальные атаки хакеров — короткий текст, ничего подозрительного. Из девяти писем открывают только три. Но дальше начинается самое интересное: письма начинают пересылать коллегам, кто-то кидает в общий чат, кто-то пересылает «чтобы предупредить».\n3) https://cisoclub.ru/ofisnaja-jepidemija-novogo-vremeni-zarazhenie-7644/"
+  },
+  "profile": "Руководство и сотрудники: кибербезопасность",
+  "pages": [
+   {
+    "url": "https://cisoclub.ru/ofisnaja-jepidemija-novogo-vremeni-zarazhenie-7644/",
+    "error": null
+   }
+  ],
+  "kind": "attack",
+  "relevance": 3,
+  "by_model": true,
+  "priority": "",
+  "priority_reason": "",
+  "headline": "Офисная «эпидемия» нового времени – заражение 7644%",
+  "summary": "В ходе учебной фишинговой кампании, в которой было отправлено всего девять писем, только три сотрудника их открыли, но затем письма начали активно пересылаться коллегам. За несколько часов охват вырос до 688 открытий и 140 уникальных пользователей, что привело к росту эффективности атаки на 7644 %. Инцидент демонстрирует, как привычка пересылать подозрительные письма может быстро превратить небольшую угрозу в масштабную проблему, потенциально затрагивая данные, финансы и репутацию компании.",
+  "why": "Это показывает, что даже простое фишинговое письмо может быстро распространиться внутри компании, поэтому необходимо обучать сотрудников и внедрять простые механизмы сообщения о подозрительных письмах.",
+  "fields": [],
+  "tags": [
+   "В РФ",
+   "Промышленность",
+   "Может быть интересно"
+  ],
+  "tag_ids": [
+   "ru",
+   "industry",
+   "curious"
+  ],
+  "links": [],
+  "unsupported": []
+ },
+ {
+  "example": {
+   "id": "management-7",
+   "audience": "management",
+   "grouping": "1. В РФ\n9. Госсектор и правовое поле",
+   "priority": "",
+   "title": "",
+   "date": "2025-11-12",
+   "urls": [
+    "https://cisoclub.ru/mincifry-planiruet-vvesti-oborotnye-shtrafy-za-narushenie-srokov-perehoda-kii-na-otechestvennye-it-reshenija/"
+   ],
+   "wanted": "1) Минцифры планирует ввести оборотные штрафы за нарушение сроков перехода КИИ на отечественные IT‑решения\n2) Министерство цифрового развития РФ готовит новый законопроект, который затронет предприятия, обслуживающие критически важную информационную инфраструктуру. На форуме CNews, прошедшем 11 ноября, руководитель ведомства Максут Шадаев сообщил, что компании, не успевшие перейти на российские программные продукты в установленные правительством сроки, могут быть вынуждены ежегодно выплачивать оборотные штрафы.\n3) https://cisoclub.ru/mincifry-planiruet-vvesti-oborotnye-shtrafy-za-narushenie-srokov-perehoda-kii-na-otechestvennye-it-reshenija/"
+  },
+  "profile": "Руководство и сотрудники: кибербезопасность",
+  "pages": [
+   {
+    "url": "https://cisoclub.ru/mincifry-planiruet-vvesti-oborotnye-shtrafy-za-narushenie-srokov-perehoda-kii-na-otechestvennye-it-reshenija/",
+    "error": null
+   }
+  ],
+  "kind": "news",
+  "relevance": 3,
+  "by_model": true,
+  "priority": "",
+  "priority_reason": "",
+  "headline": "Минцифры планирует ввести оборотные штрафы за нарушение срок",
+  "summary": "Министерство цифрового развития РФ готовит законопроект, согласно которому компании, обслуживающие критически важную информационную инфраструктуру (КИИ), должны будут перейти на российские программные продукты к установленным срокам. За несоблюдение этих сроков планируется вводить ежегодные оборотные штрафы, а также штрафы за отсутствие классификации ресурсов как КИИ. Переход обязателен к 1 января 2028 года, с возможностью отсрочки до 2030 года при объективных затруднениях. Предприятия энергетского сектора, как часть КИИ, будут затронуты этими требованиями.",
+  "why": "Компаниям энергетической отрасли придётся планировать переход на отечественное программное обеспечение, иначе они будут нести регулярные финансовые штрафы.",
+  "fields": [],
+  "tags": [
+   "В РФ",
+   "Госсектор и правовое поле",
+   "Нарушение работы критической инфраструктуры",
+   "Энергетика",
+   "Крупные финансовые потери"
+  ],
+  "tag_ids": [
+   "ru",
+   "government_law",
+   "critical_infrastructure",
+   "energy",
+   "financial_loss"
+  ],
+  "links": [],
+  "unsupported": []
+ },
+ {
+  "example": {
+   "id": "management-8",
+   "audience": "management",
+   "grouping": "2. Вне РФ\n3. Крупные финансовые потери\n7. Имиджевые потери\n8. Утечки чувствительной информации (ПДн, ком. тайна, гос. тайна и т.п.)",
+   "priority": "",
+   "title": "",
+   "date": "2025-11-04",
+   "urls": [
+    "https://www.securitylab.ru/news/565676.php"
+   ],
+   "wanted": "1) Минус 90% прибыли из-за кибератаки\n2) Крупнейший китайский телеком-оператор сообщил о почти 90% снижении операционной прибыли из-за расходов на ликвидацию последствий масштабной кибератаки, в результате которой были похищены данные миллионов клиентов. Компания была оштрафована, провела замену SIM-карт и отказалась от дивидендов, а запущенные меры по восстановлению доверия привели к дальнейшему оттоку клиентов и падению доходов.\n3) https://www.securitylab.ru/news/565676.php"
+  },
+  "profile": "Руководство и сотрудники: кибербезопасность",
+  "pages": [
+   {
+    "url": "https://www.securitylab.ru/news/565676.php",
+    "error": "сайт ответил HTTP 401"
+   }
+  ]
+ },
+ {
+  "example": {
+   "id": "management-9",
+   "audience": "management",
+   "grouping": "1. В РФ\n5. Энергетика\n6. Промышленность",
+   "priority": "",
+   "title": "",
+   "date": "2025-07-25",
+   "urls": [
+    "https://www.anti-malware.ru/news/2025-07-25-111332/46789"
+   ],
+   "wanted": "1) Атаки на SCADA-системы выросли на 27% — чаще всего страдает энергетика\n2) В 2025 году кибератаки на промышленные SCADA-системы в России выросли на 27% из-за цифровизации и слабой защиты устаревшего оборудования, что особенно опасно для энергетики, машиностроения и химической отрасли. Успешные атаки могут привести к авариям, экологическим катастрофам и угрозам для жизни, поэтому эксперты рекомендуют многофакторную аутентификацию, регулярный мониторинг и обновление инфраструктуры.\n3) https://www.anti-malware.ru/news/2025-07-25-111332/46789"
+  },
+  "profile": "Руководство и сотрудники: кибербезопасность",
+  "pages": [
+   {
+    "url": "https://www.anti-malware.ru/news/2025-07-25-111332/46789",
+    "error": null
+   }
+  ],
+  "kind": "news",
+  "relevance": 3,
+  "by_model": true,
+  "priority": "",
+  "priority_reason": "",
+  "headline": "Атаки на SCADA-системы выросли на 27% — чаще всего страдает энергетика",
+  "summary": "По исследованию «Информзащиты», в первом полугодии 2025 года количество кибератак на промышленные системы управления (SCADA) в России увеличилось на 27 % по сравнению с тем же периодом 2024 года. Наибольшая доля атак (38 %) зафиксирована в энергетическом секторе, далее — машиностроение, химическая и нефтехимическая отрасли. Успешные атаки могут привести к остановке оборудования, утечкам опасных веществ и даже экологическим катастрофам. Эксперты советуют внедрять многофакторную аутентификацию, регулярно проверять уязвимости и обновлять устаревшее оборудование.",
+  "why": "Рост количества атак на SCADA повышает риск отключения энергосетей и аварий, поэтому компании необходимо усилить защиту своих систем управления.",
+  "fields": [],
+  "tags": [
+   "В РФ",
+   "Нарушение работы критической инфраструктуры",
+   "Энергетика",
+   "Промышленность"
+  ],
+  "tag_ids": [
+   "ru",
+   "critical_infrastructure",
+   "energy",
+   "industry"
+  ],
+  "links": [],
+  "unsupported": []
+ },
+ {
+  "example": {
+   "id": "management-10",
+   "audience": "management",
+   "grouping": "1. В РФ\n6. Промышленность",
+   "priority": "",
+   "title": "",
+   "date": "2025-08-14",
+   "urls": [
+    "https://xakep.ru/2025/08/14/scaly-wolf/"
+   ],
+   "wanted": "1) Scaly Wolf снова атакует российский машиностроительный сектор\n2) APT-группировка Scaly Wolf в августе 2025 года предприняла новую масштабную атаку на российское машиностроительное предприятие, используя фишинговые письма с вредоносными вложениями и усовершенствованное вредоносное ПО. Специалисты «Доктор Веб» выявили, что злоумышленники проникли в сеть через незащищённый компьютер и пытались получить доступ к корпоративным секретам, применяя различные векторы атаки и маскируя исполняемые файлы под документы.\n3) https://xakep.ru/2025/08/14/scaly-wolf/"
+  },
+  "profile": "Руководство и сотрудники: кибербезопасность",
+  "pages": [
+   {
+    "url": "https://xakep.ru/2025/08/14/scaly-wolf/",
+    "error": null
+   }
+  ],
+  "kind": "attack",
+  "relevance": 1,
+  "by_model": true,
+  "priority": "",
+  "priority_reason": "",
+  "headline": "Scaly Wolf снова атакует российский машиностроительный сектор — Хакер",
+  "summary": "В конце мая-июне 2025 года специалисты «Доктор Веб» обнаружили, что группа Scaly Wolf направила кибератаку на предприятие машиностроительного сектора. Злоумышленники рассылали письма с фишинговыми PDF-документами и ZIP-архивами, в которых скрывался исполняемый файл — Trojan.Updatar.1, устанавливающий модульный бэкдор для кражи данных. Атака была подтверждена после обращения компании к экспертам, которые зафиксировали заражение первого компьютера 12 мая 2025 года.",
+  "why": "Это показывает, что даже компании, не работающие в ИТ, могут стать целью сложных фишинговых атак, поэтому необходимо усиливать обучение сотрудников и контроль за вложениями в письмах.",
+  "fields": [],
+  "tags": [
+   "В РФ",
+   "Промышленность",
+   "Может быть интересно"
+  ],
+  "tag_ids": [
+   "ru",
+   "industry",
+   "curious"
+  ],
+  "links": [],
+  "unsupported": []
+ },
+ {
+  "example": {
+   "id": "management-11",
+   "audience": "management",
+   "grouping": "2. Вне РФ\n4. Нарушение работы критической инфраструктуры\n5. Энергетика",
+   "priority": "",
+   "title": "",
+   "date": "2025-08-13",
+   "urls": [
+    "https://www.kommersant.ru/doc/7959198"
+   ],
+   "wanted": "1) Норвежская спецслужба обвинила российских хакеров в кибератаке на дамбу\n2) Глава Норвежской полицейской службы безопасности Беата Гангос заявила, что российские хакеры временно захватили контроль над дамбой в Бремангере, открыв шлюз и сбрасывая воду на протяжении четырёх часов. Она отметила, что подобные атаки направлены на создание хаоса и страха среди населения, а также подчеркнула, что Норвегия становится всё более уязвимой перед киберугрозами со стороны России.\n3) https://www.kommersant.ru/doc/7959198"
+  },
+  "profile": "Руководство и сотрудники: кибербезопасность",
+  "pages": [
+   {
+    "url": "https://www.kommersant.ru/doc/7959198",
+    "error": null
+   }
+  ],
+  "kind": "attack",
+  "relevance": 3,
+  "by_model": true,
+  "priority": "",
+  "priority_reason": "",
+  "headline": "Норвежская спецслужба обвинила российских хакеров в кибератаке на дамбу – Коммерсантъ",
+  "summary": "Норвежская полицейская служба безопасности (PST) заявила, что российские хакеры на несколько часов взяли под контроль управление дамбой в Бремангере, открыли шлюз и сбрасывали воду. Инцидент произошёл 7 апреля и продолжался около четырёх часов, после чего контроль был восстановлен. По словам главы PST Беаты Гангос, такие атаки направлены на создание страха и хаоса среди населения. Это первое публичное обвинение норвежских властей в адрес российских хакеров.",
+  "why": "Подобные кибератаки на объекты критической инфраструктуры могут стать угрозой и для российских энергетических компаний, требуя усиления защиты.",
+  "fields": [],
+  "tags": [
+   "Вне РФ",
+   "Нарушение работы критической инфраструктуры",
+   "Энергетика"
+  ],
+  "tag_ids": [
+   "abroad",
+   "critical_infrastructure",
+   "energy"
+  ],
+  "links": [],
+  "unsupported": []
+ }
+]
