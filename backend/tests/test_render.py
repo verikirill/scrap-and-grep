@@ -141,3 +141,28 @@ def test_empty_digest_says_so(digest: DigestView) -> None:
 
     assert "публикаций по интересам профиля не найдено" in render_markdown(empty)
     assert render_docx(empty)[:2] == b"PK"
+
+
+def test_management_reads_what_it_means_for_the_company_first(digest: DigestView) -> None:
+    management = digest.model_copy(
+        update={
+            "profile": digest.profile.model_copy(update={"audience": "management"}),
+            "implications": ["Проверить доступы подрядчиков.", "Обновить план реагирования."],
+        }
+    )
+
+    markdown = render_markdown(management)
+    paragraphs = [
+        paragraph.text for paragraph in Document(BytesIO(render_docx(management))).paragraphs
+    ]
+
+    assert markdown.index("## Что это значит для нас") < markdown.index("## Главное")
+    assert "- Проверить доступы подрядчиков." in markdown
+    assert paragraphs.index("Что это значит для нас") < paragraphs.index("Главное")
+    assert "Обновить план реагирования." in paragraphs
+
+
+def test_a_specialist_gets_no_block_for_management(digest: DigestView) -> None:
+    specialist = digest.model_copy(update={"implications": ["Лишнее."]})
+
+    assert "Что это значит для нас" not in render_markdown(specialist)

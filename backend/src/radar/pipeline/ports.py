@@ -26,6 +26,10 @@ class PipelineStore(Protocol):
         """What CISA KEV and the BDU say of these CVE and BDU ids."""
         ...
 
+    async def attack_techniques(self, ids: Sequence[str]) -> dict[str, str]:
+        """The ATT&CK names of those of these technique ids that exist."""
+        ...
+
     async def ensure_embeddings(self, start: datetime, end: datetime) -> int:
         """Embed articles of the period that lack a vector for the active model."""
         ...

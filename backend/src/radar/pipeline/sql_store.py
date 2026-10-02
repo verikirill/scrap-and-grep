@@ -24,6 +24,7 @@ from radar.selection.retrieval import Window, retrieve_candidates
 from radar.store import articles as article_store
 from radar.store import digests as digest_store
 from radar.text import stable_hash
+from radar.vulns.attack import lookup as attack_lookup
 from radar.vulns.lookup import lookup as vulnerability_lookup
 
 QUERY_VECTOR_TTL = 7 * 24 * 3600
@@ -59,6 +60,10 @@ class SqlPipelineStore:
     async def vulnerability_facts(self, ids: Sequence[str]) -> list[VulnerabilityReference]:
         async with session_scope() as session:
             return await vulnerability_lookup(session, ids)
+
+    async def attack_techniques(self, ids: Sequence[str]) -> dict[str, str]:
+        async with session_scope() as session:
+            return await attack_lookup(session, ids)
 
     async def vectors(self, article_ids: Sequence[int]) -> dict[int, np.ndarray]:
         async with session_scope() as session:

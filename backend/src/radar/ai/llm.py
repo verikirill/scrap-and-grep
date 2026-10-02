@@ -3,6 +3,7 @@
 import asyncio
 import json
 import random
+import re
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, replace
 from typing import Any, Literal
@@ -27,6 +28,7 @@ from radar.ai import prompts
 from radar.ai.heuristic import extractive_summary
 from radar.domain import (
     AttackCard,
+    AttackTechnique,
     Candidate,
     DigestOverview,
     Grade,
@@ -41,7 +43,9 @@ from radar.domain import (
 )
 from radar.ingest.telegram import is_post_url
 from radar.logging import get_logger
-from radar.text import numbers
+from radar.text import numbers, split_sentences
+
+TECHNIQUE_ID = re.compile(r"^T\d{4}(?:\.\d{3})?$")
 
 log = get_logger(__name__)
 
@@ -423,8 +427,13 @@ class ModelIntelligence:
         # What the bases said may stand in the card: a CVSS score from the BDU.
         allowed |= numbers(" ".join(reference.text() for reference in found))
         stray = _stray_figures(out, allowed)
-        if stray:
-            out = await self._ask(schema, system, prompts.with_stray_note(prompt, stray), tools)
+        # Management gets no identifiers, versions or addresses, and two
+        # sentences at most; one answer that breaks it goes back with the rest.
+        plain = _plain_problems(out) if profile.audience == "management" else []
+        if stray or plain:
+            retry = prompts.with_stray_note(prompt, stray) if stray else prompt
+            retry = prompts.with_plain_note(retry, plain) if plain else retry
+            out = await self._ask(schema, system, retry, tools)
             stray = _stray_figures(out, allowed)
         entry = _entry(out, item, stray)
         references = {reference.id: reference for reference in found}
@@ -458,6 +467,11 @@ class ModelIntelligence:
         a year the model made up most of all, goes back once; a title that
         keeps it gives way to the first topic's, a key point is left out."""
         prompt = prompts.overview_prompt(topics, profile)
+        management = profile.audience == "management"
+        schema: type[prompts.OverviewOut] = (
+            prompts.ManagementOverviewOut if management else prompts.OverviewOut
+        )
+        system = prompts.MANAGEMENT_OVERVIEW_SYSTEM if management else prompts.OVERVIEW_SYSTEM
         allowed = numbers(
             " ".join(
                 f"{item.article.title} {item.text.headline} {item.text.summary}"
@@ -467,27 +481,41 @@ class ModelIntelligence:
                 for item in topic.items
             )
         )
-        out = await self._ask(prompts.OverviewOut, prompts.OVERVIEW_SYSTEM, prompt)
+        out = await self._ask(schema, system, prompt)
         stray = cards.unsupported_figures(f"{out.title} {' '.join(out.highlights)}", allowed)
         if stray:
             note = prompts.with_stray_note(prompt, stray)
-            out = await self._ask(prompts.OverviewOut, prompts.OVERVIEW_SYSTEM, note)
+            out = await self._ask(schema, system, note)
         title = out.title.strip().strip('«»".')
         if cards.unsupported_figures(title, allowed):
             title = topics[0].title if topics else title
+        highlights = tuple(
+            line.strip()
+            for line in out.highlights
+            if line.strip() and not cards.unsupported_figures(line, allowed)
+        )
+        implications: tuple[str, ...] = ()
+        if isinstance(out, prompts.ManagementOverviewOut):
+            highlights = cards.plain_lines(highlights, 5)
+            implications = cards.plain_lines(
+                [line for line in out.implications if not cards.unsupported_figures(line, allowed)],
+                3,
+            )
         return DigestOverview(
-            title=title,
-            highlights=tuple(
-                line.strip()
-                for line in out.highlights
-                if line.strip() and not cards.unsupported_figures(line, allowed)
-            ),
-            by_model=True,
+            title=title, highlights=highlights, implications=implications, by_model=True
         )
 
 
 def _stray_figures(out: prompts.SummaryOut, allowed: set[str]) -> set[str]:
     return cards.unsupported_figures(f"{out.headline} {out.summary} {out.why}", allowed)
+
+
+def _plain_problems(out: prompts.SummaryOut) -> list[str]:
+    """What breaks the rules of a brief for management: technical details, length."""
+    problems = cards.technical_tokens(f"{out.headline} {out.summary} {out.why}")
+    if len(split_sentences(out.summary)) > cards.PLAIN_SENTENCES:
+        problems.append("пересказ длиннее двух предложений")
+    return problems
 
 
 def _entry(out: prompts.SummaryOut, item: SelectedItem, stray: set[str]) -> ItemSummary:
@@ -530,11 +558,25 @@ def _attack(out: prompts.AttackOut) -> AttackCard:
         attack_date=out.attack_date.strip(),
         sectors=out.sectors.strip(),
         energy_sector=out.energy_sector,
+        vector=out.vector.strip(),
         initial_access=out.initial_access.strip(),
+        affected=out.affected.strip(),
         tools=tuple(dict.fromkeys(tool.strip()[:80] for tool in out.tools if tool.strip())),
         vulnerabilities=tuple(out.vulnerabilities),
+        techniques=_techniques(out.techniques),
         iocs=out.iocs,
+        indicators=tuple(value.strip() for value in out.indicators if value.strip()),
     )
+
+
+def _techniques(techniques: Sequence[prompts.TechniqueOut]) -> tuple[AttackTechnique, ...]:
+    """The techniques of the ATT&CK shape; the check keeps those that exist."""
+    kept = []
+    for technique in techniques:
+        identifier = technique.id.strip().upper()
+        if TECHNIQUE_ID.match(identifier):
+            kept.append(AttackTechnique(id=identifier, name=technique.name.strip()))
+    return tuple(dict.fromkeys(kept))
 
 
 def _vulnerability(out: prompts.VulnerabilityOut) -> VulnerabilityCard:
@@ -548,4 +590,7 @@ def _vulnerability(out: prompts.VulnerabilityOut) -> VulnerabilityCard:
         cvss_score=f"{out.cvss_score:g}" if out.cvss_score is not None else "",
         cvss_vector=out.cvss_vector.strip(),
         impact=out.impact.strip(),
+        cwe=tuple(dict.fromkeys(value.strip().upper() for value in out.cwe if value.strip())),
+        equipment=out.equipment.strip(),
+        protocols=out.protocols.strip(),
     )

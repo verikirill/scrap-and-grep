@@ -5,7 +5,13 @@ import { AnimatePresence, LayoutGroup, motion } from 'motion/react'
 import { Suspense, lazy, useState } from 'react'
 import type { DateRange } from 'react-day-picker'
 import { Link } from 'react-router'
-import { CalendarMonth, CircleCheck, EventRepeat, Newspaper } from '../../components/icons'
+import {
+  CalendarMonth,
+  CircleCheck,
+  DynamicFeed,
+  EventRepeat,
+  Newspaper,
+} from '../../components/icons'
 import { Segmented } from '../../components/Segmented'
 import { useRadioKeys } from '../../components/useRadioKeys'
 import { ProfileAvatar } from '../profiles/ProfileLook'
@@ -14,8 +20,8 @@ import { Button, Card, ErrorNote, Spinner } from '../../components/ui'
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover'
 import type { DigestPeriod, Profile } from '../../lib/api'
 import { plural } from '../../lib/format'
-import { useCreateDigest, useSchedules } from '../../lib/queries'
-import { scheduleLabel } from '../../lib/schedule'
+import { useCreateDigest, useCreateDigestsForBoth, useSchedules } from '../../lib/queries'
+import { periodChoice, scheduleLabel } from '../../lib/schedule'
 import { ScheduleControl } from './ScheduleControl'
 
 const PERIODS = [
@@ -66,12 +72,14 @@ function periodOf(
 
 export function BuildPanel({ profiles, initialProfileId, isBuilding = false, onCreated }: Props) {
   const [profileId, setProfileId] = useState<string | null>(null)
-  const [period, setPeriod] = useState<PeriodValue>('7')
+  // Null until the reader picks a period: then it follows the profile's audience.
+  const [picked, setPeriod] = useState<PeriodValue | null>(null)
   const [range, setRange] = useState<DateRange | undefined>()
   const [isPicking, setPicking] = useState(false)
   // The calendar's limits: stable between renders, renewed whenever it opens.
   const [today, setToday] = useState(() => new Date())
   const create = useCreateDigest()
+  const createBoth = useCreateDigestsForBoth()
   const schedules = useSchedules()
 
   // An explicit click wins; otherwise the profile from the URL, then the first one.
@@ -79,8 +87,14 @@ export function BuildPanel({ profiles, initialProfileId, isBuilding = false, onC
     ? initialProfileId
     : null
   const selectedId = profileId ?? fromUrl ?? profiles[0]?.id ?? null
-  const chosen = periodOf(period, range, today)
   const selected = profiles.find((profile) => profile.id === selectedId) ?? null
+  const period: PeriodValue =
+    picked ??
+    periodChoice(
+      selected?.defaults.period_days,
+      PERIODS.map((item) => item.value),
+    )
+  const chosen = periodOf(period, range, today)
   const scheduleOf = (profileId: string) =>
     schedules.data?.find((item) => item.profile_id === profileId) ?? null
   const profileKeys = useRadioKeys(
@@ -100,6 +114,18 @@ export function BuildPanel({ profiles, initialProfileId, isBuilding = false, onC
       { onSuccess: (digest) => onCreated(digest.id) },
     )
   }
+
+  // One build, two digests: the specialist's opens, management's follows in the history.
+  const submitBoth = () => {
+    const pressed = periodOf(period, range, new Date())
+    if (!selectedId || !pressed) return
+    setProfileId(selectedId)
+    createBoth.mutate(
+      { profileId: selectedId, period: pressed },
+      { onSuccess: ([first]) => onCreated(first.id) },
+    )
+  }
+  const isPending = create.isPending || createBoth.isPending
 
   return (
     <Card className="p-5 sm:p-6">
@@ -245,20 +271,32 @@ export function BuildPanel({ profiles, initialProfileId, isBuilding = false, onC
           </PopoverContent>
         </Popover>
 
-        <Button
-          variant="primary"
-          icon={<Newspaper size={18} />}
-          isBusy={create.isPending || isBuilding}
-          disabled={!selectedId || !chosen}
-          onClick={submit}
-          className="ml-auto"
-        >
-          {isBuilding ? 'Собираем выпуск' : 'Собрать выпуск'}
-        </Button>
+        {/* The two ways to build stay together and wrap as one, to the right. */}
+        <div className="ml-auto flex flex-wrap justify-end gap-2">
+          <Button
+            variant="tonal"
+            icon={<DynamicFeed size={18} />}
+            isBusy={createBoth.isPending}
+            disabled={!selectedId || !chosen || isPending || isBuilding}
+            onClick={submitBoth}
+            title="Один сбор и одна оценка, два выпуска: специалисту и руководству"
+          >
+            Обеим аудиториям
+          </Button>
+          <Button
+            variant="primary"
+            icon={<Newspaper size={18} />}
+            isBusy={create.isPending || isBuilding}
+            disabled={!selectedId || !chosen || createBoth.isPending}
+            onClick={submit}
+          >
+            {isBuilding ? 'Собираем выпуск' : 'Собрать выпуск'}
+          </Button>
+        </div>
       </div>
-      {create.error && (
+      {(create.error || createBoth.error) && (
         <div className="mt-3">
-          <ErrorNote error={create.error} />
+          <ErrorNote error={create.error ?? createBoth.error} />
         </div>
       )}
       {selected && schedules.isSuccess && (

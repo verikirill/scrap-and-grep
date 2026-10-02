@@ -103,6 +103,18 @@ class KnownExploitedVulnerability(Base):
     ransomware: Mapped[bool] = mapped_column(Boolean, default=False)
     description: Mapped[str] = mapped_column(Text, default="")
     action: Mapped[str] = mapped_column(Text, default="")
+    due_date: Mapped[date | None] = mapped_column(Date)
+    cwes: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list, server_default="{}")
+
+
+class AttackTechniqueRow(Base):
+    """MITRE ATT&CK techniques, refreshed from MITRE once a day; a card's
+    techniques are checked against them."""
+
+    __tablename__ = "attack_techniques"
+
+    id: Mapped[str] = mapped_column(String(16), primary_key=True)
+    name: Mapped[str] = mapped_column(Text)
 
 
 class Article(Base):
@@ -492,6 +504,8 @@ class Digest(Base):
     error: Mapped[str | None] = mapped_column(Text)
     title: Mapped[str | None] = mapped_column(Text)
     highlights: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list, server_default="{}")
+    # Management only: what the period means for the company.
+    implications: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list, server_default="{}")
     stats: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="{}")
     # "manual" when the reader ordered it, "schedule" when their schedule did.
     origin: Mapped[str] = mapped_column(String(16), default="manual", server_default="manual")

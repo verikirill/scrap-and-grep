@@ -13,11 +13,12 @@ a CVSS score or a version number the model made up.
 """
 
 import re
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from urllib.parse import urlsplit, urlunsplit
 
 from radar.domain import (
     AttackCard,
+    AttackTechnique,
     Exploit,
     ItemSummary,
     ManagementTag,
@@ -26,7 +27,10 @@ from radar.domain import (
     VulnerabilityCard,
     VulnerabilityReference,
 )
+from radar.indicators import extract_indicators, parse_cvss_vector, refang
 from radar.text import numbers, split_sentences
+
+__all__ = ["extract_indicators", "parse_cvss_vector"]
 
 KIND_LABELS: dict[RecordKind, str] = {
     "attack": "Атака",
@@ -171,6 +175,7 @@ _PUBLIC_EXPLOIT_RE = re.compile(
     r"exploit (?:code )?(?:is |was |has been )?(?:publicly )?(?:available|released|published)",
     re.IGNORECASE,
 )
+_CWE_RE = re.compile(r"\bCWE-\d{1,5}\b", re.IGNORECASE)
 _IOC_RE = re.compile(
     r"\bIoCs?\b|индикатор\w* компрометации|indicators? of compromise|\bSHA-?(?:1|256)\b|\bMD5\b|"
     r"\b[0-9a-f]{32,64}\b",
@@ -238,11 +243,19 @@ def check_vulnerability(
         ("fix", "Обновление"),
         ("workaround", "Временные меры"),
         ("impact", "Последствия"),
+        ("equipment", "Оборудование"),
+        ("protocols", "Протоколы"),
     ):
         value = str(getattr(card, field))
         if value and not _figures_supported(value, allowed):
             updates[field] = ""
             removed.append(label)
+    # A weakness named in the text or by the catalogue, whose text is in the evidence too.
+    named = {value.upper() for value in _CWE_RE.findall(source)}
+    cwe = tuple(dict.fromkeys(value.upper() for value in card.cwe if value.upper() in named))
+    if len(cwe) < len(card.cwe):
+        removed.append("CWE")
+    updates["cwe"] = cwe
     evidence = exploit_evidence(_about(ids, source))
     if evidence != "unknown":
         updates["exploit"] = evidence
@@ -265,7 +278,41 @@ def _about(ids: Sequence[str], source: str) -> str:
     return " ".join(sentences) or source
 
 
-def check_attack(card: AttackCard, source: str) -> tuple[AttackCard, list[str]]:
+def _techniques(
+    techniques: Sequence[AttackTechnique], source: str, known: Mapping[str, str] | None
+) -> tuple[AttackTechnique, ...]:
+    """The techniques that exist and that the text describes: by id, by
+    ATT&CK's name or by the model's own words for it ("фишинг"). Without the
+    reference only an id printed in the text is taken."""
+    kept = []
+    for technique in techniques:
+        if known is None:
+            if technique.id in source:
+                kept.append(technique)
+            continue
+        name = known.get(technique.id)
+        if name is None:
+            continue
+        if technique.id in source or _mentioned(name, source) or _mentioned(technique.name, source):
+            kept.append(AttackTechnique(id=technique.id, name=name))
+    return tuple(dict.fromkeys(kept))
+
+
+def _indicators(card: AttackCard, source: str) -> tuple[tuple[str, ...], bool]:
+    """The model's indicators that the text has, then the rest of the text's;
+    and whether the model gave one the text does not have."""
+    in_text = extract_indicators(source)
+    by_key = {refang(value): value for value in in_text}
+    own = [by_key[refang(value)] for value in card.indicators if refang(value) in by_key]
+    rest = [value for value in in_text if value not in own]
+    return tuple(dict.fromkeys(own + rest)), len(own) < len(card.indicators)
+
+
+def check_attack(
+    card: AttackCard, source: str, techniques: Mapping[str, str] | None = None
+) -> tuple[AttackCard, list[str]]:
+    """`techniques` is the ATT&CK reference for the card's ids; None when it
+    could not be asked."""
     removed: list[str] = []
     updates: dict[str, object] = {}
     # The model reads "energy_sector" by its name and leaves out industry it
@@ -288,8 +335,20 @@ def check_attack(card: AttackCard, source: str) -> tuple[AttackCard, list[str]]:
     if card.attack_date and not _figures_supported(card.attack_date, allowed):
         updates["attack_date"] = ""
         removed.append("Дата атаки")
-    if card.iocs and not _IOC_RE.search(source):
+    if card.affected and not _figures_supported(card.affected, allowed):
+        updates["affected"] = ""
+        removed.append("Затронутые продукты")
+    kept = _techniques(card.techniques, source, techniques)
+    if len(kept) < len(card.techniques):
+        removed.append("Техники ATT&CK")
+    updates["techniques"] = kept
+    indicators, invented = _indicators(card, source)
+    updates["indicators"] = indicators
+    if indicators:
+        updates["iocs"] = True
+    elif card.iocs and not _IOC_RE.search(source):
         updates["iocs"] = None
+    if invented or (card.iocs and not indicators and not _IOC_RE.search(source)):
         removed.append("Индикаторы компрометации")
     return card.model_copy(update=updates), removed
 
@@ -297,6 +356,75 @@ def check_attack(card: AttackCard, source: str) -> tuple[AttackCard, list[str]]:
 def unsupported_figures(text: str, allowed: set[str]) -> set[str]:
     """Figures in model prose that neither the article nor the reader's profile has."""
     return numbers(text) - allowed
+
+
+# --- Plain language for management -------------------------------------------
+
+# What a manager is not given in the text: identifiers, scores, indicators,
+# addresses and version numbers. The links to the details stay.
+_TECHNICAL = [
+    re.compile(r"\bCVE-\d{4}-\d{4,}\b", re.IGNORECASE),
+    re.compile(r"\bBDU:\d{4}-\d{5}\b", re.IGNORECASE),
+    re.compile(r"\b(?:CVSS|IoCs?|IOCs?)\b"),
+    re.compile(r"\b(?:[a-f0-9]{64}|[a-f0-9]{40}|[a-f0-9]{32})\b", re.IGNORECASE),
+    re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b"),
+]
+# Three numbers and more through dots; a date has the same shape and is no version.
+_VERSION = re.compile(r"\b\d+(?:\.\d+){2,}\b")
+_DATE = re.compile(r"^(?:[0-2]?\d|3[01])\.(?:0?\d|1[0-2])\.(?:\d{2}|\d{4})$")
+PLAIN_SENTENCES = 2
+PLAIN_LINE = 160
+
+
+def technical_tokens(text: str) -> list[str]:
+    """Technical details in a text for management, in the order found."""
+    found: list[str] = []
+    rest = text
+    for pattern in _TECHNICAL:
+        found += pattern.findall(rest)
+        # An IP address is not counted again as a version.
+        rest = pattern.sub(" ", rest)
+    found += [match for match in _VERSION.findall(rest) if not _DATE.match(match)]
+    return list(dict.fromkeys(found))
+
+
+def _without_tokens(text: str) -> str:
+    for token in technical_tokens(text):
+        text = text.replace(token, "")
+    text = re.sub(r"\(\s*[,;]?\s*\)", "", text)
+    text = re.sub(r"\s+([,.;:!?])", r"\1", text)
+    return re.sub(r"\s{2,}", " ", text).strip()
+
+
+def plain_brief(text: ItemSummary) -> ItemSummary:
+    """A brief for management: two sentences at most, none with technical
+    details; when every sentence has them, the first one without them."""
+    sentences = split_sentences(text.summary)
+    plain = [sentence for sentence in sentences if not technical_tokens(sentence)]
+    if not plain and sentences:
+        plain = [_without_tokens(sentences[0])]
+    headline = _without_tokens(text.headline) if technical_tokens(text.headline) else text.headline
+    return text.model_copy(
+        update={
+            "headline": headline,
+            "summary": " ".join(plain[:PLAIN_SENTENCES]),
+            "why": "" if technical_tokens(text.why) else text.why,
+        }
+    )
+
+
+def _one_line(line: str) -> str:
+    first = (split_sentences(line) or [""])[0].strip()
+    if len(first) <= PLAIN_LINE:
+        return first
+    cut = first[: PLAIN_LINE - 1].rsplit(" ", 1)[0].rstrip(" ,;:-")
+    return f"{cut}…"
+
+
+def plain_lines(lines: Sequence[str], limit: int) -> tuple[str, ...]:
+    """Theses for management: one sentence each, no technical details."""
+    kept = (_one_line(line) for line in lines if line.strip())
+    return tuple(line for line in kept if line and not technical_tokens(line))[:limit]
 
 
 # --- Links of a Telegram post -------------------------------------------------
@@ -367,12 +495,14 @@ def card_ids(text: ItemSummary, source: str) -> list[str]:
     return identifiers(" ".join(named)) or (known if len(known) <= 3 else [])
 
 
-def check_entry(text: ItemSummary, source: str) -> ItemSummary:
+def check_entry(
+    text: ItemSummary, source: str, techniques: Mapping[str, str] | None = None
+) -> ItemSummary:
     """The entry with every card field the article does not support taken out."""
     removed = list(text.unsupported)
     updates: dict[str, object] = {}
     if text.attack is not None:
-        attack, lost = check_attack(text.attack, source)
+        attack, lost = check_attack(text.attack, source, techniques)
         updates["attack"] = attack
         removed += lost
     if text.vulnerability is not None:
@@ -395,6 +525,7 @@ def offline_vulnerability(source: str) -> VulnerabilityCard:
         cvss_score=score.group(1).replace(",", ".") if score else "",
         cvss_vector=vector.group(0) if vector else "",
         exploit=exploit_evidence(source),
+        cwe=tuple(dict.fromkeys(value.upper() for value in _CWE_RE.findall(source)))[:3],
     )
 
 
@@ -404,6 +535,7 @@ def offline_attack(source: str) -> AttackCard:
         energy_sector=bool(_ENERGY_OR_INDUSTRY_RE.search(source)),
         vulnerabilities=tuple(identifiers(source)[:5]),
         iocs=True if _IOC_RE.search(source) else None,
+        indicators=tuple(extract_indicators(source)),
     )
 
 
@@ -437,15 +569,19 @@ def _flag(value: bool | None) -> str:
 
 def attack_rows(card: AttackCard) -> list[tuple[str, str]]:
     """The attack card as the dataset's "desired output" lists it."""
+    techniques = "; ".join(f"{item.id} {item.name}".strip() for item in card.techniques)
     return [
         ("Страна жертвы", card.victim_country or NO_DATA),
         ("Группировка", card.group or NO_DATA),
         ("Дата атаки", card.attack_date or NO_DATA),
         ("Отрасли и компании", card.sectors or NO_DATA),
+        ("Вектор атаки", card.vector or NO_DATA),
         ("Первоначальный доступ", card.initial_access or NO_DATA),
+        ("Затронутые продукты", card.affected or NO_DATA),
         ("Инструменты", ", ".join(card.tools) or NO_DATA),
         ("Уязвимости", ", ".join(card.vulnerabilities) or NO_DATA),
-        ("Индикаторы компрометации", _flag(card.iocs)),
+        ("Техники ATT&CK", techniques or NO_DATA),
+        ("Индикаторы компрометации", ", ".join(card.indicators) or _flag(card.iocs)),
     ]
 
 
@@ -454,7 +590,7 @@ def vulnerability_rows(card: VulnerabilityCard) -> list[tuple[str, str]]:
     cvss = (
         f"{score} ({card.cvss_vector})" if score and card.cvss_vector else score or card.cvss_vector
     )
-    return [
+    rows = [
         ("Уязвимость", card.name or NO_DATA),
         ("Затронуто", card.affected or NO_DATA),
         ("Обновление", card.fix or NO_DATA),
@@ -462,8 +598,17 @@ def vulnerability_rows(card: VulnerabilityCard) -> list[tuple[str, str]]:
         ("Эксплойт", EXPLOIT_LABELS[card.exploit]),
         ("Идентификаторы", ", ".join(card.ids) or NO_DATA),
         ("CVSS", cvss or NO_DATA),
+        # The vector in words: from the network, with which rights, with a click.
+        *parse_cvss_vector(card.cvss_vector),
+        ("CWE", ", ".join(card.cwe) or NO_DATA),
         ("Последствия", card.impact or NO_DATA),
     ]
+    # Industrial control systems only: there is nothing to say for the rest.
+    if card.equipment:
+        rows.append(("Оборудование", card.equipment))
+    if card.protocols:
+        rows.append(("Протоколы", card.protocols))
+    return rows
 
 
 def reference_rows(references: Sequence[VulnerabilityReference]) -> list[tuple[str, str]]:
@@ -475,7 +620,10 @@ def reference_rows(references: Sequence[VulnerabilityReference]) -> list[tuple[s
     for reference in (reference for reference in references if reference.found):
         facts = []
         if reference.kev_added is not None:
-            facts.append(f"CISA KEV с {reference.kev_added:%d.%m.%Y}")
+            kev = f"CISA KEV с {reference.kev_added:%d.%m.%Y}"
+            if reference.kev_due is not None:
+                kev += f", устранить до {reference.kev_due:%d.%m.%Y}"
+            facts.append(kev)
         if reference.bdu_id:
             bdu = [reference.bdu_id]
             if reference.bdu_exploit:

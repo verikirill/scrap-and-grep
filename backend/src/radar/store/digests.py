@@ -236,6 +236,7 @@ async def save_result(
             error=None,
             title=overview.title,
             highlights=list(overview.highlights),
+            implications=list(overview.implications),
             stats=stats,
             finished_at=datetime.now(UTC),
         )
