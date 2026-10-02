@@ -246,4 +246,6 @@ def _card(text: ItemSummary | None) -> dict[str, Any]:
     """The card part of an entry, as stored with it."""
     if text is None:
         return {}
-    return text.model_dump(mode="json", include={"attack", "vulnerability", "tags", "unsupported"})
+    return text.model_dump(
+        mode="json", include={"attack", "vulnerability", "tags", "unsupported", "references"}
+    )

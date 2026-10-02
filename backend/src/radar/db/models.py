@@ -1,7 +1,7 @@
 """ORM models. The schema itself is owned by Alembic migrations."""
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from pgvector.sqlalchemy import Vector
@@ -9,6 +9,7 @@ from sqlalchemy import (
     BigInteger,
     Boolean,
     Computed,
+    Date,
     DateTime,
     Float,
     ForeignKey,
@@ -63,6 +64,22 @@ class Source(Base):
     last_error: Mapped[str | None] = mapped_column(Text)
     consecutive_failures: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class KnownExploitedVulnerability(Base):
+    """The CISA catalogue of vulnerabilities exploited in the wild (KEV),
+    refreshed every hour; a digest looks its CVEs up here."""
+
+    __tablename__ = "known_exploited_vulnerabilities"
+
+    cve_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    vendor: Mapped[str] = mapped_column(Text, default="")
+    product: Mapped[str] = mapped_column(Text, default="")
+    name: Mapped[str] = mapped_column(Text, default="")
+    date_added: Mapped[date] = mapped_column(Date)
+    ransomware: Mapped[bool] = mapped_column(Boolean, default=False)
+    description: Mapped[str] = mapped_column(Text, default="")
+    action: Mapped[str] = mapped_column(Text, default="")
 
 
 class Article(Base):

@@ -7,7 +7,7 @@ import httpx
 import pytest
 from pydantic import BaseModel, Field, ValidationError
 
-from radar.ai.ollama import OllamaChat
+from radar.ai.ollama import ChatTool, OllamaChat
 from radar.config import Settings
 
 
@@ -19,19 +19,23 @@ class Verdict(BaseModel):
 class Server:
     """An Ollama that gives the answers in turn and keeps what it was asked."""
 
-    def __init__(self, *answers: str) -> None:
+    def __init__(self, *answers: str | dict[str, Any]) -> None:
         self.answers = list(answers)
         self.requests: list[httpx.Request] = []
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
         self.requests.append(request)
+        answer = self.answers.pop(0)
+        # A dict is a tool call: {"name": ..., "arguments": {...}}.
+        calls = [{"function": answer}] if isinstance(answer, dict) else []
         line = {
             "model": "gpt-oss:120b",
             "created_at": "2026-10-02T10:00:00Z",
             "message": {
                 "role": "assistant",
-                "content": self.answers.pop(0),
+                "content": "" if calls else answer,
                 "thinking": "The reader wants JSON.",
+                "tool_calls": calls,
             },
             "done": True,
             "done_reason": "stop",
@@ -117,3 +121,59 @@ async def test_json_that_is_only_broken_is_mended_without_asking_again() -> None
 
     assert verdict == Verdict(relevance=2, reason="по теме")
     assert len(server.requests) == 1
+
+
+async def test_the_model_calls_its_tool_and_answers_with_what_it_got() -> None:
+    server = Server(
+        {"name": "lookup", "arguments": {"identifier": "CVE-2026-88772"}},
+        '{"relevance": 3, "reason": "в каталоге KEV"}',
+    )
+    asked: list[dict[str, Any]] = []
+
+    async def lookup(arguments: dict[str, Any]) -> str:
+        asked.append(arguments)
+        return "CVE-2026-88772: в каталоге CISA KEV с 27.09.2026: используется в атаках"
+
+    tool = ChatTool(
+        {
+            "type": "function",
+            "function": {
+                "name": "lookup",
+                "description": "Справка об уязвимости",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"identifier": {"type": "string"}},
+                    "required": ["identifier"],
+                },
+            },
+        },
+        lookup,
+    )
+
+    verdict = await chat(server).ask(Verdict, "Оцени.", "Статья", (tool,))
+
+    assert verdict == Verdict(relevance=3, reason="в каталоге KEV")
+    assert asked == [{"identifier": "CVE-2026-88772"}]
+    first, second = server.body(0), server.body(1)
+    assert first["tools"][0]["function"]["name"] == "lookup"
+    # No schema while the model may still call a tool: it would leave no room for the call.
+    assert first.get("format") is None
+    assert second["messages"][-1]["role"] == "tool"
+    assert "CISA KEV" in second["messages"][-1]["content"]
+
+
+async def test_a_tool_that_fails_is_told_to_the_model_not_raised() -> None:
+    server = Server(
+        {"name": "lookup", "arguments": {"identifier": "CVE-2026-1"}},
+        '{"relevance": 2, "reason": "по тексту"}',
+    )
+
+    async def broken(arguments: dict[str, Any]) -> str:
+        raise ConnectionError("database went away")
+
+    tool = ChatTool({"type": "function", "function": {"name": "lookup", "parameters": {}}}, broken)
+
+    verdict = await chat(server).ask(Verdict, "Оцени.", "Статья", (tool,))
+
+    assert verdict.relevance == 2
+    assert "недоступна" in server.body(1)["messages"][-1]["content"]

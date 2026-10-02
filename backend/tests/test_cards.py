@@ -119,8 +119,11 @@ class Scripted:
         self.answers = list(answers)
         self.prompts: list[str] = []
 
-    async def ask[T: BaseModel](self, schema: type[T], system: str, user: str) -> T:
+    async def ask[T: BaseModel](
+        self, schema: type[T], system: str, user: str, tools: Any = ()
+    ) -> T:
         self.prompts.append(user)
+        self.tools = tools
         return schema.model_validate(self.answers.pop(0))
 
 

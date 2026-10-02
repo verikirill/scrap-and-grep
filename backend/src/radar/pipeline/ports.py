@@ -9,12 +9,23 @@ import numpy as np
 
 from radar.ai.embedder import Embedder
 from radar.ai.intelligence import Intelligence
-from radar.domain import Candidate, DigestOverview, GradedCandidate, ProfileSpec, Topic
+from radar.domain import (
+    Candidate,
+    DigestOverview,
+    GradedCandidate,
+    ProfileSpec,
+    Topic,
+    VulnerabilityReference,
+)
 from radar.recsys.model import Learned, Personal
 from radar.selection.retrieval import Window
 
 
 class PipelineStore(Protocol):
+    async def vulnerability_facts(self, ids: Sequence[str]) -> list[VulnerabilityReference]:
+        """What CISA KEV and the BDU say of these CVE and BDU ids."""
+        ...
+
     async def ensure_embeddings(self, start: datetime, end: datetime) -> int:
         """Embed articles of the period that lack a vector for the active model."""
         ...

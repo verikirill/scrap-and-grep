@@ -10,13 +10,21 @@ import numpy as np
 from radar.ai.embedder import Embedder
 from radar.cache import Cache
 from radar.db import session_scope
-from radar.domain import Candidate, DigestOverview, GradedCandidate, ProfileSpec, Topic
+from radar.domain import (
+    Candidate,
+    DigestOverview,
+    GradedCandidate,
+    ProfileSpec,
+    Topic,
+    VulnerabilityReference,
+)
 from radar.ingest.service import embed_pending
 from radar.recsys.model import Learned, Personal
 from radar.selection.retrieval import Window, retrieve_candidates
 from radar.store import articles as article_store
 from radar.store import digests as digest_store
 from radar.text import stable_hash
+from radar.vulns.lookup import lookup as vulnerability_lookup
 
 QUERY_VECTOR_TTL = 7 * 24 * 3600
 
@@ -47,6 +55,10 @@ class SqlPipelineStore:
                 per_interest_limit=self._per_interest_limit,
                 semantic=self._embedder.semantic,
             )
+
+    async def vulnerability_facts(self, ids: Sequence[str]) -> list[VulnerabilityReference]:
+        async with session_scope() as session:
+            return await vulnerability_lookup(session, ids)
 
     async def vectors(self, article_ids: Sequence[int]) -> dict[int, np.ndarray]:
         async with session_scope() as session:

@@ -2,7 +2,7 @@
 
 import asyncio
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 import numpy as np
@@ -21,6 +21,7 @@ from radar.domain import (
     Interest,
     ProfileSpec,
     Topic,
+    VulnerabilityReference,
 )
 from radar.pipeline.graph import DigestState, build_graph
 from radar.pipeline.ports import PipelineDeps
@@ -78,6 +79,15 @@ class FakeStore:
 
     async def vectors(self, article_ids: Sequence[int]) -> dict[int, np.ndarray]:
         return {}
+
+    async def vulnerability_facts(self, ids: Sequence[str]) -> list[VulnerabilityReference]:
+        # One CVE in the CISA catalogue; the rest unknown.
+        return [
+            VulnerabilityReference(id=value, kev_added=date(2026, 9, 27))
+            if value == "CVE-2026-2222"
+            else VulnerabilityReference(id=value)
+            for value in ids
+        ]
 
     async def personal(
         self, user_id: str, article_ids: Sequence[int], start: datetime, end: datetime
@@ -377,3 +387,45 @@ async def test_a_management_digest_has_topics_and_tags_instead_of_cards(
     assert not {"Атаки", "Уязвимости"} & {topic.title for topic in topics}
     entries = [item.text for topic in topics for item in topic.items]
     assert all(entry and entry.tags and entry.attack is None for entry in entries)
+
+
+async def test_a_vulnerability_the_text_is_quiet_about_is_raised_by_the_catalogue(
+    profile: ProfileSpec, make_article: ArticleFactory
+) -> None:
+    # Nothing in the text says it is exploited; CISA KEV lists it.
+    listed = make_article("Уязвимость CVE-2026-2222 в SCADA-сервере", "Вышло исправление.")
+    other = make_article("Уязвимость CVE-2026-3333 в веб-интерфейсе SCADA", "Вышел патч.")
+    store = FakeStore([listed, other])
+    graph = build_graph(_deps(store, HeuristicIntelligence())).compile(checkpointer=InMemorySaver())
+
+    await graph.ainvoke(_input(profile), CONFIG)
+
+    assert store.saved is not None
+    [section] = [topic for topic in store.saved["topics"] if topic.title == "Уязвимости"]
+    first, second = section.items
+    assert first.article.id == listed.id
+    assert first.text.vulnerability.exploit == "in_the_wild"
+    assert second.text.vulnerability.exploit == "unknown"
+    assert store.saved["stats"]["lookups_by_pipeline"] == 2
+    assert store.saved["stats"]["references_found"] == 1
+
+
+async def test_a_card_keeps_only_the_references_about_its_own_vulnerability() -> None:
+    from radar.domain import ItemSummary, VulnerabilityCard
+    from radar.pipeline.graph import DigestNodes
+
+    nodes = DigestNodes(_deps(FakeStore([]), HeuristicIntelligence()))
+    card = ItemSummary(
+        summary="",
+        vulnerability=VulnerabilityCard(ids=("CVE-2026-92370", "BDU:2026-15497")),
+        references=(
+            # The model asked about a neighbour of the roundup, and about this CVE.
+            VulnerabilityReference(id="CVE-2026-73570", kev_added=date(2026, 9, 20)),
+            VulnerabilityReference(id="CVE-2026-92370", bdu_id="BDU:2026-15497", via="model"),
+        ),
+    )
+
+    entry = await nodes._with_references(card, "CVE-2026-92370, BDU:2026-15497")
+
+    # The BDU id is covered by the CVE's entry: nothing left to look up.
+    assert [reference.id for reference in entry.references] == ["CVE-2026-92370"]

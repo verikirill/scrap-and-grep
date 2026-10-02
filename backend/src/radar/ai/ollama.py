@@ -2,12 +2,19 @@
 
 import asyncio
 import json
-from collections.abc import Sequence
+from collections.abc import Awaitable, Callable, Sequence
+from dataclasses import dataclass
 from typing import Any, Literal
 
 import httpx
 import json_repair
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.messages import (
+    AIMessage,
+    BaseMessage,
+    HumanMessage,
+    SystemMessage,
+    ToolMessage,
+)
 from langchain_ollama import ChatOllama
 from pydantic import BaseModel, ValidationError
 
@@ -26,9 +33,13 @@ from radar.domain import (
     Topic,
     TopicName,
     VulnerabilityCard,
+    VulnerabilityReference,
 )
 from radar.ingest.telegram import is_post_url
+from radar.logging import get_logger
 from radar.text import numbers
+
+log = get_logger(__name__)
 
 # Typographic hyphens and narrow spaces gpt-oss puts even into identifiers:
 # CVE-2025-40566 written with U+2011 hyphens is not found by a search for the plain one.
@@ -66,6 +77,36 @@ def _problems(error: ValidationError) -> str:
         f"{'.'.join(map(str, problem['loc'])) or 'ответ'}: {problem['msg']}"
         for problem in error.errors()[:5]
     )
+
+
+# Rounds of tool calls before the model must answer, and calls in one round.
+MAX_TOOL_ROUNDS = 2
+MAX_TOOL_CALLS = 4
+
+
+@dataclass(frozen=True, slots=True)
+class ChatTool:
+    """A function the model may call while it writes: its description in
+    the OpenAI form Ollama takes, and what runs when it is called."""
+
+    spec: dict[str, Any]
+    call: Callable[[dict[str, Any]], Awaitable[str]]
+
+    @property
+    def name(self) -> str:
+        return str(self.spec["function"]["name"])
+
+
+async def _run(tool: ChatTool | None, arguments: Any) -> str:
+    """A tool's answer; a failure is told to the model, not raised: a database
+    hiccup in a lookup must not count as the model failing and trip the breaker."""
+    if tool is None:
+        return "Такого инструмента нет."
+    try:
+        return await tool.call(arguments if isinstance(arguments, dict) else {})
+    except Exception as exc:
+        log.warning("tool_failed", tool=tool.name, error=f"{type(exc).__name__}: {exc}"[:300])
+        return "Справка сейчас недоступна, ответь по тексту публикации."
 
 
 class OllamaChat:
@@ -115,14 +156,18 @@ class OllamaChat:
         self._slots = asyncio.Semaphore(concurrency)
         self._timeout = timeout
 
-    async def ask[T: BaseModel](self, schema: type[T], system: str, user: str) -> T:
+    async def ask[T: BaseModel](
+        self, schema: type[T], system: str, user: str, tools: Sequence[ChatTool] = ()
+    ) -> T:
         shape = schema.model_json_schema()
         messages: list[BaseMessage] = [
             SystemMessage(content=f"{system}\n\n{_answer_format(shape)}"),
             HumanMessage(content=user),
         ]
         async with self._slots:
-            answer = await self._answer(messages, shape)
+            messages, answer = await self._with_tools(messages, tools)
+            if answer is None:
+                answer = await self._answer(messages, shape)
             try:
                 return _parsed(schema, answer)
             except ValidationError as error:
@@ -136,6 +181,35 @@ class OllamaChat:
                 ]
             return _parsed(schema, await self._answer(retry, shape))
 
+    async def _with_tools(
+        self, messages: list[BaseMessage], tools: Sequence[ChatTool]
+    ) -> tuple[list[BaseMessage], str | None]:
+        """Let the model call its tools; the answer if it gave one along the way.
+
+        No `format` here: a local Ollama would hold the reply to the answer's
+        schema and leave no room for a call.
+        """
+        if not tools:
+            return messages, None
+        by_name = {tool.name: tool for tool in tools}
+        model = self._llm.bind_tools([tool.spec for tool in tools])
+        for _ in range(MAX_TOOL_ROUNDS):
+            async with asyncio.timeout(self._timeout):
+                reply = await model.ainvoke(messages)
+            if not reply.tool_calls:
+                return messages, _json_text(reply.text)
+            results: list[BaseMessage] = []
+            for index, call in enumerate(reply.tool_calls):
+                # Every call is answered: some chat templates expect a result per call.
+                result = (
+                    await _run(by_name.get(call["name"]), call["args"])
+                    if index < MAX_TOOL_CALLS
+                    else "Лимит вызовов исчерпан: ответь по уже полученным сведениям."
+                )
+                results.append(ToolMessage(content=result, tool_call_id=call["id"] or call["name"]))
+            messages = [*messages, reply, *results]
+        return messages, None
+
     async def _answer(self, messages: list[BaseMessage], shape: dict[str, Any]) -> str:
         # The clock starts once a slot is free: time spent queueing behind
         # other calls is not the model being slow and must not trip the breaker.
@@ -144,10 +218,15 @@ class OllamaChat:
         return _json_text(reply.text)
 
 
+# Looks vulnerabilities up in the reference bases by their ids.
+Lookup = Callable[[Sequence[str]], Awaitable[list[VulnerabilityReference]]]
+
+
 class OllamaIntelligence:
-    def __init__(self, chat: OllamaChat) -> None:
+    def __init__(self, chat: OllamaChat, lookup: Lookup | None = None) -> None:
         self.name = chat.name
         self._ask = chat.ask
+        self._lookup = lookup
 
     async def grade(self, candidate: Candidate, profile: ProfileSpec) -> Grade:
         out = await self._ask(
@@ -182,12 +261,39 @@ class OllamaIntelligence:
             | numbers(prompts.reader_text(profile, interest))
             | {str(article.published_at.year)}
         )
-        out = await self._ask(schema, system, prompt)
+        found: list[VulnerabilityReference] = []
+        # Only a card has ids to look up: a brief and a plain entry do not.
+        carded = schema in (prompts.AttackOut, prompts.VulnerabilityOut)
+        tools = self._tools(found) if carded else ()
+        if tools:
+            system = f"{system}\n\n{prompts.LOOKUP_NOTE}"
+        out = await self._ask(schema, system, prompt, tools)
+        # What the bases said may stand in the card: a CVSS score from the BDU.
+        allowed |= numbers(" ".join(reference.text() for reference in found))
         stray = _stray_figures(out, allowed)
         if stray:
-            out = await self._ask(schema, system, prompts.with_stray_note(prompt, stray))
+            out = await self._ask(schema, system, prompts.with_stray_note(prompt, stray), tools)
             stray = _stray_figures(out, allowed)
-        return _entry(out, item, stray)
+        entry = _entry(out, item, stray)
+        references = {reference.id: reference for reference in found}
+        return entry.model_copy(update={"references": tuple(references.values())})
+
+    def _tools(self, found: list[VulnerabilityReference]) -> tuple[ChatTool, ...]:
+        """The lookup in the reference bases, as a tool the model calls; what
+        it returned is kept for the entry."""
+        lookup = self._lookup
+        if lookup is None:
+            return ()
+
+        async def call(arguments: dict[str, Any]) -> str:
+            identifier = str(arguments.get("identifier", ""))[:40]
+            references = await lookup([identifier])
+            found.extend(reference.model_copy(update={"via": "model"}) for reference in references)
+            if not references:
+                return f"«{identifier}» не похож на идентификатор CVE или БДУ."
+            return "\n".join(reference.text() for reference in references)
+
+        return (ChatTool(prompts.LOOKUP_TOOL, call),)
 
     async def name_topic(self, items: Sequence[SelectedItem], profile: ProfileSpec) -> TopicName:
         out = await self._ask(prompts.TopicOut, prompts.TOPIC_SYSTEM, prompts.topic_prompt(items))

@@ -64,6 +64,12 @@ class Settings(BaseSettings):
     breaker_failure_threshold: int = 3
     breaker_reset_seconds: float = 30.0
 
+    # The CISA catalogue of exploited vulnerabilities, refreshed every hour
+    # (a 304 when unchanged). Empty turns the lookup off; BDU still answers.
+    kev_url: str = (
+        "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+    )
+
     # Ingestion
     ingest_cron: str = "*/15 * * * *"
     http_timeout_seconds: float = 20.0

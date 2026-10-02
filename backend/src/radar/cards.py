@@ -24,6 +24,7 @@ from radar.domain import (
     Priority,
     RecordKind,
     VulnerabilityCard,
+    VulnerabilityReference,
 )
 from radar.text import numbers, split_sentences
 
@@ -347,6 +348,18 @@ def source_text(title: str, summary: str, content: str | None) -> str:
     return "\n".join(part for part in (title, summary, content or "") if part)
 
 
+def card_ids(text: ItemSummary, source: str) -> list[str]:
+    """The ids a card is about: its own, or those of a text that names few."""
+    if text.vulnerability is not None:
+        named = list(text.vulnerability.ids)
+    elif text.attack is not None:
+        named = list(text.attack.vulnerabilities)
+    else:
+        return []
+    known = identifiers(source)
+    return identifiers(" ".join(named)) or (known if len(known) <= 3 else [])
+
+
 def check_entry(text: ItemSummary, source: str) -> ItemSummary:
     """The entry with every card field the article does not support taken out."""
     removed = list(text.unsupported)
@@ -443,3 +456,26 @@ def vulnerability_rows(card: VulnerabilityCard) -> list[tuple[str, str]]:
         ("CVSS", cvss or NO_DATA),
         ("Последствия", card.impact or NO_DATA),
     ]
+
+
+def reference_rows(references: Sequence[VulnerabilityReference]) -> list[tuple[str, str]]:
+    """What the reference bases said, one id after another, as a card row."""
+    if not references:
+        return []
+    parts = []
+    unknown = [reference.id for reference in references if not reference.found]
+    for reference in (reference for reference in references if reference.found):
+        facts = []
+        if reference.kev_added is not None:
+            facts.append(f"CISA KEV с {reference.kev_added:%d.%m.%Y}")
+        if reference.bdu_id:
+            bdu = [reference.bdu_id]
+            if reference.bdu_exploit:
+                bdu.append(f"эксплойт {reference.bdu_exploit}")
+            if reference.bdu_in_attacks:
+                bdu.append("используется в атаках")
+            facts.append(", ".join(bdu))
+        parts.append(f"{reference.id}: {'; '.join(facts)}")
+    if unknown:
+        parts.append(f"нет в CISA KEV и БДУ: {', '.join(unknown)}")
+    return [("Сверено по базам", "; ".join(parts))]
