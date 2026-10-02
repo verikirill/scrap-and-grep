@@ -14,6 +14,8 @@ from radar.config import get_settings
 from radar.db import session_scope
 from radar.events import enabled as events_enabled
 from radar.events import writer as event_writer
+from radar.images.store import get_image_store
+from radar.ingest import avatars
 from radar.ingest.measure import measure
 from radar.ingest.net import build_client
 from radar.ingest.service import embed_pending, enabled_source_ids, ingest_source
@@ -291,13 +293,25 @@ async def refresh_kev() -> int:
     return kept
 
 
+@ingest_broker.task(task_name="refresh_source_avatars", schedule=[{"cron": "41 */6 * * *"}])
+async def refresh_source_avatars() -> int:
+    """Every six hours: pictures for sources that have none yet, a few dozen at a time."""
+    async with build_client() as client, session_scope() as session:
+        return await avatars.refresh_avatars(session, client, get_image_store())
+
+
 @ingest_broker.on_event(TaskiqEvents.WORKER_STARTUP)
 async def _kev_at_start(state: TaskiqState) -> None:
-    # A fresh stack looks vulnerabilities up before the first hourly round.
-    try:
-        await refresh_kev()
-    except Exception as exc:
-        log.warning("kev_not_refreshed", error=f"{type(exc).__name__}: {exc}"[:300])
+    # A fresh stack looks vulnerabilities up before the first hourly round,
+    # and shows its sources' pictures before the first six-hourly one.
+    for task, event in (
+        (refresh_kev, "kev_not_refreshed"),
+        (refresh_source_avatars, "avatars_not_refreshed"),
+    ):
+        try:
+            await task()
+        except Exception as exc:
+            log.warning(event, error=f"{type(exc).__name__}: {exc}"[:300])
 
 
 @ingest_broker.task(task_name="housekeeping", schedule=[{"cron": "*/10 * * * *"}])

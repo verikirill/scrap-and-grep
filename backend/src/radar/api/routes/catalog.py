@@ -20,7 +20,9 @@ from radar.api.deps import (
 from radar.api.schemas import ArticleOut, Page, SourceCreate, SourceOut, SourceUpdate
 from radar.db.models import Article, Source
 from radar.domain import Language, SourceCategory
+from radar.images.store import get_image_store
 from radar.ingest import telegram
+from radar.ingest.avatars import avatar_key
 from radar.ingest.net import UnsafeUrlError, build_client, ensure_public_url
 from radar.ingest.pages import MarkupChanged
 from radar.logging import get_logger
@@ -90,6 +92,31 @@ async def _source_out(session: SessionDep, source: Source) -> SourceOut:
     ).one()
     out = SourceOut.model_validate(source)
     return out.model_copy(update={"articles": counts.total, "articles_last_day": counts.day})
+
+
+@router.get("/sources/avatars")
+async def source_avatars(session: SessionDep) -> dict[int, str]:
+    """Sources that have a picture, each with a version for the picture's address."""
+    rows = await session.execute(
+        select(Source.id, Source.avatar_updated_at).where(Source.avatar_updated_at.is_not(None))
+    )
+    return {source_id: f"{updated:%Y%m%d%H%M%S}" for source_id, updated in rows.all() if updated}
+
+
+@router.get("/sources/{source_id}/avatar")
+async def source_avatar(source_id: int) -> Response:
+    data = await get_image_store().get(avatar_key(source_id))
+    if data is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "No picture for this source")
+    # The address carries the picture's version, so it may be kept long.
+    return Response(
+        content=data,
+        media_type="image/webp",
+        headers={
+            "Cache-Control": "private, max-age=2592000, immutable",
+            "Content-Security-Policy": "default-src 'none'",
+        },
+    )
 
 
 @router.get("/sources")

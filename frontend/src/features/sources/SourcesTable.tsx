@@ -12,6 +12,7 @@ import { CATEGORY_LABELS, externalHref, formatNumber, formatRelative } from '../
 import { useSourceMutations } from '../../lib/queries'
 import { CATEGORY_ORDER, groupSources, matchesSource, queryWords } from '../../lib/sourceList'
 import type { SourceGrouping, SourceOrder } from '../../lib/sourceList'
+import { SourceAvatar } from '../feed/SourceAvatar'
 
 function StatusDot({ source }: { source: Source }) {
   const failing = source.last_status === 'error'
@@ -372,6 +373,11 @@ export function SourcesTable({ sources, canEdit }: Props) {
                     rel="noopener noreferrer"
                     className="flex items-center gap-1.5 text-sm font-medium hover:text-on-primary-container"
                   >
+                    <SourceAvatar
+                      sourceId={source.id}
+                      name={source.name}
+                      className="size-6 text-[10px]"
+                    />
                     {source.kind === 'telegram' && (
                       <Send
                         size={14}
