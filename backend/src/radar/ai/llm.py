@@ -426,9 +426,24 @@ class ModelIntelligence:
         if stray:
             out = await self._ask(schema, system, prompts.with_stray_note(prompt, stray), tools)
             stray = _stray_figures(out, allowed)
+        if profile.audience == "management":
+            out = await self._plain(out, schema, system, prompt)
         entry = _entry(out, item, stray)
+        if profile.audience == "management":
+            entry = _plain_entry(entry)
         references = {reference.id: reference for reference in found}
         return entry.model_copy(update={"references": tuple(references.values())})
+
+    async def _plain[T: prompts.SummaryOut](
+        self, out: T, schema: type[T], system: str, prompt: str
+    ) -> T:
+        """A management brief with technical marks or more than two sentences
+        goes back once; what still slips through is cut in _plain_entry."""
+        marks = cards.technical_marks(f"{out.headline} {out.summary} {out.why}")
+        is_long = len(cards.sentences(out.summary)) > cards.BRIEF_SENTENCES
+        if not marks and not is_long:
+            return out
+        return await self._ask(schema, system, prompts.with_brief_note(prompt, marks, is_long))
 
     def _tools(self, found: list[VulnerabilityReference]) -> tuple[ChatTool, ...]:
         """The lookup in the reference bases, as a tool the model calls; what
@@ -467,23 +482,45 @@ class ModelIntelligence:
                 for item in topic.items
             )
         )
-        out = await self._ask(prompts.OverviewOut, prompts.OVERVIEW_SYSTEM, prompt)
-        stray = cards.unsupported_figures(f"{out.title} {' '.join(out.highlights)}", allowed)
+        system = prompts.overview_system(profile.audience)
+        out = await self._ask(prompts.OverviewOut, system, prompt)
+        written = f"{out.title} {' '.join(out.highlights)} {' '.join(out.implications)}"
+        stray = cards.unsupported_figures(written, allowed)
         if stray:
             note = prompts.with_stray_note(prompt, stray)
-            out = await self._ask(prompts.OverviewOut, prompts.OVERVIEW_SYSTEM, note)
+            out = await self._ask(prompts.OverviewOut, system, note)
         title = out.title.strip().strip('«»".')
         if cards.unsupported_figures(title, allowed):
             title = topics[0].title if topics else title
-        return DigestOverview(
-            title=title,
-            highlights=tuple(
+        is_management = profile.audience == "management"
+
+        def kept(lines: Sequence[str]) -> tuple[str, ...]:
+            # A line with a figure the entries lack is left out, and for
+            # management one with a technical mark too.
+            return tuple(
                 line.strip()
-                for line in out.highlights
-                if line.strip() and not cards.unsupported_figures(line, allowed)
-            ),
+                for line in lines
+                if line.strip()
+                and not cards.unsupported_figures(line, allowed)
+                and not (is_management and cards.technical_marks(line))
+            )
+
+        return DigestOverview(
+            title=cards.without_marks(title) if is_management else title,
+            highlights=kept(out.highlights),
+            implications=kept(out.implications) if is_management else (),
             by_model=True,
         )
+
+
+def _plain_entry(entry: ItemSummary) -> ItemSummary:
+    """A management entry as the reader gets it: no technical marks, two
+    sentences at most. A brief left empty by the cut keeps its first sentence."""
+    summary = cards.plain_brief(entry.summary) or " ".join(cards.sentences(entry.summary)[:1])
+    why = "" if cards.technical_marks(entry.why) else entry.why
+    return entry.model_copy(
+        update={"headline": cards.without_marks(entry.headline), "summary": summary, "why": why}
+    )
 
 
 def _stray_figures(out: prompts.SummaryOut, allowed: set[str]) -> set[str]:

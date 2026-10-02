@@ -220,6 +220,10 @@ def render_markdown(digest: DigestView) -> str:
         f"**Сформирован:** {format_datetime(digest.finished_at or digest.created_at)} МСК",
         "",
     ]
+    if digest.implications:
+        lines += ["## Что это значит для нас", ""]
+        lines += [f"- {_escape(line)}" for line in digest.implications]
+        lines.append("")
     if digest.highlights:
         lines += ["## Главное", ""]
         lines += [f"- {_escape(highlight)}" for highlight in digest.highlights]

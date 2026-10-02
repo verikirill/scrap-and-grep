@@ -13,6 +13,8 @@ from radar.cards import (
     defang,
     exploit_evidence,
     priority,
+    technical_marks,
+    without_marks,
 )
 from radar.domain import (
     AttackCard,
@@ -270,3 +272,69 @@ def test_industry_in_the_sectors_counts_as_the_datasets_energy_sector() -> None:
     checked, _ = check_attack(card, "PhantomCore атаковала промышленные предприятия РФ.")
 
     assert priority("attack", ItemSummary(summary="", attack=checked)) == "high"
+
+
+async def test_a_management_brief_with_technical_marks_goes_back_then_is_cut(
+    make_article: ArticleFactory, profile: ProfileSpec
+) -> None:
+    technical = {
+        "headline": "Уязвимость CVE-2026-88772 в NetScaler",
+        "summary": "Citrix закрыла уязвимость. Оценка CVSS 9. Атакующие уже её используют.",
+        "why": "Обновите шлюзы до 14.1-47.48.",
+        "tags": ["abroad"],
+    }
+    model = Scripted(technical, technical)
+    item = _selected(make_article, "vulnerability", BDU_ENTRY)
+    management = profile.model_copy(update={"audience": "management"})
+
+    entry = await ModelIntelligence(cast(Any, model)).summarize(item, management, None)
+
+    # Sent back once with what is wrong, then cut by hand.
+    assert "CVE-2026-88772" in model.prompts[1]
+    assert "одного-двух предложений" in model.prompts[1]
+    assert entry.summary == "Citrix закрыла уязвимость. Атакующие уже её используют."
+    assert technical_marks(f"{entry.headline} {entry.summary} {entry.why}") == set()
+
+
+async def test_management_overview_says_what_it_means_for_the_company(
+    make_article: ArticleFactory, profile: ProfileSpec
+) -> None:
+    from radar.domain import Topic
+
+    answer = {
+        "title": "Атаки на энергетику",
+        "highlights": [
+            "Группировка атаковала подстанции.",
+            "Оценка CVSS у уязвимости критическая.",
+        ],
+        "implications": ["Стоит проверить удалённый доступ подрядчиков к АСУ ТП."],
+    }
+    model = Scripted(answer)
+    item = _selected(make_article, "attack", "Группировка атаковала подстанции.")
+    item = item.model_copy(update={"text": ItemSummary(headline="Атака", summary="Атака.")})
+    management = profile.model_copy(update={"audience": "management"})
+
+    overview = await ModelIntelligence(cast(Any, model)).overview(
+        [Topic(title="Атаки", items=(item,))], management
+    )
+
+    assert overview.implications == ("Стоит проверить удалённый доступ подрядчиков к АСУ ТП.",)
+    # A key point with an identifier is no key point for management.
+    assert overview.highlights == ("Группировка атаковала подстанции.",)
+
+
+def test_technical_marks_are_identifiers_scores_addresses_and_hashes() -> None:
+    text = (
+        "CVE-2026-1111, BDU:2026-01234, CVSS 9.8, IoC 10.0.0.1 и "
+        "d41d8cd98f00b204e9800998ecf8427e, но не 187-ФЗ и не версия 2.0"
+    )
+
+    assert technical_marks(text) == {
+        "CVE-2026-1111",
+        "BDU:2026-01234",
+        "CVSS",
+        "IoC",
+        "10.0.0.1",
+        "d41d8cd98f00b204e9800998ecf8427e",
+    }
+    assert without_marks("Уязвимость CVE-2026-88772 в NetScaler") == "Уязвимость в NetScaler"

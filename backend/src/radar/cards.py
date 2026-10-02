@@ -294,6 +294,37 @@ def check_attack(card: AttackCard, source: str) -> tuple[AttackCard, list[str]]:
     return card.model_copy(update=updates), removed
 
 
+# What a management brief must not carry: the jury asked for no technical
+# details there. Identifiers, scores, addresses and hashes, as they appear.
+_TECHNICAL = re.compile(
+    r"\bCVE-\d{4}-\d{4,}\b|\bBDU:\d{4}-\d{5}\b|\bCVSS\b|\bIoCs?\b|\bIOCs?\b"
+    r"|\b(?:\d{1,3}\.){3}\d{1,3}\b|\b[a-fA-F0-9]{32,64}\b"
+)
+_SENTENCE_END = re.compile(r"(?<=[.!?…])\s+(?=[A-ZА-ЯЁ«\"(0-9])")
+# A management entry: what happened and what it threatens, nothing more.
+BRIEF_SENTENCES = 2
+
+
+def technical_marks(text: str) -> set[str]:
+    """Identifiers, CVSS, IP addresses and hashes found in a text."""
+    return {match.group(0) for match in _TECHNICAL.finditer(text)}
+
+
+def sentences(text: str) -> list[str]:
+    return [part.strip() for part in _SENTENCE_END.split(text.strip()) if part.strip()]
+
+
+def plain_brief(text: str, limit: int = BRIEF_SENTENCES) -> str:
+    """The first sentences of a brief that carry no technical marks."""
+    kept = [sentence for sentence in sentences(text) if not technical_marks(sentence)]
+    return " ".join(kept[:limit])
+
+
+def without_marks(text: str) -> str:
+    """A headline with its identifiers taken out: "Уязвимость в Windows"."""
+    return re.sub(r"\s{2,}", " ", _TECHNICAL.sub("", text)).replace(" ,", ",").strip(" ,:-")
+
+
 def unsupported_figures(text: str, allowed: set[str]) -> set[str]:
     """Figures in model prose that neither the article nor the reader's profile has."""
     return numbers(text) - allowed

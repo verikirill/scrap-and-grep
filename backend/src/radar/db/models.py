@@ -495,6 +495,8 @@ class Digest(Base):
     error: Mapped[str | None] = mapped_column(Text)
     title: Mapped[str | None] = mapped_column(Text)
     highlights: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list, server_default="{}")
+    # For management: what the period means for an energy company.
+    implications: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list, server_default="{}")
     stats: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="{}")
     # "manual" when the reader ordered it, "schedule" when their schedule did.
     origin: Mapped[str] = mapped_column(String(16), default="manual", server_default="manual")
