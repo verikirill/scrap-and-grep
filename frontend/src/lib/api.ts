@@ -37,8 +37,23 @@ export interface Profile {
   share_token: string | null
   /** Whether the profile follows its reader's marks. */
   adaptive: boolean
+  /** What the profile's audience suggests: the period of a digest and a schedule. */
+  defaults: ProfileDefaults
   created_at: string
   updated_at: string
+}
+
+export interface ScheduleDefault {
+  cadence: Cadence
+  /** Monday is 0; weekly schedules only. */
+  weekday: number | null
+  /** HH:MM, the reader's local time. */
+  time: string
+}
+
+export interface ProfileDefaults {
+  period_days: number
+  schedule: ScheduleDefault
 }
 
 /** What one interest of a profile has learned from the reader's marks. */

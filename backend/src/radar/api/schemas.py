@@ -8,7 +8,13 @@ from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator, mod
 
 from radar.auth.passwords import PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH
 from radar.config import check_proxy_url
-from radar.domain import AddableSourceKind, ProfileSpec, SourceCategory, SourceKind
+from radar.domain import (
+    AddableSourceKind,
+    ProfileSpec,
+    ScheduleDefault,
+    SourceCategory,
+    SourceKind,
+)
 from radar.ingest.net import proxy_name
 from radar.reader.blocks import Block
 from radar.shorts.voice import VoiceOption
@@ -198,6 +204,14 @@ class ArticleReadOut(BaseModel):
     blocks: list[Annotated[Block, Field(discriminator="type")]]
 
 
+class ProfileDefaults(BaseModel):
+    """What the profile's audience suggests: the period of a digest and a
+    schedule. The web app and the console start from these."""
+
+    period_days: int
+    schedule: ScheduleDefault
+
+
 class ProfileOut(BaseModel):
     id: uuid.UUID
     version: int
@@ -208,6 +222,7 @@ class ProfileOut(BaseModel):
     share_token: str | None = None
     # Whether the profile follows its reader's marks.
     adaptive: bool = True
+    defaults: ProfileDefaults
     created_at: datetime
     updated_at: datetime
 
@@ -238,7 +253,8 @@ class SharedProfileOut(BaseModel):
 
 class DigestCreate(BaseModel):
     profile_id: uuid.UUID
-    period_days: int | None = Field(default=7, ge=1, le=90)
+    # Neither days nor bounds: the period of the profile's audience.
+    period_days: int | None = Field(default=None, ge=1, le=90)
     period_start: datetime | None = None
     period_end: datetime | None = None
 
@@ -247,8 +263,6 @@ class DigestCreate(BaseModel):
         explicit = self.period_start is not None and self.period_end is not None
         if explicit and self.period_start >= self.period_end:  # type: ignore[operator]
             raise ValueError("period_start must be before period_end")
-        if not explicit and self.period_days is None:
-            raise ValueError("either period_days or both period bounds are required")
         return self
 
 

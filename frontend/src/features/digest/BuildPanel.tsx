@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/pop
 import type { DigestPeriod, Profile } from '../../lib/api'
 import { plural } from '../../lib/format'
 import { useCreateDigest, useSchedules } from '../../lib/queries'
-import { scheduleLabel } from '../../lib/schedule'
+import { periodChoice, scheduleLabel } from '../../lib/schedule'
 import { ScheduleControl } from './ScheduleControl'
 
 const PERIODS = [
@@ -66,7 +66,8 @@ function periodOf(
 
 export function BuildPanel({ profiles, initialProfileId, isBuilding = false, onCreated }: Props) {
   const [profileId, setProfileId] = useState<string | null>(null)
-  const [period, setPeriod] = useState<PeriodValue>('7')
+  // Null until the reader picks a period: then it follows the profile's audience.
+  const [picked, setPeriod] = useState<PeriodValue | null>(null)
   const [range, setRange] = useState<DateRange | undefined>()
   const [isPicking, setPicking] = useState(false)
   // The calendar's limits: stable between renders, renewed whenever it opens.
@@ -79,8 +80,14 @@ export function BuildPanel({ profiles, initialProfileId, isBuilding = false, onC
     ? initialProfileId
     : null
   const selectedId = profileId ?? fromUrl ?? profiles[0]?.id ?? null
-  const chosen = periodOf(period, range, today)
   const selected = profiles.find((profile) => profile.id === selectedId) ?? null
+  const period: PeriodValue =
+    picked ??
+    periodChoice(
+      selected?.defaults.period_days,
+      PERIODS.map((item) => item.value),
+    )
+  const chosen = periodOf(period, range, today)
   const scheduleOf = (profileId: string) =>
     schedules.data?.find((item) => item.profile_id === profileId) ?? null
   const profileKeys = useRadioKeys(

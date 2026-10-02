@@ -22,6 +22,29 @@ Language = Literal["ru", "en"]
 # Who reads the digest, as in the organizers' dataset: specialists get a card
 # per attack and vulnerability, management a short brief with tags.
 Audience = Literal["specialist", "management"]
+
+# How often each audience reads, as the jury put it: specialists every day,
+# management less often. The period of a digest built without one and the
+# schedule a profile is offered follow it; nothing is scheduled by itself.
+AUDIENCE_PERIOD_DAYS: dict[Audience, int] = {"specialist": 1, "management": 7}
+
+
+class ScheduleDefault(BaseModel):
+    """A schedule as the reader is offered it, in their local time."""
+
+    model_config = ConfigDict(frozen=True)
+
+    cadence: Literal["daily", "weekdays", "weekly"]
+    # Monday is 0; for a weekly schedule only.
+    weekday: int | None = None
+    time: str = Field(pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+
+
+AUDIENCE_SCHEDULE: dict[Audience, ScheduleDefault] = {
+    "specialist": ScheduleDefault(cadence="weekdays", time="08:30"),
+    "management": ScheduleDefault(cadence="weekly", weekday=0, time="09:00"),
+}
+
 # What a publication reports, the dataset's grouping for specialists.
 RecordKind = Literal["attack", "vulnerability", "news"]
 Priority = Literal["high", "medium", "low"]

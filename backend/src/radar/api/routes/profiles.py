@@ -15,12 +15,13 @@ from radar.api.schemas import (
     PreviewItem,
     PreviewOut,
     PreviewRequest,
+    ProfileDefaults,
     ProfileLook,
     ProfileOut,
     SharedProfileOut,
 )
 from radar.db.models import Profile
-from radar.domain import ProfileSpec
+from radar.domain import AUDIENCE_PERIOD_DAYS, AUDIENCE_SCHEDULE, ProfileSpec
 from radar.events import record
 from radar.logging import get_logger
 from radar.pipeline.sql_store import CachedQueryEmbedder
@@ -52,14 +53,19 @@ PREVIEW_TTL_SECONDS = 60
 
 
 def profile_out(profile: Profile) -> ProfileOut:
+    spec = ProfileSpec.model_validate(profile.spec)
     return ProfileOut(
         id=profile.id,
         version=profile.version,
-        spec=ProfileSpec.model_validate(profile.spec),
+        spec=spec,
         icon=profile.icon,
         color=profile.color,
         share_token=profile.share_token,
         adaptive=profile.adaptive,
+        defaults=ProfileDefaults(
+            period_days=AUDIENCE_PERIOD_DAYS[spec.audience],
+            schedule=AUDIENCE_SCHEDULE[spec.audience],
+        ),
         created_at=profile.created_at,
         updated_at=profile.updated_at,
     )

@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/pop
 import { useRadioKeys } from '../../components/useRadioKeys'
 import type { Cadence, DigestSchedule, Profile, ScheduleInput } from '../../lib/api'
 import { useSchedule } from '../../lib/queries'
-import { scheduleLabel } from '../../lib/schedule'
+import { scheduleDraft, scheduleLabel } from '../../lib/schedule'
 
 const CADENCES = [
   { value: 'daily', label: 'Каждый день' },
@@ -27,7 +27,6 @@ const DAY_NAMES = [
   'суббота',
   'воскресенье',
 ]
-const DEFAULT: Omit<ScheduleInput, 'timezone'> = { cadence: 'weekdays', weekday: 0, time: '09:00' }
 
 function browserZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
@@ -91,7 +90,9 @@ export function ScheduleControl({
 }) {
   const { save, remove } = useSchedule()
   const [isOpen, setOpen] = useState(false)
-  const [draft, setDraft] = useState<Omit<ScheduleInput, 'timezone'>>(DEFAULT)
+  const [draft, setDraft] = useState<Omit<ScheduleInput, 'timezone'>>(() =>
+    scheduleDraft(profile.defaults.schedule),
+  )
   // A schedule keeps its zone: saving it from another place does not move it.
   const zone = schedule?.timezone ?? browserZone()
 
@@ -101,7 +102,7 @@ export function ScheduleControl({
       setDraft(
         schedule
           ? { cadence: schedule.cadence, weekday: schedule.weekday ?? 0, time: schedule.time }
-          : DEFAULT,
+          : scheduleDraft(profile.defaults.schedule),
       )
       save.reset()
       remove.reset()
