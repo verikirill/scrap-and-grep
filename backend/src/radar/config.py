@@ -92,6 +92,19 @@ class Settings(BaseSettings):
         default_factory=lambda: ["https://t.me", "https://telegram.me"], min_length=1
     )
 
+    # Reading sites that refuse a bot (ingest/fetch.py). A page that answers
+    # 401/403/429/503 or a challenge is asked again a step up the ladder:
+    # browser headers, then the TLS fingerprint of Chrome.
+    # What a browser sends on the second step and later.
+    browser_user_agent: str = (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        " (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+    )
+    # The third step: curl_cffi with the TLS and HTTP/2 fingerprint of Chrome.
+    fetch_impersonate: bool = True
+    # An article page whose text is shorter than this is taken for a stub.
+    fetch_min_article_chars: int = Field(default=300, ge=0)
+
     # Longest a digest build may run. A build whose worker died is handed to
     # another worker after this long, and resumes from its last checkpoint.
     digest_task_timeout_seconds: int = Field(default=1200, ge=120)

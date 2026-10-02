@@ -14,7 +14,7 @@ from radar.db import session_scope
 from radar.db.models import Source
 from radar.images.extract import from_page
 from radar.ingest.feeds import CONTENT_LIMIT, FeedResult, fetch_feed
-from radar.ingest.net import safe_get
+from radar.ingest.fetch import Ladder, Outcome
 from radar.ingest.pages import page_text
 from radar.ingest.ptsecurity import fetch_trending
 from radar.ingest.telegram import fetch_channel
@@ -61,6 +61,7 @@ async def ingest_source(source_id: int, client: httpx.AsyncClient, cache: Cache)
                 source.fetch_full_text,
             )
             last_post_id = source.last_post_id
+            ladder = Ladder(client, remembered=source.fetch_method)
 
         try:
             if kind == "telegram":
@@ -69,39 +70,37 @@ async def ingest_source(source_id: int, client: httpx.AsyncClient, cache: Cache)
                 )
             elif kind == "pt_trending":
                 feed = await fetch_trending(
-                    client, feed_url, etag=etag, last_modified=last_modified
+                    ladder, feed_url, etag=etag, last_modified=last_modified
                 )
             else:
                 feed = await fetch_feed(
-                    client, feed_url, language=language, etag=etag, last_modified=last_modified
+                    ladder, feed_url, language=language, etag=etag, last_modified=last_modified
                 )
-            new_ids = await _store(source_id, feed, client, full_text)
+            new_ids = await _store(source_id, feed, ladder, full_text)
         except Exception as exc:
             error = f"{type(exc).__name__}: {exc}"[:500]
             log.warning("ingest_failed", source_id=source_id, error=error)
-            await _record(source_id, status="error", error=error)
+            await _record(source_id, status="error", error=error, read=ladder.first)
             return IngestReport(source_id, "error", error=error)
 
-        await _record(source_id, status=feed.status, feed=feed)
+        await _record(source_id, status=feed.status, feed=feed, read=ladder.first)
         log.info("ingest_done", source_id=source_id, status=feed.status, new=len(new_ids))
         return IngestReport(source_id, feed.status, new_articles=len(new_ids))
 
 
-async def _store(
-    source_id: int, feed: FeedResult, client: httpx.AsyncClient, full_text: bool
-) -> list[int]:
+async def _store(source_id: int, feed: FeedResult, ladder: Ladder, full_text: bool) -> list[int]:
     if feed.status != "ok" or not feed.articles:
         return []
     async with session_scope() as session:
         known = await article_store.known_urls(session, [item.url for item in feed.articles])
     fresh = [item for item in feed.articles if item.url not in known]
     if full_text:
-        fresh = await _with_full_text(fresh, client)
+        fresh = await _with_full_text(fresh, ladder)
     async with session_scope() as session:
         return await article_store.insert_new(session, source_id, fresh)
 
 
-async def _with_full_text(items: list[NewArticle], client: httpx.AsyncClient) -> list[NewArticle]:
+async def _with_full_text(items: list[NewArticle], ladder: Ladder) -> list[NewArticle]:
     """Download article pages for feeds that only carry a teaser.
 
     Capped per run and bounded in concurrency: the goal is a usable summary,
@@ -116,7 +115,9 @@ async def _with_full_text(items: list[NewArticle], client: httpx.AsyncClient) ->
             return item
         async with slots:
             try:
-                response = await safe_get(client, item.url, max_bytes=FULLTEXT_MAX_BYTES)
+                response = await ladder.get(
+                    item.url, max_bytes=FULLTEXT_MAX_BYTES, expect="article"
+                )
                 response.raise_for_status()
                 text = await asyncio.to_thread(page_text, item.url, response.text)
             except Exception as exc:
@@ -142,7 +143,12 @@ async def _with_full_text(items: list[NewArticle], client: httpx.AsyncClient) ->
 
 
 async def _record(
-    source_id: int, *, status: str, feed: FeedResult | None = None, error: str | None = None
+    source_id: int,
+    *,
+    status: str,
+    feed: FeedResult | None = None,
+    error: str | None = None,
+    read: Outcome | None = None,
 ) -> None:
     async with session_scope() as session:
         source = await session.get(Source, source_id)
@@ -155,6 +161,17 @@ async def _record(
         if feed is not None and feed.status == "ok":
             source.etag = feed.etag
             source.last_modified = feed.last_modified
+        if read is not None and read.step:
+            # Kept on failure too: a site that refused every step this time
+            # is tried from the same step next time.
+            if read.step != source.fetch_method:
+                source.fetch_changed_at = source.last_fetched_at
+                source.fetch_note = read.note
+            elif read.note:
+                source.fetch_note = read.note
+            # A run that starts on the remembered step and is let in there
+            # keeps the reason the source was moved up to it.
+            source.fetch_method = read.step
         if feed is not None and feed.last_post_id is not None:
             # Written after the posts are stored: a failed run reads them again.
             source.last_post_id = feed.last_post_id

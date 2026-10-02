@@ -144,3 +144,49 @@ async def test_the_trending_page_of_pt_comes_with_the_defaults_and_is_read(
         )
     assert (report.status, report.new_articles) == ("ok", 3)
     assert "Трендовая уязвимость CVE-2026-99002 в Microsoft Windows" in titles
+
+
+async def test_a_feed_that_refuses_the_bot_remembers_how_it_was_read(
+    api: str, offline: None
+) -> None:
+    from radar.cache import get_cache
+    from radar.db import session_scope
+    from radar.db.models import Source
+    from radar.ingest.service import ingest_source
+
+    async with session_scope() as session:
+        source = Source(
+            slug="waf-feed",
+            name="Сайт за WAF",
+            feed_url="https://waf.example/feed",
+            category="security",
+        )
+        session.add(source)
+        await session.flush()
+        source_id = source.id
+    feed = (
+        '<?xml version="1.0"?><rss version="2.0"><channel><title>WAF</title>'
+        "<item><title>Новость</title><link>https://waf.example/news/1</link>"
+        "<pubDate>Wed, 30 Sep 2026 10:00:00 GMT</pubDate></item></channel></rss>"
+    )
+    agents: list[str] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        agents.append(request.headers["user-agent"])
+        if "Chrome/" not in request.headers["user-agent"]:
+            return httpx.Response(403, text="Forbidden")
+        return httpx.Response(200, text=feed)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
+        first = await ingest_source(source_id, client, get_cache())
+        second = await ingest_source(source_id, client, get_cache())
+
+    async with session_scope() as session:
+        source = await session.get(Source, source_id)
+    assert (first.status, first.new_articles) == ("ok", 1)
+    assert second.status == "ok"
+    assert source is not None
+    assert source.fetch_method == "browser_headers"
+    assert source.fetch_note == "403 на шаге «обычный запрос», прочитан через заголовки браузера"
+    # The next run starts on the step that worked.
+    assert ["Chrome/" in agent for agent in agents] == [False, True, True]

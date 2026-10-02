@@ -58,6 +58,9 @@ def offline(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     from radar.config import get_settings
 
     monkeypatch.setenv("RADAR_ALLOW_PRIVATE_FEED_HOSTS", "true")
+    # curl_cffi does not go through the mock transport: it would ask the
+    # real network for the test's hosts.
+    monkeypatch.setenv("RADAR_FETCH_IMPERSONATE", "false")
     get_settings.cache_clear()
     with stamina.set_testing(True, attempts=1):
         yield

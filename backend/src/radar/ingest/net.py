@@ -143,13 +143,19 @@ async def safe_get(
     *,
     headers: dict[str, str] | None = None,
     max_bytes: int | None = None,
+    retry: bool = True,
 ) -> httpx.Response:
-    """GET with per-hop URL validation, a size cap and retries on transient errors."""
+    """GET with per-hop URL validation, a size cap and retries on transient errors.
+
+    Without `retry` a 5xx or 429 comes back as a response: the fetch ladder
+    (ingest/fetch.py) decides itself whether to ask again, and how.
+    """
     limit = max_bytes or get_settings().max_feed_bytes
+    get = _get_retrying if retry else _get_once
     current = url
     for _ in range(MAX_REDIRECTS + 1):
         address = await resolve_public(current)
-        response = await _get_once(client, current, address, headers or {}, limit)
+        response = await get(client, current, address, headers or {}, limit, raise_transient=retry)
         if response.status_code not in _REDIRECT_CODES:
             return response
         location = response.headers.get("location")
@@ -185,13 +191,14 @@ def _pinned(url: str, address: str | None) -> tuple[str, dict[str, str], dict[st
     return target, {"Host": host_header}, {"sni_hostname": host}
 
 
-@stamina.retry(on=_is_transient, attempts=3, timeout=90.0)
 async def _get_once(
     client: httpx.AsyncClient,
     url: str,
     address: str | None,
     headers: dict[str, str],
     limit: int,
+    *,
+    raise_transient: bool,
 ) -> httpx.Response:
     target, host_header, extensions = _pinned(url, address)
     async with (
@@ -200,7 +207,7 @@ async def _get_once(
             "GET", target, headers={**headers, **host_header}, extensions=extensions
         ) as response,
     ):
-        if response.status_code >= 500 or response.status_code == 429:
+        if raise_transient and (response.status_code >= 500 or response.status_code == 429):
             response.raise_for_status()
         body = bytearray()
         async for chunk in response.aiter_bytes():
@@ -222,3 +229,6 @@ async def _get_once(
             content=bytes(body),
             request=httpx.Request("GET", url),
         )
+
+
+_get_retrying = stamina.retry(on=_is_transient, attempts=3, timeout=90.0)(_get_once)

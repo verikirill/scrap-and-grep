@@ -93,6 +93,10 @@ class SourceOut(BaseModel):
     last_status: str | None
     last_error: str | None
     consecutive_failures: int
+    # The step of the fetch ladder that reads the source, and why not a lower one.
+    fetch_method: str | None = None
+    fetch_note: str | None = None
+    fetch_changed_at: datetime | None = None
     articles: int = 0
     articles_last_day: int = 0
 

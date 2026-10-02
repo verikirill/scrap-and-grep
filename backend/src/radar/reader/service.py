@@ -18,7 +18,8 @@ from radar.db.models import Article, ArticleBody
 from radar.images.service import NotAPicture, Picture, download, image_key, mirror
 from radar.images.store import ImageStore
 from radar.ingest import bdu, telegram
-from radar.ingest.net import ResponseTooLargeError, UnsafeUrlError, build_client, safe_get
+from radar.ingest.fetch import Ladder
+from radar.ingest.net import ResponseTooLargeError, UnsafeUrlError, build_client
 from radar.logging import get_logger
 from radar.reader.blocks import MIN_CHARS, Block, Body, from_text, from_tree, plain_text
 from radar.reading import word_count
@@ -115,7 +116,8 @@ async def _read(article: Article) -> tuple[Body, str]:
     async with _pages:
         try:
             async with build_client() as client:
-                response = await safe_get(client, article.url, max_bytes=PAGE_MAX_BYTES)
+                ladder = Ladder(client, remembered=article.source.fetch_method)
+                response = await ladder.get(article.url, max_bytes=PAGE_MAX_BYTES, expect="article")
             response.raise_for_status()
         except _UNREACHABLE as exc:
             log.info("reader_page_failed", url=article.url, error=type(exc).__name__)
