@@ -106,11 +106,12 @@ load() {
   local target=${2:?usage: offline_bundle.sh load <bundle dir> <install dir>}
   (cd "$dir" && sha256sum -c SHA256SUMS) || die "the bundle is damaged"
   mkdir -p "$target/ollama-models"
-  tar -xf "$dir/radar-repo.tar" -C "$target"
+  # The archives go through stdin: GNU tar takes "C:/..." for a remote host.
+  (cd "$target" && tar -xf -) <"$dir/radar-repo.tar"
   echo "loading the images"
   docker load -i "$dir/radar-images.tar"
   echo "unpacking the models"
-  tar -xf "$dir/ollama-models.tar" -C "$target/ollama-models"
+  (cd "$target/ollama-models" && tar -xf -) <"$dir/ollama-models.tar"
   {
     cat "$dir/bundle.env"
     echo "OLLAMA_MODELS_DIR=$(abs "$target/ollama-models")"
