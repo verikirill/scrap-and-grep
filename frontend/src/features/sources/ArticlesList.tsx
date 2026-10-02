@@ -2,11 +2,14 @@ import clsx from 'clsx'
 import { FileText, Search } from '../../components/icons'
 import { motion } from 'motion/react'
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router'
 import { EASE, rowMotion } from '../../components/tokens'
 import { Button, Card, Chip, EmptyState, ErrorNote, Spinner } from '../../components/ui'
 import type { SourceCategory, TimelinePoint } from '../../lib/api'
-import { CATEGORY_LABELS, externalHref, formatDateTime, formatNumber } from '../../lib/format'
+import { CATEGORY_LABELS, formatDateTime, formatNumber } from '../../lib/format'
 import { useArticles, useTimeline } from '../../lib/queries'
+import { OriginalLink } from '../reader/OriginalLink'
+import { articlePath } from '../reader/paths'
 
 const CATEGORIES = Object.keys(CATEGORY_LABELS) as SourceCategory[]
 const TIMELINE_DAYS = 14
@@ -162,14 +165,15 @@ export function ArticlesList() {
                   Похоже по смыслу
                 </p>
               )}
-              <a
-                href={externalHref(article.url)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm font-medium hover:text-on-primary-container"
-              >
-                {article.title}
-              </a>
+              <div className="group flex items-start gap-1">
+                <Link
+                  to={articlePath(article.id)}
+                  className="min-w-0 flex-1 text-sm font-medium hover:text-on-primary-container"
+                >
+                  {article.title}
+                </Link>
+                <OriginalLink url={article.url} title={article.title} />
+              </div>
               {article.summary && (
                 <p className="mt-0.5 line-clamp-2 text-[13px] text-muted-foreground">
                   {article.summary}

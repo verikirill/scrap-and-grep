@@ -24,6 +24,7 @@ from radar.api.routes import (
     mcp_keys,
     profiles,
     publishing,
+    reader,
     resume,
     schedules,
     shorts,
@@ -151,6 +152,8 @@ def create_app() -> FastAPI:
     for router in (
         auth.router,
         catalog.router,
+        # After the catalogue: its /articles/timeline must not be read as an article id.
+        reader.router,
         profiles.router,
         adaptation.router,
         digests.router,

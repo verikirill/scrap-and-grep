@@ -10,6 +10,7 @@ when RADAR_IMAGE_STORE=s3.
 import asyncio
 import io
 import re
+import uuid
 from functools import lru_cache
 from pathlib import Path
 from typing import Protocol
@@ -47,7 +48,8 @@ class LocalImageStore:
 
         def write() -> None:
             path.parent.mkdir(parents=True, exist_ok=True)
-            partial = path.with_suffix(path.suffix + ".part")
+            # A name of its own: two API replicas may keep the same picture at once.
+            partial = path.with_name(f"{path.name}.{uuid.uuid4().hex}.part")
             partial.write_bytes(data)
             partial.replace(path)
 

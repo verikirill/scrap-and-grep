@@ -101,6 +101,29 @@ class Article(Base):
     )
 
 
+class ArticleBody(Base):
+    """An article as the reader shows it (radar.reader), read from its page
+    when it is first opened."""
+
+    __tablename__ = "article_bodies"
+
+    article_id: Mapped[int] = mapped_column(
+        ForeignKey("articles.id", ondelete="CASCADE"), primary_key=True
+    )
+    # radar.reader.service.READER_VERSION it was read with; an older one is read again.
+    version: Mapped[int] = mapped_column(Integer)
+    # "page" when read from the page, "stored" when the source gave all there
+    # is (a Telegram post), "failed" when the page could not be read and the
+    # feed's text stands in for it until the next try, "stale" when a page
+    # read before could not be read again and its old text stays till then.
+    status: Mapped[str] = mapped_column(String(16))
+    blocks: Mapped[list[dict[str, Any]]] = mapped_column(JSONB)
+    # The pictures' addresses by name, and their stored copies once fetched.
+    images: Mapped[dict[str, str]] = mapped_column(JSONB)
+    image_keys: Mapped[dict[str, str]] = mapped_column(JSONB, server_default=text("'{}'::jsonb"))
+    read_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
 class ArticleEmbedding(Base):
     """One vector per (article, model); switching models keeps older vectors."""
 

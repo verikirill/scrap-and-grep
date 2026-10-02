@@ -80,6 +80,8 @@ class Settings(BaseSettings):
     # API
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
     rate_limit_per_minute: int = 120
+    # Pictures of articles opened in the reader, up to 40 a page.
+    picture_rate_limit_per_minute: int = 300
     # The preview scans the whole period once per interest; keep it rarer.
     preview_rate_limit_per_minute: int = 40
     # Builds queued or running at once. More would only deepen the model queue.

@@ -2,12 +2,13 @@
 
 import uuid
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator, model_validator
 
 from radar.auth.passwords import PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH
 from radar.domain import AddableSourceKind, ProfileSpec, SourceCategory, SourceKind
+from radar.reader.blocks import Block
 from radar.shorts.voice import VoiceOption
 from radar.views import ItemView
 
@@ -119,6 +120,25 @@ class ArticleOut(BaseModel):
     published_at: datetime
     # In a search: found by the words of the query, or only by its meaning.
     match: Literal["words", "meaning"] | None = None
+
+
+class ArticleReadOut(BaseModel):
+    """An article opened in the app: its text as blocks, pictures named in them."""
+
+    id: int
+    url: str
+    title: str
+    author: str | None
+    source_id: int
+    source_name: str
+    source_category: str
+    language: str
+    tags: list[str]
+    published_at: datetime
+    reading_minutes: int | None
+    # The whole text, or only what the feed carried when the page could not be read.
+    complete: bool
+    blocks: list[Annotated[Block, Field(discriminator="type")]]
 
 
 class ProfileOut(BaseModel):

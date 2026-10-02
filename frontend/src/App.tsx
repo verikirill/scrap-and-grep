@@ -20,6 +20,7 @@ import { DigestPage } from './pages/DigestPage'
 import {
   AccountPage,
   AnalyticsPage,
+  ArticlePage,
   ChannelsPage,
   ComparePage,
   FeedPage,
@@ -108,6 +109,7 @@ export default function App() {
                 <Route path="/" element={<DigestPage />} />
                 <Route path="/digests/:digestId" element={<DigestPage />} />
                 <Route path="/feed" element={<FeedPage />} />
+                <Route path="/articles/:articleId" element={<ArticlePage />} />
                 <Route path="/profiles" element={<ProfilesPage />} />
                 <Route path="/sources" element={<SourcesPage />} />
                 <Route path="/compare" element={<ComparePage />} />
