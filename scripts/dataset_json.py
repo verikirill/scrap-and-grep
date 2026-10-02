@@ -4,7 +4,7 @@
 # ///
 """The organizers' dataset examples as JSON, for scripts/dataset_run.py.
 
-    uv run scripts/dataset_json.py docs/task/dataset_v4.0.xlsx docs/task/dataset_v4.0.json
+uv run scripts/dataset_json.py docs/task/dataset_v4.0.xlsx docs/task/dataset_v4.0.json
 """
 
 import json
@@ -63,7 +63,11 @@ def main() -> None:
                 "wanted": str(wanted or "").strip(),
             }
         )
-    TARGET.write_text(json.dumps(examples, ensure_ascii=False, indent=1), encoding="utf-8", newline="\n")
+    TARGET.write_text(
+        json.dumps(examples, ensure_ascii=False, indent=1),
+        encoding="utf-8",
+        newline="\n",
+    )
     print(f"{len(examples)} examples")
 
 

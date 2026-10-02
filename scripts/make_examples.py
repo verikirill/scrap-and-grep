@@ -27,7 +27,10 @@ OUT = Path(sys.argv[2] if len(sys.argv) > 2 else "examples")
 API = f"{BASE}/api/v1"
 # A fixed week, the one data/samples/articles.jsonl holds: the examples can be
 # rebuilt from the snapshot on any machine, any day.
-PERIOD = {"period_start": "2026-09-25T00:00:00+03:00", "period_end": "2026-10-02T16:00:00+03:00"}
+PERIOD = {
+    "period_start": "2026-09-25T00:00:00+03:00",
+    "period_end": "2026-10-02T16:00:00+03:00",
+}
 BUILD_TIMEOUT_SECONDS = 1200
 
 SLUGS = {
@@ -52,7 +55,12 @@ def scenarios(spec: dict[str, Any]) -> list[tuple[str, str, dict[str, Any]]]:
         (
             "01-removed-interest",
             f"Убран интерес «{removed['title']}»",
-            {**spec, "interests": [i for i in spec["interests"] if i["id"] != REMOVED_INTEREST]},
+            {
+                **spec,
+                "interests": [
+                    i for i in spec["interests"] if i["id"] != REMOVED_INTEREST
+                ],
+            },
         ),
         (
             "02-exclusion",
@@ -68,13 +76,19 @@ def scenarios(spec: dict[str, Any]) -> list[tuple[str, str, dict[str, Any]]]:
 
 
 def slug(name: str) -> str:
-    return SLUGS.get(name) or re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") or "profile"
+    return (
+        SLUGS.get(name)
+        or re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+        or "profile"
+    )
 
 
 def build(client: httpx.Client, profile_id: str) -> dict[str, Any]:
-    created = client.post(
-        f"{API}/digests", json={"profile_id": profile_id, **PERIOD}
-    ).raise_for_status().json()
+    created = (
+        client.post(f"{API}/digests", json={"profile_id": profile_id, **PERIOD})
+        .raise_for_status()
+        .json()
+    )
     deadline = time.monotonic() + BUILD_TIMEOUT_SECONDS
     while time.monotonic() < deadline:
         digest = client.get(f"{API}/digests/{created['id']}").raise_for_status().json()
@@ -89,7 +103,9 @@ def build(client: httpx.Client, profile_id: str) -> dict[str, Any]:
 def export(client: httpx.Client, digest: dict[str, Any], stem: Path) -> None:
     stem.parent.mkdir(parents=True, exist_ok=True)
     for extension in ("md", "docx"):
-        body = client.get(f"{API}/digests/{digest['id']}/export.{extension}").raise_for_status()
+        body = client.get(
+            f"{API}/digests/{digest['id']}/export.{extension}"
+        ).raise_for_status()
         stem.with_suffix(f".{extension}").write_bytes(body.content)
     stats = digest["stats"]
     print(
@@ -100,7 +116,11 @@ def export(client: httpx.Client, digest: dict[str, Any], stem: Path) -> None:
 
 
 def selected(digest: dict[str, Any]) -> dict[int, dict[str, Any]]:
-    return {item["article_id"]: item for topic in digest["topics"] for item in topic["items"]}
+    return {
+        item["article_id"]: item
+        for topic in digest["topics"]
+        for item in topic["items"]
+    }
 
 
 def graded(digest: dict[str, Any]) -> dict[int, dict[str, Any]]:
@@ -150,7 +170,9 @@ def diff_markdown(
     old, new = selected(before), selected(after)
     came = [item for article_id, item in new.items() if article_id not in old]
     went = [item for article_id, item in old.items() if article_id not in new]
-    kept = [(old[article_id], item) for article_id, item in new.items() if article_id in old]
+    kept = [
+        (old[article_id], item) for article_id, item in new.items() if article_id in old
+    ]
 
     def link(item: dict[str, Any]) -> str:
         return f"[{item['headline']}]({item['url']}) - {item['source_name']}"
@@ -159,20 +181,30 @@ def diff_markdown(
         [
             f"# {title}",
             "",
-            f"Профиль: «{spec['name']}». Было {len(old)} публикаций, стало {len(new)}: "
-            f"пришло {len(came)}, ушло {len(went)}, осталось {len(kept)}.",
+            (
+                f"Профиль: «{spec['name']}». Было {len(old)} публикаций, стало {len(new)}: "
+                f"пришло {len(came)}, ушло {len(went)}, осталось {len(kept)}."
+            ),
             "",
-            "Причины взяты из записи выпуска: у каждого кандидата сохранены оценка, интерес "
-            "и причина, по которой он не вошёл.",
+            (
+                "Причины взяты из записи выпуска: у каждого кандидата сохранены оценка, интерес "
+                "и причина, по которой он не вошёл."
+            ),
             "",
             *regraded_note(before["profile"], spec_after(after)),
             f"## Пришло ({len(came)})",
             "",
-            *([f"- {link(item)}. {came_because(item, before)}." for item in came] or ["- нет"]),
+            *(
+                [f"- {link(item)}. {came_because(item, before)}." for item in came]
+                or ["- нет"]
+            ),
             "",
             f"## Ушло ({len(went)})",
             "",
-            *([f"- {link(item)}. {gone_because(item, after)}." for item in went] or ["- нет"]),
+            *(
+                [f"- {link(item)}. {gone_because(item, after)}." for item in went]
+                or ["- нет"]
+            ),
             "",
             f"## Осталось ({len(kept)})",
             "",
@@ -195,19 +227,26 @@ def spec_after(digest: dict[str, Any]) -> dict[str, Any]:
 def regraded_note(before: dict[str, Any], after: dict[str, Any]) -> list[str]:
     """Interests and exclusions are the text the model grades against: an
     edit of them grades every candidate again, and a grade may move a little."""
-    if before["interests"] == after["interests"] and before["exclusions"] == after["exclusions"]:
+    if (
+        before["interests"] == after["interests"]
+        and before["exclusions"] == after["exclusions"]
+    ):
         return []
     return [
-        "Правка интересов или исключений меняет текст профиля, по которому модель оценивает "
-        "статьи, поэтому все кандидаты оценены заново. У статей, которых правка не касается, "
-        "оценка может сдвинуться на несколько сотых, и статья у порога может уйти или прийти.",
+        (
+            "Правка интересов или исключений меняет текст профиля, по которому модель оценивает "
+            "статьи, поэтому все кандидаты оценены заново. У статей, которых правка не касается, "
+            "оценка может сдвинуться на несколько сотых, и статья у порога может уйти или прийти."
+        ),
         "",
     ]
 
 
 def write_json(path: Path, value: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
+    path.write_text(
+        json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n"
+    )
 
 
 def main() -> None:
@@ -228,15 +267,22 @@ def main() -> None:
         before = digests[CHANGED_PROFILE]
         spec = next(p["spec"] for p in profiles if p["spec"]["name"] == CHANGED_PROFILE)
         for folder, title, edited in scenarios(spec):
-            temporary = client.post(
-                f"{API}/profiles", json={**edited, "name": f"{spec['name']} ({folder})"}
-            ).raise_for_status().json()
+            temporary = (
+                client.post(
+                    f"{API}/profiles",
+                    json={**edited, "name": f"{spec['name']} ({folder})"},
+                )
+                .raise_for_status()
+                .json()
+            )
             try:
                 after = build(client, temporary["id"])
                 export(client, after, OUT / "change" / folder / "after")
                 write_json(OUT / "change" / folder / "profile-after.json", edited)
                 (OUT / "change" / folder / "diff.md").write_text(
-                    diff_markdown(title, before, after, spec), encoding="utf-8", newline="\n"
+                    diff_markdown(title, before, after, spec),
+                    encoding="utf-8",
+                    newline="\n",
                 )
                 print(f"  {folder}: done", flush=True)
             finally:
