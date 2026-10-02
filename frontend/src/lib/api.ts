@@ -806,6 +806,8 @@ export const api = {
     }),
 
   sources: () => request<Source[]>('/sources'),
+  /** Source id -> version of its picture, for the sources that have one. */
+  sourceAvatars: () => request<Record<string, string>>('/sources/avatars'),
   createSource: (source: SourceCreate) => request<Source>('/sources', json('POST', source)),
   updateSource: (id: number, patch: Partial<Pick<Source, 'enabled' | 'fetch_full_text'>>) =>
     request<Source>(`/sources/${id}`, json('PATCH', patch)),

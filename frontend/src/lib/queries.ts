@@ -43,6 +43,7 @@ export const keys = {
   taste: ['taste'] as const,
   profiles: ['profiles'] as const,
   sources: ['sources'] as const,
+  sourceAvatars: ['source-avatars'] as const,
   digests: ['digests'] as const,
   digest: (id: string) => ['digest', id] as const,
   article: (id: number) => ['article', id] as const,
@@ -76,6 +77,10 @@ export const useProfiles = () => useQuery({ queryKey: keys.profiles, queryFn: ap
 
 export const useSources = () =>
   useQuery({ queryKey: keys.sources, queryFn: api.sources, refetchInterval: 30_000 })
+
+/** Which sources have a picture; asked once a session, pictures change rarely. */
+export const useSourceAvatars = () =>
+  useQuery({ queryKey: keys.sourceAvatars, queryFn: api.sourceAvatars, staleTime: 30 * 60_000 })
 
 /** The list is polled only while some digest in it is still being built. */
 export function useDigests() {
