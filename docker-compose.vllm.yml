@@ -1,0 +1,67 @@
+# The language model in vLLM instead of Ollama: an OpenAI-compatible server
+# for a card of 24 GB and more. Embeddings stay in Ollama (profile ollama).
+#
+#   docker compose -f docker-compose.yml -f docker-compose.vllm.yml \
+#     --profile ollama --profile vllm up -d
+#
+# and in .env:
+#   RADAR_EMBEDDING_PROVIDER=ollama
+#   RADAR_LLM_PROVIDER=openai
+#   RADAR_LLM_BASE_URL=http://vllm:8000/v1
+#   RADAR_LLM_MODEL=qwen3.6-35b-a3b
+#
+# The defaults fit Qwen3.6 35B-A3B on one card of 24 GB: the 4-bit AWQ weights
+# take 25 GB, so 2.5 GB of them stay in RAM, as in a published run on an
+# NVIDIA A10 (github.com/dkhokhlov/Qwen_3_6_on_A10_vLLM). On 48 GB and more
+# take the official FP8 weights without offload:
+#   VLLM_MODEL=Qwen/Qwen3.6-35B-A3B-FP8
+#   VLLM_CPU_OFFLOAD_GB=0
+services:
+  vllm:
+    profiles: ["vllm"]
+    image: vllm/vllm-openai:v0.30.0
+    restart: unless-stopped
+    # PyTorch shares tensors between processes through /dev/shm.
+    ipc: host
+    environment:
+      # 1 in a closed network: the weights are read from VLLM_MODELS_DIR only.
+      HF_HUB_OFFLINE: ${VLLM_OFFLINE:-0}
+    volumes:
+      # The Hugging Face cache: a volume, or a directory with weights brought in.
+      - ${VLLM_MODELS_DIR:-vllm-models}:/root/.cache/huggingface
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      # The name the backend asks for does not change with the weights.
+      # Thinking is off for every request: the graph wants a short JSON answer,
+      # and the tools go through the qwen3_coder parser, as the model card says.
+      - >-
+        exec vllm serve ${VLLM_MODEL:-QuantTrio/Qwen3.6-35B-A3B-AWQ}
+        --served-model-name qwen3.6-35b-a3b
+        --host 0.0.0.0 --port 8000
+        --max-model-len ${VLLM_MAX_MODEL_LEN:-32768}
+        --gpu-memory-utilization ${VLLM_GPU_MEMORY:-0.95}
+        --cpu-offload-gb ${VLLM_CPU_OFFLOAD_GB:-2.5}
+        --kv-cache-dtype fp8
+        --language-model-only
+        --enable-prefix-caching
+        --reasoning-parser qwen3
+        --enable-auto-tool-choice --tool-call-parser qwen3_coder
+        --default-chat-template-kwargs '{"enable_thinking": false}'
+        ${VLLM_EXTRA_ARGS:-}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      # Reading 25 GB of weights and warming up takes minutes.
+      start_period: 900s
+
+volumes:
+  vllm-models:

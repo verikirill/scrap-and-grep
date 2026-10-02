@@ -4,7 +4,7 @@ import asyncio
 import json
 import random
 from collections.abc import Awaitable, Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Literal
 
 import httpx
@@ -101,6 +101,51 @@ def _rate_limited(error: BaseException) -> bool:
     return getattr(error, "status_code", None) == 429
 
 
+@dataclass(slots=True)
+class Usage:
+    """What the model was asked and answered: the cost of a digest in tokens
+    and the speed of the server, for the comparison of models."""
+
+    requests: int = 0
+    input_tokens: int = 0
+    output_tokens: int = 0
+    # Time the server spent writing, where it says: Ollama does, an
+    # OpenAI-compatible server does not. Waiting in a queue is not in it.
+    generation_seconds: float = 0.0
+    timed_output_tokens: int = 0
+
+    def add(self, reply: object) -> None:
+        if not isinstance(reply, AIMessage):
+            return
+        self.requests += 1
+        usage = reply.usage_metadata
+        output = usage["output_tokens"] if usage else 0
+        self.input_tokens += usage["input_tokens"] if usage else 0
+        self.output_tokens += output
+        nanoseconds = reply.response_metadata.get("eval_duration")
+        if isinstance(nanoseconds, int) and nanoseconds > 0:
+            self.generation_seconds += nanoseconds / 1e9
+            self.timed_output_tokens += output
+
+    @property
+    def tokens_per_second(self) -> float | None:
+        if not self.generation_seconds:
+            return None
+        return self.timed_output_tokens / self.generation_seconds
+
+    def copy(self) -> Usage:
+        return replace(self)
+
+    def since(self, earlier: Usage) -> Usage:
+        return Usage(
+            requests=self.requests - earlier.requests,
+            input_tokens=self.input_tokens - earlier.input_tokens,
+            output_tokens=self.output_tokens - earlier.output_tokens,
+            generation_seconds=self.generation_seconds - earlier.generation_seconds,
+            timed_output_tokens=self.timed_output_tokens - earlier.timed_output_tokens,
+        )
+
+
 @dataclass(frozen=True, slots=True)
 class ChatTool:
     """A function the model may call while it writes: its description in
@@ -159,6 +204,7 @@ class ModelChat:
         self._timeout = timeout
         # Up while the server keeps answering 429 after all the retries (see _invoke).
         self._is_full = False
+        self.usage = Usage()
 
     async def ask[T: BaseModel](
         self, schema: type[T], system: str, user: str, tools: Sequence[ChatTool] = ()
@@ -243,6 +289,7 @@ class ModelChat:
                     raise
             else:
                 self._is_full = False
+                self.usage.add(reply)
                 return reply
             # Spread out, so the requests that were refused together do not return together.
             step = min(RATE_LIMIT_PAUSE_SECONDS * 2**attempt, RATE_LIMIT_MAX_PAUSE_SECONDS)

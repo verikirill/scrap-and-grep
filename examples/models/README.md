@@ -80,6 +80,17 @@
 
 ## Как повторить
 
+Локальная модель, например Qwen3.6 35B-A3B из списка финала: стек запущен с ней (README, «Быстрый запуск»), дальше одна команда из корня репозитория:
+
+```bash
+backend/scripts/measure_model.sh qwen3.6-35b-a3b
+uv run scripts/model_report.py examples/models
+```
+
+Скрипт сам очищает кеш ответов и пишет рядом с выпусками `qwen3.6-35b-a3b.hardware.json`: карту, драйвер, пиковую видеопамять, процессор, память и версию Ollama. Токены на вход и выход за выпуск и скорость записи ответа лежат в `qwen3.6-35b-a3b.json`, в поле `usage` у каждого выпуска.
+
+Облачные прогоны выше сделаны так, модель задавалась прямо в команде:
+
 ```bash
 docker exec -i radar-api-3 sh -c 'cat > /tmp/dataset.json' < docs/task/dataset_v4.0.json
 docker exec -i -e RADAR_CACHE_URL=redis://valkey:6379/7 -e RADAR_LLM_MODEL=gemma4:31b \

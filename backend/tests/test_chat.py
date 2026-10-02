@@ -1,6 +1,7 @@
 """The model connection: what goes to the server and what is accepted back."""
 
 import json
+import os
 from typing import Any
 
 import httpx
@@ -44,6 +45,11 @@ class Server:
             },
             "done": True,
             "done_reason": "stop",
+            # What Ollama says about the work: tokens and nanoseconds.
+            "prompt_eval_count": 120,
+            "prompt_eval_duration": 100_000_000,
+            "eval_count": 30,
+            "eval_duration": 500_000_000,
         }
         return httpx.Response(200, text=json.dumps(line, ensure_ascii=False) + "\n")
 
@@ -116,6 +122,43 @@ def test_a_cloud_model_without_a_key_stops_the_start() -> None:
     # Offline and local models need no key.
     Settings(llm_provider="heuristic", llm_api_key=None)
     Settings(llm_provider="ollama", llm_base_url="", llm_api_key=None)
+
+
+def test_the_model_mode_asks_a_local_model_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    for name in [name for name in os.environ if name.startswith("RADAR_LLM_")]:
+        monkeypatch.delenv(name)
+
+    settings = Settings(_env_file=None, llm_provider="ollama")  # type: ignore[call-arg]
+
+    # The finals forbid closed external APIs: by default nothing leaves the stack.
+    assert settings.llm_base_url == ""
+    assert settings.llm_model == "qwen3.6:35b-a3b"
+    assert settings.llm_api_key is None
+    # Qwen answers a schema as well without hidden reasoning, and one GPU
+    # serves requests one after another.
+    assert settings.llm_reasoning == "off"
+    assert settings.llm_concurrency == 2
+
+
+async def test_the_tokens_and_the_time_of_writing_are_counted() -> None:
+    server = Server('{"relevance": 7, "reason": "x"}', '{"relevance": 2, "reason": "по теме"}')
+    model = chat(server)
+
+    await model.ask(Verdict, "Оцени.", "Статья")
+
+    # The answer sent back counts too: it took the server's time all the same.
+    assert model.usage.requests == 2
+    assert model.usage.input_tokens == 240
+    assert model.usage.output_tokens == 60
+    assert model.usage.generation_seconds == pytest.approx(1.0)
+    assert model.usage.tokens_per_second == pytest.approx(60.0)
+
+    before = model.usage.copy()
+    server.answers.append('{"relevance": 1, "reason": "косвенно"}')
+    await model.ask(Verdict, "Оцени.", "Статья")
+
+    assert model.usage.since(before).requests == 1
+    assert model.usage.since(before).output_tokens == 30
 
 
 async def test_a_busy_server_is_asked_again_after_a_pause(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -304,3 +347,27 @@ async def test_an_openai_compatible_server_gets_the_key_the_folder_and_no_schema
     # Not every such server takes json_schema: the prompt carries the schema.
     assert "response_format" not in server.body(0)
     assert server.body(1)["messages"][-1]["role"] == "tool"
+
+
+async def test_an_openai_compatible_server_reports_tokens_but_not_the_time_of_writing() -> None:
+    server = OpenAIServer(
+        {"name": "lookup", "arguments": {"identifier": "CVE-2026-88772"}},
+        '{"relevance": 3, "reason": "в каталоге KEV"}',
+    )
+
+    async def lookup(arguments: dict[str, Any]) -> str:
+        return "нет в каталогах"
+
+    tool = ChatTool({"type": "function", "function": {"name": "lookup", "parameters": {}}}, lookup)
+    model = openai_chat(
+        "qwen3.6-35b-a3b", "http://vllm:8000/v1", transport=httpx.MockTransport(server)
+    )
+
+    await model.ask(Verdict, "Оцени.", "Статья", (tool,))
+
+    # The round with the tool call is a request of its own.
+    assert model.usage.requests == 2
+    assert model.usage.input_tokens == 20
+    assert model.usage.output_tokens == 10
+    # The server does not say how long it wrote: no speed rather than a made-up one.
+    assert model.usage.tokens_per_second is None

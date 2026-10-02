@@ -54,26 +54,28 @@ class Settings(BaseSettings):
     # "openai" is any OpenAI-compatible Chat Completions server: Yandex AI
     # Studio, vLLM, Ollama's /v1. Its base URL is required.
     llm_provider: Literal["heuristic", "ollama", "openai"] = "heuristic"
-    # gpt-oss-120b, one of the models the task names, in Ollama's cloud. A
-    # local model is the same settings with an empty base URL, see .env.example.
-    llm_model: str = "gpt-oss:120b"
+    # Qwen3.6 35B-A3B, one of the models of the finals, run locally: closed
+    # external APIs are forbidden there. 22.6 GB in Q4_K_M; on a card of
+    # 12-16 GB Ollama runs the layers that do not fit on the CPU. See .env.example.
+    llm_model: str = "qwen3.6:35b-a3b"
     # Where the language model is asked. Empty means the Ollama below, the one
-    # that also makes the embeddings.
-    llm_base_url: str = "https://ollama.com"
+    # that also makes the embeddings. Ollama's cloud is for development only.
+    llm_base_url: str = ""
     llm_api_key: SecretStr | None = None
     # Yandex AI Studio wants the folder id as the OpenAI project.
     llm_project: str = ""
-    # Hidden reasoning before the answer. gpt-oss cannot switch it off and
-    # takes a level; qwen3.5 answers a schema as well without it.
-    llm_reasoning: Literal["off", "low", "medium", "high"] = "low"
+    # Hidden reasoning before the answer. Qwen answers a schema as well
+    # without it; gpt-oss cannot switch it off and takes a level.
+    llm_reasoning: Literal["off", "low", "medium", "high"] = "off"
     # Zero: a grade must not drift between two builds of the same week, or an
     # edit of the interests is lost among changes nobody made.
     llm_temperature: float = 0.0
     llm_num_ctx: int = 8192
     llm_timeout_seconds: float = 120.0
-    # Requests in flight at once. The cloud serves them in parallel; one local
-    # GPU does not (see DECISIONS.md), there 2 is enough.
-    llm_concurrency: int = 4
+    # Requests in flight at once. One local GPU serves them one after another
+    # (see DECISIONS.md), 2 keeps it busy; a server with several cards or the
+    # cloud takes more.
+    llm_concurrency: int = 2
     ollama_base_url: str = "http://127.0.0.1:11434"
     ollama_keep_alive_seconds: int = 1800
     breaker_failure_threshold: int = 3
