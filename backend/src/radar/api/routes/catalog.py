@@ -1,5 +1,6 @@
 """Sources and articles: the raw material a digest is built from."""
 
+import asyncio
 from datetime import datetime
 from typing import Annotated, Any, Literal
 
@@ -33,6 +34,10 @@ router = APIRouter(tags=["catalog"], dependencies=[Depends(current_user)])
 log = get_logger(__name__)
 
 _write_limit = Depends(user_rate_limit("write", lambda settings: settings.rate_limit_per_minute))
+# A search embeds the query and compares it with every article in the filters.
+_search_limit = Depends(user_rate_limit("search", lambda settings: settings.rate_limit_per_minute))
+# A query longer to embed than this is searched by its words alone.
+MEANING_TIMEOUT_SECONDS = 10
 _admin = Depends(admin_user)
 
 
@@ -62,7 +67,8 @@ async def _meaning(query: str | None) -> Meaning | None:
     if not query or not embedder.semantic:
         return None
     try:
-        [vector] = await embedder.embed([query], "query")
+        async with asyncio.timeout(MEANING_TIMEOUT_SECONDS):
+            [vector] = await embedder.embed([query], "query")
     except Exception as exc:
         log.warning("search_meaning_unavailable", error=type(exc).__name__)
         return None
@@ -238,7 +244,7 @@ async def refresh_source(source_id: int, session: SessionDep) -> dict[str, str]:
     return {"status": "queued"}
 
 
-@router.get("/articles")
+@router.get("/articles", dependencies=[_search_limit])
 async def search_articles(
     session: SessionDep,
     settings: SettingsDep,
@@ -259,7 +265,10 @@ async def search_articles(
         since=since,
         until=until,
     )
-    found, total = await find_articles(session, flt, limit, offset, await _meaning(flt.query))
+    # No connection waits on the embedding server.
+    await session.commit()
+    meaning = await _meaning(flt.query)
+    found, total = await find_articles(session, flt, limit, offset, meaning)
     words: Literal["words"] | None = "words" if flt.query else None
     return Page[ArticleOut](
         items=[
