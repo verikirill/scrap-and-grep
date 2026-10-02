@@ -18,6 +18,7 @@ from radar.api.deps import (
 )
 from radar.api.schemas import (
     AvatarOut,
+    FeedOrder,
     FeedView,
     LoginIn,
     MeOut,
@@ -189,7 +190,9 @@ async def me(user: OptionalUser, session: SessionDep) -> MeOut | None:
     avatar_at = await session.scalar(
         select(UserAvatar.updated_at).where(UserAvatar.user_id == user.id)
     )
-    feed_view = await session.scalar(select(User.feed_view).where(User.id == user.id))
+    looks = (
+        await session.execute(select(User.feed_view, User.feed_order).where(User.id == user.id))
+    ).one_or_none()
     return MeOut(
         id=user.id,
         email=user.email,
@@ -199,7 +202,8 @@ async def me(user: OptionalUser, session: SessionDep) -> MeOut | None:
         profiles=int(profiles or 0),
         resume_status=resume_status,
         avatar_url=_avatar_url(avatar_at),
-        feed_view=_feed_view(feed_view),
+        feed_view=_feed_view(looks.feed_view if looks else None),
+        feed_order=_feed_order(looks.feed_order if looks else None),
     )
 
 
@@ -207,15 +211,24 @@ def _feed_view(stored: str | None) -> FeedView:
     return "telegram" if stored == "telegram" else "cards"
 
 
+def _feed_order(stored: str | None) -> FeedOrder:
+    return "top" if stored == "top" else "new"
+
+
 @router.patch("/me/settings", dependencies=[_write_limit])
 async def update_settings(
     payload: SettingsIn, user: CurrentUser, session: SessionDep
 ) -> SettingsOut:
     """The reader's choices about how the app looks, kept with the account."""
-    await session.execute(
-        update(User).where(User.id == user.id).values(feed_view=payload.feed_view)
+    changes = payload.model_dump(exclude_none=True)
+    if changes:
+        await session.execute(update(User).where(User.id == user.id).values(**changes))
+    stored = (
+        await session.execute(select(User.feed_view, User.feed_order).where(User.id == user.id))
+    ).one()
+    return SettingsOut(
+        feed_view=_feed_view(stored.feed_view), feed_order=_feed_order(stored.feed_order)
     )
-    return SettingsOut(feed_view=payload.feed_view)
 
 
 def _avatar_url(updated_at: datetime | None) -> str | None:

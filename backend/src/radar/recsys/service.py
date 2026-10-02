@@ -49,6 +49,13 @@ FEED_SIZE = 120
 # How long a built feed stays pageable. Pages are cut from one frozen list,
 # so reactions between two pages do not reshuffle what comes next.
 _SNAPSHOT_TTL = 1800
+# The feed in two orders: by score, or the relevant articles newest first.
+ORDER_TOP = "top"
+ORDER_NEW = "new"
+# Arrivals looked at by one freshness check: a busy quarter of an hour at most.
+_FRESH_LIMIT = 300
+# An arrival embedded late is counted after this long at most.
+_FRESH_TTL = 300
 # A taste built while the embedding server was down has no vectors; it is
 # kept only briefly, so the full one comes back soon after the server does.
 _DEGRADED_TASTE_TTL = 60
@@ -96,6 +103,9 @@ class FeedItem(BaseModel):
     # The article has a picture: /articles/{id}/picture shows it. Read
     # with each page, as one is often found after the feed was ranked.
     has_picture: bool = False
+    # In the newest-first order: the reader had met it before this order was
+    # made, so it comes after those they have not.
+    seen: bool = False
     # Why it is in the list (ranked, explore, newest, saved) and where: the
     # reader's browser sends both back with what the reader did.
     slot: str = SLOT_RANKED
@@ -117,6 +127,9 @@ class FeedPage:
     total: int
     snapshot: str
     ranking: Ranking
+    order: str = "top"
+    # When the list was ranked; the page asks later what arrived since.
+    built_at: datetime | None = None
 
 
 class FacetOut(BaseModel):
@@ -574,41 +587,21 @@ async def feed_page(
     limit: int,
     offset: int,
     snapshot: str | None = None,
+    order: str = ORDER_TOP,
 ) -> FeedPage:
     """One page of the reader's feed, with their current reactions attached.
 
     The first page builds (or reuses, for `ttl` seconds) a ranked list and
     names it; later pages ask for the same snapshot, so a like between two
-    pages cannot make an article appear twice or never.
+    pages cannot make an article appear twice or never. ORDER_NEW shows the
+    same list's relevant articles newest first.
     """
-
-    async def stored(name: str) -> tuple[list[FeedItem], Ranking] | None:
-        raw = await cache.get_json(_snapshot_key(user_id, name))
-        if raw is None:
-            return None
-        items = [FeedItem.model_validate(item) for item in raw["items"]]
-        return items, Ranking.model_validate(raw["ranking"])
-
-    found = await stored(snapshot) if snapshot is not None else None
-    model = get_embedder().model_id
-    latest_key = _latest_feed_key(user_id, model, await _generation(cache, user_id))
-    if found is None:
-        latest = await cache.get_json(latest_key)
-        if latest is not None:
-            found, snapshot = await stored(latest), latest
-    if found is None or snapshot is None:
-        found = await build_feed(session, cache, user_id, window_days=window_days)
-        snapshot = uuid.uuid4().hex
-        await cache.set_json(
-            _snapshot_key(user_id, snapshot),
-            {
-                "items": [item.model_dump(mode="json") for item in found[0]],
-                "ranking": found[1].model_dump(mode="json"),
-            },
-            _SNAPSHOT_TTL,
-        )
-        await cache.set_json(latest_key, snapshot, ttl)
-    items, ranking = found
+    found = await _snapshot(
+        session, cache, user_id, window_days=window_days, ttl=ttl, snapshot=snapshot
+    )
+    items = found.items
+    if order == ORDER_NEW:
+        items = await _newest_first(session, cache, user_id, found.name, items, refresh=offset == 0)
     page = items[offset : offset + limit]
     # Reactions are read live: the snapshot may be half an hour old.
     current = await store.reactions(session, user_id, [item.article_id for item in page])
@@ -625,9 +618,156 @@ async def feed_page(
             for index, item in enumerate(page)
         ],
         total=len(items),
-        snapshot=snapshot,
-        ranking=ranking,
+        snapshot=found.name,
+        ranking=found.ranking,
+        order=order,
+        built_at=found.built_at,
     )
+
+
+@dataclass(frozen=True, slots=True)
+class _Snapshot:
+    items: list[FeedItem]
+    ranking: Ranking
+    name: str
+    # When the list was ranked: articles that arrive later are news to it.
+    built_at: datetime
+
+
+async def _snapshot(
+    session: AsyncSession,
+    cache: Cache,
+    user_id: uuid.UUID,
+    *,
+    window_days: int,
+    ttl: int,
+    snapshot: str | None,
+) -> _Snapshot:
+    """The named ranked list, or the latest one, or a new one built now."""
+
+    async def stored(name: str) -> _Snapshot | None:
+        raw = await cache.get_json(_snapshot_key(user_id, name))
+        if raw is None:
+            return None
+        # Lists cached before the time was kept count as made just now.
+        built_at = raw.get("built_at")
+        return _Snapshot(
+            items=[FeedItem.model_validate(item) for item in raw["items"]],
+            ranking=Ranking.model_validate(raw["ranking"]),
+            name=name,
+            built_at=datetime.fromisoformat(built_at) if built_at else datetime.now(UTC),
+        )
+
+    found = await stored(snapshot) if snapshot is not None else None
+    model = get_embedder().model_id
+    latest_key = _latest_feed_key(user_id, model, await _generation(cache, user_id))
+    if found is None:
+        latest = await cache.get_json(latest_key)
+        if latest is not None:
+            found = await stored(latest)
+    if found is None:
+        built_at = datetime.now(UTC)
+        items, ranking = await build_feed(session, cache, user_id, window_days=window_days)
+        found = _Snapshot(items, ranking, uuid.uuid4().hex, built_at)
+        await cache.set_json(
+            _snapshot_key(user_id, found.name),
+            {
+                "items": [item.model_dump(mode="json") for item in items],
+                "ranking": ranking.model_dump(mode="json"),
+                "built_at": built_at.isoformat(),
+            },
+            _SNAPSHOT_TTL,
+        )
+        await cache.set_json(latest_key, found.name, ttl)
+    return found
+
+
+def _order_key(user_id: uuid.UUID, snapshot: str) -> str:
+    return f"feed-order:{user_id}:{snapshot}:{ORDER_NEW}"
+
+
+async def _newest_first(
+    session: AsyncSession,
+    cache: Cache,
+    user_id: uuid.UUID,
+    snapshot: str,
+    items: list[FeedItem],
+    *,
+    refresh: bool,
+) -> list[FeedItem]:
+    """The list's relevant articles, newest first: those the reader has not
+    met yet, then those they have.
+
+    Exploration picks stay out: they are there to be tried, not because they
+    match. The order is fixed when the first page is asked for, so what the
+    reader scrolls past on the way down does not reshuffle the pages to come.
+    Every item says "newest": the ranker must not learn from places a clock set.
+    """
+    relevant = {item.article_id: item for item in items if item.slot != SLOT_EXPLORE}
+    key = _order_key(user_id, snapshot)
+    stored = None if refresh else await cache.get_json(key)
+    if stored is None:
+        seen = await store.seen_ids(session, user_id, list(relevant))
+        ordered = sorted(
+            relevant.values(),
+            key=lambda item: (
+                item.article_id in seen,
+                -item.published_at.timestamp(),
+                item.article_id,
+            ),
+        )
+        stored = {"ids": [item.article_id for item in ordered], "seen": sorted(seen)}
+        await cache.set_json(key, stored, _SNAPSHOT_TTL)
+    seen_ids = set(stored["seen"])
+    return [
+        relevant[article_id].model_copy(
+            update={"slot": SLOT_NEWEST, "seen": article_id in seen_ids}
+        )
+        for article_id in stored["ids"]
+        if article_id in relevant
+    ]
+
+
+async def fresh_since(
+    session: AsyncSession,
+    cache: Cache,
+    user_id: uuid.UUID,
+    *,
+    window_days: int,
+    ttl: int,
+    since: datetime,
+) -> int:
+    """How many articles that arrived after `since` pass the reader's interests.
+
+    Only arrivals count: an older article that a like moved up the ranking is
+    no news. Nothing arrived is one cheap query; otherwise the latest list is
+    ranked once per arrival and the answer kept for the polls that follow.
+    """
+    rows = (
+        await session.execute(
+            select(Article.id, Article.fetched_at)
+            .where(Article.fetched_at > since)
+            .order_by(Article.id.desc())
+            .limit(_FRESH_LIMIT)
+        )
+    ).all()
+    if not rows:
+        return 0
+    arrived = {row.id for row in rows}
+    key = f"feed-fresh:{user_id}:{rows[0].id}:{since.isoformat()}"
+    known = await cache.get_json(key)
+    if known is not None:
+        return int(known)
+    found = await _snapshot(
+        session, cache, user_id, window_days=window_days, ttl=ttl, snapshot=None
+    )
+    relevant = {item.article_id for item in found.items if item.slot != SLOT_EXPLORE}
+    count = len(relevant & arrived)
+    # A list ranked before the last arrival cannot know of it: its answer is
+    # not kept, and a later poll ranks again once the list is renewed.
+    if found.built_at >= max(row.fetched_at for row in rows):
+        await cache.set_json(key, count, _FRESH_TTL)
+    return count
 
 
 async def saved_page(

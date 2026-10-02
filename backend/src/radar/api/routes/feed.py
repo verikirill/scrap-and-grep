@@ -25,12 +25,19 @@ _feed_limit = Depends(user_rate_limit("feed", lambda settings: settings.feed_rat
 _write_limit = Depends(user_rate_limit("write", lambda settings: settings.rate_limit_per_minute))
 
 
+class FreshOut(BaseModel):
+    # Articles that arrived after the reader's feed was ranked and pass their interests.
+    fresh: int
+
+
 class FeedOut(BaseModel):
     items: list[FeedItem]
     total: int
     limit: int
     offset: int
     generated_at: datetime
+    # When the list behind the page was ranked: /feed/fresh counts arrivals since.
+    built_at: datetime | None = None
     # Pass it back for the next page to page the same ranking.
     snapshot: str | None = None
 
@@ -64,8 +71,10 @@ async def get_feed(
     limit: Annotated[int, Query(ge=1, le=60)] = 30,
     offset: Annotated[int, Query(ge=0, le=service.FEED_SIZE)] = 0,
     snapshot: Annotated[str | None, Query(pattern=r"^[0-9a-f]{32}$")] = None,
+    order: Literal["top", "new"] = "top",
 ) -> FeedOut:
-    """Articles of the last days ranked for the reader, with the reasons."""
+    """Articles of the last days for the reader, with the reasons: ranked
+    ("top"), or the relevant ones newest first ("new")."""
     page = await service.feed_page(
         session,
         cache,
@@ -75,6 +84,7 @@ async def get_feed(
         limit=limit,
         offset=offset,
         snapshot=snapshot,
+        order=order,
     )
     # Pages of the shown articles are read for a length or a picture they lack.
     await measure_soon(
@@ -90,7 +100,29 @@ async def get_feed(
         offset=offset,
         generated_at=datetime.now(UTC),
         snapshot=page.snapshot,
+        built_at=page.built_at,
     )
+
+
+@router.get("/feed/fresh", dependencies=[_feed_limit])
+async def get_fresh(
+    user: CurrentUser,
+    session: SessionDep,
+    cache: CacheDep,
+    settings: SettingsDep,
+    since: datetime,
+) -> FreshOut:
+    """Whether the feed on the reader's screen has fallen behind: an open page
+    asks now and then, and offers the new articles when there are any."""
+    fresh = await service.fresh_since(
+        session,
+        cache,
+        user.id,
+        window_days=settings.feed_window_days,
+        ttl=settings.feed_cache_seconds,
+        since=since,
+    )
+    return FreshOut(fresh=fresh)
 
 
 @router.get("/feed/saved")

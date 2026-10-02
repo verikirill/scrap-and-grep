@@ -25,6 +25,7 @@ import type {
   SharedProfile,
   Resume,
   Settings,
+  FeedOrder,
   Source,
   SourceCreate,
   Video,
@@ -54,6 +55,7 @@ const ACTIVE_POLL_MS = 4_000
 const RESUME_POLL_MS = 1_200
 const SHORT_POLL_MS = 2_500
 const SCHEDULE_POLL_MS = 60_000
+const FRESH_POLL_MS = 120_000
 
 const isBuilding = (digest: { status: string } | undefined) =>
   digest?.status === 'queued' || digest?.status === 'running'
@@ -491,15 +493,31 @@ const nextCursor = (last: FeedPage): FeedCursor | undefined => {
  * first one was cut from, so reactions between pages do not reshuffle it.
  * Rebuilding (a refetch) starts a new snapshot.
  */
-export const useFeed = () =>
+export const useFeed = (order: FeedOrder) =>
   useInfiniteQuery({
-    queryKey: keys.feed,
-    queryFn: ({ pageParam }) => api.feed(FEED_PAGE, pageParam.offset, pageParam.snapshot),
+    queryKey: [...keys.feed, order],
+    queryFn: ({ pageParam }) => api.feed(order, FEED_PAGE, pageParam.offset, pageParam.snapshot),
     initialPageParam: { offset: 0 } as FeedCursor,
     getNextPageParam: nextCursor,
     // The order changes only when the reader asks for it: a feed that
     // reshuffles under the cursor after every like is unreadable.
     staleTime: Infinity,
+  })
+
+/**
+ * Asks now and then whether the feed on screen has fallen behind: sources are
+ * read every quarter of an hour, and a new relevant article is then offered.
+ */
+export const useFeedFresh = (since: string | null | undefined) =>
+  useQuery({
+    queryKey: ['feed-fresh', since],
+    queryFn: () => api.feedFresh(since ?? ''),
+    enabled: Boolean(since),
+    refetchInterval: FRESH_POLL_MS,
+    // A hidden tab does not ask; coming back to it does, at once.
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+    placeholderData: undefined,
   })
 
 export const useSaved = (isEnabled: boolean) =>
@@ -551,8 +569,9 @@ function writeReactions(
 ): void {
   const setItem = (item: FeedItem): FeedItem =>
     item.article_id === articleId ? { ...item, reactions: change(item.reactions) } : item
+  // The feed is cached once per order: every copy of the article changes.
   for (const queryKey of [keys.feed, keys.saved]) {
-    client.setQueryData<FeedPages>(queryKey, (data) =>
+    client.setQueriesData<FeedPages>({ queryKey }, (data) =>
       data
         ? {
             ...data,
@@ -570,9 +589,12 @@ function writeReactions(
 /** The reactions of one article as the screen shows them now. */
 function readReactions(client: QueryClient, articleId: number): ReactionKind[] {
   for (const queryKey of [keys.feed, keys.saved]) {
-    const data = client.getQueryData<FeedPages>(queryKey)
-    const item = data?.pages.flatMap((page) => page.items).find((it) => it.article_id === articleId)
-    if (item) return item.reactions
+    for (const [, data] of client.getQueriesData<FeedPages>({ queryKey })) {
+      const item = data?.pages
+        .flatMap((page) => page.items)
+        .find((it) => it.article_id === articleId)
+      if (item) return item.reactions
+    }
   }
   for (const [, data] of client.getQueriesData<Record<string, ReactionKind[]>>({
     queryKey: ['reactions'],
@@ -777,7 +799,7 @@ export function useUpdateSettings() {
   const client = useQueryClient()
   return useMutation({
     mutationFn: api.updateSettings,
-    onMutate: async (settings: Settings) => {
+    onMutate: async (settings: Partial<Settings>) => {
       await client.cancelQueries({ queryKey: keys.me })
       const previous = client.getQueryData<Me | null>(keys.me)
       client.setQueryData<Me | null>(keys.me, (me) => (me ? { ...me, ...settings } : me))
@@ -788,7 +810,7 @@ export function useUpdateSettings() {
       const before = context?.previous
       if (before) {
         client.setQueryData<Me | null>(keys.me, (me) =>
-          me ? { ...me, feed_view: before.feed_view } : me,
+          me ? { ...me, feed_view: before.feed_view, feed_order: before.feed_order } : me,
         )
       }
     },

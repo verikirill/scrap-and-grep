@@ -126,7 +126,9 @@ async def served(session: AsyncSession, user: AuthUser, page: FeedPage) -> None:
     if not page.items:
         return
     first = page.items[0].position
-    if not await _first_time(f"radar:events:served:{page.snapshot}:{first}:{len(page.items)}"):
+    # The order is in the key: the same list newest first is another page.
+    served_key = f"radar:events:served:{page.snapshot}:{page.order}:{first}:{len(page.items)}"
+    if not await _first_time(served_key):
         return
     if not await _within_budget(user.id, len(page.items)):
         return
