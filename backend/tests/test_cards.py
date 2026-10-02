@@ -243,3 +243,21 @@ def test_in_a_roundup_the_exploit_belongs_to_the_vulnerability_it_is_said_of() -
 
 def test_a_post_link_cannot_close_its_code_span() -> None:
     assert "`" not in defang("https://a.com/x`; [c](http://evil.com)")
+
+
+async def test_a_year_the_entries_do_not_have_leaves_the_title(
+    make_article: ArticleFactory, profile: ProfileSpec
+) -> None:
+    from radar.domain import Topic
+
+    invented = {"title": "Крупные кибератаки 2024 года", "highlights": ["Атака на ПЛК в 2024 году"]}
+    model = Scripted(invented, invented)
+    item = _selected(make_article, "attack", "Группировка атаковала ПЛК подстанции.")
+    item = item.model_copy(update={"text": ItemSummary(headline="Атака на ПЛК", summary="Атака.")})
+    topics = [Topic(title="Атаки на АСУ ТП", items=(item,))]
+
+    overview = await ModelIntelligence(cast(Any, model)).overview(topics, profile)
+
+    assert "2024" in model.prompts[1]
+    assert overview.title == "Атаки на АСУ ТП"
+    assert overview.highlights == ()

@@ -361,12 +361,34 @@ class ModelIntelligence:
         )
 
     async def overview(self, topics: Sequence[Topic], profile: ProfileSpec) -> DigestOverview:
-        out = await self._ask(
-            prompts.OverviewOut, prompts.OVERVIEW_SYSTEM, prompts.overview_prompt(topics, profile)
+        """The issue's title and key points. A figure the entries do not have,
+        a year the model made up most of all, goes back once; a title that
+        keeps it gives way to the first topic's, a key point is left out."""
+        prompt = prompts.overview_prompt(topics, profile)
+        allowed = numbers(
+            " ".join(
+                f"{item.article.title} {item.text.headline} {item.text.summary}"
+                if item.text
+                else item.article.title
+                for topic in topics
+                for item in topic.items
+            )
         )
+        out = await self._ask(prompts.OverviewOut, prompts.OVERVIEW_SYSTEM, prompt)
+        stray = cards.unsupported_figures(f"{out.title} {' '.join(out.highlights)}", allowed)
+        if stray:
+            note = prompts.with_stray_note(prompt, stray)
+            out = await self._ask(prompts.OverviewOut, prompts.OVERVIEW_SYSTEM, note)
+        title = out.title.strip().strip('«»".')
+        if cards.unsupported_figures(title, allowed):
+            title = topics[0].title if topics else title
         return DigestOverview(
-            title=out.title.strip().strip('«»".'),
-            highlights=tuple(line.strip() for line in out.highlights if line.strip()),
+            title=title,
+            highlights=tuple(
+                line.strip()
+                for line in out.highlights
+                if line.strip() and not cards.unsupported_figures(line, allowed)
+            ),
             by_model=True,
         )
 

@@ -78,6 +78,8 @@ DEFAULT_SOURCES: tuple[tuple[str, str, str, str, str, str, bool], ...] = (
     ("ahnlab-asec", "AhnLab ASEC", "https://asec.ahnlab.com/en/feed/", "https://asec.ahnlab.com/en/", "security", "en", True),
     # Telegram channels of the dataset whose web preview is open and alive.
     ("tg-true-secator", "SecAtor", "https://t.me/s/true_secator", "https://t.me/true_secator", "security", "ru", False),
+    ("tg-bdufstecru", "БДУ ФСТЭК России", "https://t.me/s/bdufstecru", "https://t.me/bdufstecru", "regulator", "ru", False),
+    ("tg-xakep-ru", "Хакер (Telegram)", "https://t.me/s/xakep_ru", "https://t.me/xakep_ru", "security", "ru", False),
     ("tg-ptescalator", "PT ESC Threat Intelligence", "https://t.me/s/ptescalator", "https://t.me/ptescalator", "security", "ru", False),
     ("tg-four-rays", "4RAYS", "https://t.me/s/four_rays", "https://t.me/four_rays", "security", "ru", False),
     ("tg-cyberok", "CyberOK", "https://t.me/s/cyberok_news", "https://t.me/cyberok_news", "security", "ru", False),

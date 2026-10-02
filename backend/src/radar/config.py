@@ -57,7 +57,9 @@ class Settings(BaseSettings):
     # Hidden reasoning before the answer. gpt-oss cannot switch it off and
     # takes a level; qwen3.5 answers a schema as well without it.
     llm_reasoning: Literal["off", "low", "medium", "high"] = "low"
-    llm_temperature: float = 0.1
+    # Zero: a grade must not drift between two builds of the same week, or an
+    # edit of the interests is lost among changes nobody made.
+    llm_temperature: float = 0.0
     llm_num_ctx: int = 8192
     llm_timeout_seconds: float = 120.0
     # Requests in flight at once. The cloud serves them in parallel; one local
