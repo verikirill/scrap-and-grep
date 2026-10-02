@@ -153,9 +153,10 @@ async def demo_login(response: Response, session: SessionDep, settings: Settings
     """Enter as a guest: a fresh throwaway account with the example profiles.
 
     Lets a reviewer try everything without registering, without seeing or
-    changing what other visitors did. Off when `RADAR_DEMO_LOGIN=false`.
+    changing what other visitors did. Off when `RADAR_DEMO_LOGIN=false`,
+    unless sign-in is off altogether (`RADAR_AUTH=off`).
     """
-    if not settings.demo_login:
+    if not settings.demo_login and settings.auth == "on":
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Вход без регистрации отключён.")
     guest = await service.create_guest(session)
     _set_cookie(

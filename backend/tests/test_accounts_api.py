@@ -308,6 +308,31 @@ async def test_only_an_administrator_changes_the_source_catalogue(api: str) -> N
         assert (await admin.post("/sources/refresh")).status_code == 202
 
 
+@pytest.mark.parametrize(
+    ("auth", "guest_status"),
+    [("on", 404), ("off", 200)],
+    ids=["sign-in required", "no sign-in"],
+)
+async def test_without_sign_in_every_visitor_may_enter_as_a_guest(
+    api: str, monkeypatch: pytest.MonkeyPatch, auth: str, guest_status: int
+) -> None:
+    from radar.config import get_settings
+
+    # The guest button is off; with sign-in off a visitor still gets in.
+    monkeypatch.setenv("RADAR_AUTH", auth)
+    monkeypatch.setenv("RADAR_DEMO_LOGIN", "false")
+    get_settings.cache_clear()
+    try:
+        async with client(api) as visitor:
+            meta = (await visitor.get("/meta")).json()
+            entered = await visitor.post("/auth/demo")
+    finally:
+        get_settings.cache_clear()
+
+    assert meta["sign_in_required"] is (auth == "on")
+    assert entered.status_code == guest_status
+
+
 async def test_every_guest_gets_an_own_copy_of_the_examples(api: str) -> None:
     async with client(api) as first, client(api) as second:
         await first.post("/auth/demo")

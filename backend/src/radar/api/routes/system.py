@@ -68,8 +68,9 @@ async def meta(session: SessionDep, settings: SettingsDep, cache: CacheDep) -> M
         newest_article=stats["newest"],
         sources=int(sources or 0),
         sources_failing=int(failing or 0),
-        demo_login=settings.demo_login,
+        demo_login=settings.demo_login or settings.auth == "off",
         registration_open=settings.registration_open,
+        sign_in_required=settings.auth == "on",
         resume_parser=PARSER_DOCLING if settings.docparser_url else PARSER_BUILTIN,
         resume_formats=list(
             DOCLING_FORMATS if settings.docparser_url else (*BUILTIN_FORMATS, "html")

@@ -354,6 +354,43 @@ function forgetReaderData(client: QueryClient): void {
   })
 }
 
+/** Set by signing out on purpose: no guest is made behind the reader's back then. */
+const SIGNED_OUT_KEY = 'radar-signed-out'
+
+function rememberSignedOut(isSignedOut: boolean): void {
+  try {
+    if (isSignedOut) sessionStorage.setItem(SIGNED_OUT_KEY, '1')
+    else sessionStorage.removeItem(SIGNED_OUT_KEY)
+  } catch {
+    // Storage may be blocked; the worst case is one guest too many.
+  }
+}
+
+function hasSignedOut(): boolean {
+  try {
+    return sessionStorage.getItem(SIGNED_OUT_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Where the server needs no sign-in, a visitor with no session becomes a guest
+ * of their own straight away: the jury asked for no sign-in screen. A failure
+ * here leaves the sign-in page, which has the same button.
+ */
+async function enterAsGuest(client: QueryClient): Promise<Me | null> {
+  if (hasSignedOut()) return null
+  try {
+    const meta = await client.fetchQuery({ queryKey: keys.meta, queryFn: api.meta })
+    if (meta.sign_in_required) return null
+    await api.demoLogin()
+    return await api.me()
+  } catch {
+    return null
+  }
+}
+
 /**
  * Who is signed in; `null` means nobody, and the app shows the sign-in page.
  * Checked again when the tab regains focus: if another tab signed in as
@@ -365,7 +402,7 @@ export function useMe() {
     queryKey: keys.me,
     queryFn: async () => {
       const previous = client.getQueryData<Me | null>(keys.me)
-      const current = await api.me()
+      const current = (await api.me()) ?? (await enterAsGuest(client))
       if (previous && previous.id !== current?.id) forgetReaderData(client)
       return current
     },
@@ -383,6 +420,7 @@ export function useMe() {
 export function useSignIn() {
   const client = useQueryClient()
   const enter = async () => {
+    rememberSignedOut(false)
     forgetReaderData(client)
     const me = await client.fetchQuery({ queryKey: keys.me, queryFn: api.me, staleTime: 0 })
     if (!me) {
@@ -414,6 +452,7 @@ export function useSignIn() {
 export function useSignOut() {
   const client = useQueryClient()
   const leave = () => {
+    rememberSignedOut(true)
     // Telling the route guard first: it unmounts the pages, and only then
     // their data is removed.
     client.setQueryData(keys.me, null)
