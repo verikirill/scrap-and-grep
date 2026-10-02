@@ -12,8 +12,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-RUN, OUT = (Path(arg) for arg in sys.argv[1:3])
-
 KINDS = {"Атака": "attack", "Уязвимость": "vulnerability", "Инфо": "news"}
 KIND_WORDS = {"attack": "атака", "vulnerability": "уязвимость", "news": "новость"}
 PRIORITIES = {"Высокий": "высокий", "Средний": "средний", "Низкий": "низкий"}
@@ -126,43 +124,48 @@ def management_block(result: dict[str, Any]) -> list[str]:
     return lines
 
 
-def main() -> None:
-    results = json.loads(RUN.read_text(encoding="utf-8"))
-    specialists = [r for r in results if r["example"]["audience"] == "specialist"]
-    management = [r for r in results if r["example"]["audience"] == "management"]
-    read = [r for r in results if "kind" in r]
-
-    def kind_matches(r: dict[str, Any]) -> bool:
-        return KINDS.get(r["example"]["grouping"].strip()) == r["kind"]
-
-    def priority_matches(r: dict[str, Any]) -> bool:
-        return PRIORITIES.get(r["example"]["priority"].strip()) == r["priority"]
-
+def scores(results: list[dict[str, Any]]) -> dict[str, int]:
+    """How a run agrees with the dataset: pages read, the kind and priority of
+    the specialists' attacks and vulnerabilities, the management tags found."""
     graded = [
         r
-        for r in specialists
-        if "kind" in r and r["example"]["grouping"].strip() != "Инфо"
+        for r in results
+        if r["example"]["audience"] == "specialist"
+        and "kind" in r
+        and r["example"]["grouping"].strip() != "Инфо"
     ]
-    wanted_total = sum(
-        len(wanted_tags(r["example"]["grouping"])) for r in management if "kind" in r
-    )
-    hit_total = sum(
-        len(wanted_tags(r["example"]["grouping"]) & set(r["tag_ids"]))
-        for r in management
-        if "kind" in r
-    )
-    extra_total = sum(
-        len(set(r["tag_ids"]) - wanted_tags(r["example"]["grouping"]))
-        for r in management
-        if "kind" in r
-    )
+    management = [r for r in results if r["example"]["audience"] == "management" and "kind" in r]
+    return {
+        "read": sum("kind" in r for r in results),
+        "examples": len(results),
+        "graded": len(graded),
+        "kind": sum(KINDS.get(r["example"]["grouping"].strip()) == r["kind"] for r in graded),
+        "priority": sum(
+            PRIORITIES.get(r["example"]["priority"].strip()) == r["priority"] for r in graded
+        ),
+        "tags_wanted": sum(len(wanted_tags(r["example"]["grouping"])) for r in management),
+        "tags_found": sum(
+            len(wanted_tags(r["example"]["grouping"]) & set(r["tag_ids"])) for r in management
+        ),
+        "tags_extra": sum(
+            len(set(r["tag_ids"]) - wanted_tags(r["example"]["grouping"])) for r in management
+        ),
+    }
+
+
+def main() -> None:
+    run, out = (Path(arg) for arg in sys.argv[1:3])
+    results = json.loads(run.read_text(encoding="utf-8"))
+    specialists = [r for r in results if r["example"]["audience"] == "specialist"]
+    management = [r for r in results if r["example"]["audience"] == "management"]
+    score = scores(results)
     text = [
         "# Прогон по датасету организаторов",
         "",
         (
-            "Каждый из 21 примера датасета ([docs/task](../../docs/task/TASK.md)) прогнан через те же "
-            "шаги, что и запись выпуска: страница читается так же, как источник, модель "
-            "(`gpt-oss:120b`) ставит оценку и тип записи и пишет карточку или сводку для "
+            "Каждый из 21 примера датасета ([docs/task](../../docs/task/TASK.md)) прогнан "
+            "через те же шаги, что и запись выпуска: страница читается так же, как источник, "
+            "модель (`gpt-oss:120b`) ставит оценку и тип записи и пишет карточку или сводку для "
             "аудитории примера, номера уязвимостей сверяются с CISA KEV и БДУ, карточка "
             "проверяется по тексту. Рядом стоит «желаемый вывод» из датасета. Скрипты: "
             "`scripts/dataset_json.py`, `backend/scripts/dataset_run.py`, "
@@ -171,7 +174,7 @@ def main() -> None:
         "",
         "## Итог",
         "",
-        f"- Прочитано страниц: {len(read)} из {len(results)}. Не прочитано: "
+        f"- Прочитано страниц: {score['read']} из {score['examples']}. Не прочитано: "
         + (
             "; ".join(
                 f"{r['example']['id']} ({'; '.join(p['error'] for p in r['pages'] if p['error'])})"
@@ -182,8 +185,8 @@ def main() -> None:
         )
         + ".",
         (
-            f"- Специалисты, атаки и уязвимости: тип совпал в {sum(map(kind_matches, graded))} "
-            f"из {len(graded)}, приоритет в {sum(map(priority_matches, graded))} из {len(graded)}."
+            f"- Специалисты, атаки и уязвимости: тип совпал в {score['kind']} "
+            f"из {score['graded']}, приоритет в {score['priority']} из {score['graded']}."
         ),
         (
             "- Специалисты, посты Telegram: датасет кладёт их в группу «Инфо» по источнику, "
@@ -191,8 +194,8 @@ def main() -> None:
             "карточку уязвимости и ссылки из поста, как в желаемом выводе."
         ),
         (
-            f"- Руководство: признаков датасета найдено {hit_total} из {wanted_total}, "
-            f"лишних поставлено {extra_total}."
+            f"- Руководство: признаков датасета найдено {score['tags_found']} "
+            f"из {score['tags_wanted']}, лишних поставлено {score['tags_extra']}."
         ),
         "",
         (
@@ -215,8 +218,8 @@ def main() -> None:
     text += ["## Руководству", ""]
     for result in management:
         text += management_block(result)
-    OUT.write_text("\n".join(text), encoding="utf-8", newline="\n")
-    print(f"{len(results)} examples written to {OUT}")
+    out.write_text("\n".join(text), encoding="utf-8", newline="\n")
+    print(f"{len(results)} examples written to {out}")
 
 
 if __name__ == "__main__":

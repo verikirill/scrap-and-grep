@@ -5,8 +5,10 @@ from typing import Any
 
 import httpx
 import pytest
+from ollama import ResponseError
 from pydantic import BaseModel, Field, ValidationError
 
+from radar.ai import llm
 from radar.ai.llm import ChatTool, ModelChat, ollama_chat, openai_chat
 from radar.config import Settings
 
@@ -19,13 +21,16 @@ class Verdict(BaseModel):
 class Server:
     """An Ollama that gives the answers in turn and keeps what it was asked."""
 
-    def __init__(self, *answers: str | dict[str, Any]) -> None:
+    def __init__(self, *answers: str | dict[str, Any] | int) -> None:
         self.answers = list(answers)
         self.requests: list[httpx.Request] = []
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
         self.requests.append(request)
         answer = self.answers.pop(0)
+        # A number is an error status, as the cloud sends it.
+        if isinstance(answer, int):
+            return httpx.Response(answer, json={"error": "too many concurrent requests"})
         # A dict is a tool call: {"name": ..., "arguments": {...}}.
         calls = [{"function": answer}] if isinstance(answer, dict) else []
         line = {
@@ -111,6 +116,55 @@ def test_a_cloud_model_without_a_key_stops_the_start() -> None:
     # Offline and local models need no key.
     Settings(llm_provider="heuristic", llm_api_key=None)
     Settings(llm_provider="ollama", llm_base_url="", llm_api_key=None)
+
+
+async def test_a_busy_server_is_asked_again_after_a_pause(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(llm, "RATE_LIMIT_PAUSE_SECONDS", 0.0)
+    server = Server(429, 429, '{"relevance": 2, "reason": "по теме"}')
+
+    verdict = await chat(server).ask(Verdict, "Оцени.", "Статья")
+
+    # A full queue on the server is not the model failing: no breaker, no fallback.
+    assert verdict == Verdict(relevance=2, reason="по теме")
+    assert len(server.requests) == 3
+
+
+async def test_a_server_that_stays_busy_or_breaks_fails_the_call(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(llm, "RATE_LIMIT_PAUSE_SECONDS", 0.0)
+    busy = Server(*[429] * (llm.RATE_LIMIT_RETRIES + 1))
+    broken = Server(500, '{"relevance": 2, "reason": "по теме"}')
+
+    with pytest.raises(ResponseError):
+        await chat(busy).ask(Verdict, "Оцени.", "Статья")
+    with pytest.raises(ResponseError):
+        await chat(broken).ask(Verdict, "Оцени.", "Статья")
+
+    assert len(busy.requests) == llm.RATE_LIMIT_RETRIES + 1
+    # Any other error goes to the breaker at once.
+    assert len(broken.requests) == 1
+
+
+async def test_once_a_call_runs_out_of_retries_the_queue_behind_it_fails_at_once(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(llm, "RATE_LIMIT_PAUSE_SECONDS", 0.0)
+    ok = '{"relevance": 2, "reason": "по теме"}'
+    server = Server(*[429] * (llm.RATE_LIMIT_RETRIES + 1), 429, ok, 429, ok)
+    model = chat(server)
+
+    with pytest.raises(ResponseError):
+        await model.ask(Verdict, "Оцени.", "Статья")
+    # The server is still full: the next call does not wait out its own retries,
+    # so the breaker hears of it in seconds and the digest falls back in time.
+    with pytest.raises(ResponseError):
+        await model.ask(Verdict, "Оцени.", "Статья")
+    assert len(server.requests) == llm.RATE_LIMIT_RETRIES + 2
+    # An answer means the server has room again, and retries come back.
+    await model.ask(Verdict, "Оцени.", "Статья")
+    assert await model.ask(Verdict, "Оцени.", "Статья") == Verdict(relevance=2, reason="по теме")
+    assert len(server.requests) == llm.RATE_LIMIT_RETRIES + 5
 
 
 async def test_json_that_is_only_broken_is_mended_without_asking_again() -> None:
