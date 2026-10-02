@@ -230,7 +230,7 @@ async def _show_progress(digest_id: uuid.UUID) -> None:
                     select(Digest.stage, Digest.progress).where(Digest.id == digest_id)
                 )
             ).one_or_none()
-        if row is not None and row.stage != shown:
+        if row is not None and row.stage not in (shown, "done"):
             shown = row.stage
             typer.echo(progress_line(row.stage, row.progress))
         await asyncio.sleep(PROGRESS_POLL_SECONDS)
@@ -277,7 +277,7 @@ async def _build(target: Target, email: str | None, out: Path) -> Path:
         if loaded is None:
             raise typer.Exit(code=1)
         view = digest_view(loaded)
-    stem = file_stem(target.label, days, datetime.now(UTC))
+    stem = file_stem(target.label, days, datetime.now().astimezone())
     markdown = await asyncio.to_thread(_write, out, stem, render_markdown(view), render_docx(view))
     stats = view.stats
     typer.echo(
