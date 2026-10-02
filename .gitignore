@@ -28,3 +28,17 @@ Thumbs.db
 # Local scratch
 /tmp/
 *.log
+
+# AI assistants' local settings and skills: not part of the product
+.claude/
+.agents/
+.codex/
+.cursor/
+skills-lock.json
+CLAUDE.local.md
+
+# Local outputs: console digests, recordings, offline bundles
+/out/
+*.mp4
+*.tar
+*.tar.gz
