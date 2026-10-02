@@ -406,6 +406,20 @@ async def test_an_address_is_detected_by_the_worker_and_its_answer_read_back(
     assert failed == {"status": "done", "found": None, "error": "Сайт ответил 404."}
 
 
+async def test_a_digest_asked_for_without_a_period_covers_its_audiences_one(api: str) -> None:
+    async with client(api) as guest:
+        await guest.post("/auth/demo")
+        profiles = {p["spec"]["audience"]: p["id"] for p in (await guest.get("/profiles")).json()}
+        spans = {}
+        for audience, profile_id in profiles.items():
+            created = (await guest.post("/digests", json={"profile_id": profile_id})).json()
+            start = datetime.fromisoformat(created["period_start"])
+            spans[audience] = datetime.fromisoformat(created["period_end"]) - start
+
+    # Specialists read the last day, management the week, as the jury asked.
+    assert spans == {"specialist": timedelta(days=1), "management": timedelta(days=7)}
+
+
 @pytest.mark.parametrize(
     ("auth", "guest_status"),
     [("on", 404), ("off", 200)],

@@ -27,7 +27,12 @@ const DAY_NAMES = [
   'суббота',
   'воскресенье',
 ]
-const DEFAULT: Omit<ScheduleInput, 'timezone'> = { cadence: 'weekdays', weekday: 0, time: '09:00' }
+// A new schedule follows the audience, as the jury put it: technical people
+// every working morning, management once a week, on Monday.
+const DEFAULTS: Record<Profile['spec']['audience'], Omit<ScheduleInput, 'timezone'>> = {
+  specialist: { cadence: 'weekdays', weekday: 0, time: '08:30' },
+  management: { cadence: 'weekly', weekday: 0, time: '09:00' },
+}
 
 function browserZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
@@ -91,7 +96,8 @@ export function ScheduleControl({
 }) {
   const { save, remove } = useSchedule()
   const [isOpen, setOpen] = useState(false)
-  const [draft, setDraft] = useState<Omit<ScheduleInput, 'timezone'>>(DEFAULT)
+  const fallback = DEFAULTS[profile.spec.audience]
+  const [draft, setDraft] = useState<Omit<ScheduleInput, 'timezone'>>(fallback)
   // A schedule keeps its zone: saving it from another place does not move it.
   const zone = schedule?.timezone ?? browserZone()
 
@@ -101,7 +107,7 @@ export function ScheduleControl({
       setDraft(
         schedule
           ? { cadence: schedule.cadence, weekday: schedule.weekday ?? 0, time: schedule.time }
-          : DEFAULT,
+          : fallback,
       )
       save.reset()
       remove.reset()

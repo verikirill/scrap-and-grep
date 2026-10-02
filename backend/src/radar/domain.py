@@ -22,6 +22,9 @@ Language = Literal["ru", "en"]
 # Who reads the digest, as in the organizers' dataset: specialists get a card
 # per attack and vulnerability, management a short brief with tags.
 Audience = Literal["specialist", "management"]
+# How often each audience reads, as the jury put it: technical people every
+# day, management once a week. A digest asked for without a period covers this.
+AUDIENCE_DAYS: dict[Audience, int] = {"specialist": 1, "management": 7}
 # What a publication reports, the dataset's grouping for specialists.
 RecordKind = Literal["attack", "vulnerability", "news"]
 Priority = Literal["high", "medium", "low"]

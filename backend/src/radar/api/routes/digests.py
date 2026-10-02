@@ -17,7 +17,7 @@ from radar.api.reading import measure_soon
 from radar.api.schemas import CompareOut, DigestCreate, InterestChange, ScoreChange
 from radar.db import session_scope
 from radar.db.models import Digest, Profile
-from radar.domain import ProfileSpec
+from radar.domain import AUDIENCE_DAYS, ProfileSpec
 from radar.events import record
 from radar.logging import get_logger
 from radar.pipeline.runner import events_channel
@@ -83,13 +83,15 @@ async def create_digest(
             detail="Уже собирается несколько выпусков. Дождитесь их завершения.",
             headers={"Retry-After": "30"},
         )
+    spec = ProfileSpec.model_validate(profile.spec)
     end = payload.period_end or datetime.now(UTC)
-    start = payload.period_start or end - timedelta(days=payload.period_days or 7)
+    days = payload.period_days or AUDIENCE_DAYS[spec.audience]
+    start = payload.period_start or end - timedelta(days=days)
     digest = await digest_store.create(
         session,
         user_id=user.id,
         profile_id=profile.id,
-        profile=ProfileSpec.model_validate(profile.spec),
+        profile=spec,
         profile_version=profile.version,
         period_start=start,
         period_end=end,

@@ -66,7 +66,9 @@ function periodOf(
 
 export function BuildPanel({ profiles, initialProfileId, isBuilding = false, onCreated }: Props) {
   const [profileId, setProfileId] = useState<string | null>(null)
-  const [period, setPeriod] = useState<PeriodValue>('7')
+  // Until a period is picked it follows the profile: specialists read the
+  // last day, management the week, as the jury asked.
+  const [picked, setPeriod] = useState<PeriodValue | null>(null)
   const [range, setRange] = useState<DateRange | undefined>()
   const [isPicking, setPicking] = useState(false)
   // The calendar's limits: stable between renders, renewed whenever it opens.
@@ -79,8 +81,9 @@ export function BuildPanel({ profiles, initialProfileId, isBuilding = false, onC
     ? initialProfileId
     : null
   const selectedId = profileId ?? fromUrl ?? profiles[0]?.id ?? null
-  const chosen = periodOf(period, range, today)
   const selected = profiles.find((profile) => profile.id === selectedId) ?? null
+  const period: PeriodValue = picked ?? (selected?.spec.audience === 'management' ? '7' : '1')
+  const chosen = periodOf(period, range, today)
   const scheduleOf = (profileId: string) =>
     schedules.data?.find((item) => item.profile_id === profileId) ?? null
   const profileKeys = useRadioKeys(

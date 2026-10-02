@@ -283,7 +283,9 @@ class SharedProfileOut(BaseModel):
 
 class DigestCreate(BaseModel):
     profile_id: uuid.UUID
-    period_days: int | None = Field(default=7, ge=1, le=90)
+    # Neither the days nor the bounds: the profile's audience decides
+    # (radar.domain.AUDIENCE_DAYS).
+    period_days: int | None = Field(default=None, ge=1, le=90)
     period_start: datetime | None = None
     period_end: datetime | None = None
 
@@ -292,8 +294,8 @@ class DigestCreate(BaseModel):
         explicit = self.period_start is not None and self.period_end is not None
         if explicit and self.period_start >= self.period_end:  # type: ignore[operator]
             raise ValueError("period_start must be before period_end")
-        if not explicit and self.period_days is None:
-            raise ValueError("either period_days or both period bounds are required")
+        if (self.period_start is None) != (self.period_end is None):
+            raise ValueError("a period takes both bounds or none")
         return self
 
 
