@@ -2,15 +2,18 @@
 //   npx tsx scripts/palette.mjs
 // Writes src/styles/palette.css (light and dark Material 3 roles as CSS
 // variables) and ../shorts/src/palette.ts (the dark roles the videos use).
-// Material's vibrant scheme keeps the brand blue vivid; amber and green are
-// harmonised towards it so that warnings and successes belong to the same set.
+// Material's vibrant scheme keeps the brand blue vivid in the dark theme; amber
+// and green are harmonised towards it so that warnings and successes belong to
+// the same set. The light theme is built from its own palettes (see LIGHT).
 import { writeFileSync } from 'node:fs'
 import {
   Blend,
+  DynamicScheme,
   Hct,
   MaterialDynamicColors,
   SchemeVibrant,
   TonalPalette,
+  Variant,
   argbFromHex,
   hexFromArgb,
 } from '@material/material-color-utilities'
@@ -68,9 +71,37 @@ const ROLES = [
 
 const kebab = (name) => name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
 const seed = argbFromHex(SEED)
+const seedHct = Hct.fromInt(seed)
+
+// The light theme: slate. The seed blue sits at hue 276 in HCT, on the edge of
+// violet, so neutrals derived from it (as the vibrant scheme does) tint every
+// surface lilac. Here the neutrals lean the other way, towards cyan, and the
+// blue is a little calmer than vibrant's electric #004bef.
+const LIGHT = {
+  primary: TonalPalette.fromHueAndChroma(seedHct.hue, 66),
+  secondary: TonalPalette.fromHueAndChroma(seedHct.hue - 20, 16),
+  tertiary: TonalPalette.fromHueAndChroma(seedHct.hue - 60, 24),
+  neutral: TonalPalette.fromHueAndChroma(seedHct.hue - 25, 5),
+  neutralVariant: TonalPalette.fromHueAndChroma(seedHct.hue - 25, 9),
+}
+
+function schemeFor(isDark) {
+  if (isDark) return new SchemeVibrant(seedHct, true, 0)
+  return new DynamicScheme({
+    sourceColorHct: seedHct,
+    variant: Variant.TONAL_SPOT,
+    contrastLevel: 0,
+    isDark: false,
+    primaryPalette: LIGHT.primary,
+    secondaryPalette: LIGHT.secondary,
+    tertiaryPalette: LIGHT.tertiary,
+    neutralPalette: LIGHT.neutral,
+    neutralVariantPalette: LIGHT.neutralVariant,
+  })
+}
 
 function roles(isDark) {
-  const scheme = new SchemeVibrant(Hct.fromInt(seed), isDark, 0)
+  const scheme = schemeFor(isDark)
   const out = Object.fromEntries(
     ROLES.map((role) => [kebab(role), hexFromArgb(MaterialDynamicColors[role].getArgb(scheme))]),
   )

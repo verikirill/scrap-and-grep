@@ -1,10 +1,9 @@
-import { cn } from '../../lib/utils'
 import clsx from 'clsx'
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { ChipsInput } from '../../components/ChipsInput'
 import { Button, Field, Toggle } from '../../components/ui'
-import { INPUT_CLASS } from '../../components/tokens'
+import { INPUT_CLASS, TEXTAREA_CLASS } from '../../components/tokens'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs'
 import { WEEKDAYS } from '../../lib/publishing'
 import type { ChannelSettings } from '../../lib/publishing'
@@ -122,7 +121,7 @@ export function ChannelSettingsForm({
               maxLength={1000}
               rows={3}
               onChange={(event) => set('style', { instructions: event.target.value })}
-              className={cn(INPUT_CLASS, 'h-auto py-2.5')}
+              className={TEXTAREA_CLASS}
             />
           </Field>
           <Field label="Для кого пишем" hint="пусто - роль из профиля">
