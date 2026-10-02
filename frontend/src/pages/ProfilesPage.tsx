@@ -151,7 +151,8 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
             onClick={() => leaveTo(profile.id)}
             aria-current={profile.id === activeId ? 'true' : undefined}
             className={clsx(
-              'relative isolate flex items-center gap-2 rounded-full py-1 pr-3.5 pl-1 text-sm font-medium transition-colors duration-300',
+              // Never wider than the row: a long name used to push the whole page sideways on a phone.
+              'relative isolate flex max-w-full min-w-0 items-center gap-2 rounded-full py-1 pr-3.5 pl-1 text-sm font-medium transition-colors duration-300',
               profile.id === activeId
                 ? 'text-primary-foreground'
                 : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface',
@@ -165,7 +166,7 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
               />
             )}
             <ProfileAvatar profile={profile} size={28} />
-            <span className="relative max-w-80 truncate" title={profile.spec.name}>
+            <span className="relative min-w-0 truncate sm:max-w-80" title={profile.spec.name}>
               {profile.spec.name}
             </span>
           </button>
@@ -222,7 +223,7 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
 
       {/* The save button at the top is a screen away from a slider at the
           bottom: unsaved edits keep a bar of their own in view. */}
-      {dirty && <div aria-hidden className="h-20" />}
+      {dirty && <div aria-hidden className="h-24" />}
       <AnimatePresence>
         {dirty && (
           <motion.div
@@ -232,28 +233,31 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 16 }}
             transition={{ duration: 0.2, ease: EASE }}
-            className="fixed inset-x-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-20 mx-auto flex max-w-xl items-center gap-2 rounded-2xl bg-inverse-surface py-2 pr-2 pl-4 text-sm text-inverse-on-surface shadow-elevation-3 md:bottom-6"
+            className="fixed inset-x-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-20 mx-auto flex max-w-xl flex-wrap items-center gap-x-2 gap-y-1 rounded-2xl bg-inverse-surface py-2 pr-2 pl-4 text-sm text-inverse-on-surface shadow-elevation-3 md:bottom-6"
           >
-            <span className="min-w-0 flex-1">{problem ?? 'Правки не сохранены'}</span>
-            {saved && (
-              <button
-                type="button"
-                onClick={() => setDraft(saved)}
-                className="shrink-0 rounded-full px-3 py-2 font-medium hover:bg-inverse-on-surface/10"
+            {/* On a phone the buttons go under the text rather than squeeze it into a column. */}
+            <span className="min-w-44 flex-1 py-1">{problem ?? 'Правки не сохранены'}</span>
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+              {saved && (
+                <button
+                  type="button"
+                  onClick={() => setDraft(saved)}
+                  className="shrink-0 rounded-full px-3 py-2 font-medium hover:bg-inverse-on-surface/10"
+                >
+                  Отменить
+                </button>
+              )}
+              <Button
+                variant="primary"
+                size="sm"
+                icon={<Save size={15} />}
+                disabled={Boolean(problem)}
+                isBusy={save.isPending}
+                onClick={() => persist()}
               >
-                Отменить
-              </button>
-            )}
-            <Button
-              variant="primary"
-              size="sm"
-              icon={<Save size={15} />}
-              disabled={Boolean(problem)}
-              isBusy={save.isPending}
-              onClick={() => persist()}
-            >
-              Сохранить
-            </Button>
+                Сохранить
+              </Button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
