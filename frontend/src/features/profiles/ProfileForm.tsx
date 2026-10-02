@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { ChipsInput } from '../../components/ChipsInput'
-import { EASE, INPUT_CLASS, shortId } from '../../components/tokens'
+import { EASE, INPUT_CLASS, TEXTAREA_CLASS, shortId } from '../../components/tokens'
 import { Button, Card, Chip, Field } from '../../components/ui'
 import type { Interest, ProfileSpec, SourceCategory } from '../../lib/api'
 import { CATEGORY_LABELS } from '../../lib/format'
@@ -95,7 +95,7 @@ function InterestEditor({
               </Field>
               <Field label="Что именно интересует" hint="по этому тексту идёт смысловой поиск">
                 <textarea
-                  className={cn(INPUT_CLASS, 'min-h-16 resize-y')}
+                  className={cn(TEXTAREA_CLASS, 'min-h-16')}
                   value={interest.description}
                   maxLength={600}
                   onChange={(event) => onChange({ ...interest, description: event.target.value })}
@@ -200,7 +200,7 @@ export function ProfileForm({
         </div>
         <Field label="Кто читатель" hint="модель пишет «почему важно» под эту роль">
           <textarea
-            className={cn(INPUT_CLASS, 'min-h-20 resize-y')}
+            className={TEXTAREA_CLASS}
             value={spec.role}
             maxLength={600}
             onChange={(event) => onChange({ ...spec, role: event.target.value })}

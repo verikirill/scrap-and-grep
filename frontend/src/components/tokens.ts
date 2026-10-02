@@ -10,6 +10,14 @@ export const INPUT_CLASS =
   'hover:border-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary ' +
   'disabled:opacity-40'
 
+/**
+ * The same field, multi-line. The text sits as far from the top edge as from
+ * the left (12px of padding plus the half-leading of a 20px line ≈ 14px), and
+ * the box grows with its text instead of scrolling inside a fixed height.
+ */
+export const TEXTAREA_CLASS =
+  INPUT_CLASS + ' h-auto min-h-20 py-3 leading-5 field-sizing-content resize-y'
+
 /** Entrance for list rows: fade and rise, staggered only for the first screen. */
 export function rowMotion(index: number) {
   return {

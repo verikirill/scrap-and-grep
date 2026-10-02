@@ -1,8 +1,7 @@
-import { cn } from '../../lib/utils'
 import clsx from 'clsx'
 import { Check } from '../../components/icons'
 import { motion } from 'motion/react'
-import { INPUT_CLASS, rowMotion } from '../../components/tokens'
+import { INPUT_CLASS, TEXTAREA_CLASS, rowMotion } from '../../components/tokens'
 import { Field } from '../../components/ui'
 import type { Interest, ProfileSpec } from '../../lib/api'
 
@@ -100,7 +99,7 @@ export function SuggestionEditor({ spec, kept, onSpecChange, onKeptChange }: Pro
       </div>
       <Field label="Кто читатель" hint="по этому тексту модель пишет «почему важно»">
         <textarea
-          className={cn(INPUT_CLASS, 'min-h-20 resize-y')}
+          className={TEXTAREA_CLASS}
           value={spec.role}
           maxLength={600}
           onChange={(event) => onSpecChange({ ...spec, role: event.target.value })}
