@@ -2,7 +2,7 @@
 
 Решение полуфинала хакатона «ИИ-ассистенты для энергетики» ([задание](docs/task/TASK.md)). Жюри проверяет, может ли ИИ-ассистент заменить аналитика ИБ в поиске, отборе и приоритизации новостей. Tail&Grep делает эту работу сам: собирает 87 источников, включая сайты без ленты, защищённые от ботов, и Telegram-каналы, отбирает статьи по интересам читателя, ставит приоритет по правилу датасета организаторов, сверяет записи с текстом статей и с CISA KEV и БДУ ФСТЭК и выдаёт два выпуска: специалисту подробно за сутки, руководству тезисно за неделю, в Markdown и DOCX, из браузера или одной командой в консоли. Выпуск собирается за одну-четыре минуты на облачной модели. Сравнение с аналитиком-человеком подготовлено и ждёт разметки ([docs/eval/human](docs/eval/human/README.md)), расчёт экономии - в [BUSINESS](docs/BUSINESS.md).
 
-[Презентация](docs/presentation/tailgrep.pdf), 12 слайдов. Примеры: [выпуск специалисту за сутки](examples/specialist-daily.md), [выпуск руководству за неделю](examples/management-weekly.md). Кратко о возможностях и ограничениях - [docs/SUMMARY.md](docs/SUMMARY.md), план показа - [docs/DEMO.md](docs/DEMO.md).
+[Видео](https://git.codenrock.com/codenrock/ii-assistenty/misis-mojarung/assistent-dlya-sozdaniya-it-ib-daydzhestov/uploads/0330749424fd4ca4d8207d44f8679eba/tailgrep-demo.mp4), 4,5 минуты с голосом и субтитрами. [Презентация](docs/presentation/tailgrep.pdf), 12 слайдов. Примеры: [выпуск специалисту за сутки](examples/specialist-daily.md), [выпуск руководству за неделю](examples/management-weekly.md). Кратко о возможностях и ограничениях - [docs/SUMMARY.md](docs/SUMMARY.md), план показа - [docs/DEMO.md](docs/DEMO.md).
 
 ## Где что посмотреть по заданию
 
