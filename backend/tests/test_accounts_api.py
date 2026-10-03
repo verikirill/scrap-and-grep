@@ -415,6 +415,9 @@ async def test_a_digest_asked_for_without_a_period_covers_its_audiences_one(api:
             created = (await guest.post("/digests", json={"profile_id": profile_id})).json()
             start = datetime.fromisoformat(created["period_start"])
             spans[audience] = datetime.fromisoformat(created["period_end"]) - start
+            # Nothing builds them here; left queued, they would fill the limit of
+            # active digests that the schedule test counts on.
+            await guest.delete(f"/digests/{created['id']}")
 
     # Specialists read the last day, management the week, as the jury asked.
     assert spans == {"specialist": timedelta(days=1), "management": timedelta(days=7)}
