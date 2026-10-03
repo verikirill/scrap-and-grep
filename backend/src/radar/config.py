@@ -86,6 +86,17 @@ class Settings(BaseSettings):
     kev_url: str = (
         "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
     )
+    # NVD's records: the CVEs it changed, every hour, and those the articles
+    # name. Without a key NVD answers 5 requests in 30 s, with one 50. Empty
+    # turns it off.
+    nvd_api_url: str = "https://services.nvd.nist.gov/rest/json/cves/2.0"
+    nvd_api_key: SecretStr | None = None
+    # FIRST's EPSS scores of every CVE, once a day. Empty turns it off.
+    epss_url: str = "https://epss.empiricalsecurity.com/epss_scores-current.csv.gz"
+    # The index of Exploit-DB, once a day. Empty turns it off.
+    exploitdb_url: str = (
+        "https://gitlab.com/exploit-database/exploitdb/-/raw/main/files_exploits.csv"
+    )
     # MITRE ATT&CK for the techniques of an attack card, refreshed once a day.
     # Empty turns the refresh off; the snapshot in the package still answers.
     attack_url: str = (
@@ -316,7 +327,7 @@ class Settings(BaseSettings):
     def _one_proxy(cls, url: str) -> str:
         return check_proxy_url(url) if url else url
 
-    @field_validator("llm_api_key", mode="before")
+    @field_validator("llm_api_key", "nvd_api_key", mode="before")
     @classmethod
     def _unset_key(cls, value: object) -> object:
         # Compose passes a key that is not set as an empty string.

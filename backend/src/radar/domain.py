@@ -272,13 +272,33 @@ class VulnerabilityReference(BaseModel):
     bdu_cvss: str = ""
     bdu_vector: str = ""
     bdu_fix: str = ""
+    # NVD: the score to show, its vector, CWEs, vulnerable products, CISA's
+    # SSVC exploitation (active, poc, none) and links NVD tagged as an exploit.
+    nvd_cvss: str = ""
+    nvd_vector: str = ""
+    nvd_cwes: tuple[str, ...] = ()
+    nvd_products: tuple[str, ...] = ()
+    nvd_exploitation: str = ""
+    nvd_exploit_links: tuple[str, ...] = ()
+    nvd_patch: bool = False
+    # FIRST's EPSS: the probability of exploitation in 30 days and its percentile.
+    epss: float | None = None
+    epss_percentile: float | None = None
+    # Exploit-DB: the exploits published for it, as "EDB-51234".
+    exploits: tuple[str, ...] = ()
     # "model" when the model asked for it with its tool, "pipeline" when the
     # digest looked it up for an id on the card the model did not ask about.
     via: str = "pipeline"
 
     @property
     def found(self) -> bool:
-        return self.kev_added is not None or bool(self.bdu_id)
+        return (
+            self.kev_added is not None
+            or bool(self.bdu_id)
+            or bool(self.nvd_cvss or self.nvd_cwes or self.nvd_exploitation)
+            or self.epss is not None
+            or bool(self.exploits)
+        )
 
     def text(self) -> str:
         """The facts in words, for the model and for the check of a card."""
@@ -305,7 +325,36 @@ class VulnerabilityReference(BaseModel):
             if self.bdu_fix:
                 bdu.append(f"устранение: {self.bdu_fix}")
             parts.append("БДУ ФСТЭК " + ", ".join(bdu))
-        return f"{self.id}: " + ("; ".join(parts) if parts else "нет в CISA KEV и БДУ ФСТЭК")
+        # Phrased so the check of a card reads the exploit sign from them:
+        # "активно эксплуатируется" is in the wild, "опубликован PoC" is public.
+        nvd = []
+        if self.nvd_cvss:
+            nvd.append(f"оценка CVSS {self.nvd_cvss}")
+        if self.nvd_vector:
+            nvd.append(f"вектор {self.nvd_vector}")
+        if self.nvd_cwes:
+            nvd.append(", ".join(self.nvd_cwes))
+        if self.nvd_products:
+            nvd.append("затронуто: " + ", ".join(self.nvd_products))
+        if self.nvd_exploitation == "active":
+            nvd.append("по оценке CISA (SSVC) активно эксплуатируется")
+        elif self.nvd_exploitation == "poc":
+            nvd.append("по оценке CISA (SSVC) опубликован PoC")
+        if self.nvd_exploit_links:
+            nvd.append(f"публичный эксплойт по ссылке {self.nvd_exploit_links[0]}")
+        if self.nvd_patch:
+            nvd.append("есть исправление")
+        if nvd:
+            parts.append("NVD " + ", ".join(nvd))
+        if self.epss is not None:
+            percentile = (
+                f", выше {self.epss_percentile:.0%} уязвимостей" if self.epss_percentile else ""
+            )
+            chance = f"{self.epss:.1%}".replace(".", ",")
+            parts.append(f"EPSS {chance}: вероятность эксплуатации за 30 дней{percentile}")
+        if self.exploits:
+            parts.append("Exploit-DB: публичный эксплойт " + ", ".join(self.exploits))
+        return f"{self.id}: " + ("; ".join(parts) if parts else "нет в справочных базах")
 
 
 class ItemSummary(BaseModel):

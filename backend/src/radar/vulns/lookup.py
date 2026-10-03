@@ -4,6 +4,9 @@ The CISA KEV catalogue answers whether it is exploited in the wild. The BDU
 of FSTEC answers in Russian: an exploit in the open, use in attacks, the CVSS
 score and vector, the fix. BDU entries are articles of the BDU sources,
 written field by field by ingest/bdu.py; their lines are read back here.
+NVD adds the score, CWEs, products and CISA's SSVC decision, EPSS the chance
+of exploitation, Exploit-DB a published exploit. All of them are local
+copies the ingest worker keeps fresh: nothing is asked outside here.
 """
 
 import re
@@ -13,9 +16,17 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from radar.cards import identifiers
-from radar.db.models import Article, KnownExploitedVulnerability, Source
+from radar.db.models import (
+    Article,
+    EpssScore,
+    KnownExploitedVulnerability,
+    NvdVulnerability,
+    PublicExploit,
+    Source,
+)
 from radar.domain import VulnerabilityReference
 from radar.text import truncate
+from radar.vulns.nvd import ABSENT
 
 # Enough for one card: a roundup of thirty CVEs is not looked up whole.
 MAX_IDS = 6
@@ -61,6 +72,25 @@ async def lookup(session: AsyncSession, values: Sequence[str]) -> list[Vulnerabi
             select(KnownExploitedVulnerability).where(KnownExploitedVulnerability.cve_id.in_(cves))
         )
     }
+    nvd = {
+        row.cve_id: row
+        for row in await session.scalars(
+            select(NvdVulnerability).where(
+                NvdVulnerability.cve_id.in_(cves), NvdVulnerability.status != ABSENT
+            )
+        )
+    }
+    epss = {
+        row.cve_id: row
+        for row in await session.scalars(select(EpssScore).where(EpssScore.cve_id.in_(cves)))
+    }
+    exploits: dict[str, list[str]] = {}
+    for row in await session.scalars(
+        select(PublicExploit)
+        .where(PublicExploit.cve_id.in_(cves))
+        .order_by(PublicExploit.verified.desc(), PublicExploit.edb_id.desc())
+    ):
+        exploits.setdefault(row.cve_id, []).append(f"EDB-{row.edb_id}")
     # A BDU entry names its CVEs in its text; a BDU id is in its address.
     wanted = [Article.content.contains(value) for value in cves] + [
         Article.url.contains(value.removeprefix("BDU:"))
@@ -87,6 +117,8 @@ async def lookup(session: AsyncSession, values: Sequence[str]) -> list[Vulnerabi
             VulnerabilityReference(id=value),
         )
         known = kev.get(value)
+        record = nvd.get(value)
+        score = epss.get(value)
         references.append(
             bdu.model_copy(
                 update={
@@ -94,6 +126,16 @@ async def lookup(session: AsyncSession, values: Sequence[str]) -> list[Vulnerabi
                     "kev_ransomware": bool(known and known.ransomware),
                     "kev_due": known.due_date if known else None,
                     "kev_cwes": tuple(known.cwes) if known else (),
+                    "nvd_cvss": record.cvss_score if record else "",
+                    "nvd_vector": record.cvss_vector if record else "",
+                    "nvd_cwes": tuple(record.cwes) if record else (),
+                    "nvd_products": tuple(record.products[:3]) if record else (),
+                    "nvd_exploitation": record.exploitation if record else "",
+                    "nvd_exploit_links": tuple(record.exploit_links) if record else (),
+                    "nvd_patch": bool(record and record.patch_links),
+                    "epss": score.score if score else None,
+                    "epss_percentile": score.percentile if score else None,
+                    "exploits": tuple(exploits.get(value, ())[:3]),
                 }
             )
         )

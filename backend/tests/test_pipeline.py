@@ -480,6 +480,35 @@ async def test_a_card_keeps_only_the_references_about_its_own_vulnerability() ->
     assert [reference.id for reference in entry.references] == ["CVE-2026-92370"]
 
 
+async def test_a_reference_from_the_answer_cache_is_looked_up_again() -> None:
+    """An answer cached before the local copies of NVD, EPSS and Exploit-DB
+    knew the CVE gets their facts; who asked first stays the model."""
+    from radar.domain import ItemSummary, VulnerabilityCard
+    from radar.pipeline.graph import DigestNodes
+
+    class Richer(FakeStore):
+        async def vulnerability_facts(self, ids: Sequence[str]) -> list[VulnerabilityReference]:
+            return [
+                VulnerabilityReference(
+                    id=value, kev_added=date(2026, 9, 27), epss=0.42, exploits=("EDB-1",)
+                )
+                for value in ids
+            ]
+
+    nodes = DigestNodes(_deps(Richer([]), HeuristicIntelligence()))
+    card = ItemSummary(
+        summary="",
+        vulnerability=VulnerabilityCard(ids=("CVE-2026-2222",)),
+        references=(
+            VulnerabilityReference(id="CVE-2026-2222", kev_added=date(2026, 9, 27), via="model"),
+        ),
+    )
+
+    [reference] = (await nodes._with_references(card, "CVE-2026-2222")).references
+
+    assert (reference.epss, reference.exploits, reference.via) == (0.42, ("EDB-1",), "model")
+
+
 class ModelGrades(CountingIntelligence):
     """A model's grades, as the cache keeps them: by_model is set."""
 

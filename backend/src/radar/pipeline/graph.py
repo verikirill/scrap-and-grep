@@ -422,20 +422,30 @@ class DigestNodes:
         asked = {reference.id for reference in text.references if reference.via == "model"}
         covered = {reference.id for reference in kept} | {reference.bdu_id for reference in kept}
         missing = [value for value in ids if value not in covered]
-        found: list[VulnerabilityReference] = []
-        if missing:
-            try:
-                found = await self._deps.store.vulnerability_facts(missing)
-            except Exception as exc:
-                log.warning(
-                    "vulnerability_lookup_failed", error=f"{type(exc).__name__}: {exc}"[:300]
-                )
-        # Who asked first is kept for the stats: the model, if it used its tool.
-        found = [
-            reference.model_copy(update={"via": "model"}) if reference.id in asked else reference
-            for reference in found
+        # The kept ones are looked up again too: an answer from the cache was
+        # made with the bases of its day, and the local copies of NVD, EPSS
+        # and Exploit-DB have more to say since.
+        wanted = [*(reference.id for reference in kept), *missing]
+        if not wanted:
+            return text.model_copy(update={"references": kept})
+        try:
+            found = await self._deps.store.vulnerability_facts(wanted)
+        except Exception as exc:
+            log.warning("vulnerability_lookup_failed", error=f"{type(exc).__name__}: {exc}"[:300])
+            found = []
+        fresh = {reference.id: reference for reference in found}
+        # One the bases no longer know (a table being refilled) keeps its old answer.
+        renewed = [
+            fresh[reference.id] if fresh.get(reference.id, reference).found else reference
+            for reference in kept
         ]
-        return text.model_copy(update={"references": (*kept, *found)})
+        added = [reference for reference in found if reference.id in missing]
+        # Who asked first is kept for the stats: the model, if it used its tool.
+        references = [
+            reference.model_copy(update={"via": "model"}) if reference.id in asked else reference
+            for reference in (*renewed, *added)
+        ]
+        return text.model_copy(update={"references": tuple(references)})
 
     async def name_topic(self, state: TopicTask) -> dict[str, Any]:
         items = [SelectedItem.model_validate(item) for item in state["items"]]
