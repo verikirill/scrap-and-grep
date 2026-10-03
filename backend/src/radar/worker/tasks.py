@@ -4,6 +4,7 @@ import asyncio
 import uuid
 from datetime import UTC, datetime, timedelta
 
+from sqlalchemy import func, select
 from taskiq import Context, TaskiqDepends, TaskiqEvents, TaskiqState
 
 from radar.ai.factory import get_embedder
@@ -12,6 +13,7 @@ from radar.auth import sessions as auth_sessions
 from radar.cache import get_cache
 from radar.config import get_settings
 from radar.db import session_scope
+from radar.db.models import EpssScore, PublicExploit
 from radar.events import enabled as events_enabled
 from radar.events import writer as event_writer
 from radar.images.store import get_image_store
@@ -33,7 +35,7 @@ from radar.shorts.renderer import RendererBusy
 from radar.store import digests as digest_store
 from radar.store import profiles as profile_store
 from radar.store import schedules as schedule_store
-from radar.vulns import attack, kev
+from radar.vulns import attack, epss, exploitdb, kev, nvd
 from radar.worker.brokers import (
     DIGEST_IDLE_TIMEOUT_MS,
     MEDIA_IDLE_TIMEOUT_MS,
@@ -343,6 +345,48 @@ async def refresh_kev() -> int:
     return kept
 
 
+@ingest_broker.task(task_name="refresh_nvd", schedule=[{"cron": "17 * * * *"}])
+async def refresh_nvd() -> dict[str, int]:
+    """Every hour: the CVEs NVD changed, then those the articles name that are
+    not kept yet. A digest reads only the local copy."""
+    settings = get_settings()
+    url = settings.nvd_api_url
+    if not url:
+        return {}
+    key = settings.nvd_api_key.get_secret_value() if settings.nvd_api_key else ""
+    async with build_client() as client:
+        async with session_scope() as session:
+            changed, cursor = await nvd.refresh_changed(session, client, get_cache(), url, key)
+        await nvd.remember(get_cache(), cursor)
+        async with session_scope() as session:
+            named = await nvd.backfill(session, client, url, key)
+    return {"changed": changed, "named": named}
+
+
+@ingest_broker.task(task_name="refresh_epss", schedule=[{"cron": "37 5 * * *"}])
+async def refresh_epss() -> int:
+    """Once a day: FIRST's EPSS scores of every CVE, if the file changed."""
+    url = get_settings().epss_url
+    if not url:
+        return 0
+    async with build_client() as client, session_scope() as session:
+        kept, last_modified = await epss.refresh(session, client, get_cache(), url)
+    await epss.remember(get_cache(), last_modified)
+    return kept
+
+
+@ingest_broker.task(task_name="refresh_exploitdb", schedule=[{"cron": "47 5 * * *"}])
+async def refresh_exploitdb() -> int:
+    """Once a day: the index of Exploit-DB, if it changed."""
+    url = get_settings().exploitdb_url
+    if not url:
+        return 0
+    async with build_client() as client, session_scope() as session:
+        kept, etag = await exploitdb.refresh(session, client, get_cache(), url)
+    await exploitdb.remember(get_cache(), etag)
+    return kept
+
+
 @ingest_broker.task(task_name="refresh_attack", schedule=[{"cron": "23 4 * * *"}])
 async def refresh_attack() -> int:
     """Once a day: MITRE ATT&CK, if it changed (54 MB, a 304 otherwise). Until
@@ -366,9 +410,18 @@ async def refresh_source_avatars() -> int:
 @ingest_broker.on_event(TaskiqEvents.WORKER_STARTUP)
 async def _kev_at_start(state: TaskiqState) -> None:
     # A fresh stack looks vulnerabilities up before the first hourly round,
-    # and shows its sources' pictures before the first six-hourly one.
+    # and shows its sources' pictures before the first six-hourly one. EPSS
+    # and Exploit-DB are taken at start only into empty tables: the daily
+    # EPSS file takes most of a minute, and a restart must not wait for it.
+    async with session_scope() as session:
+        empty = {
+            model: not await session.scalar(select(func.count()).select_from(model))
+            for model in (EpssScore, PublicExploit)
+        }
     for task, event in (
         (refresh_kev, "kev_not_refreshed"),
+        *([(refresh_epss, "epss_not_refreshed")] if empty[EpssScore] else []),
+        *([(refresh_exploitdb, "exploitdb_not_refreshed")] if empty[PublicExploit] else []),
         (refresh_source_avatars, "avatars_not_refreshed"),
     ):
         try:

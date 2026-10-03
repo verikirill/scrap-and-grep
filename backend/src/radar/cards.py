@@ -651,7 +651,17 @@ def reference_rows(references: Sequence[VulnerabilityReference]) -> list[tuple[s
             if reference.bdu_in_attacks:
                 bdu.append("используется в атаках")
             facts.append(", ".join(bdu))
+        if reference.nvd_exploitation == "active":
+            facts.append("CISA SSVC: эксплуатируется")
+        if reference.exploits:
+            facts.append(f"эксплойт в Exploit-DB {reference.exploits[0]}")
+        elif reference.nvd_exploit_links or reference.nvd_exploitation == "poc":
+            facts.append("публичный эксплойт по NVD")
+        if reference.epss is not None:
+            facts.append(f"EPSS {reference.epss:.1%}".replace(".", ","))
+        if reference.nvd_cvss and not reference.bdu_cvss:
+            facts.append(f"CVSS {reference.nvd_cvss} по NVD")
         parts.append(f"{reference.id}: {'; '.join(facts)}")
     if unknown:
-        parts.append(f"нет в CISA KEV и БДУ: {', '.join(unknown)}")
+        parts.append(f"нет в справочных базах: {', '.join(unknown)}")
     return [("Сверено по базам", "; ".join(parts))]

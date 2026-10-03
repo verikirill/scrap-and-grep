@@ -143,6 +143,60 @@ class AttackTechniqueRow(Base):
     name: Mapped[str] = mapped_column(Text)
 
 
+class NvdVulnerability(Base):
+    """What NVD says of a CVE: the score, the weaknesses, the products, and
+    whether CISA's SSVC or the references point at an exploit. Kept for CVEs
+    NVD changed lately and for those the articles name (vulns/nvd.py)."""
+
+    __tablename__ = "nvd_vulnerabilities"
+
+    cve_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    # NVD's own status ("Analyzed", "Awaiting Analysis"...), or "Absent" when
+    # NVD had no such CVE when it was asked: asked again a few days later.
+    status: Mapped[str] = mapped_column(String(32), default="")
+    published: Mapped[date | None] = mapped_column(Date)
+    last_modified: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    description: Mapped[str] = mapped_column(Text, default="")
+    cvss_version: Mapped[str] = mapped_column(String(8), default="")
+    cvss_score: Mapped[str] = mapped_column(String(8), default="")
+    cvss_vector: Mapped[str] = mapped_column(Text, default="")
+    severity: Mapped[str] = mapped_column(String(16), default="")
+    cwes: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list, server_default="{}")
+    # CISA's SSVC "exploitation": active, poc or none; empty when not assessed.
+    exploitation: Mapped[str] = mapped_column(String(8), default="")
+    exploit_links: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list, server_default="{}")
+    patch_links: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list, server_default="{}")
+    products: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list, server_default="{}")
+    checked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class EpssScore(Base):
+    """FIRST's EPSS: the probability of exploitation within 30 days, and its
+    percentile among all CVEs; the whole daily file (vulns/epss.py)."""
+
+    __tablename__ = "epss_scores"
+
+    cve_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    score: Mapped[float] = mapped_column(Float)
+    percentile: Mapped[float] = mapped_column(Float)
+    scored_on: Mapped[date | None] = mapped_column(Date)
+
+
+class PublicExploit(Base):
+    """An exploit published in Exploit-DB, one row per CVE it names
+    (vulns/exploitdb.py)."""
+
+    __tablename__ = "public_exploits"
+
+    cve_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    edb_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    title: Mapped[str] = mapped_column(Text, default="")
+    kind: Mapped[str] = mapped_column(String(16), default="")
+    platform: Mapped[str] = mapped_column(String(32), default="")
+    published: Mapped[date | None] = mapped_column(Date)
+    verified: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
 class Article(Base):
     __tablename__ = "articles"
 
