@@ -16,7 +16,15 @@ from sqlalchemy import select
 
 from radar import aio
 from radar.config import get_settings
-from radar.console import Audience, ConsoleError, Target, file_stem, progress_line, targets
+from radar.console import (
+    Audience,
+    ConsoleError,
+    Target,
+    addresses,
+    file_stem,
+    progress_line,
+    targets,
+)
 from radar.logging import configure_logging, get_logger
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
@@ -178,6 +186,46 @@ def embed() -> None:
 PROGRESS_POLL_SECONDS = 1.0
 
 
+async def _add_sources(path: Path) -> None:
+    """Each address of the file detected, added to the catalog and fetched now,
+    as «Любой адрес» does in the browser. One that cannot be read is reported
+    and skipped; one already in the catalog is fetched as it is."""
+    from radar.ai.factory import get_embedder
+    from radar.cache import get_cache
+    from radar.db import session_scope
+    from radar.db.models import Source
+    from radar.ingest.detect import NotFound, as_source, detect
+    from radar.ingest.net import build_client
+    from radar.ingest.service import embed_pending, ingest_source
+
+    wanted = addresses(await asyncio.to_thread(path.read_text, encoding="utf-8"))
+    typer.echo(f"Источники из {path.name}: {len(wanted)}")
+    async with build_client() as client:
+        for address in wanted:
+            try:
+                found = await detect(address, client)
+            except NotFound as exc:
+                typer.echo(f"  - {address}: {exc}")
+                continue
+            source = as_source(found)
+            async with session_scope() as session:
+                known = await session.scalar(
+                    select(Source.id).where(
+                        (Source.slug == source.slug) | (Source.feed_url == source.feed_url)
+                    )
+                )
+                if known is None:
+                    session.add(source)
+                    await session.flush()
+                    known = source.id
+            outcome = await ingest_source(known, client, get_cache())
+            how = found.fetch_method or "plain"
+            typer.echo(
+                f"  + {found.name} ({found.kind}, {how}): новых публикаций {outcome.new_articles}"
+            )
+    await embed_pending(get_embedder())
+
+
 async def _register(target: Target, email: str | None) -> tuple[uuid.UUID, int]:
     """The digest's row for this target, and the period it covers in days."""
     from radar.auth import DEMO_EMAIL
@@ -308,6 +356,15 @@ def digest(
         typer.Option(min=1, max=90, help="Period; a day for specialists, a week for management."),
     ] = None,
     fresh: Annotated[bool, typer.Option(help="Fetch every source before building.")] = False,
+    source_file: Annotated[
+        Path | None,
+        typer.Option(
+            "--sources",
+            help="A file of addresses to add before building, one per line: sites, news "
+            "sections, feeds or @channels.",
+            dir_okay=False,
+        ),
+    ] = None,
     out: Annotated[Path, typer.Option(help="Directory for the .md and .docx files.")] = Path("."),
 ) -> None:
     """Build digests in this process and write them as Markdown and DOCX.
@@ -321,6 +378,8 @@ def digest(
         raise typer.BadParameter(str(exc)) from exc
 
     async def run() -> list[Path]:
+        if source_file is not None:
+            await _add_sources(source_file)
         if fresh:
             typer.echo("Опрашиваем источники...")
             sources, new_articles, _ = await _ingest_now()

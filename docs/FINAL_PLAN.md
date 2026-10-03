@@ -458,7 +458,7 @@ ls out/
 
 ### И1. Консольная команда для жюри - P0
 
-Статус: сделано, кроме `--sources` - сервис `cli` (профиль `cli`, том `./out`), `radar digest` с `--audience`, `--profile`, `--profile-file`, `--days`, `--fresh`, этапы в терминале, файлы `specialist-1d-<дата>-<время>.md` и `.docx`, владелец файлов - хозяин папки. Вживую: оба выпуска за 51 с, специалисту с прогретым кешем 6 с. ветка `feature/console`.
+Статус: сделано - сервис `cli` (профиль `cli`, том `./out`), `radar digest` с `--audience`, `--profile`, `--profile-file`, `--days`, `--fresh`, этапы в терминале, файлы `specialist-1d-<дата>-<время>.md` и `.docx`, владелец файлов - хозяин папки. Вживую: оба выпуска за 51 с, специалисту с прогретым кешем 6 с. `--sources файл`: адреса определяются, добавляются и опрашиваются до сборки; вживую `securitycode.ru/company/news/` (лента, 9 публикаций) и `@dataleak` (канал, 18), несуществующий домен пропущен с причиной. ветки `feature/console`, `feature/attack-details`.
 
 - Сервис `cli` в Compose (профиль `cli`) с томом `./out`.
 - `radar digest --audience specialist|management|both --days N --out /out` без обязательных `--profile` и `--email`: берёт пример профиля нужной аудитории.
