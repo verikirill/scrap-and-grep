@@ -331,6 +331,8 @@ class MetaOut(BaseModel):
     sources_failing: int
     demo_login: bool
     registration_open: bool
+    # False: the app enters a visitor as a guest instead of showing sign-in.
+    sign_in_required: bool = True
     resume_parser: str
     resume_formats: list[str]
     resume_max_bytes: int

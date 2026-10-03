@@ -178,6 +178,10 @@ class Settings(BaseSettings):
     # with the example profiles. Handy for a demonstration; turn it off on a
     # server open to the internet.
     demo_login: bool = True
+    # "off": no sign-in screen. A visitor without a session is entered as a
+    # guest of their own at once, as the jury asked; registering stays in the
+    # account menu. Guests can always be created then, whatever demo_login says.
+    auth: Literal["on", "off"] = "on"
     guest_ttl_hours: int = Field(default=24, ge=1)
     # Sign-in and registration attempts per address and minute.
     auth_rate_limit_per_minute: int = 10

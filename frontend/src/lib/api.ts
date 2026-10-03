@@ -389,6 +389,8 @@ export interface Meta {
   sources_failing: number
   demo_login: boolean
   registration_open: boolean
+  /** False: a visitor without a session is entered as a guest, no sign-in screen. */
+  sign_in_required: boolean
   resume_parser: 'builtin' | 'docling'
   resume_formats: string[]
   resume_max_bytes: number

@@ -1,6 +1,8 @@
 """Operational commands: migrations, seeding, one-off ingestion and digests."""
 
 import asyncio
+import os
+import sys
 import uuid
 from datetime import UTC, datetime, timedelta
 from importlib import resources
@@ -14,6 +16,7 @@ from sqlalchemy import select
 
 from radar import aio
 from radar.config import get_settings
+from radar.console import Audience, ConsoleError, Target, file_stem, progress_line, targets
 from radar.logging import configure_logging, get_logger
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
@@ -119,41 +122,44 @@ def seed(
     aio.run(_seed(_existing(sample)))
 
 
+async def _ingest_now(source: str | None = None) -> tuple[int, int, int]:
+    """Fetch the sources in this process and embed what is new: sources, new
+    articles, embedded."""
+    from radar.ai.factory import get_embedder
+    from radar.cache import get_cache
+    from radar.db import session_scope
+    from radar.db.models import Source
+    from radar.ingest.net import build_client
+    from radar.ingest.service import embed_pending, enabled_source_ids, ingest_source
+
+    if source is None:
+        source_ids = await enabled_source_ids()
+    else:
+        async with session_scope() as session:
+            found = await session.scalar(select(Source.id).where(Source.slug == source))
+        if found is None:
+            raise typer.BadParameter(f"unknown source: {source}")
+        source_ids = [found]
+
+    slots = asyncio.Semaphore(6)
+    async with build_client() as client:
+
+        async def one(source_id: int) -> int:
+            async with slots:
+                return (await ingest_source(source_id, client, get_cache())).new_articles
+
+        counts = await asyncio.gather(*(one(source_id) for source_id in source_ids))
+    embedded = await embed_pending(get_embedder())
+    return len(source_ids), sum(counts), embedded
+
+
 @app.command()
 def ingest(
     source: Annotated[str | None, typer.Option(help="Source slug; all enabled if omitted.")] = None,
 ) -> None:
     """Fetch feeds now, in this process, and embed what is new."""
-
-    async def run() -> None:
-        from radar.ai.factory import get_embedder
-        from radar.cache import get_cache
-        from radar.db import session_scope
-        from radar.db.models import Source
-        from radar.ingest.net import build_client
-        from radar.ingest.service import embed_pending, enabled_source_ids, ingest_source
-
-        if source is None:
-            source_ids = await enabled_source_ids()
-        else:
-            async with session_scope() as session:
-                found = await session.scalar(select(Source.id).where(Source.slug == source))
-            if found is None:
-                raise typer.BadParameter(f"unknown source: {source}")
-            source_ids = [found]
-
-        slots = asyncio.Semaphore(6)
-        async with build_client() as client:
-
-            async def one(source_id: int) -> int:
-                async with slots:
-                    return (await ingest_source(source_id, client, get_cache())).new_articles
-
-            counts = await asyncio.gather(*(one(source_id) for source_id in source_ids))
-        embedded = await embed_pending(get_embedder())
-        typer.echo(f"sources={len(source_ids)} new_articles={sum(counts)} embedded={embedded}")
-
-    aio.run(run())
+    sources, new_articles, embedded = aio.run(_ingest_now(source))
+    typer.echo(f"sources={sources} new_articles={new_articles} embedded={embedded}")
 
 
 @app.command()
@@ -169,66 +175,160 @@ def embed() -> None:
     aio.run(run())
 
 
-@app.command()
-def digest(
-    profile: Annotated[str, typer.Option(help="Profile name (exact match).")],
-    email: Annotated[
-        str | None, typer.Option(help="Owner of the profile; the demo account if omitted.")
-    ] = None,
-    days: Annotated[int, typer.Option(min=1, max=90)] = 7,
-    out: Annotated[Path, typer.Option(help="Directory for the .md and .docx files.")] = Path("."),
-) -> None:
-    """Build a digest in this process and write it as Markdown and DOCX."""
+PROGRESS_POLL_SECONDS = 1.0
 
-    async def run() -> None:
-        from radar.auth import DEMO_EMAIL
-        from radar.db import session_scope
-        from radar.db.models import Profile, User
-        from radar.domain import ProfileSpec
-        from radar.pipeline.runner import report_failure, run_digest
-        from radar.render.docx import render_docx
-        from radar.render.markdown import render_markdown
-        from radar.store import digests as digest_store
-        from radar.views import digest_view
 
-        now = datetime.now(UTC)
-        async with session_scope() as session:
+async def _register(target: Target, email: str | None) -> tuple[uuid.UUID, int]:
+    """The digest's row for this target, and the period it covers in days."""
+    from radar.auth import DEMO_EMAIL
+    from radar.db import session_scope
+    from radar.db.models import Profile, User
+    from radar.domain import ProfileSpec
+    from radar.store import digests as digest_store
+
+    now = datetime.now(UTC)
+    owner = (email or DEMO_EMAIL).lower()
+    async with session_scope() as session:
+        if target.spec is not None:
+            user_id = await session.scalar(select(User.id).where(User.email == owner))
+            if user_id is None:
+                raise typer.BadParameter(f"no account {owner}: run `radar migrate --seed` first")
+            spec, profile_id, version = target.spec, None, 1
+        else:
             row = await session.scalar(
                 select(Profile)
                 .join(User, User.id == Profile.user_id)
-                .where(Profile.name == profile, User.email == (email or DEMO_EMAIL).lower())
+                .where(Profile.name == target.profile_name, User.email == owner)
             )
             if row is None:
-                raise typer.BadParameter(f"unknown profile: {profile}")
-            created = await digest_store.create(
-                session,
-                user_id=row.user_id,
-                profile_id=row.id,
-                profile=ProfileSpec.model_validate(row.spec),
-                profile_version=row.version,
-                period_start=now - timedelta(days=days),
-                period_end=now,
-            )
-            digest_id: uuid.UUID = created.id
+                raise typer.BadParameter(f"unknown profile: {target.profile_name}")
+            user_id, profile_id, version = row.user_id, row.id, row.version
+            spec = ProfileSpec.model_validate(row.spec)
+        days = target.period(spec.audience)
+        created = await digest_store.create(
+            session,
+            user_id=user_id,
+            profile_id=profile_id,
+            profile=spec,
+            profile_version=version,
+            period_start=now - timedelta(days=days),
+            period_end=now,
+        )
+        return created.id, days
 
-        try:
-            await run_digest(digest_id)
-        except Exception as exc:
-            # No queue here, so no retry: record the failure before leaving.
-            await report_failure(digest_id, exc)
-            raise
+
+async def _show_progress(digest_id: uuid.UUID) -> None:
+    """Print each stage as the build reaches it, read from the digest's row."""
+    from radar.db import session_scope
+    from radar.db.models import Digest
+
+    shown = None
+    while True:
         async with session_scope() as session:
-            loaded = await digest_store.get(session, digest_id, full=True)
-            if loaded is None:
-                raise typer.Exit(code=1)
-            view = digest_view(loaded)
-        out.mkdir(parents=True, exist_ok=True)
-        stem = f"digest-{now:%Y%m%d}-{digest_id.hex[-6:]}"
-        (out / f"{stem}.md").write_text(render_markdown(view), encoding="utf-8", newline="\n")
-        (out / f"{stem}.docx").write_bytes(render_docx(view))
-        typer.echo(f"digest={digest_id} items={view.stats.get('selected')} -> {out / stem}.md")
+            row = (
+                await session.execute(
+                    select(Digest.stage, Digest.progress).where(Digest.id == digest_id)
+                )
+            ).one_or_none()
+        if row is not None and row.stage not in (shown, "done"):
+            shown = row.stage
+            typer.echo(progress_line(row.stage, row.progress))
+        await asyncio.sleep(PROGRESS_POLL_SECONDS)
 
-    aio.run(run())
+
+def _hand_over(path: Path) -> None:
+    """Run as root to write into any ./out, the file goes to the folder's owner."""
+    if sys.platform != "win32" and os.geteuid() == 0:
+        owner = path.parent.stat()
+        os.chown(path, owner.st_uid, owner.st_gid)
+
+
+def _write(out: Path, stem: str, markdown: str, docx: bytes) -> Path:
+    out.mkdir(parents=True, exist_ok=True)
+    md_path, docx_path = out / f"{stem}.md", out / f"{stem}.docx"
+    md_path.write_text(markdown, encoding="utf-8", newline="\n")
+    docx_path.write_bytes(docx)
+    for path in (md_path, docx_path):
+        _hand_over(path)
+    return md_path
+
+
+async def _build(target: Target, email: str | None, out: Path) -> Path:
+    from radar.db import session_scope
+    from radar.pipeline.runner import report_failure, run_digest
+    from radar.render.docx import render_docx
+    from radar.render.markdown import render_markdown
+    from radar.store import digests as digest_store
+    from radar.views import digest_view
+
+    digest_id, days = await _register(target, email)
+    typer.echo(f"\n{target.label}: выпуск за {days} дн.")
+    watcher = asyncio.create_task(_show_progress(digest_id))
+    try:
+        await run_digest(digest_id)
+    except Exception as exc:
+        # No queue here, so no retry: record the failure before leaving.
+        await report_failure(digest_id, exc)
+        raise
+    finally:
+        watcher.cancel()
+    async with session_scope() as session:
+        loaded = await digest_store.get(session, digest_id, full=True)
+        if loaded is None:
+            raise typer.Exit(code=1)
+        view = digest_view(loaded)
+    stem = file_stem(target.label, days, datetime.now().astimezone())
+    markdown = await asyncio.to_thread(_write, out, stem, render_markdown(view), render_docx(view))
+    stats = view.stats
+    typer.echo(
+        f"Готово: {stats.get('selected', 0)} записей из {stats.get('window_total', 0)} "
+        f"публикаций, модель {stats.get('llm')}, {stats.get('duration_seconds', 0):.0f} с"
+    )
+    return markdown
+
+
+@app.command()
+def digest(
+    audience: Annotated[
+        Audience | None,
+        typer.Option(help="The example profile of an audience; both if nothing is chosen."),
+    ] = None,
+    profile: Annotated[
+        str | None, typer.Option(help="A saved profile by name, instead of an audience.")
+    ] = None,
+    profile_file: Annotated[
+        Path | None,
+        typer.Option(help="A profile from a JSON file, as in examples/profiles/.", dir_okay=False),
+    ] = None,
+    email: Annotated[
+        str | None, typer.Option(help="Owner of the profile; the demo account if omitted.")
+    ] = None,
+    days: Annotated[
+        int | None,
+        typer.Option(min=1, max=90, help="Period; a day for specialists, a week for management."),
+    ] = None,
+    fresh: Annotated[bool, typer.Option(help="Fetch every source before building.")] = False,
+    out: Annotated[Path, typer.Option(help="Directory for the .md and .docx files.")] = Path("."),
+) -> None:
+    """Build digests in this process and write them as Markdown and DOCX.
+
+    Without options: one for specialists over the last day and one for
+    management over the last week, from the example profiles.
+    """
+    try:
+        wanted = targets(audience, profile, profile_file, days)
+    except ConsoleError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    async def run() -> list[Path]:
+        if fresh:
+            typer.echo("Опрашиваем источники...")
+            sources, new_articles, _ = await _ingest_now()
+            typer.echo(f"{sources} источников, новых публикаций: {new_articles}")
+        return [await _build(target, email, out) for target in wanted]
+
+    for path in aio.run(run()):
+        typer.echo(f"Markdown: {path}  DOCX: {path.parent / (path.stem + '.docx')}")
 
 
 @app.command("grant-admin")

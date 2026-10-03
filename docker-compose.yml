@@ -52,6 +52,8 @@ x-backend: &backend
     # Accounts. The demo sign-in is on by default so that the stack can be
     # looked at without registering; turn it off outside a demonstration.
     RADAR_DEMO_LOGIN: ${RADAR_DEMO_LOGIN:-true}
+    # No sign-in screen: a visitor is entered as a guest of their own.
+    RADAR_AUTH: ${RADAR_AUTH:-off}
     RADAR_REGISTRATION_OPEN: ${RADAR_REGISTRATION_OPEN:-true}
     RADAR_COOKIE_SECURE: ${RADAR_COOKIE_SECURE:-false}
     # Empty: resumes are read by the built-in parser. With the docling
@@ -282,6 +284,29 @@ services:
   scheduler:
     <<: *backend
     command: ["taskiq", "scheduler", "radar.worker.brokers:scheduler", "radar.worker.tasks"]
+
+  # Digests without a browser, written to ./out:
+  #   docker compose run --rm cli digest --audience specialist
+  # Root inside, so that it can write into ./out whoever owns it on the host;
+  # the files are then handed to the folder's owner. Reaches the browser
+  # step like the ingest worker does, for `digest --fresh`.
+  cli:
+    <<: *backend
+    profiles: ["cli"]
+    restart: "no"
+    entrypoint: ["radar"]
+    command: ["digest", "--help"]
+    user: "0:0"
+    cap_drop: []
+    working_dir: /out
+    environment:
+      <<: *backend-env
+      RADAR_LOG_LEVEL: ${RADAR_CLI_LOG_LEVEL:-WARNING}
+    volumes:
+      - ./out:/out
+    networks:
+      - default
+      - solving
 
   # Caddy serves the built frontend and balances /api across api replicas.
   web:
