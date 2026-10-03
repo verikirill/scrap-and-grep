@@ -2,7 +2,7 @@
 
 import uuid
 from collections.abc import Sequence
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import delete, func, select, update
@@ -10,7 +10,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from radar.cards import priority
-from radar.db.models import Digest, DigestItem, DigestTopic
+from radar.db.models import Article, Digest, DigestItem, DigestTopic
+from radar.digest_extras import (
+    HISTORY_DAYS,
+    HISTORY_ISSUES,
+    changes,
+    tag_counts,
+    vulnerability_states,
+)
 from radar.domain import DigestOverview, GradedCandidate, ItemSummary, ProfileSpec, Topic
 
 STATUS_QUEUED = "queued"
@@ -226,6 +233,7 @@ async def save_result(
         )
         position += 1
 
+    stats = {**stats, **await _history(session, digest_id, topics)}
     await session.execute(
         update(Digest)
         .where(Digest.id == digest_id)
@@ -241,6 +249,79 @@ async def save_result(
             finished_at=datetime.now(UTC),
         )
     )
+
+
+async def _history(
+    session: AsyncSession, digest_id: uuid.UUID, topics: Sequence[Topic]
+) -> dict[str, Any]:
+    """What the earlier issues of the same profile and audience say about this
+    one: what changed for the vulnerabilities they had, and the previous issue
+    of the same length's tags, for management's numbers."""
+    digest = await session.get(Digest, digest_id)
+    if digest is None or digest.profile_id is None:
+        return {}
+    audience = digest.profile_spec.get("audience", "specialist")
+    found = await session.scalars(
+        select(Digest)
+        .where(
+            Digest.profile_id == digest.profile_id,
+            Digest.status == STATUS_DONE,
+            Digest.id != digest_id,
+            Digest.created_at < digest.created_at,
+            Digest.created_at >= digest.created_at - timedelta(days=HISTORY_DAYS),
+        )
+        .order_by(Digest.created_at.desc())
+        # One build for both audiences writes two digests of one profile.
+        .limit(HISTORY_ISSUES * 2)
+    )
+    earlier = [row for row in found if row.profile_spec.get("audience", "specialist") == audience]
+    earlier = earlier[:HISTORY_ISSUES]
+    if not earlier:
+        return {}
+    rows = (
+        await session.execute(
+            select(DigestItem, Article.url, Article.title)
+            .join(Article, Article.id == DigestItem.article_id)
+            .where(DigestItem.digest_id.in_([row.id for row in earlier]), DigestItem.selected)
+        )
+    ).all()
+    when = {row.id: row.finished_at or row.created_at for row in earlier}
+    texts = [
+        (
+            ItemSummary.model_validate({"summary": item.summary, **(item.card or {})}),
+            item,
+            url,
+            title,
+        )
+        for item, url, title in rows
+    ]
+    past = vulnerability_states(
+        (text, item.headline or title, url, when[item.digest_id])
+        for text, item, url, title in texts
+    )
+    current = vulnerability_states(
+        (item.text, item.text.headline or item.article.title, item.article.url, digest.created_at)
+        for topic in topics
+        for item in topic.items
+        if item.text is not None
+    )
+    result: dict[str, Any] = {
+        "changes": [change.model_dump(mode="json") for change in changes(past, current)]
+    }
+    length = digest.period_end - digest.period_start
+    previous = next(
+        (
+            row
+            for row in earlier
+            if abs((row.period_end - row.period_start) - length) < timedelta(hours=1)
+        ),
+        None,
+    )
+    if previous is not None:
+        result["tags_before"] = tag_counts(
+            text for text, item, _, _ in texts if item.digest_id == previous.id
+        )
+    return result
 
 
 def _card(text: ItemSummary | None) -> dict[str, Any]:
