@@ -16,6 +16,7 @@ from radar.db.models import Source
 from radar.images.extract import from_page
 from radar.ingest.feeds import CONTENT_LIMIT, FeedResult, fetch_feed
 from radar.ingest.fetch import Ladder, Outcome
+from radar.ingest.health import error_kind, record_poll
 from radar.ingest.pages import fetch_listing, page_text
 from radar.ingest.polite import robots_allows
 from radar.ingest.ptsecurity import fetch_trending
@@ -104,12 +105,27 @@ async def ingest_source(source_id: int, client: httpx.AsyncClient, cache: Cache)
         except Exception as exc:
             await ladder.aclose()
             error = f"{type(exc).__name__}: {exc}"[:500]
-            log.warning("ingest_failed", source_id=source_id, error=error)
-            await _record(source_id, status="error", error=error, read=ladder.first, robots=robots)
+            kind = error_kind(exc)
+            log.warning("ingest_failed", source_id=source_id, error=error, kind=kind)
+            await _record(
+                source_id,
+                status="error",
+                error=error,
+                kind=kind,
+                read=ladder.first,
+                robots=robots,
+            )
             return IngestReport(source_id, "error", error=error)
 
         await ladder.aclose()
-        await _record(source_id, status=feed.status, feed=feed, read=ladder.first, robots=robots)
+        await _record(
+            source_id,
+            status=feed.status,
+            feed=feed,
+            new=len(new_ids),
+            read=ladder.first,
+            robots=robots,
+        )
         log.info("ingest_done", source_id=source_id, status=feed.status, new=len(new_ids))
         return IngestReport(source_id, feed.status, new_articles=len(new_ids))
 
@@ -179,6 +195,8 @@ async def _record(
     status: str,
     feed: FeedResult | None = None,
     error: str | None = None,
+    kind: str | None = None,
+    new: int = 0,
     read: Outcome | None = None,
     robots: bool | None = None,
 ) -> None:
@@ -186,6 +204,7 @@ async def _record(
         source = await session.get(Source, source_id)
         if source is None:
             return
+        await record_poll(session, source_id, status=status, kind=kind, new=new)
         source.last_fetched_at = datetime.now(UTC)
         source.last_status = status
         source.last_error = error

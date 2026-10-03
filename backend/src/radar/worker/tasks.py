@@ -16,6 +16,7 @@ from radar.events import enabled as events_enabled
 from radar.events import writer as event_writer
 from radar.images.store import get_image_store
 from radar.ingest import avatars
+from radar.ingest import health as source_health
 from radar.ingest.detect import DETECT_TTL_SECONDS, NotFound, detect, detect_key, detected_json
 from radar.ingest.measure import measure
 from radar.ingest.net import build_client
@@ -90,6 +91,26 @@ async def ingest_all() -> int:
     # switch to a different embedding model.
     await embed_pending_task.kiq()
     return len(source_ids)
+
+
+@ingest_broker.task(task_name="check_source_health", schedule=[{"cron": "53 * * * *"}])
+async def check_source_health() -> dict[str, int]:
+    """Every hour: polls older than a week go, and the sources that fail or
+    have fallen silent are named in the log."""
+    now = datetime.now(UTC)
+    async with session_scope() as session:
+        purged = await source_health.purge(session, now)
+        found = await source_health.health(session, now)
+    if found.failing or found.silent or (found.polls and found.ok < found.polls):
+        log.warning(
+            "sources_unhealthy",
+            polls=found.polls,
+            ok=found.ok,
+            errors=found.errors,
+            failing=[f"{item.name} ({item.kind or 'other'})" for item in found.failing],
+            silent=[item.name for item in found.silent],
+        )
+    return {"purged": purged, "failing": len(found.failing), "silent": len(found.silent)}
 
 
 @ingest_broker.task(task_name="ingest_source", retry_on_error=True, max_retries=2)
