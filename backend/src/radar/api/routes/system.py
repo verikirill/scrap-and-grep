@@ -71,6 +71,7 @@ async def meta(session: SessionDep, settings: SettingsDep, cache: CacheDep) -> M
         demo_login=settings.demo_login or settings.auth == "off",
         registration_open=settings.registration_open,
         sign_in_required=settings.auth == "on",
+        open_catalog=settings.open_catalog,
         resume_parser=PARSER_DOCLING if settings.docparser_url else PARSER_BUILTIN,
         resume_formats=list(
             DOCLING_FORMATS if settings.docparser_url else (*BUILTIN_FORMATS, "html")

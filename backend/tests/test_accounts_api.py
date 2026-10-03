@@ -308,6 +308,104 @@ async def test_only_an_administrator_changes_the_source_catalogue(api: str) -> N
         assert (await admin.post("/sources/refresh")).status_code == 202
 
 
+@pytest.fixture
+def open_catalog(api: str, monkeypatch: pytest.MonkeyPatch) -> Iterator[AsyncMock]:
+    """An open catalogue, with no queue and no DNS behind adding a source.
+    Returns the detection task's stand-in."""
+    from radar.api.routes import catalog
+    from radar.config import get_settings
+    from radar.worker import tasks
+
+    monkeypatch.setenv("RADAR_OPEN_CATALOG", "true")
+    get_settings.cache_clear()
+    monkeypatch.setattr(tasks.ingest_source_task, "kiq", AsyncMock())
+    detect = AsyncMock()
+    monkeypatch.setattr(tasks.detect_source_task, "kiq", detect)
+    monkeypatch.setattr(catalog, "ensure_public_url", AsyncMock())
+    yield detect
+    get_settings.cache_clear()
+
+
+NEWS_PAGE = {
+    "kind": "page",
+    "name": "Новости компании",
+    "feed_url": "https://vendor.example/news/",
+    "link_selector": "article h2 a",
+    "category": "security",
+}
+
+
+async def test_in_an_open_catalogue_a_reader_adds_a_page_and_only_they_may_remove_it(
+    api: str, open_catalog: AsyncMock
+) -> None:
+    async with register(api, "author") as author, register(api, "other") as other:
+        created = await author.post("/sources", json=NEWS_PAGE)
+        source_id = created.json()["id"]
+        theirs = {s["id"]: s for s in (await other.get("/sources")).json()}[source_id]
+        refused = await other.delete(f"/sources/{source_id}")
+        renamed = await author.patch(f"/sources/{source_id}", json={"name": "Новости вендора"})
+        removed = await author.delete(f"/sources/{source_id}")
+
+    # Stored as the page it is, with its selector: not quietly as a feed.
+    assert created.status_code == 201
+    assert created.json()["kind"] == "page"
+    assert created.json()["can_edit"] is True
+    assert theirs["can_edit"] is False
+    assert refused.status_code == 403
+    assert renamed.json()["name"] == "Новости вендора"
+    assert removed.status_code == 204
+
+
+async def test_a_wordpress_source_must_be_its_posts_api(api: str, open_catalog: AsyncMock) -> None:
+    site = {**NEWS_PAGE, "kind": "wordpress", "link_selector": None}
+    async with register(api, "author") as author:
+        homepage = await author.post("/sources", json=site)
+        posts = await author.post(
+            "/sources",
+            json={**site, "feed_url": "https://vendor.example/wp-json/wp/v2/posts?categories=2"},
+        )
+
+    assert homepage.status_code == 422
+    assert posts.json()["kind"] == "wordpress"
+
+
+async def test_an_address_is_detected_by_the_worker_and_its_answer_read_back(
+    api: str, open_catalog: AsyncMock
+) -> None:
+    from radar.cache import get_cache
+    from radar.ingest.detect import detect_key
+
+    async with register(api, "reader") as reader:
+        started = (await reader.post("/sources/detect", json={"address": "vendor.example"})).json()
+        request_id = started["request_id"]
+        waiting = (await reader.get(f"/sources/detect/{request_id}")).json()
+        found = {
+            "kind": "page",
+            "address": "https://vendor.example/news/",
+            "name": "Vendor",
+            "site_url": "https://vendor.example",
+            "language": "en",
+            "link_selector": None,
+            "fetch_method": "impersonate",
+            "fetch_note": "403 на обычном запросе",
+            "samples": [
+                {"title": "Patch", "url": "https://vendor.example/news/1", "published_at": None}
+            ],
+        }
+        await get_cache().set_json(detect_key(request_id), {"ok": True, "found": found}, ttl=60)
+        done = (await reader.get(f"/sources/detect/{request_id}")).json()
+        await get_cache().set_json(
+            detect_key(request_id), {"ok": False, "error": "Сайт ответил 404."}, ttl=60
+        )
+        failed = (await reader.get(f"/sources/detect/{request_id}")).json()
+
+    open_catalog.assert_awaited_once_with(request_id, "vendor.example", None)
+    assert waiting == {"status": "pending", "found": None, "error": None}
+    assert done["found"]["fetch_method"] == "impersonate"
+    assert done["found"]["samples"][0]["title"] == "Patch"
+    assert failed == {"status": "done", "found": None, "error": "Сайт ответил 404."}
+
+
 @pytest.mark.parametrize(
     ("auth", "guest_status"),
     [("on", 404), ("off", 200)],

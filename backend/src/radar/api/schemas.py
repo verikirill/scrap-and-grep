@@ -113,11 +113,50 @@ class SourceOut(BaseModel):
     proxy: str | None = Field(default=None, validation_alias="proxy_url")
     articles: int = 0
     articles_last_day: int = 0
+    # Whether the reader asking may change and remove it: an administrator,
+    # or its author in an open catalogue.
+    can_edit: bool = False
 
     @field_validator("proxy")
     @classmethod
     def _hide_password(cls, url: str | None) -> str | None:
         return proxy_name(url) if url else None
+
+
+class DetectIn(BaseModel):
+    """Any address a reader pastes: a site, a section, a feed or a channel."""
+
+    address: str = Field(min_length=3, max_length=500)
+    link_selector: str | None = Field(default=None, max_length=200)
+
+
+class DetectSample(BaseModel):
+    title: str
+    url: str
+    published_at: datetime | None = None
+
+
+class DetectedSource(BaseModel):
+    """What the address turned out to be, to be added as it is."""
+
+    kind: AddableSourceKind
+    address: str
+    name: str
+    site_url: str | None = None
+    language: str
+    link_selector: str | None = None
+    # The step of the fetch ladder that read the page, and why not a lower one.
+    fetch_method: str | None = None
+    fetch_note: str | None = None
+    samples: list[DetectSample] = []
+
+
+class DetectOut(BaseModel):
+    """The worker's answer, or that it is still looking."""
+
+    status: Literal["pending", "done"]
+    found: DetectedSource | None = None
+    error: str | None = None
 
 
 class SourceCreate(BaseModel):
@@ -133,6 +172,9 @@ class SourceCreate(BaseModel):
     fetch_full_text: bool = False
     # A proxy for this source only: http://, https:// or socks5://.
     proxy_url: str | None = Field(default=None, max_length=500)
+    # A news page: the CSS selector of its links, where they are not found by
+    # themselves (ingest/listing.py).
+    link_selector: str | None = Field(default=None, max_length=200)
 
     @field_validator("proxy_url")
     @classmethod
@@ -141,10 +183,13 @@ class SourceCreate(BaseModel):
 
     @model_validator(mode="after")
     def _address(self) -> SourceCreate:
-        if self.kind == "rss" and (
+        # A feed, a news page and a WordPress API are all polled at feed_url.
+        if self.kind != "telegram" and (
             self.feed_url is None or self.name is None or self.channel is not None
         ):
-            raise ValueError("a feed takes a name and feed_url, and no channel")
+            raise ValueError("a feed, a page or a WordPress API takes a name and feed_url")
+        if self.link_selector is not None and self.kind != "page":
+            raise ValueError("only a news page takes a link selector")
         if self.kind == "telegram" and (self.channel is None or self.feed_url is not None):
             raise ValueError("a Telegram source takes a channel, and no feed_url")
         return self
@@ -333,6 +378,8 @@ class MetaOut(BaseModel):
     registration_open: bool
     # False: the app enters a visitor as a guest instead of showing sign-in.
     sign_in_required: bool = True
+    # Every reader may add sources, not only the administrator.
+    open_catalog: bool = False
     resume_parser: str
     resume_formats: list[str]
     resume_max_bytes: int

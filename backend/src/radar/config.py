@@ -182,6 +182,9 @@ class Settings(BaseSettings):
     # guest of their own at once, as the jury asked; registering stays in the
     # account menu. Guests can always be created then, whatever demo_login says.
     auth: Literal["on", "off"] = "on"
+    # An open catalogue: every reader, guests too, may add a source, and its
+    # author may change and remove it. Closed, sources are the administrator's.
+    open_catalog: bool = False
     guest_ttl_hours: int = Field(default=24, ge=1)
     # Sign-in and registration attempts per address and minute.
     auth_rate_limit_per_minute: int = 10

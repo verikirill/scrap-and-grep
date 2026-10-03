@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Source } from './api'
-import { groupSources, matchesSource, queryWords } from './sourceList'
+import { groupSources, isProtected, matchesSource, queryWords, readVia } from './sourceList'
 
 function source(fields: Partial<Source>): Source {
   return {
@@ -87,5 +87,34 @@ describe('groupSources', () => {
     const groups = groupSources([bdu, xakep], 'category', 'name')
 
     expect(groups.map((group) => group.key)).toEqual(['security', 'regulator'])
+  })
+})
+
+describe('readVia', () => {
+  it('says nothing about a source a plain request reads', () => {
+    expect(readVia(source({ fetch_method: 'plain' }))).toBeNull()
+    expect(readVia(source({}))).toBeNull()
+    expect(isProtected(source({ fetch_method: 'plain' }))).toBe(false)
+  })
+
+  it('names the step and keeps its reason for a protected site', () => {
+    const cybernews = source({
+      fetch_method: 'impersonate',
+      fetch_note: '403, заглушка Cloudflare на шаге «обычный запрос»',
+      fetch_via_proxy: true,
+    })
+
+    expect(readVia(cybernews)).toEqual({
+      label: 'Отпечаток Chrome, через прокси',
+      note: '403, заглушка Cloudflare на шаге «обычный запрос»',
+    })
+    expect(isProtected(cybernews)).toBe(true)
+  })
+
+  it('keeps a news page without a feed among the sites, found by "страница"', () => {
+    const page = source({ id: 9, name: 'Новости PT', kind: 'page' })
+
+    expect(groupSources([page, channel], 'kind', 'name')[0].sources).toEqual([page])
+    expect(matchesSource(page, 'страница')).toBe(true)
   })
 })
