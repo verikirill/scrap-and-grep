@@ -4,10 +4,13 @@ Nothing here touches the database or a model, which keeps the rules that
 decide what a reader sees easy to test and to explain.
 """
 
+import re
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 
 import numpy as np
 
+from radar.cards import identifiers
 from radar.domain import (
     Candidate,
     DuplicateRef,
@@ -25,6 +28,16 @@ LEXICAL_BONUS = 0.12
 NO_KEYWORD_CEILING = 0.45
 TITLE_JACCARD_DUPLICATE = 0.6
 TITLE_MIN_SHARED_WORDS = 3
+# Two publications that name the same CVE or BDU entry, each naming a few,
+# report one vulnerability. A roundup of thirty is not one story with each of
+# them: it joins one only when it names all of that one's ids and the two
+# headlines share a Latin name ("Kiteworks").
+FOCUSED_IDS = 4
+ROUNDUP_IDS = 12
+# A post with no Latin word in its first line ("Ирония судьбы") is named by
+# the start of its text.
+_NAMES_FROM_TEXT = 300
+_ID_WORDS_RE = re.compile(r"\b(?:CVE|BDU|БДУ|GHSA)[-:\s]*[\w-]*", re.IGNORECASE)
 
 REJECT_LOW_SCORE = "low_score"
 REJECT_EXCLUDED = "excluded"
@@ -118,11 +131,17 @@ def collapse_duplicates(
     absorbed) and the list of absorbed candidates.
     """
     ordered = sorted(graded, key=lambda item: (-item.score, item.article.id))
+    named = {
+        item.article.id: mentions(item.article.title, item.article.summary, item.article.content)
+        for item in ordered
+    }
     kept: list[GradedCandidate] = []
     absorbed_by: dict[int, list[GradedCandidate]] = {}
     absorbed: list[GradedCandidate] = []
     for item in ordered:
-        twin = next((seen for seen in kept if _same_story(item, seen, vectors, threshold)), None)
+        twin = next(
+            (seen for seen in kept if _same_story(item, seen, vectors, threshold, named)), None
+        )
         if twin is None:
             kept.append(item)
             continue
@@ -145,15 +164,65 @@ def collapse_duplicates(
     return selected, absorbed
 
 
+@dataclass(frozen=True, slots=True)
+class Mentions:
+    """The vulnerability ids a publication names, and the Latin words of its
+    headline: product and vendor names, which Russian and English titles of
+    one advisory write alike."""
+
+    ids: frozenset[str]
+    names: frozenset[str]
+
+
+def _latin_words(text: str) -> frozenset[str]:
+    # The ids themselves are not names: every title that prints one has "cve".
+    bare = _ID_WORDS_RE.sub(" ", text)
+    return frozenset(
+        word for word in content_tokens(bare) if any("a" <= char <= "z" for char in word)
+    )
+
+
+def mentions(title: str, summary: str, content: str | None) -> Mentions:
+    ids = frozenset(identifiers(f"{title}\n{summary}\n{content or ''}"))
+    names = _latin_words(title) or _latin_words(summary[:_NAMES_FROM_TEXT])
+    return Mentions(ids=ids, names=names)
+
+
+def same_vulnerability(left: Mentions, right: Mentions) -> bool:
+    """Two publications about one vulnerability: a CVE or BDU id in common,
+    each naming a few. A roundup joins one only when it names all of that
+    one's ids and their headlines share a name.
+
+    Asking every pair for a shared name lost more than it saved: on the
+    snapshot of October 3 it kept apart 20 retellings of one event whose
+    headlines name none ("Ирония судьбы", "В продолжение к предыдущему",
+    "Certainties in life...") to keep apart 2 pairs that were not one.
+    """
+    if not left.ids & right.ids:
+        return False
+    if len(left.ids) <= FOCUSED_IDS and len(right.ids) <= FOCUSED_IDS:
+        return True
+    small, large = sorted((left.ids, right.ids), key=len)
+    return (
+        len(small) <= FOCUSED_IDS
+        and len(large) <= ROUNDUP_IDS
+        and small <= large
+        and bool(left.names & right.names)
+    )
+
+
 def _same_story(
     left: GradedCandidate,
     right: GradedCandidate,
     vectors: dict[int, np.ndarray],
     threshold: float,
+    named: dict[int, Mentions] | None = None,
 ) -> bool:
     if left.article.content_hash == right.article.content_hash:
         return True
     if _same_headline(left.article.title, right.article.title):
+        return True
+    if named is not None and same_vulnerability(named[left.article.id], named[right.article.id]):
         return True
     a, b = vectors.get(left.article.id), vectors.get(right.article.id)
     if a is None or b is None:
