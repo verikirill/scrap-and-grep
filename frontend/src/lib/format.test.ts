@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDuration, formatPostTime } from './format'
+import { formatDuration, formatPostTime, inSentence } from './format'
 
 describe('formatPostTime', () => {
   // 00:30 on 2 October in Moscow, still 1 October in UTC.
@@ -26,5 +26,15 @@ describe('formatDuration', () => {
 
   it('rounds up into the next minute instead of showing sixty seconds', () => {
     expect(formatDuration(59_600)).toBe('1:00')
+  })
+})
+
+describe('inSentence', () => {
+  it('lowers a field name but keeps an abbreviation', () => {
+    expect(inSentence('Дата атаки')).toBe('дата атаки')
+    expect(inSentence('Техники ATT&CK')).toBe('техники ATT&CK')
+    expect(inSentence('CVSS')).toBe('CVSS')
+    expect(inSentence('CWE')).toBe('CWE')
+    expect(inSentence('')).toBe('')
   })
 })
