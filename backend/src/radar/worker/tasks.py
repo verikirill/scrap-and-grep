@@ -32,7 +32,7 @@ from radar.shorts.renderer import RendererBusy
 from radar.store import digests as digest_store
 from radar.store import profiles as profile_store
 from radar.store import schedules as schedule_store
-from radar.vulns import kev
+from radar.vulns import attack, kev
 from radar.worker.brokers import (
     DIGEST_IDLE_TIMEOUT_MS,
     MEDIA_IDLE_TIMEOUT_MS,
@@ -146,8 +146,15 @@ async def reap_stale_digests() -> int:
 
 
 @digest_broker.task(task_name="build_digest", retry_on_error=True, max_retries=DIGEST_ATTEMPTS)
-async def build_digest(digest_id: str, context: Context = TaskiqDepends()) -> None:
-    """Build a digest, resuming from its last checkpoint after a crash or a retry."""
+async def build_digest(
+    digest_id: str, then: str | None = None, context: Context = TaskiqDepends()
+) -> None:
+    """Build a digest, resuming from its last checkpoint after a crash or a retry.
+
+    `then` is the digest to build after this one, for both audiences of one
+    profile: queued once this one is done or has failed for good, so it takes
+    the grades this one left in the cache instead of asking the model again.
+    """
     async with get_cache().lock(f"digest:{digest_id}", DIGEST_LOCK_TTL) as acquired:
         if not acquired:
             log.info("digest_already_running", digest_id=digest_id)
@@ -161,9 +168,13 @@ async def build_digest(digest_id: str, context: Context = TaskiqDepends()) -> No
             attempt = int(context.message.labels.get("_retries", 0)) + 1
             if attempt >= DIGEST_ATTEMPTS:
                 await report_failure(uuid.UUID(digest_id), exc)
+                if then:
+                    await build_digest.kiq(then)
             else:
                 log.warning("digest_will_retry", digest_id=digest_id, attempt=attempt)
             raise
+    if then:
+        await build_digest.kiq(then)
 
 
 @profile_broker.task(task_name="process_resume", retry_on_error=True, max_retries=RESUME_ATTEMPTS)
@@ -308,6 +319,19 @@ async def refresh_kev() -> int:
         kept, last_modified = await kev.refresh(session, client, get_cache(), url)
     # Remembered after the commit: a failed one must not turn the next round into a 304.
     await kev.remember(get_cache(), last_modified)
+    return kept
+
+
+@ingest_broker.task(task_name="refresh_attack", schedule=[{"cron": "23 4 * * *"}])
+async def refresh_attack() -> int:
+    """Once a day: MITRE ATT&CK, if it changed (54 MB, a 304 otherwise). Until
+    the first round, and in a closed network, the snapshot in the package answers."""
+    url = get_settings().attack_url
+    if not url:
+        return 0
+    async with build_client() as client, session_scope() as session:
+        kept, etag = await attack.refresh(session, client, get_cache(), url)
+    await attack.remember(get_cache(), etag)
     return kept
 
 

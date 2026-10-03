@@ -1,8 +1,8 @@
-"""what a management digest means for the company: its own block, before the key points
+"""what a management digest's period means for the company
 
-Revision ID: 0027
-Revises: 0026
-Create Date: 2026-10-12 12:00:00
+Revision ID: 0026
+Revises: 0025
+Create Date: 2026-10-12 10:00:00
 """
 
 from collections.abc import Sequence
@@ -11,8 +11,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0027"
-down_revision: str | None = "0026"
+revision: str = "0026"
+down_revision: str | None = "0025"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -20,7 +20,7 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     op.add_column(
         "digests",
-        sa.Column("implications", postgresql.ARRAY(sa.Text()), server_default="{}", nullable=False),
+        sa.Column("implications", postgresql.ARRAY(sa.Text()), nullable=False, server_default="{}"),
     )
 
 

@@ -105,10 +105,10 @@ def render_docx(digest: DigestView) -> bytes:
         f"Сформирован: {format_datetime(digest.finished_at or digest.created_at)} МСК",
     )
 
-    if digest.implications:
+    if digest.profile.audience == "management" and digest.implications:
         document.add_heading("Что это значит для нас", level=1)
-        for line in digest.implications:
-            document.add_paragraph(line, style="List Bullet")
+        for point in digest.implications:
+            document.add_paragraph(point, style="List Bullet")
     if digest.highlights:
         document.add_heading("Главное", level=1)
         for highlight in digest.highlights:

@@ -80,6 +80,10 @@ class FakeStore:
     async def vectors(self, article_ids: Sequence[int]) -> dict[int, np.ndarray]:
         return {}
 
+    async def attack_techniques(self, ids: Sequence[str]) -> dict[str, str]:
+        known = {"T1566": "Phishing"}
+        return {value: known[value] for value in ids if value in known}
+
     async def vulnerability_facts(self, ids: Sequence[str]) -> list[VulnerabilityReference]:
         # One CVE in the CISA catalogue; the rest unknown.
         return [
@@ -389,6 +393,29 @@ async def test_a_management_digest_has_topics_and_tags_instead_of_cards(
     assert all(entry and entry.tags and entry.attack is None for entry in entries)
 
 
+async def test_management_reads_no_identifiers_even_from_an_offline_digest(
+    profile: ProfileSpec, security_week: list[ArticleRef]
+) -> None:
+    from radar.cards import technical_tokens
+    from radar.text import split_sentences
+
+    store = FakeStore(security_week)
+    graph = build_graph(_deps(store, HeuristicIntelligence())).compile(checkpointer=InMemorySaver())
+    management = profile.model_copy(update={"max_items": 10, "audience": "management"})
+
+    await graph.ainvoke(_input(management), CONFIG)
+
+    assert store.saved is not None
+    entries = [item.text for topic in store.saved["topics"] for item in topic.items]
+    assert entries
+    for entry in entries:
+        assert entry is not None
+        assert technical_tokens(f"{entry.headline} {entry.summary} {entry.why}") == []
+        assert len(split_sentences(entry.summary)) <= 2
+    overview = store.saved["overview"]
+    assert all(technical_tokens(line) == [] for line in overview.highlights)
+
+
 async def test_a_vulnerability_the_text_is_quiet_about_is_raised_by_the_catalogue(
     profile: ProfileSpec, make_article: ArticleFactory
 ) -> None:
@@ -429,3 +456,41 @@ async def test_a_card_keeps_only_the_references_about_its_own_vulnerability() ->
 
     # The BDU id is covered by the CVE's entry: nothing left to look up.
     assert [reference.id for reference in entry.references] == ["CVE-2026-92370"]
+
+
+class ModelGrades(CountingIntelligence):
+    """A model's grades, as the cache keeps them: by_model is set."""
+
+    async def grade(self, candidate: Candidate, profile: ProfileSpec) -> Grade:
+        grade = await super().grade(candidate, profile)
+        return grade.model_copy(update={"by_model": True})
+
+
+async def test_the_second_audience_takes_its_grades_from_the_first(
+    profile: ProfileSpec, security_week: list[ArticleRef]
+) -> None:
+    from radar.ai.resilient import CachedIntelligence
+    from tests.test_resilience import MemoryCache
+
+    model = ModelGrades()
+    cached = CachedIntelligence(model, MemoryCache())  # type: ignore[arg-type]
+    specialist = profile.model_copy(update={"max_items": 10})
+    management = specialist.model_copy(update={"audience": "management"})
+    stores = []
+    for audience, spec in (("specialist", specialist), ("management", management)):
+        store = FakeStore(security_week)
+        graph = build_graph(_deps(store, cached)).compile(checkpointer=InMemorySaver())
+        await graph.ainvoke(_input(spec), {"configurable": {"thread_id": audience}})
+        stores.append(store)
+        if audience == "specialist":
+            graded_once, written_once = model.grade_calls, model.summary_calls
+
+    # One grading for both: the audience changes how an entry is written, not its grade.
+    assert graded_once > 0
+    assert model.grade_calls == graded_once
+    assert model.summary_calls > written_once
+    first, second = (store.saved for store in stores)
+    assert first is not None
+    assert second is not None
+    assert [topic.title for topic in first["topics"][:2]] == ["Атаки", "Уязвимости"]
+    assert not {"Атаки", "Уязвимости"} & {topic.title for topic in second["topics"]}

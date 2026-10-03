@@ -91,7 +91,10 @@ export function History({ digests, activeId, onSelect, onDelete }: Props) {
                       />
                     )}
                     <span className="truncate">
-                      {digest.profile_name} · {formatRelative(digest.created_at)}
+                      {digest.profile_name}
+                      {/* Two digests of one profile, one for each audience, tell apart here. */}
+                      {digest.audience === 'management' ? ' · руководству' : ''} ·{' '}
+                      {formatRelative(digest.created_at)}
                     </span>
                   </span>
                 </button>
