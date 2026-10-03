@@ -34,6 +34,8 @@ from radar.cards import (
     SECTION_TITLES,
     card_ids,
     check_entry,
+    plain_brief,
+    plain_lines,
     priority,
     section_overview,
     source_text,
@@ -379,9 +381,26 @@ class DigestNodes:
         evidence = "\n".join(
             [source, *(reference.text() for reference in written.references if reference.found)]
         )
-        text = check_entry(written, evidence)
+        techniques = await self._techniques(written)
+        text = check_entry(written, evidence, techniques)
+        # Past the cache as well: a brief written before the rule keeps to it.
+        if profile.audience == "management":
+            text = plain_brief(text)
         _emit("summarize", done=1)
         return {"summaries": [{"article_id": item.article.id, "text": text.model_dump()}]}
+
+    async def _techniques(self, text: ItemSummary) -> dict[str, str] | None:
+        """The ATT&CK reference for the card's techniques; None when it could
+        not be asked, and the check then takes only ids printed in the text."""
+        if text.attack is None or not text.attack.techniques:
+            return {}
+        try:
+            return await self._deps.store.attack_techniques(
+                [technique.id for technique in text.attack.techniques]
+            )
+        except Exception as exc:
+            log.warning("attack_lookup_failed", error=f"{type(exc).__name__}: {exc}"[:300])
+            return None
 
     async def _with_references(self, text: ItemSummary, source: str) -> ItemSummary:
         """The card's ids the model did not look up itself, looked up here: the
@@ -454,6 +473,14 @@ class DigestNodes:
             overview = await self._deps.intelligence.overview(topics, profile)
         else:
             overview = DigestOverview(title=f"Дайджест для профиля «{profile.name}»")
+        if profile.audience == "management":
+            # The offline overview takes headlines, which may carry a CVE.
+            overview = overview.model_copy(
+                update={
+                    "highlights": plain_lines(overview.highlights, 5),
+                    "implications": plain_lines(overview.implications, 3),
+                }
+            )
         return {
             "overview": overview.model_dump(mode="json"),
             "topics": [topic.model_dump(mode="json") for topic in topics],

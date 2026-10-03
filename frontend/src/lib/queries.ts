@@ -160,6 +160,17 @@ export function useCreateDigest() {
   })
 }
 
+export function useCreateDigestsForBoth() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: ({ profileId, period }: { profileId: string; period: DigestPeriod }) =>
+      api.createDigestsForBoth(profileId, period),
+    onSuccess: (created) => {
+      client.setQueryData<DigestSummary[]>(keys.digests, (list) => [...created, ...(list ?? [])])
+    },
+  })
+}
+
 export function useDeleteDigest() {
   const client = useQueryClient()
   return useMutation({

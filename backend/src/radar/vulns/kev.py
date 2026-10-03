@@ -36,6 +36,9 @@ class KevEntry:
     ransomware: bool
     description: str
     action: str
+    # The date federal agencies must fix it by, and the weaknesses it names.
+    due_date: date | None = None
+    cwes: tuple[str, ...] = ()
 
 
 def parse_catalog(raw: dict[str, Any]) -> list[KevEntry]:
@@ -54,6 +57,10 @@ def parse_catalog(raw: dict[str, Any]) -> list[KevEntry]:
                     ransomware=str(item.get("knownRansomwareCampaignUse")) == "Known",
                     description=str(item.get("shortDescription") or ""),
                     action=str(item.get("requiredAction") or ""),
+                    due_date=date.fromisoformat(str(item["dueDate"]))
+                    if item.get("dueDate")
+                    else None,
+                    cwes=tuple(str(cwe) for cwe in item.get("cwes") or () if str(cwe)),
                 )
             )
         except KeyError, TypeError, ValueError:
@@ -67,10 +74,16 @@ async def refresh(
     """Take the catalogue in if it changed. The number of entries now kept, and
     the file's Last-Modified to remember once the caller has committed them."""
     count = await session.scalar(select(func.count()).select_from(KnownExploitedVulnerability))
+    # Rows from before the due date was kept take the whole file again once.
+    undated = await session.scalar(
+        select(func.count())
+        .select_from(KnownExploitedVulnerability)
+        .where(KnownExploitedVulnerability.due_date.is_(None))
+    )
     headers = {}
     modified = await cache.get_json(_MODIFIED_KEY)
     # An empty table needs the file whatever the cache remembers.
-    if count and isinstance(modified, str):
+    if count and not undated and isinstance(modified, str):
         headers["If-Modified-Since"] = modified
     response = await client.get(url, headers=headers)
     if response.status_code == httpx.codes.NOT_MODIFIED:
@@ -78,7 +91,9 @@ async def refresh(
     response.raise_for_status()
     entries = parse_catalog(response.json())
     for start in range(0, len(entries), 500):
-        rows = [asdict(entry) for entry in entries[start : start + 500]]
+        rows = [
+            {**asdict(entry), "cwes": list(entry.cwes)} for entry in entries[start : start + 500]
+        ]
         statement = insert(KnownExploitedVulnerability).values(rows)
         await session.execute(
             statement.on_conflict_do_update(
@@ -93,6 +108,8 @@ async def refresh(
                         "ransomware",
                         "description",
                         "action",
+                        "due_date",
+                        "cwes",
                     )
                 },
             )

@@ -86,6 +86,12 @@ class Settings(BaseSettings):
     kev_url: str = (
         "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
     )
+    # MITRE ATT&CK for the techniques of an attack card, refreshed once a day.
+    # Empty turns the refresh off; the snapshot in the package still answers.
+    attack_url: str = (
+        "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/"
+        "enterprise-attack/enterprise-attack.json"
+    )
 
     # Ingestion
     ingest_cron: str = "*/15 * * * *"

@@ -346,20 +346,20 @@ export function DigestView({ digest, previousId }: { digest: Digest; previousId?
           </p>
         )}
 
-        {(digest.implications?.length ?? 0) > 0 && (
-          <div className="mt-6 rounded-xl bg-spark-container px-4 py-3 text-on-spark-container">
-            <h3 className="text-xs font-semibold tracking-wide uppercase">
+        {digest.profile.audience === 'management' && digest.implications.length > 0 && (
+          <div className="mt-6">
+            <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
               Что это значит для нас
             </h3>
             <ul className="mt-2 space-y-1.5">
-              {digest.implications?.map((line, index) => (
+              {digest.implications.map((point, index) => (
                 <motion.li
-                  key={`${index}-${line}`}
+                  key={`${index}-${point}`}
                   {...rowMotion(index)}
                   className="flex gap-2.5 text-sm"
                 >
-                  <span className="mt-2 size-1.5 shrink-0 rounded-full bg-spark" />
-                  {line}
+                  <span className="mt-2 size-1.5 shrink-0 rounded-full bg-primary" />
+                  {point}
                 </motion.li>
               ))}
             </ul>

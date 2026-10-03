@@ -1,4 +1,4 @@
-"""who added a source: in an open catalogue its author may change and remove it
+"""what a management digest's period means for the company
 
 Revision ID: 0026
 Revises: 0025
@@ -19,14 +19,10 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     op.add_column(
-        "sources",
-        sa.Column(
-            "added_by",
-            postgresql.UUID(as_uuid=True),
-            sa.ForeignKey("users.id", ondelete="SET NULL"),
-        ),
+        "digests",
+        sa.Column("implications", postgresql.ARRAY(sa.Text()), nullable=False, server_default="{}"),
     )
 
 
 def downgrade() -> None:
-    op.drop_column("sources", "added_by")
+    op.drop_column("digests", "implications")
