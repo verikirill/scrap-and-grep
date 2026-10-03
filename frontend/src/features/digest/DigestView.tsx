@@ -105,6 +105,11 @@ function ItemCard({ item, index, placement, reactions, onReact }: ItemCardProps)
             {item.source_read_via}
           </Chip>
         )}
+        {item.ours && item.ours.length > 0 && (
+          <Chip tone="ok" title="Запись называет системы из вашего профиля">
+            касается нас: {item.ours.join(', ')}
+          </Chip>
+        )}
         <span>{formatDate(item.published_at)}</span>
         <ReadingTime minutes={item.reading_minutes} />
         <PriorityChip item={item} />
