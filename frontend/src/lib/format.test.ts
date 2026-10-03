@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDuration, formatPostTime, inSentence } from './format'
+import { formatDuration, formatPostTime, inSentence, pause } from './format'
 
 describe('formatPostTime', () => {
   // 00:30 on 2 October in Moscow, still 1 October in UTC.
@@ -36,5 +36,14 @@ describe('inSentence', () => {
     expect(inSentence('CVSS')).toBe('CVSS')
     expect(inSentence('CWE')).toBe('CWE')
     expect(inSentence('')).toBe('')
+  })
+})
+
+describe('pause', () => {
+  it('names a pause in hours, then in days', () => {
+    expect(pause(0.4)).toBe('меньше часа')
+    expect(pause(6.2)).toBe('6 ч')
+    expect(pause(47)).toBe('47 ч')
+    expect(pause(72)).toBe('3 дн.')
   })
 })

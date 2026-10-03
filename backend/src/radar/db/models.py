@@ -93,6 +93,28 @@ class Source(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class SourcePoll(Base):
+    """One poll of a source, kept for a week: how the sources are doing
+    (ingest/health.py)."""
+
+    __tablename__ = "source_polls"
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    source_id: Mapped[int] = mapped_column(ForeignKey("sources.id", ondelete="CASCADE"))
+    polled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # "ok", "not_modified" or "error", as the source's last_status.
+    status: Mapped[str] = mapped_column(String(32))
+    # For an error: dns, tls, refused, stub, timeout, connect, http, markup,
+    # unsafe or other (ingest/health.py).
+    error_kind: Mapped[str | None] = mapped_column(String(16))
+    new_articles: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+
+    __table_args__ = (
+        Index("ix_source_polls_polled_at", "polled_at"),
+        Index("ix_source_polls_source_polled", "source_id", "polled_at"),
+    )
+
+
 class KnownExploitedVulnerability(Base):
     """The CISA catalogue of vulnerabilities exploited in the wild (KEV),
     refreshed every hour; a digest looks its CVEs up here."""

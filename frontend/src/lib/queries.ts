@@ -78,6 +78,10 @@ export const useProfiles = () => useQuery({ queryKey: keys.profiles, queryFn: ap
 export const useSources = () =>
   useQuery({ queryKey: keys.sources, queryFn: api.sources, refetchInterval: 30_000 })
 
+/** The polls of the last day: asked again with each poll of the catalogue. */
+export const useSourceHealth = () =>
+  useQuery({ queryKey: ['source-health'], queryFn: api.sourceHealth, refetchInterval: 5 * 60_000 })
+
 /** Which sources have a picture; asked once a session, pictures change rarely. */
 export const useSourceAvatars = () =>
   useQuery({ queryKey: keys.sourceAvatars, queryFn: api.sourceAvatars, staleTime: 30 * 60_000 })

@@ -2,7 +2,8 @@
 
 import asyncio
 import uuid
-from datetime import datetime
+from dataclasses import asdict
+from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
 import httpx
@@ -28,6 +29,7 @@ from radar.api.schemas import (
     DetectOut,
     Page,
     SourceCreate,
+    SourceHealthOut,
     SourceOut,
     SourceUpdate,
 )
@@ -36,6 +38,7 @@ from radar.config import Settings
 from radar.db.models import Article, Source
 from radar.domain import Language, SourceCategory
 from radar.images.store import get_image_store
+from radar.ingest import health as source_health
 from radar.ingest import telegram, wordpress
 from radar.ingest.avatars import avatar_key
 from radar.ingest.detect import detect_key
@@ -158,6 +161,14 @@ async def source_avatar(source_id: int) -> Response:
             "Content-Security-Policy": "default-src 'none'",
         },
     )
+
+
+@router.get("/sources/health")
+async def sources_health(session: SessionDep) -> SourceHealthOut:
+    """The share of good polls in a day, the errors by kind, the sources that
+    fail and those silent longer than usual for them."""
+    found = await source_health.health(session, datetime.now(UTC))
+    return SourceHealthOut.model_validate({**asdict(found), "kinds": source_health.ERROR_KINDS})
 
 
 @router.get("/sources")
