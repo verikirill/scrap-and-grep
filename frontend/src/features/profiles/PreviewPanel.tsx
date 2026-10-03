@@ -7,10 +7,8 @@ import { AnimatedNumber, Card, Chip, Spinner } from '../../components/ui'
 import type { ProfileSpec } from '../../lib/api'
 import { diffPreview } from '../../lib/diff'
 import type { Movement } from '../../lib/diff'
-import { externalHref, modelLabel, plural } from '../../lib/format'
+import { AUDIENCE_DAYS, externalHref, modelLabel, periodWords, plural } from '../../lib/format'
 import { usePreview } from '../../lib/queries'
-
-const PERIOD_DAYS = 7
 
 const MOVEMENT_ICON: Record<Movement, ReactNode> = {
   new: <Plus size={12} strokeWidth={3} />,
@@ -41,8 +39,10 @@ type Props = {
 }
 
 export function PreviewPanel({ draft, saved, isDirty }: Props) {
-  const current = usePreview(draft, PERIOD_DAYS)
-  const baseline = usePreview(saved, PERIOD_DAYS, 0)
+  // The period an issue of this audience is built over by default.
+  const days = AUDIENCE_DAYS[draft.audience]
+  const current = usePreview(draft, days)
+  const baseline = usePreview(saved, days, 0)
 
   const baselineItems = isDirty && saved ? (baseline.data?.items ?? null) : null
   const diff = current.data ? diffPreview(baselineItems, current.data.items) : null
@@ -56,7 +56,8 @@ export function PreviewPanel({ draft, saved, isDirty }: Props) {
           {current.isFetching && current.isValid && <Spinner className="size-3.5 text-primary" />}
         </div>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          За неделю, по текущим настройкам. Обновляется по мере правки, без языковой модели.
+          За {periodWords(days)}, по текущим настройкам. Обновляется по мере правки, без языковой
+          модели.
         </p>
         {current.data && (
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">

@@ -1,4 +1,4 @@
-import type { SourceCategory } from './api'
+import type { Audience, SourceCategory } from './api'
 
 const MOSCOW = 'Europe/Moscow'
 
@@ -73,6 +73,12 @@ export const formatMegabytes = (bytes: number) =>
   `${(bytes / 1_000_000).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} МБ`
 
 /** Russian plural form: plural(5, ['статья', 'статьи', 'статей']). */
+/** The period an audience reads by default: a specialist's issue covers a day, management's a week. */
+export const AUDIENCE_DAYS: Record<Audience, number> = { specialist: 1, management: 7 }
+
+/** "сутки" or "неделю": the default period of an audience, after "за". */
+export const periodWords = (days: number) => (days === 1 ? 'сутки' : 'неделю')
+
 export function plural(count: number, forms: [string, string, string]): string {
   const mod10 = count % 10
   const mod100 = count % 100

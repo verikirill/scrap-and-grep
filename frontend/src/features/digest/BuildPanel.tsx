@@ -13,7 +13,7 @@ import { buttonClass } from '../../components/tokens'
 import { Button, Card, ErrorNote, Spinner } from '../../components/ui'
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover'
 import type { DigestPeriod, Profile } from '../../lib/api'
-import { plural } from '../../lib/format'
+import { AUDIENCE_DAYS, plural } from '../../lib/format'
 import { useCreateDigest, useSchedules } from '../../lib/queries'
 import { scheduleLabel } from '../../lib/schedule'
 import { ScheduleControl } from './ScheduleControl'
@@ -82,7 +82,8 @@ export function BuildPanel({ profiles, initialProfileId, isBuilding = false, onC
     : null
   const selectedId = profileId ?? fromUrl ?? profiles[0]?.id ?? null
   const selected = profiles.find((profile) => profile.id === selectedId) ?? null
-  const period: PeriodValue = picked ?? (selected?.spec.audience === 'management' ? '7' : '1')
+  const period: PeriodValue =
+    picked ?? (String(AUDIENCE_DAYS[selected?.spec.audience ?? 'specialist']) as PeriodValue)
   const chosen = periodOf(period, range, today)
   const scheduleOf = (profileId: string) =>
     schedules.data?.find((item) => item.profile_id === profileId) ?? null
