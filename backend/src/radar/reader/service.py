@@ -110,8 +110,8 @@ def _complete(status: str, article: Article) -> bool:
 async def _read(article: Article) -> tuple[Body, str]:
     stored = _stored(article)
     # A Telegram post is all there is to read, as is a card of the
-    # trending-vulnerabilities page; both are stored whole.
-    if telegram.is_post_url(article.url) or article.source.kind == "pt_trending":
+    # trending-vulnerabilities page or a Symantec bulletin; all are stored whole.
+    if telegram.is_post_url(article.url) or article.source.kind in {"pt_trending", "broadcom"}:
         return stored, "stored"
     async with _pages:
         try:

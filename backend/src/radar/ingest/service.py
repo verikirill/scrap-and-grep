@@ -14,6 +14,7 @@ from radar.config import get_settings
 from radar.db import session_scope
 from radar.db.models import Source
 from radar.images.extract import from_page
+from radar.ingest.broadcom import fetch_bulletins
 from radar.ingest.feeds import CONTENT_LIMIT, FeedResult, fetch_feed
 from radar.ingest.fetch import Ladder, Outcome
 from radar.ingest.pages import fetch_listing, page_text
@@ -80,6 +81,10 @@ async def ingest_source(source_id: int, client: httpx.AsyncClient, cache: Cache)
                 )
             elif kind == "pt_trending":
                 feed = await fetch_trending(
+                    ladder, feed_url, etag=etag, last_modified=last_modified
+                )
+            elif kind == "broadcom":
+                feed = await fetch_bulletins(
                     ladder, feed_url, etag=etag, last_modified=last_modified
                 )
             elif kind == "wordpress":

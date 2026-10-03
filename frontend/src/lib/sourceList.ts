@@ -8,6 +8,7 @@ const KIND_WORDS: Record<SourceKind, string> = {
   page: 'страница сайт без ленты',
   wordpress: 'wordpress api',
   pt_trending: 'positive technologies трендовые уязвимости',
+  broadcom: 'broadcom symantec protection bulletin бюллетени',
 }
 
 /** What a source is, in a word, where it is not a plain feed. */
@@ -15,6 +16,7 @@ export const KIND_LABELS: Partial<Record<SourceKind, string>> = {
   page: 'Страница',
   wordpress: 'WordPress API',
   pt_trending: 'Страница',
+  broadcom: 'API сайта',
 }
 
 /** The fetch ladder's steps above a plain request, as a reader would name them. */
@@ -85,7 +87,7 @@ export type SourceGroup = { key: string; label: string; sources: Source[] }
 
 // The PT page is a site too: only Telegram channels stand apart.
 const KIND_GROUPS: { key: string; label: string; kinds: SourceKind[] }[] = [
-  { key: 'web', label: 'Сайты', kinds: ['rss', 'page', 'wordpress', 'pt_trending'] },
+  { key: 'web', label: 'Сайты', kinds: ['rss', 'page', 'wordpress', 'pt_trending', 'broadcom'] },
   { key: 'telegram', label: 'Telegram-каналы', kinds: ['telegram'] },
 ]
 

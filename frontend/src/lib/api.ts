@@ -103,7 +103,7 @@ export interface SharedProfile {
  * A feed, a public Telegram channel, a site's news page without a feed, a
  * WordPress site's API, or the trending vulnerabilities page of PT.
  */
-export type SourceKind = 'rss' | 'telegram' | 'page' | 'wordpress' | 'pt_trending'
+export type SourceKind = 'rss' | 'telegram' | 'page' | 'wordpress' | 'pt_trending' | 'broadcom'
 
 /** The step of the fetch ladder that reads a source (backend ingest/fetch.py). */
 export type FetchMethod = 'plain' | 'browser_headers' | 'impersonate' | 'browser' | 'solver'
