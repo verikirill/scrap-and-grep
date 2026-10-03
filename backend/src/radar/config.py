@@ -144,6 +144,10 @@ class Settings(BaseSettings):
     # step off. A page gets this long, its challenge included.
     browser_url: str = ""
     browser_timeout_seconds: float = Field(default=30.0, ge=5, le=120)
+    # Pages one ingest process asks the browser for at once: as many as the
+    # browser has tabs (BROWSER_TABS); more would wait in its queue and the
+    # wait would eat their time.
+    browser_tabs: int = Field(default=2, ge=1, le=16)
     # FlareSolverr inside the stack (the solver profile) for pages that stop
     # the browser too: http://flaresolverr:8191. Empty turns the step off.
     flaresolverr_url: str = ""
