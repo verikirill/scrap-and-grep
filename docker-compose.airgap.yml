@@ -1,0 +1,80 @@
+# A closed network: no service of the stack has a route outside, and the
+# requests to the sources leave through one forward proxy of its own, which
+# reaches public addresses only and can chain to the corporate proxy.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.airgap.yml --profile ollama up -d
+#
+# With a corporate proxy: EGRESS_UPSTREAM=proxy.corp.local:3128 in .env. With
+# no way out at all the stack still builds digests from what it has (the
+# sample, earlier polls), and a poll of a source ends in an error.
+#
+# What goes out and where to: DECISIONS.md, «Закрытый контур».
+
+x-through-egress: &through-egress
+  # Every outgoing request of the backend goes through the egress proxy, which
+  # resolves the names: inside the network no outside name resolves.
+  RADAR_HTTP_PROXY: http://egress:3128
+  RADAR_HTTP_PROXIES: ""
+  RADAR_FETCH_DNS_VIA_PROXY: "true"
+  # Ollama in the stack only, never its cloud.
+  RADAR_LLM_BASE_URL: ""
+
+services:
+  # The only service with a route outside. It is on the stack's network and on
+  # the browsers' one, and refuses every address that is not public, so it is
+  # no way from the browsers to the database.
+  egress:
+    build:
+      context: ./egress
+    image: radar-egress:local
+    restart: unless-stopped
+    environment:
+      EGRESS_UPSTREAM: ${EGRESS_UPSTREAM:-}
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 256m
+    networks:
+      - default
+      - solving
+      - outside
+
+  api:
+    environment: *through-egress
+  worker-ingest:
+    environment: *through-egress
+  worker-digest:
+    environment: *through-egress
+  worker-profile:
+    environment: *through-egress
+  worker-media:
+    environment: *through-egress
+  scheduler:
+    environment: *through-egress
+  migrate:
+    environment: *through-egress
+  cli:
+    environment: *through-egress
+
+  # The browser goes out through its own filtering proxy, and that one through
+  # the egress proxy the ingest worker names, by name.
+  browser:
+    environment:
+      BROWSER_DNS_VIA_PROXY: "true"
+
+  # The published port needs a network that is not internal; Caddy itself
+  # sends nothing out. Pictures only from the stack: no address of a news site
+  # is loaded by the reader's browser.
+  web:
+    environment:
+      CSP_IMG_SRC: "'self' data:"
+    networks:
+      - default
+      - edge
+
+networks:
+  default:
+    internal: true
+  solving:
+    internal: true
+  outside: {}
+  edge: {}
