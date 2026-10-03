@@ -21,11 +21,17 @@ import {
 import type { IconComponent } from '../../components/icons'
 import { useState } from 'react'
 import { Button, Field, Toggle } from '../../components/ui'
+import { SelectField } from '../../components/SelectField'
 import { INPUT_CLASS } from '../../components/tokens'
 import type { Media, PostButton, PostContent, PostFormat } from '../../lib/publishing'
 import { visibleLength } from '../../lib/postText'
 import { Segmented } from '../../components/Segmented'
 import { TelegramPreview } from './TelegramPreview'
+
+const MEDIA_KINDS = [
+  { value: 'photo', label: 'Фото' },
+  { value: 'video', label: 'Видео' },
+]
 
 /** Telegram's spoiler: text hidden under a veil until tapped. */
 const Spoiler = Mark.create({
@@ -273,19 +279,13 @@ export function PostEditor({
           <div className="space-y-2">
             {content.media.map((item, index) => (
               <div key={index} className="flex gap-2">
-                <select
+                <SelectField
                   value={item.kind}
-                  onChange={(event) =>
-                    setMedia(index, {
-                      kind: event.target.value as Media['kind'],
-                    })
-                  }
-                  className={cn(INPUT_CLASS, 'w-28 shrink-0')}
-                  aria-label="Тип"
-                >
-                  <option value="photo">Фото</option>
-                  <option value="video">Видео</option>
-                </select>
+                  onChange={(value) => setMedia(index, { kind: value as Media['kind'] })}
+                  className="w-28 shrink-0"
+                  label="Тип"
+                  options={MEDIA_KINDS}
+                />
                 <input
                   value={item.url}
                   onChange={(event) => setMedia(index, { url: event.target.value })}

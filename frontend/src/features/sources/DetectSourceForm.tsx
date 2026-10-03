@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
+import { SelectField } from '../../components/SelectField'
 import { INPUT_CLASS } from '../../components/tokens'
 import { Button, Chip, ErrorNote, Field } from '../../components/ui'
 import type { DetectedSource, SourceCategory, SourceCreate } from '../../lib/api'
@@ -166,17 +167,15 @@ export function DetectSourceForm({ onDone, onAdded }: Props) {
               />
             </Field>
             <Field label="Категория">
-              <select
-                className={INPUT_CLASS}
+              <SelectField
+                label="Категория"
                 value={category}
-                onChange={(event) => setCategory(event.target.value as SourceCategory)}
-              >
-                {CATEGORY_ORDER.map((item) => (
-                  <option key={item} value={item}>
-                    {CATEGORY_LABELS[item]}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => setCategory(value as SourceCategory)}
+                options={CATEGORY_ORDER.map((item) => ({
+                  value: item,
+                  label: CATEGORY_LABELS[item],
+                }))}
+              />
             </Field>
           </div>
           {found.samples.length > 0 && (

@@ -11,7 +11,8 @@ import {
 import { motion } from 'motion/react'
 import type { ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router'
-import { INPUT_CLASS, buttonClass, rowMotion } from '../components/tokens'
+import { SelectField } from '../components/SelectField'
+import { buttonClass, rowMotion } from '../components/tokens'
 import { AnimatedNumber, Card, Chip, EmptyState, ErrorNote, PageHeader } from '../components/ui'
 import type { DigestItem, DigestSummary, InterestChange } from '../lib/api'
 import { externalHref, formatDateTime, SETTING_LABELS } from '../lib/format'
@@ -138,31 +139,27 @@ export function ComparePage() {
       ) : (
         <>
           <Card className="mb-5 grid items-center gap-3 p-4 sm:grid-cols-[1fr_auto_1fr]">
-            <select
-              aria-label="Было"
-              className={INPUT_CLASS}
+            <SelectField
+              label="Было"
               value={base ?? ''}
-              onChange={(event) => pick('base', event.target.value)}
-            >
-              {done.map((digest) => (
-                <option key={digest.id} value={digest.id} disabled={digest.id === other}>
-                  {optionLabel(digest)}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => pick('base', value)}
+              options={done.map((digest) => ({
+                value: digest.id,
+                label: optionLabel(digest),
+                disabled: digest.id === other,
+              }))}
+            />
             <ArrowRight size={18} className="mx-auto hidden text-outline sm:block" />
-            <select
-              aria-label="Стало"
-              className={INPUT_CLASS}
+            <SelectField
+              label="Стало"
               value={other ?? ''}
-              onChange={(event) => pick('other', event.target.value)}
-            >
-              {done.map((digest) => (
-                <option key={digest.id} value={digest.id} disabled={digest.id === base}>
-                  {optionLabel(digest)}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => pick('other', value)}
+              options={done.map((digest) => ({
+                value: digest.id,
+                label: optionLabel(digest),
+                disabled: digest.id === base,
+              }))}
+            />
           </Card>
 
           <ErrorNote error={comparison.error} />
