@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from radar.ai.embedder import HashingEmbedder, fit_dimension
-from radar.domain import Candidate, Grade, ProfileSpec
+from radar.domain import Candidate, Grade, GradedCandidate, ProfileSpec
 from radar.selection.clustering import cluster_items
 from radar.selection.retrieval import _excluded_by, exclusion_query, keyword_query
 from radar.selection.scoring import (
@@ -15,8 +15,10 @@ from radar.selection.scoring import (
     REJECT_OVER_LIMIT,
     final_score,
     lexical_score,
+    mentions,
     rank_candidates,
     retrieval_score,
+    same_vulnerability,
     select,
 )
 from tests.conftest import ArticleFactory, GradedFactory
@@ -220,3 +222,78 @@ def test_spelling_only_vectors_are_not_clustered_but_grouped_by_interest(
 
     assert sorted(len(group) for group in groups) == [3, 3]
     assert all(len({item.graded.interest_id for item in group}) == 1 for group in groups)
+
+
+def _graded(
+    make_article: ArticleFactory, title: str, summary: str, score: float
+) -> GradedCandidate:
+    candidate = Candidate(
+        article=make_article(title, summary), interest_id="ics", retrieval_score=score
+    )
+    return GradedCandidate(
+        candidate=candidate, grade=Grade(relevance=2, interest_id="ics"), score=score
+    )
+
+
+def test_retellings_of_one_cve_in_two_languages_are_one_entry(
+    profile: ProfileSpec, make_article: ArticleFactory
+) -> None:
+    """From the snapshot of October 3: one FortiMail zero-day from BleepingComputer
+    and from 1275; the headlines share no words and the vectors are not given."""
+    english = _graded(
+        make_article,
+        "Fortinet warns of critical FortiMail flaw exploited in zero-day attacks",
+        "Fortinet patched CVE-2026-104286, a path traversal in FortiMail.",
+        0.9,
+    )
+    russian = _graded(
+        make_article,
+        "CISA добавила в каталог активно эксплуатируемых уязвимостей обход пути в FortiMail",
+        "Уязвимость CVE-2026-104286 позволяет записывать файлы без аутентификации.",
+        0.8,
+    )
+    other = _graded(
+        make_article,
+        "Cisco закрыла zero-day в Catalyst SD-WAN Manager",
+        "CVE-2026-76504 используется в атаках.",
+        0.7,
+    )
+
+    selected, rejected = select(
+        [english, russian, other], profile, vectors={}, duplicate_threshold=0.9
+    )
+
+    assert [item.article.id for item in selected] == [english.article.id, other.article.id]
+    assert rejected == {russian.article.id: REJECT_DUPLICATE}
+
+
+def test_a_roundup_joins_a_story_only_when_it_names_all_its_ids_and_its_name() -> None:
+    story = mentions(
+        "Kiteworks EPG получил 10 из 10 по CVSS", "Kiteworks раскрыла CVE-2026-54154.", None
+    )
+    roundup_ids = " ".join(f"CVE-2026-1021{n}" for n in range(7))
+    roundup = mentions(
+        "Более сотни уязвимостей в четырёх продуктах Kiteworks",
+        f"CVE-2026-54154 {roundup_ids}",
+        None,
+    )
+    weekly = mentions("Трендовые уязвимости недели", f"CVE-2026-54154 {roundup_ids}", None)
+    huge = mentions(
+        "Kiteworks и ещё сорок вендоров",
+        "CVE-2026-54154 " + " ".join(f"CVE-2026-3{n:04d}" for n in range(30)),
+        None,
+    )
+
+    assert same_vulnerability(story, roundup)
+    # The same ids without the product's name: a weekly roundup is not the story.
+    assert not same_vulnerability(story, weekly)
+    assert not same_vulnerability(story, huge)
+
+
+def test_names_leave_the_ids_out_and_come_from_the_text_when_the_title_has_none() -> None:
+    printed = mentions("CVE-2026-88772 в Citrix NetScaler", "", None)
+    untitled = mentions("Ирония судьбы", "DIVD взломали через Zammad: CVE-2026-102489.", None)
+
+    assert printed.names == {"citrix", "netscaler"}
+    assert printed.ids == {"CVE-2026-88772"}
+    assert untitled.names == {"divd", "zammad"}
