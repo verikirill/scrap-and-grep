@@ -117,11 +117,13 @@ DEFAULT_SOURCES: tuple[tuple[str, str, str, str, str, str, bool], ...] = (
     ("securitymedia", "SecurityMedia", "https://securitymedia.org/news/", "https://securitymedia.org", "security", "ru", False),
     ("cybernews", "Cybernews", "https://cybernews.com/security/", "https://cybernews.com", "security", "en", False),
     ("bdu-asutp", "БДУ ФСТЭК: АСУ ТП", "https://bduasutp.fstec.ru/#/news", "https://bduasutp.fstec.ru", "ics", "ru", False),
+    ("broadcom-bulletins", "Symantec: Protection Bulletins", "https://www.broadcom.com/api/nocache/mblogs?locale=en-us&limit=20", "https://www.broadcom.com/support/security-center/protection-bulletin", "security", "en", False),
 )  # fmt: skip
 
 # Sources that are not feeds; the rest are RSS or Atom.
 SOURCE_KINDS = {
     "pt-trending": "pt_trending",
+    "broadcom-bulletins": "broadcom",
     "cisoclub": "wordpress",
     **dict.fromkeys(
         (

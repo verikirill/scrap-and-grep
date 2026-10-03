@@ -1,0 +1,68 @@
+{
+ "2020": [
+  {
+   "content_id": "1211260759725",
+   "content_type": "protection_bulletin",
+   "title": "Emotet starts 2021 with a (spam campaign) bang",
+   "published": "December 31, 2020",
+   "body": "<p>Emotet is one of the most prevalent banking malware, constantly active on the email threat landscape. The group behind this malware has been targeting many countries via multiple&nbsp;campaigns since at least 2014 and Symantec has been monitoring Emotet activity for just as long.&nbsp;</p>\n\n<p>As many have reported, in December (2020) there was a new Emotet spam campaign which is still raging. Symantec can confirm the following coverage is in place:&nbsp;</p>\n\n<p><strong>File-based</strong></p>\n\n<ul style=\"margin-left: 40px;\">\n\t<li>ISB.Downloader!gen438</li>\n\t<li>ISB.Downloader!gen439</li>\n\t<li>W97M.Downloader</li>\n\t<li>Trojan.Emotet</li>\n\t<li>Trojan.Horse</li>\n\t<li>Trojan.Gen.MBT</li>\n\t<",
+   "thumbnails": [],
+   "highlight": "No",
+   "url": "/support/security-center/protection-bulletin/emotet-starts-2021-with-a-spam-campaign-bang"
+  },
+  {
+   "content_id": "1211260755767",
+   "content_type": "protection_bulletin",
+   "title": "New variant of Bella OSX RAT",
+   "published": "December 30, 2020",
+   "body": "<p>Bella is an open-source and python-based Remote Access Trojan (RAT) for OSX, which has been around since early 2017.&nbsp;Symantec Security Response recently came across a new variant of Bella RAT, which is&nbsp;coincidently reported as being associated with&nbsp;an APT group. As a RAT, Bella is able to perform a variety of activities on the compromised machine such as stealing login, keychain and Apple ID credentials, and downloading and executing remote files.</p>\r\n\r\n<p>Symantec detects this new Bella variant as the following:</p>\r\n\r\n<p><strong>File-based:</strong></p>\r\n\r\n<ul style=\"margin-left: 40px;\">\r\n\t<li>Python.Bellabot</li>\r\n</ul>\r\n",
+   "thumbnails": [],
+   "highlight": "No",
+   "url": null
+  }
+ ],
+ "2025": [
+  {
+   "content_id": "blt825d1d0077ca49ce_en-us",
+   "content_type": "protection_bulletin",
+   "title": "Mamont Malware Shifts from Fake Stores to SMS & Chats",
+   "published": "December 29, 2025",
+   "body": "<div class=\"rte\"><p>A recent report highlights Mamont Android banking malware activity in 2025, showing a surge in attacks targeting Russian banks' customers. The infection vector has shifted from fake app stores to direct phishing delivery, with malicious APKs distributed via SMS and popular messenger groups, often relayed from already compromised devices.</p><p>Once installed, the malware pressures victims to set it as the default SMS app, maintains persistence through fake “update” notifications, and focuses on stealing OTPs and SMS content at scale. Command-and-control is handled through Telegram bots, allowing operators to retrieve full SMS histories, run USSD checks, and mass-message c",
+   "thumbnails": [],
+   "highlight": "No",
+   "url": "/support/security-center/protection-bulletin/mamont-malware-shifts-from-fake-stores-to-sms-chats"
+  },
+  {
+   "content_id": "blt4f4bc59265b35dde_en-us",
+   "content_type": "protection_bulletin",
+   "title": "Pytric and Rustric implants leveraged in UNG0801 malicious operations ",
+   "published": "December 24, 2025",
+   "body": "<div class=\"rte\"><p>A new malicious activity attributed to a persistent threat cluster designated as UNG0801 (aka Operation IconCat) has been reported in the wild. The campaign targets specifically Israeli enterprise environments. The attackers employ sophisticated social engineering techniques, utilizing Hebrew-language phishing lures that mimic internal corporate communications. The hallmark of this operation is the abuse of antivirus (AV) branding to mask malicious activity and to create a false sense of legitimacy. Malicious Word and .PDF documents serve as the initial delivery mechanisms. SEQRITE researchers have identified two distinct infection chains within this activity cluster. Fir",
+   "thumbnails": [],
+   "highlight": "No",
+   "url": "/support/security-center/protection-bulletin/pytric-and-rustric-implants-leveraged-in-ung0801-malicious-operations"
+  }
+ ],
+ "2026": [
+  {
+   "content_id": "blt6b087bdefc554422_en-us",
+   "content_type": "protection_bulletin",
+   "title": "Vidar and Remus infostealers distributed with help of new 2CLoader",
+   "published": "October 02, 2026",
+   "body": "<div class=\"rte\"><p>Zscaler ThreatLabz uncovered a previously undocumented loader malware dubbed 2CLoader. This modular loader has been observed facilitating the delivery of credential-harvesting tools including Vidar and Remus, alongside the XWorm malware strain. The loader stands out due to its advanced defensive mechanisms designed to confound analysts and bypass endpoint protections. It executes a wide spectrum of evasion protocols, spanning virtual machine detection, debugger identification, and user engagement verifications, inline trampoline API hooks as well as indirect system calls.</p><p>Symantec protects you from this threat, identified by the following:</p><p><strong>Behavior-bas",
+   "thumbnails": [],
+   "highlight": "No",
+   "url": "/support/security-center/protection-bulletin/vidar-and-remus-infostealers-distributed-with-help-of-new-2cloader"
+  },
+  {
+   "content_id": "blt11b493f36a2cdac5_en-us",
+   "content_type": "protection_bulletin",
+   "title": "Malicious packages posing as KakaoTalk messaging app installers",
+   "published": "October 02, 2026",
+   "body": "<div class=\"rte\"><p>ASEC Ahnlab researchers reported about an evolution of recently monitored campaigns where adversaries are manipulating search engine optimization (SEO) to steer unsuspecting users toward counterfeit KakaoTalk installers. The packaging of these trojanized setup packages progressively shifted across NSIS, Advanced Installer, and Inno Setup formats, bundling authentic software alongside malicious components. Launching the executable triggers in-memory shellcode execution leading to deployment of malicious payloads. While initial versions tampered with legitimately signed binaries, the threat actors later transitioned toward DLL side-loading techniques. In one prominent case,",
+   "thumbnails": [],
+   "highlight": "No",
+   "url": "/support/security-center/protection-bulletin/malicious-packages-posing-as-kakaotalk-messaging-app-installers"
+  }
+ ]
+}

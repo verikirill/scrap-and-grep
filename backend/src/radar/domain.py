@@ -15,7 +15,7 @@ SourceCategory = Literal["security", "ics", "it", "energy", "regulator"]
 # An RSS or Atom feed, a public Telegram channel, the trending
 # vulnerabilities page of Positive Technologies, the REST API of a WordPress
 # site, or a news page without a feed.
-SourceKind = Literal["rss", "telegram", "pt_trending", "wordpress", "page"]
+SourceKind = Literal["rss", "telegram", "pt_trending", "wordpress", "page", "broadcom"]
 # What can be added; the PT page comes with the defaults.
 AddableSourceKind = Literal["rss", "telegram", "wordpress", "page"]
 Language = Literal["ru", "en"]

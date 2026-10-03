@@ -84,6 +84,39 @@ class AvatarOut(BaseModel):
     avatar_url: str | None
 
 
+class FailingSourceOut(BaseModel):
+    source_id: int
+    name: str
+    failures: int
+    # dns, tls, refused, stub, timeout, connect, http, markup, unsafe, other.
+    kind: str | None
+    error: str | None
+    # The last poll that went well, within the week polls are kept.
+    since: datetime | None
+
+
+class SilentSourceOut(BaseModel):
+    source_id: int
+    name: str
+    last_article: datetime
+    # The longest pause between two of its articles in the last 30 days.
+    longest_gap_hours: float
+
+
+class SourceHealthOut(BaseModel):
+    """How the sources did over the last `hours`: GET /sources/health."""
+
+    hours: int
+    polls: int
+    ok: int
+    # Failed polls by kind, the most frequent first.
+    errors: dict[str, int]
+    # The reader's words for each kind of error.
+    kinds: dict[str, str]
+    failing: list[FailingSourceOut]
+    silent: list[SilentSourceOut]
+
+
 class SourceOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

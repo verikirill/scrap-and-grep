@@ -103,7 +103,7 @@ export interface SharedProfile {
  * A feed, a public Telegram channel, a site's news page without a feed, a
  * WordPress site's API, or the trending vulnerabilities page of PT.
  */
-export type SourceKind = 'rss' | 'telegram' | 'page' | 'wordpress' | 'pt_trending'
+export type SourceKind = 'rss' | 'telegram' | 'page' | 'wordpress' | 'pt_trending' | 'broadcom'
 
 /** The step of the fetch ladder that reads a source (backend ingest/fetch.py). */
 export type FetchMethod = 'plain' | 'browser_headers' | 'impersonate' | 'browser' | 'solver'
@@ -176,6 +176,28 @@ export type SourceCreate =
       /** Without one the channel's own title is taken. */
       name?: string
     })
+
+/** How the sources did over the last day: GET /sources/health. */
+export interface SourceHealth {
+  hours: number
+  polls: number
+  ok: number
+  /** Failed polls by kind, the most frequent first. */
+  errors: Record<string, number>
+  /** The reader's words for each kind of error. */
+  kinds: Record<string, string>
+  failing: {
+    source_id: number
+    name: string
+    failures: number
+    kind: string | null
+    error: string | null
+    /** The last poll that went well, within the week polls are kept. */
+    since: string | null
+  }[]
+  /** Silent longer than the longest pause between two of their articles in 30 days. */
+  silent: { source_id: number; name: string; last_article: string; longest_gap_hours: number }[]
+}
 
 export interface Article {
   id: number
@@ -882,6 +904,7 @@ export const api = {
     }),
 
   sources: () => request<Source[]>('/sources'),
+  sourceHealth: () => request<SourceHealth>('/sources/health'),
   /** Source id -> version of its picture, for the sources that have one. */
   sourceAvatars: () => request<Record<string, string>>('/sources/avatars'),
   createSource: (source: SourceCreate) => request<Source>('/sources', json('POST', source)),

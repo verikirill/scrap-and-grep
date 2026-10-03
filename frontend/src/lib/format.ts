@@ -158,3 +158,10 @@ export function inSentence(label: string): string {
   const isAbbreviation = second !== second.toLowerCase()
   return isAbbreviation ? label : first.toLowerCase() + label.slice(1)
 }
+
+/** "6 ч", "3 дн.": a pause between two articles of a source. */
+export function pause(hours: number): string {
+  if (hours < 1) return 'меньше часа'
+  if (hours < 48) return `${Math.round(hours)} ч`
+  return `${Math.round(hours / 24)} дн.`
+}

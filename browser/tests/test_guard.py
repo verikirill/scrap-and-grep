@@ -168,3 +168,18 @@ async def test_internal_address_is_not_opened(site: int, renderer) -> None:  # t
     with pytest.raises(Refused):
         await renderer.render(f"http://127.0.0.1:{site}/", seconds=20)
     assert Site.hits == []
+
+
+async def test_a_name_that_does_not_resolve_goes_to_the_upstream_proxy_by_name() -> None:
+    async def nowhere(host: str, port: int) -> list[str]:
+        raise Refused(f"cannot resolve {host}")
+
+    closed = Guard(resolve=nowhere)
+    with pytest.raises(Refused):
+        await closed.address("news.example", 443)
+
+    through_proxy = Guard(resolve=nowhere, by_name=True)
+    assert await through_proxy.address("news.example", 443) == ""
+    # An address literal is still checked: the proxy is not asked to go inside.
+    with pytest.raises(Refused):
+        await through_proxy.address("127.0.0.1", 80)

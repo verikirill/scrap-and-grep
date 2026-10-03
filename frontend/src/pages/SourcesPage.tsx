@@ -3,6 +3,7 @@ import { motion } from 'motion/react'
 import { useSearchParams } from 'react-router'
 import { ErrorNote, PageHeader } from '../components/ui'
 import { ArticlesList } from '../features/sources/ArticlesList'
+import { SourceHealth } from '../features/sources/SourceHealth'
 import { SourcesTable } from '../features/sources/SourcesTable'
 import { useMe, useMeta, useSources } from '../lib/queries'
 
@@ -58,6 +59,7 @@ export function SourcesPage() {
       {tab === 'sources' ? (
         <>
           <ErrorNote error={sources.error} />
+          <SourceHealth />
           {sources.data ? (
             <SourcesTable
               sources={sources.data}
