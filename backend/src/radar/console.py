@@ -10,7 +10,7 @@ from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
 
-from radar.domain import AUDIENCE_DAYS, ProfileSpec
+from radar.domain import AUDIENCE_PERIOD_DAYS, ProfileSpec
 from radar.domain import Audience as ProfileAudience
 
 
@@ -51,7 +51,7 @@ class Target:
     spec: ProfileSpec | None = None
 
     def period(self, audience: ProfileAudience) -> int:
-        return self.days or AUDIENCE_DAYS[audience]
+        return self.days or AUDIENCE_PERIOD_DAYS[audience]
 
 
 def targets(

@@ -1,4 +1,9 @@
-"""Render a digest as Markdown."""
+"""Render a digest as Markdown, the main format of a digest.
+
+GitLab is the reference renderer: front matter for programs, anchors as
+GitLab makes them for the table of contents, cards as tables and what was
+left out in a folded block.
+"""
 
 import json
 import re
@@ -52,6 +57,51 @@ def _escape(text: str) -> str:
 def _link(text: str, url: str) -> str:
     safe_url = "".join(ch for ch in url if ch.isprintable()).translate(_URL_UNSAFE)
     return f"[{_escape(text)}]({safe_url})"
+
+
+def _cell(text: str) -> str:
+    """Text of a table cell: a pipe would end the cell early."""
+    return _escape(text).replace("|", "\\|")
+
+
+def _yaml(value: object) -> str:
+    """A front matter value. JSON is valid YAML, and its strings escape quotes,
+    colons and line breaks a profile's name may have."""
+    return json.dumps(value, ensure_ascii=False)
+
+
+def front_matter(digest: DigestView) -> list[str]:
+    """What a program reading the file needs before the text: who it is for,
+    the period, the models and the funnel of publications."""
+    stats = digest.stats
+    made = (digest.finished_at or digest.created_at).astimezone(MOSCOW)
+    fields: dict[str, object] = {
+        "profile": digest.profile_name,
+        "profile_version": digest.profile_version,
+        "audience": digest.profile.audience,
+        "period_start": digest.period_start.astimezone(MOSCOW).date().isoformat(),
+        "period_end": digest.period_end.astimezone(MOSCOW).date().isoformat(),
+        "generated": made.isoformat(timespec="minutes"),
+        "llm": stats.get("llm", ""),
+        "embedding": stats.get("embedding_model", ""),
+        "sources": stats.get("sources", 0),
+        "publications": stats.get("window_total", 0),
+        "candidates": stats.get("candidates", 0),
+        "entries": sum(len(topic.items) for topic in digest.topics),
+    }
+    return ["---", *(f"{key}: {_yaml(value)}" for key, value in fields.items()), "---", ""]
+
+
+def gitlab_anchor(title: str, seen: dict[str, int]) -> str:
+    """The id GitLab gives a heading: lower case, everything but letters,
+    digits, underscores, hyphens and spaces dropped, each space to a hyphen,
+    and -1, -2 for a heading seen before. `seen` holds the headings of the
+    document so far, in order. Checked on git.codenrock.com: unlike its docs,
+    GitLab keeps a run of hyphens, "новое - и" is "новое---и"."""
+    anchor = re.sub(r"[^\w\- ]", "", title.strip().lower()).replace(" ", "-")
+    count = seen.get(anchor)
+    seen[anchor] = (count or 0) + 1
+    return anchor if count is None else f"{anchor}-{count}"
 
 
 def methodology(digest: DigestView) -> list[str]:
@@ -127,7 +177,8 @@ def _item(item: ItemView) -> list[str]:
         lines += [_escape(item.summary), ""]
     rows = card_rows(item)
     if rows:
-        lines += [f"- **{label}:** {_escape(value)}" for label, value in rows]
+        lines += ["| Поле | Значение |", "| --- | --- |"]
+        lines += [f"| {_cell(label)} | {_cell(value)} |" for label, value in rows]
         lines.append("")
     if item.tags:
         tags = " · ".join(TAG_LABELS[tag] for tag in item.tags)
@@ -147,75 +198,48 @@ def _item(item: ItemView) -> list[str]:
     return lines
 
 
-def _front_matter(digest: DigestView) -> list[str]:
-    """What a script needs without reading the text, as YAML front matter.
-    JSON scalars are YAML, so every value is written as JSON."""
-    stats = digest.stats
-    fields = {
-        "profile": digest.profile_name,
-        "audience": digest.profile.audience,
-        "period_start": digest.period_start.astimezone(MOSCOW).isoformat(timespec="minutes"),
-        "period_end": digest.period_end.astimezone(MOSCOW).isoformat(timespec="minutes"),
-        "built": (digest.finished_at or digest.created_at)
-        .astimezone(MOSCOW)
-        .isoformat(timespec="minutes"),
-        "model": stats.get("llm"),
-        "embeddings": stats.get("embedding_model"),
-        "sources": stats.get("sources", 0),
-        "publications": stats.get("window_total", 0),
-        "candidates": stats.get("candidates", 0),
-        "entries": stats.get("selected", 0),
-    }
-    lines = [f"{key}: {json.dumps(value, ensure_ascii=False)}" for key, value in fields.items()]
-    return ["---", *lines, "---", ""]
-
-
-# Contents are worth a line of their own from this many topics.
-CONTENTS_FROM_TOPICS = 3
-_ANCHOR_DROPS = re.compile(r"[^\w\- ]")
-
-
-def anchor(heading: str) -> str:
-    """The anchor GitLab and GitHub give a heading: lower case, punctuation
-    dropped, spaces turned into hyphens."""
-    return _ANCHOR_DROPS.sub("", heading.lower()).strip().replace(" ", "-")
-
-
-def _contents(digest: DigestView) -> list[str]:
-    if len(digest.topics) < CONTENTS_FROM_TOPICS:
-        return []
-    lines = ["## Содержание", ""]
-    for number, topic in enumerate(digest.topics, start=1):
-        heading = f"{number}. {topic.title}"
-        lines.append(f"- [{_escape(heading)}](#{anchor(heading)}) · {len(topic.items)}")
-    return [*lines, ""]
-
-
-def _rejected(digest: DigestView) -> list[str]:
-    """Every candidate left out, with its score and why: folded, as on the page."""
+def _left_out(digest: DigestView) -> list[str]:
+    """The candidates that did not make it, folded: open them to check the choice.
+    The blank line after the summary makes GitLab read the list as Markdown."""
     if not digest.rejected:
         return []
-    lines = [
-        "<details>",
-        f"<summary>Не вошло в выпуск: {len(digest.rejected)} кандидатов с оценкой и причиной"
-        "</summary>",
-        "",
-    ]
+    lines = [f"<details><summary>Не вошло в выпуск: {len(digest.rejected)}</summary>", ""]
     for item in digest.rejected:
-        code = item.reject_reason or "low_score"
-        reason = REJECT_REASONS.get(code, code)
-        detail = f": {_escape(item.reason)}" if item.reason else ""
-        lines.append(
-            f"- {item.score:.2f} {_link(item.title, item.url)} "
-            f"({_escape(item.source_name)}) - {reason}{detail}"
-        )
+        reason = REJECT_REASONS.get(item.reject_reason or "", item.reject_reason or "")
+        parts = [
+            _link(item.headline, item.url),
+            _escape(item.source_name),
+            f"оценка {item.score:.2f}",
+        ]
+        lines.append("- " + " · ".join([*parts, reason] if reason else parts))
     return [*lines, "", "</details>", ""]
 
 
 def render_markdown(digest: DigestView) -> str:
     title = digest.title or f"Дайджест для профиля «{digest.profile_name}»"
+    management = digest.profile.audience == "management"
+    implications = management and bool(digest.implications)
+    # A specialist's digest is long: sections first, so a reader jumps to one.
+    contents = not management and bool(digest.topics)
+    headings = [f"{number}. {topic.title}" for number, topic in enumerate(digest.topics, 1)]
+    # Anchors as GitLab makes them, counting every heading before each section.
+    seen: dict[str, int] = {}
+    gitlab_anchor(title, seen)
+    for fixed, present in (
+        ("Содержание", contents),
+        ("Что это значит для нас", implications),
+        ("Главное", bool(digest.highlights)),
+    ):
+        if present:
+            gitlab_anchor(fixed, seen)
+    anchors = []
+    for heading, topic in zip(headings, digest.topics, strict=True):
+        anchors.append(gitlab_anchor(heading, seen))
+        for item in topic.items:
+            gitlab_anchor(item.headline, seen)
+
     lines = [
-        *_front_matter(digest),
+        *front_matter(digest),
         f"# {_escape(title)}",
         "",
         f"**Профиль:** {_escape(digest.profile_name)} (версия {digest.profile_version})  ",
@@ -223,24 +247,30 @@ def render_markdown(digest: DigestView) -> str:
         f"**Сформирован:** {format_datetime(digest.finished_at or digest.created_at)} МСК",
         "",
     ]
-    if digest.implications:
+    if contents:
+        lines += ["## Содержание", ""]
+        lines += [
+            f"- [{_escape(heading)}](#{anchor})"
+            for heading, anchor in zip(headings, anchors, strict=True)
+        ]
+        lines.append("")
+    if implications:
         lines += ["## Что это значит для нас", ""]
-        lines += [f"- {_escape(line)}" for line in digest.implications]
+        lines += [f"- {_escape(point)}" for point in digest.implications]
         lines.append("")
     if digest.highlights:
         lines += ["## Главное", ""]
         lines += [f"- {_escape(highlight)}" for highlight in digest.highlights]
         lines.append("")
-    lines += _contents(digest)
     if not digest.topics:
         lines += ["За выбранный период публикаций по интересам профиля не найдено.", ""]
-    for number, topic in enumerate(digest.topics, start=1):
-        lines += [f"## {number}. {_escape(topic.title)}", ""]
+    for heading, topic in zip(headings, digest.topics, strict=True):
+        lines += [f"## {_escape(heading)}", ""]
         if topic.overview:
             lines += [_escape(topic.overview), ""]
         for item in topic.items:
             lines += _item(item)
-    lines += _rejected(digest)
+    lines += _left_out(digest)
     lines += ["---", "", "## Как составлен выпуск", ""]
     lines += [f"- {line}" for line in methodology(digest)]
     lines.append("")

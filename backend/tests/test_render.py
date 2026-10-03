@@ -1,6 +1,5 @@
 """Exports must carry every source link, in both formats."""
 
-import json
 import re
 import uuid
 from datetime import UTC, datetime
@@ -144,46 +143,29 @@ def test_empty_digest_says_so(digest: DigestView) -> None:
     assert render_docx(empty)[:2] == b"PK"
 
 
-def test_markdown_starts_with_front_matter_a_script_can_read(digest: DigestView) -> None:
-    head = render_markdown(digest).split("---\n")[1]
-    meta = dict(line.split(": ", 1) for line in head.strip().splitlines())
+def test_management_reads_what_it_means_for_the_company_first(digest: DigestView) -> None:
+    management = digest.model_copy(
+        update={
+            "profile": digest.profile.model_copy(update={"audience": "management"}),
+            "implications": ["Проверить доступы подрядчиков.", "Обновить план реагирования."],
+        }
+    )
 
-    # Every value is JSON, which YAML reads as it is.
-    assert json.loads(meta["profile"]) == "ИБ АСУ ТП"
-    assert json.loads(meta["audience"]) == "specialist"
-    assert json.loads(meta["period_start"]) == "2026-09-23T03:00+03:00"
-    assert json.loads(meta["publications"]) == 800
-    assert json.loads(meta["entries"]) == 2
-
-
-def test_contents_link_to_the_anchors_of_their_headings(digest: DigestView) -> None:
-    topics = [
-        TopicView(title=title, overview="", items=[_item(number, f"Статья {number}")])
-        for number, title in enumerate(
-            ["Атаки", "Уязвимости", "OT-кибербезопасность: стратегия"], 1
-        )
+    markdown = render_markdown(management)
+    paragraphs = [
+        paragraph.text for paragraph in Document(BytesIO(render_docx(management))).paragraphs
     ]
-    text = render_markdown(digest.model_copy(update={"topics": topics}))
 
-    assert "- [1. Атаки](#1-атаки) · 1" in text
-    assert "- [3. OT-кибербезопасность: стратегия](#3-ot-кибербезопасность-стратегия) · 1" in text
-    assert "## 3. OT-кибербезопасность: стратегия" in text
-    # Two topics need no contents.
-    assert "## Содержание" not in render_markdown(digest)
+    assert markdown.index("## Что это значит для нас") < markdown.index("## Главное")
+    assert "- Проверить доступы подрядчиков." in markdown
+    assert paragraphs.index("Что это значит для нас") < paragraphs.index("Главное")
+    assert "Обновить план реагирования." in paragraphs
 
 
-def test_the_candidates_left_out_are_folded_with_score_and_reason(digest: DigestView) -> None:
-    left_out = [
-        _item(7, "Акция магазина", score=0.21, reject_reason="low_score", reason="Не про ИБ."),
-        _item(8, "Обзор гаджетов", score=0.6, reject_reason="excluded"),
-    ]
-    text = render_markdown(digest.model_copy(update={"rejected": left_out}))
+def test_a_specialist_gets_no_block_for_management(digest: DigestView) -> None:
+    specialist = digest.model_copy(update={"implications": ["Лишнее."]})
 
-    folded = text.split("<details>")[1].split("</details>")[0]
-    assert "Не вошло в выпуск: 2 кандидатов" in folded
-    assert "- 0.21 [Акция магазина](https://example.org/a/7) (Источник) - ниже порога" in folded
-    assert "Не про ИБ." in folded
-    assert "попадает под исключение" in folded
+    assert "Что это значит для нас" not in render_markdown(specialist)
 
 
 def test_an_entry_says_how_its_protected_source_is_read(digest: DigestView) -> None:

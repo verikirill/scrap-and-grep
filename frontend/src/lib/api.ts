@@ -37,8 +37,23 @@ export interface Profile {
   share_token: string | null
   /** Whether the profile follows its reader's marks. */
   adaptive: boolean
+  /** What the profile's audience suggests: the period of a digest and a schedule. */
+  defaults: ProfileDefaults
   created_at: string
   updated_at: string
+}
+
+export interface ScheduleDefault {
+  cadence: Cadence
+  /** Monday is 0; weekly schedules only. */
+  weekday: number | null
+  /** HH:MM, the reader's local time. */
+  time: string
+}
+
+export interface ProfileDefaults {
+  period_days: number
+  schedule: ScheduleDefault
 }
 
 /** What one interest of a profile has learned from the reader's marks. */
@@ -272,6 +287,8 @@ export interface DigestSummary {
   profile_id: string | null
   profile_name: string
   profile_version: number
+  /** Who it was written for; a profile built for both audiences gives two digests. */
+  audience?: Audience
   period_start: string
   period_end: string
   status: DigestStatus
@@ -348,8 +365,8 @@ export interface Topic {
 export interface Digest extends DigestSummary {
   profile: ProfileSpec
   highlights: string[]
-  /** For management: what the period means for the company. */
-  implications?: string[]
+  /** Management only: what the period means for the company. */
+  implications: string[]
   topics: Topic[]
   rejected: DigestItem[]
 }
@@ -740,6 +757,17 @@ export function query(params: Record<string, string | number | string[] | undefi
   return text ? `?${text}` : ''
 }
 
+function digestBody(profileId: string, period: DigestPeriod) {
+  return 'days' in period
+    ? { profile_id: profileId, period_days: period.days }
+    : {
+        profile_id: profileId,
+        period_days: null,
+        period_start: period.start.toISOString(),
+        period_end: period.end.toISOString(),
+      }
+}
+
 export const api = {
   meta: () => request<Meta>('/meta'),
   analytics: (days: number, guests: boolean) =>
@@ -891,20 +919,11 @@ export const api = {
   digest: (id: string) => request<Digest>(`/digests/${id}`),
   /** A period is a number of days back from now, or two dates. */
   createDigest: (profileId: string, period: DigestPeriod) =>
-    request<DigestSummary>(
-      '/digests',
-      json(
-        'POST',
-        'days' in period
-          ? { profile_id: profileId, period_days: period.days }
-          : {
-              profile_id: profileId,
-              period_days: null,
-              period_start: period.start.toISOString(),
-              period_end: period.end.toISOString(),
-            },
-      ),
-    ),
+    request<DigestSummary>('/digests', json('POST', digestBody(profileId, period))),
+  /** A specialist's digest and a management one, the second built after the
+   * first on its cached grades. */
+  createDigestsForBoth: (profileId: string, period: DigestPeriod) =>
+    request<DigestSummary[]>('/digests/both', json('POST', digestBody(profileId, period))),
   deleteDigest: (id: string) => request<void>(`/digests/${id}`, { method: 'DELETE' }),
   compare: (base: string, other: string) =>
     request<Comparison>(`/digests/compare${query({ base, other })}`),

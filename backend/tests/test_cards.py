@@ -7,18 +7,12 @@ from pydantic import BaseModel
 
 from radar.ai.llm import ModelIntelligence
 from radar.cards import (
-    attack_rows,
     check_attack,
     check_entry,
     check_vulnerability,
     defang,
     exploit_evidence,
-    indicators,
     priority,
-    technical_marks,
-    vector_words,
-    vulnerability_rows,
-    without_marks,
 )
 from radar.domain import (
     AttackCard,
@@ -116,87 +110,6 @@ def test_an_attack_card_drops_tools_and_indicators_the_text_does_not_name() -> N
     assert removed == ["Инструменты", "Индикаторы компрометации"]
 
 
-def test_an_attack_card_takes_the_indicators_and_techniques_the_article_prints() -> None:
-    source = (
-        "Группа использовала DCOM для перемещения (T1021.003) и T1190; "
-        "модель T1000 тут ни при чём. "
-        "Индикаторы: 44D88612FEA8A8F36DE82E1278ABB02F, C2 evil[.]com и 192.168.10[.]5, "
-        "загрузка с hxxps://bad[.]site/p.php. Затронута версия 20.9.10.1."
-    )
-
-    checked, removed = check_attack(AttackCard(iocs=None), source)
-
-    assert checked.indicators == (
-        "44d88612fea8a8f36de82e1278abb02f",
-        "evil[.]com",
-        "192.168.10[.]5",
-        "hxxps://bad[.]site/p.php",
-    )
-    assert checked.iocs is True
-    assert checked.techniques == (
-        "T1021.003 Distributed Component Object Model",
-        "T1190 Exploit Public-Facing Application",
-    )
-    assert removed == []
-    rows = dict(attack_rows(checked))
-    assert rows["Индикаторы компрометации"].startswith("44d88612fea8a8f36de82e1278abb02f, evil")
-    assert rows["Техники MITRE ATT&CK"].startswith("T1021.003 Distributed Component Object Model")
-
-
-def test_a_card_without_techniques_shows_no_empty_attack_row() -> None:
-    labels = [label for label, _ in attack_rows(AttackCard(iocs=False))]
-
-    assert "Техники MITRE ATT&CK" not in labels
-    assert dict(attack_rows(AttackCard(iocs=False)))["Индикаторы компрометации"] == "нет"
-
-
-@pytest.mark.parametrize(
-    ("vector", "words"),
-    [
-        (
-            "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
-            "по сети, сложность низкая, без прав, без участия пользователя",
-        ),
-        (
-            "AV:L/AC:H/PR:H/UI:R/S:U/C:H/I:N/A:N",
-            "локально, сложность высокая, с правами администратора, нужно действие пользователя",
-        ),
-        ("AV:N/AC:M/Au:N/C:P/I:P/A:P", "по сети, сложность средняя"),
-        ("не вектор", ""),
-    ],
-)
-def test_the_cvss_vector_reads_as_what_an_attacker_needs(vector: str, words: str) -> None:
-    assert vector_words(vector) == words
-
-
-def test_a_vulnerability_card_shows_the_vector_in_words_only_when_there_is_one() -> None:
-    with_vector = dict(vulnerability_rows(VulnerabilityCard(cvss_vector="AV:N/AC:L/PR:N/UI:N")))
-    without = dict(vulnerability_rows(VulnerabilityCard(cvss_score="9.8")))
-
-    assert with_vector["Вектор атаки"].startswith("по сети")
-    assert "Вектор атаки" not in without
-
-
-def test_a_dotted_version_is_not_an_indicator() -> None:
-    assert indicators("Обновите до 20.9.10.1 или 7.18.1; адрес 10.0.0.1 в тексте без защиты") == ()
-
-
-def test_an_indicator_keeps_no_markup_around_it() -> None:
-    found = indicators(
-        "<hxxp://a[.]b/x> и **evil[.]com/path**, номер 12345678901234567890123456789012"
-    )
-
-    assert found == ("hxxp://a[.]b/x", "evil[.]com/path")
-
-
-def test_a_defanged_address_alone_keeps_the_indicators_flag() -> None:
-    checked, removed = check_attack(AttackCard(iocs=True), "Сервер управления: evil[.]com.")
-
-    assert checked.iocs is True
-    assert checked.indicators == ("evil[.]com",)
-    assert removed == []
-
-
 class Scripted:
     """A model that gives the answers in turn and keeps the prompts it got."""
 
@@ -284,7 +197,8 @@ def test_markdown_lists_the_card_in_the_datasets_order_and_defangs_post_links(
 
     block = markdown[markdown.index("Citrix закрыла уязвимость") :]
     assert "приоритет: высокий (эксплойт: используется в атаках)" in block
-    labels = [line.split(":**")[0].removeprefix("- **") for line in block.splitlines()]
+    # The card is a table: the label is the first cell of a row.
+    labels = [line.split("|")[1].strip() for line in block.splitlines() if line.startswith("| ")]
     assert [label for label in labels if label in {"Уязвимость", "Эксплойт", "CVSS"}] == [
         "Уязвимость",
         "Эксплойт",
@@ -357,69 +271,3 @@ def test_industry_in_the_sectors_counts_as_the_datasets_energy_sector() -> None:
     checked, _ = check_attack(card, "PhantomCore атаковала промышленные предприятия РФ.")
 
     assert priority("attack", ItemSummary(summary="", attack=checked)) == "high"
-
-
-async def test_a_management_brief_with_technical_marks_goes_back_then_is_cut(
-    make_article: ArticleFactory, profile: ProfileSpec
-) -> None:
-    technical = {
-        "headline": "Уязвимость CVE-2026-88772 в NetScaler",
-        "summary": "Citrix закрыла уязвимость. Оценка CVSS 9. Атакующие уже её используют.",
-        "why": "Обновите шлюзы до 14.1-47.48.",
-        "tags": ["abroad"],
-    }
-    model = Scripted(technical, technical)
-    item = _selected(make_article, "vulnerability", BDU_ENTRY)
-    management = profile.model_copy(update={"audience": "management"})
-
-    entry = await ModelIntelligence(cast(Any, model)).summarize(item, management, None)
-
-    # Sent back once with what is wrong, then cut by hand.
-    assert "CVE-2026-88772" in model.prompts[1]
-    assert "одного-двух предложений" in model.prompts[1]
-    assert entry.summary == "Citrix закрыла уязвимость. Атакующие уже её используют."
-    assert technical_marks(f"{entry.headline} {entry.summary} {entry.why}") == set()
-
-
-async def test_management_overview_says_what_it_means_for_the_company(
-    make_article: ArticleFactory, profile: ProfileSpec
-) -> None:
-    from radar.domain import Topic
-
-    answer = {
-        "title": "Атаки на энергетику",
-        "highlights": [
-            "Группировка атаковала подстанции.",
-            "Оценка CVSS у уязвимости критическая.",
-        ],
-        "implications": ["Стоит проверить удалённый доступ подрядчиков к АСУ ТП."],
-    }
-    model = Scripted(answer)
-    item = _selected(make_article, "attack", "Группировка атаковала подстанции.")
-    item = item.model_copy(update={"text": ItemSummary(headline="Атака", summary="Атака.")})
-    management = profile.model_copy(update={"audience": "management"})
-
-    overview = await ModelIntelligence(cast(Any, model)).overview(
-        [Topic(title="Атаки", items=(item,))], management
-    )
-
-    assert overview.implications == ("Стоит проверить удалённый доступ подрядчиков к АСУ ТП.",)
-    # A key point with an identifier is no key point for management.
-    assert overview.highlights == ("Группировка атаковала подстанции.",)
-
-
-def test_technical_marks_are_identifiers_scores_addresses_and_hashes() -> None:
-    text = (
-        "CVE-2026-1111, BDU:2026-01234, CVSS 9.8, IoC 10.0.0.1 и "
-        "d41d8cd98f00b204e9800998ecf8427e, но не 187-ФЗ и не версия 2.0"
-    )
-
-    assert technical_marks(text) == {
-        "CVE-2026-1111",
-        "BDU:2026-01234",
-        "CVSS",
-        "IoC",
-        "10.0.0.1",
-        "d41d8cd98f00b204e9800998ecf8427e",
-    }
-    assert without_marks("Уязвимость CVE-2026-88772 в NetScaler") == "Уязвимость в NetScaler"

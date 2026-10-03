@@ -22,9 +22,29 @@ Language = Literal["ru", "en"]
 # Who reads the digest, as in the organizers' dataset: specialists get a card
 # per attack and vulnerability, management a short brief with tags.
 Audience = Literal["specialist", "management"]
-# How often each audience reads, as the jury put it: technical people every
-# day, management once a week. A digest asked for without a period covers this.
-AUDIENCE_DAYS: dict[Audience, int] = {"specialist": 1, "management": 7}
+
+# How often each audience reads, as the jury put it: specialists every day,
+# management less often. The period of a digest built without one and the
+# schedule a profile is offered follow it; nothing is scheduled by itself.
+AUDIENCE_PERIOD_DAYS: dict[Audience, int] = {"specialist": 1, "management": 7}
+
+
+class ScheduleDefault(BaseModel):
+    """A schedule as the reader is offered it, in their local time."""
+
+    model_config = ConfigDict(frozen=True)
+
+    cadence: Literal["daily", "weekdays", "weekly"]
+    # Monday is 0; for a weekly schedule only.
+    weekday: int | None = None
+    time: str = Field(pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+
+
+AUDIENCE_SCHEDULE: dict[Audience, ScheduleDefault] = {
+    "specialist": ScheduleDefault(cadence="weekdays", time="08:30"),
+    "management": ScheduleDefault(cadence="weekly", weekday=0, time="09:00"),
+}
+
 # What a publication reports, the dataset's grouping for specialists.
 RecordKind = Literal["attack", "vulnerability", "news"]
 Priority = Literal["high", "medium", "low"]
@@ -185,6 +205,15 @@ class DuplicateRef(BaseModel):
     source_name: str
 
 
+class AttackTechnique(BaseModel):
+    """A technique of MITRE ATT&CK: T1566, or a sub-technique T1566.001."""
+
+    model_config = ConfigDict(frozen=True)
+
+    id: str = Field(pattern=r"^T\d{4}(?:\.\d{3})?$")
+    name: str = ""
+
+
 class AttackCard(BaseModel):
     """The dataset's card of an attack. Empty means the text does not say."""
 
@@ -194,14 +223,18 @@ class AttackCard(BaseModel):
     attack_date: str = ""
     sectors: str = ""
     energy_sector: bool | None = None
+    # The way in, broadly (phishing, a flaw on the perimeter, a contractor),
+    # and the concrete entry point.
+    vector: str = ""
     initial_access: str = ""
+    # Products and versions the attack went through.
+    affected: str = ""
     tools: tuple[str, ...] = ()
     vulnerabilities: tuple[str, ...] = ()
+    techniques: tuple[AttackTechnique, ...] = ()
     iocs: bool | None = None
-    # Taken from the article by the check, never written by the model: the
-    # hashes and defanged addresses it prints, the ATT&CK techniques it names.
+    # Addresses, domains and hashes from the text, defanged.
     indicators: tuple[str, ...] = ()
-    techniques: tuple[str, ...] = ()
 
 
 class VulnerabilityCard(BaseModel):
@@ -216,6 +249,11 @@ class VulnerabilityCard(BaseModel):
     cvss_score: str = ""
     cvss_vector: str = ""
     impact: str = ""
+    cwe: tuple[str, ...] = ()
+    # For industrial control systems: the maker and model of the equipment,
+    # and the protocols it speaks.
+    equipment: str = ""
+    protocols: str = ""
 
 
 class VulnerabilityReference(BaseModel):
@@ -225,6 +263,9 @@ class VulnerabilityReference(BaseModel):
     id: str
     kev_added: date | None = None
     kev_ransomware: bool = False
+    # The date CISA wants it fixed by, and the weaknesses it names.
+    kev_due: date | None = None
+    kev_cwes: tuple[str, ...] = ()
     bdu_id: str = ""
     bdu_exploit: str = ""
     bdu_in_attacks: bool = False
@@ -245,7 +286,12 @@ class VulnerabilityReference(BaseModel):
         if self.kev_added is not None:
             ransomware = ", в том числе вымогателями" if self.kev_ransomware else ""
             added = f"{self.kev_added:%d.%m.%Y}"
-            parts.append(f"в каталоге CISA KEV с {added}: используется в атаках{ransomware}")
+            kev = f"в каталоге CISA KEV с {added}: используется в атаках{ransomware}"
+            if self.kev_due is not None:
+                kev += f", устранить до {self.kev_due:%d.%m.%Y}"
+            if self.kev_cwes:
+                kev += f", {', '.join(self.kev_cwes)}"
+            parts.append(kev)
         if self.bdu_id:
             bdu = [self.bdu_id]
             if self.bdu_exploit:
@@ -295,7 +341,7 @@ class TopicName(BaseModel):
 class DigestOverview(BaseModel):
     title: str
     highlights: tuple[str, ...] = ()
-    # For management: what the period means for an energy company.
+    # Management only: what the period means for the company, two or three points.
     implications: tuple[str, ...] = ()
     by_model: bool = False
 
