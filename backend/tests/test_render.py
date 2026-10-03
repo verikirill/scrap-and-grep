@@ -13,7 +13,7 @@ from docx.opc.constants import RELATIONSHIP_TYPE
 from radar.domain import Interest, ProfileSpec
 from radar.render.docx import render_docx
 from radar.render.markdown import render_markdown
-from radar.views import DigestView, DuplicateView, ItemView, TopicView
+from radar.views import DigestView, DuplicateView, ItemView, TopicView, read_via
 
 PUBLISHED = datetime(2026, 9, 29, 21, 30, tzinfo=UTC)
 
@@ -184,3 +184,15 @@ def test_the_candidates_left_out_are_folded_with_score_and_reason(digest: Digest
     assert "- 0.21 [Акция магазина](https://example.org/a/7) (Источник) - ниже порога" in folded
     assert "Не про ИБ." in folded
     assert "попадает под исключение" in folded
+
+
+def test_an_entry_says_how_its_protected_source_is_read(digest: DigestView) -> None:
+    digest.topics[0].items.append(
+        _item(9, "БДУ АСУ ТП: новая уязвимость", source_read_via=read_via("browser", False))
+    )
+
+    markdown = render_markdown(digest)
+
+    assert "Источник (прочитан: браузер)" in markdown
+    assert read_via("impersonate", True) == "отпечаток Chrome, через прокси"
+    assert read_via("plain", False) == ""

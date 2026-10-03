@@ -297,6 +297,8 @@ export interface DigestItem {
   headline: string
   source_name: string
   source_category: SourceCategory
+  /** How the source gets past a site that refuses a bot; empty for a plain read. */
+  source_read_via?: string
   language: string
   published_at: string
   score: number

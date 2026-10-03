@@ -98,7 +98,10 @@ def methodology(digest: DigestView) -> list[str]:
 
 def item_meta(item: ItemView) -> list[str]:
     """The line under an entry's headline: source, date, kind and priority, score."""
-    meta = [item.source_name, format_date(item.published_at)]
+    source = item.source_name
+    if item.source_read_via:
+        source += f" (прочитан: {item.source_read_via})"
+    meta = [source, format_date(item.published_at)]
     if item.priority:
         # Only a specialist's card has a kind and a priority to show.
         meta.append(KIND_LABELS[item.kind])

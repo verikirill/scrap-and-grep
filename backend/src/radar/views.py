@@ -39,6 +39,8 @@ class ItemView(BaseModel):
     headline: str
     source_name: str
     source_category: str
+    # How the source gets past a site that refuses a bot; empty for a plain read.
+    source_read_via: str = ""
     language: str
     published_at: datetime
     score: float
@@ -117,6 +119,24 @@ class DigestView(DigestSummaryView):
     rejected: list[ItemView]
 
 
+# The fetch ladder's steps above a plain request, as an entry names them.
+READ_VIA_LABELS = {
+    "browser_headers": "заголовки браузера",
+    "impersonate": "отпечаток Chrome",
+    "browser": "браузер",
+    "solver": "FlareSolverr",
+}
+
+
+def read_via(fetch_method: str | None, via_proxy: bool) -> str:
+    """How the entry's source is read when a plain request is refused:
+    "браузер", "отпечаток Chrome, через прокси"; empty for a plain read."""
+    parts = [READ_VIA_LABELS[fetch_method]] if fetch_method in READ_VIA_LABELS else []
+    if via_proxy:
+        parts.append("через прокси")
+    return ", ".join(parts)
+
+
 # Stored as plain strings; read back as the values the domain knows.
 _KINDS: dict[str, RecordKind] = {"attack": "attack", "vulnerability": "vulnerability"}
 _PRIORITIES: dict[str, Priority] = {"high": "high", "medium": "medium", "low": "low"}
@@ -134,6 +154,7 @@ def _item_view(item: DigestItem, profile: ProfileSpec) -> ItemView:
         headline=item.headline or article.title,
         source_name=article.source.name,
         source_category=article.source.category,
+        source_read_via=read_via(article.source.fetch_method, article.source.fetch_via_proxy),
         language=article.language,
         published_at=article.published_at,
         score=round(item.score, 3),
