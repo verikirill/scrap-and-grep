@@ -7,11 +7,13 @@ from pydantic import BaseModel
 
 from radar.ai.llm import ModelIntelligence
 from radar.cards import (
+    attack_rows,
     check_attack,
     check_entry,
     check_vulnerability,
     defang,
     exploit_evidence,
+    indicators,
     priority,
     technical_marks,
     without_marks,
@@ -110,6 +112,44 @@ def test_an_attack_card_drops_tools_and_indicators_the_text_does_not_name() -> N
     assert checked.tools == ("KermitRAT",)
     assert checked.iocs is None
     assert removed == ["Инструменты", "Индикаторы компрометации"]
+
+
+def test_an_attack_card_takes_the_indicators_and_techniques_the_article_prints() -> None:
+    source = (
+        "Группа использовала DCOM для перемещения (T1021.003) и T1190; "
+        "модель T1000 тут ни при чём. "
+        "Индикаторы: 44D88612FEA8A8F36DE82E1278ABB02F, C2 evil[.]com и 192.168.10[.]5, "
+        "загрузка с hxxps://bad[.]site/p.php. Затронута версия 20.9.10.1."
+    )
+
+    checked, removed = check_attack(AttackCard(iocs=None), source)
+
+    assert checked.indicators == (
+        "44d88612fea8a8f36de82e1278abb02f",
+        "evil[.]com",
+        "192.168.10[.]5",
+        "hxxps://bad[.]site/p.php",
+    )
+    assert checked.iocs is True
+    assert checked.techniques == (
+        "T1021.003 Distributed Component Object Model",
+        "T1190 Exploit Public-Facing Application",
+    )
+    assert removed == []
+    rows = dict(attack_rows(checked))
+    assert rows["Индикаторы компрометации"].startswith("44d88612fea8a8f36de82e1278abb02f, evil")
+    assert rows["Техники MITRE ATT&CK"].startswith("T1021.003 Distributed Component Object Model")
+
+
+def test_a_card_without_techniques_shows_no_empty_attack_row() -> None:
+    labels = [label for label, _ in attack_rows(AttackCard(iocs=False))]
+
+    assert "Техники MITRE ATT&CK" not in labels
+    assert dict(attack_rows(AttackCard(iocs=False)))["Индикаторы компрометации"] == "нет"
+
+
+def test_a_dotted_version_is_not_an_indicator() -> None:
+    assert indicators("Обновите до 20.9.10.1 или 7.18.1; адрес 10.0.0.1 в тексте без защиты") == ()
 
 
 class Scripted:

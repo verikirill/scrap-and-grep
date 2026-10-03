@@ -27,6 +27,7 @@ from radar.domain import (
     VulnerabilityReference,
 )
 from radar.text import numbers, split_sentences
+from radar.vulns.attack import techniques
 
 KIND_LABELS: dict[RecordKind, str] = {
     "attack": "Атака",
@@ -178,6 +179,24 @@ _IOC_RE = re.compile(
 )
 
 
+# Indicators as threat reports print them: file hashes, and addresses defanged
+# ("evil[.]com", "hxxp://") so nobody opens them by accident. A plain dotted
+# number is left alone: "20.9.10.1" is a version far more often than a host.
+_HASH_RE = re.compile(r"\b(?:[0-9a-fA-F]{64}|[0-9a-fA-F]{40}|[0-9a-fA-F]{32})\b")
+_DEFANGED_RE = re.compile(
+    r"\bhxxps?(?:://|\[:\]//)\S+|[\w.-]+(?:\[\.\][\w-]+)+(?:[/:]\S*)?", re.IGNORECASE
+)
+_TRAILING = ".,;:!?)»\"'"
+MAX_INDICATORS = 10
+
+
+def indicators(source: str) -> tuple[str, ...]:
+    """The hashes and defanged addresses an article gives, in its order."""
+    found = [match.group(0).lower() for match in _HASH_RE.finditer(source)]
+    found += [match.group(0).rstrip(_TRAILING) for match in _DEFANGED_RE.finditer(source)]
+    return tuple(dict.fromkeys(found))[:MAX_INDICATORS]
+
+
 def exploit_evidence(text: str) -> Exploit:
     """What the text says about an exploit; "unknown" when it says nothing."""
     affirmed = _NO_EXPLOIT_RE.sub(" ", text)
@@ -291,6 +310,12 @@ def check_attack(card: AttackCard, source: str) -> tuple[AttackCard, list[str]]:
     if card.iocs and not _IOC_RE.search(source):
         updates["iocs"] = None
         removed.append("Индикаторы компрометации")
+    # What a specialist acts on comes from the text itself, not from the model:
+    # the indicators it prints and the ATT&CK techniques it names by id.
+    updates["indicators"] = indicators(source)
+    if updates["indicators"]:
+        updates["iocs"] = True
+    updates["techniques"] = techniques(source)
     return card.model_copy(update=updates), removed
 
 
@@ -476,8 +501,8 @@ def attack_rows(card: AttackCard) -> list[tuple[str, str]]:
         ("Первоначальный доступ", card.initial_access or NO_DATA),
         ("Инструменты", ", ".join(card.tools) or NO_DATA),
         ("Уязвимости", ", ".join(card.vulnerabilities) or NO_DATA),
-        ("Индикаторы компрометации", _flag(card.iocs)),
-    ]
+        ("Индикаторы компрометации", ", ".join(card.indicators) or _flag(card.iocs)),
+    ] + ([("Техники MITRE ATT&CK", ", ".join(card.techniques))] if card.techniques else [])
 
 
 def vulnerability_rows(card: VulnerabilityCard) -> list[tuple[str, str]]:

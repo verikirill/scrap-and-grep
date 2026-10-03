@@ -198,6 +198,10 @@ class AttackCard(BaseModel):
     tools: tuple[str, ...] = ()
     vulnerabilities: tuple[str, ...] = ()
     iocs: bool | None = None
+    # Taken from the article by the check, never written by the model: the
+    # hashes and defanged addresses it prints, the ATT&CK techniques it names.
+    indicators: tuple[str, ...] = ()
+    techniques: tuple[str, ...] = ()
 
 
 class VulnerabilityCard(BaseModel):
