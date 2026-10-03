@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tail&amp;Grep</title>
+<!-- Исходник презентации. PDF - печать в Chromium, размер страницы задан в CSS (README.md рядом). -->
+<style>
+@font-face { font-family: 'Roboto Flex'; font-weight: 100&nbsp;1000; font-display: block;
+  src: url(fonts/roboto-flex-cyrillic-wght-normal.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: 'Roboto Flex'; font-weight: 100&nbsp;1000; font-display: block;
+  src: url(fonts/roboto-flex-latin-wght-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Source Serif 4'; font-weight: 200&nbsp;900; font-display: block;
+  src: url(fonts/source-serif-4-cyrillic-wght-normal.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: 'Source Serif 4'; font-weight: 200&nbsp;900; font-display: block;
+  src: url(fonts/source-serif-4-latin-wght-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
+:root {
+  --primary: #2b52d3;
+  --primary-container: #dde1ff;
+  --on-primary-container: #0038b7;
+  --spark: #904d00;
+  --spark-container: #ffdcc2;
+  --success: #006d43;
+  --surface: #f8f9fe;
+  --surface-low: #f3f3f8;
+  --surface-container: #edeef2;
+  --surface-high: #e7e8ed;
+  --on-surface: #191c1f;
+  --muted: #41474f;
+  --outline: #727780;
+  --outline-variant: #c1c7d0;
+  --sans: 'Roboto Flex', 'Segoe UI', Roboto, Arial, sans-serif;
+  --serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { background: #d9dade; }
+body { font-family: var(--sans); color: var(--on-surface); background: #d9dade; }
+@page { size: 1920px 1080px; margin: 0; }
+
+.slide {
+  position: relative; width: 1920px; height: 1080px; overflow: hidden;
+  background: var(--surface); padding: 88px 112px 72px;
+  display: flex; flex-direction: column; break-after: page;
+}
+@media screen { .slide { margin: 32px auto; box-shadow: 0 8px 32px rgb(0 0 0 / .18); } }
+@media print { html, body { background: none; } }
+
+.kicker { font-size: 26px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--primary); }
+h1 { font-family: var(--serif); font-weight: 600; font-size: 64px; line-height: 1.12; margin-top: 14px; max-width: 1500px; }
+h2 { font-size: 30px; font-weight: 650; margin-bottom: 14px; }
+p, li { font-size: 28px; line-height: 1.42; }
+.lead { font-size: 32px; line-height: 1.4; color: var(--muted); margin-top: 22px; max-width: 1500px; }
+.muted { color: var(--muted); }
+.small { font-size: 22px; line-height: 1.4; color: var(--muted); }
+code { font-family: 'Cascadia Mono', Consolas, monospace; font-size: .9em; background: var(--surface-high); padding: 2px 8px; border-radius: 8px; }
+ul { list-style: none; }
+ul.dots li { position: relative; padding-left: 30px; margin-top: 14px; }
+ul.dots li::before { content: ''; position: absolute; left: 0; top: .62em; width: 11px; height: 11px; border-radius: 50%; background: var(--spark); }
+.body { flex: 1; display: flex; gap: 56px; margin-top: 48px; min-height: 0; }
+.col { flex: 1; min-width: 0; }
+.footer { position: absolute; left: 112px; right: 112px; bottom: 36px; display: flex; justify-content: space-between; font-size: 20px; color: var(--outline); }
+.shot { border-radius: 22px; box-shadow: 0 6px 28px rgb(25 28 31 / .16); border: 1px solid var(--outline-variant); overflow: hidden; background: #fff; }
+.shot img { display: block; width: 100%; }
+.card { background: #fff; border-radius: 24px; padding: 30px 34px; border: 1px solid var(--surface-high); }
+.card h2 { margin-bottom: 8px; }
+.card p { font-size: 25px; }
+.big { font-family: var(--serif); font-weight: 650; font-size: 92px; line-height: 1; color: var(--primary); }
+.big.spark { color: var(--spark); }
+.big.green { color: var(--success); }
+table { border-collapse: collapse; width: 100%; font-size: 25px; }
+th { text-align: left; font-weight: 600; color: var(--muted); font-size: 21px; text-transform: uppercase; letter-spacing: .04em; padding: 10px 16px; border-bottom: 2px solid var(--outline-variant); }
+td { padding: 13px 16px; border-bottom: 1px solid var(--surface-high); vertical-align: top; }
+td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+tr.hl td { background: var(--primary-container); }
+.chip { display: inline-block; font-size: 21px; font-weight: 600; padding: 6px 16px; border-radius: 999px; background: var(--spark-container); color: #2e1500; }
+.chip.blue { background: var(--primary-container); color: var(--on-primary-container); }
+
+/* Title */
+.title { justify-content: center; background: linear-gradient(135deg, #f8f9fe 55%, #dde1ff); }
+.title .brand { display: flex; align-items: center; gap: 28px; }
+.title .brand img { width: 128px; height: 128px; border-radius: 30px; box-shadow: 0 6px 24px rgb(0 0 0 / .14); }
+.title .name { font-family: var(--serif); font-size: 112px; font-weight: 650; letter-spacing: -.01em; }
+.title h1 { font-size: 58px; margin-top: 56px; max-width: 1450px; }
+
+/* Pipeline */
+.pipe { display: flex; gap: 14px; margin-top: 56px; }
+.step { flex: 1; background: #fff; border-radius: 22px; padding: 26px 22px; border-top: 8px solid var(--primary); }
+.step b { display: block; font-size: 29px; margin-bottom: 10px; }
+.step span { font-size: 22px; line-height: 1.4; color: var(--muted); display: block; }
+.step.check { border-top-color: var(--spark); }
+
+/* Ladder */
+.ladder { display: flex; flex-direction: column; gap: 12px; }
+.rung { display: flex; align-items: center; gap: 20px; background: #fff; border-radius: 18px; padding: 12px 22px; }
+.rung .n { flex: none; width: 50px; height: 50px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 24px; background: var(--primary-container); color: var(--on-primary-container); }
+.rung b { font-size: 26px; }
+.rung span { font-size: 21px; color: var(--muted); display: block; margin-top: 2px; }
+
+.money { display: flex; gap: 28px; margin-top: 52px; }
+.money .card { flex: 1; }
+.money .card p { margin-top: 18px; }
+.money .big { font-size: 80px; white-space: nowrap; }
+.cmd { font-family: 'Cascadia Mono', Consolas, monospace; font-size: 22px; background: var(--surface-high); padding: 12px 16px; border-radius: 12px; white-space: nowrap; margin-top: 12px; }
+th.num { text-align: right; }
+</style>
+</head>
+<body>
+
+<!-- 1 -->
+<section class="slide title">
+  <div class="brand"><img src="img/mark.webp" alt=""><span class="name">Tail&amp;Grep</span></div>
+  <h1>ИИ-ассистент, который делает работу аналитика ИБ по новостям: сам собирает, отбирает, ставит приоритет и пишет выпуск</h1>
+  <p class="lead">Выпуск специалисту за сутки и руководству за неделю собирается за одну-четыре минуты. Хакатон «ИИ-ассистенты для энергетики», полуфинал. Команда misis-mojarung.</p>
+</section>
+
+<!-- 2 -->
+<section class="slide">
+  <div class="kicker">Проблема</div>
+  <h1>Следить за новостями ИБ сейчас приходится вручную, и это дорого</h1>
+  <div class="body">
+    <div class="col">
+      <ul class="dots">
+        <li>Только в списках датасета организаторов 62 источника: 24 сайта и 18 Telegram-каналов для специалистов, 20 сайтов для руководства.</li>
+        <li>Часть сайтов не пускает бота: Cloudflare, Akamai, страницы, которые собирает скрипт. БДУ АСУ ТП без браузера пустая.</li>
+        <li>Две аудитории читают по-разному: специалисту нужны детали каждый день, руководству - тезисы раз в неделю.</li>
+        <li>От того, кто в отпуске, зависят полнота и приоритет: единого правила нет.</li>
+      </ul>
+    </div>
+    <div class="col" style="flex: 0 0&nbsp;600px">
+      <div class="card">
+        <div class="big spark">≈89&nbsp;000&nbsp;₽</div>
+        <p style="margin-top: 18px">в месяц стоит час мониторинга в день у трёх специалистов: медиана SOC-аналитика 149&nbsp;000&nbsp;₽, с взносами около 1&nbsp;170&nbsp;₽ за час, плюс 3 часа в неделю на сводку руководству.</p>
+        <p class="small" style="margin-top: 16px">Хабр Карьера, I полугодие 2026. Часы - допущение, пока их не замерили у аналитика.</p>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>Tail&amp;Grep</span><span>2</span></div>
+</section>
+
+<!-- 3 -->
+<section class="slide">
+  <div class="kicker">Гипотеза жюри</div>
+  <h1>Может ли ассистент заменить аналитика ИБ? Каждый шаг его работы он делает сам</h1>
+  <div class="body" style="flex-direction: column; gap: 28px">
+    <table>
+      <tr><th style="width: 330px">Работа аналитика</th><th>Что делает ассистент</th></tr>
+      <tr><td><b>Поиск и сбор</b></td><td>87 источников, из списков датасета 61 из 62; сайты без ленты читаются как страницы новостей, защищённые - лестницей способов до браузера в стеке и прокси; любой читатель добавляет любой адрес</td></tr>
+      <tr><td><b>Отбор</b></td><td>профиль читателя: интересы, исключения, порог; 60 кандидатов оценивает модель, у каждой записи и у каждого отказа есть причина</td></tr>
+      <tr><td><b>Приоритизация</b></td><td>правило датасета: атака на энергетику и промышленность РФ выше всех, уязвимость с эксплойтом выше; эксплойт сверяется с CISA KEV и БДУ ФСТЭК</td></tr>
+      <tr><td><b>Подача</b></td><td>два выпуска: специалисту подробно за сутки, руководству тезисно за неделю; Markdown и DOCX, из браузера или одной командой в консоли</td></tr>
+    </table>
+    <p class="muted">Чего пока нет: сравнения с живым аналитиком на одной неделе. Комплект для него готов, разметки человеком ещё нет, поэтому цифр сравнения мы не приводим.</p>
+  </div>
+  <div class="footer"><span>Tail&amp;Grep</span><span>3</span></div>
+</section>
+
+<!-- 4 -->
+<section class="slide">
+  <div class="kicker">Две аудитории</div>
+  <h1>Технарям подробно и каждый день, руководству тезисно и раз в неделю</h1>
+  <div class="body" style="gap: 40px">
+    <div class="col">
+      <div class="shot" style="height: 560px"><img src="img/specialist-vulnerabilities.jpg" alt="Выпуск специалисту: карточка уязвимости с приоритетом и сверкой по базам"></div>
+      <p class="small" style="margin-top: 18px"><span class="chip blue">Специалисту, за сутки</span> атаки и уязвимости карточками, приоритет по правилу датасета, «Сверено по базам»: CISA KEV и БДУ ФСТЭК</p>
+    </div>
+    <div class="col">
+      <div class="shot" style="height: 560px"><img src="img/management-implications.jpg" alt="Выпуск руководству: блок «Что это значит для нас» и главное недели"></div>
+      <p class="small" style="margin-top: 18px"><span class="chip">Руководству, за неделю</span> «Что это значит для нас», записи в одно-два предложения без номеров CVE и CVSS, двенадцать признаков датасета</p>
+    </div>
+  </div>
+  <div class="footer"><span>Период и расписание по умолчанию берутся от аудитории профиля</span><span>4</span></div>
+</section>
+
+<!-- 5 -->
+<section class="slide">
+  <div class="kicker">Как работает</div>
+  <h1>Граф сборки: от публикации до проверенной записи со ссылкой на первоисточник</h1>
+  <div class="pipe" style="margin-top: 40px">
+    <div class="step"><b>Сбор</b><span>опрос каждые 15 минут, полный текст со страницы, если в ленте анонс</span></div>
+    <div class="step"><b>Поиск</b><span>по смыслу и по словам по каждому интересу профиля</span></div>
+    <div class="step"><b>Оценка</b><span>модель оценивает 60 лучших кандидатов по шкале 0-3 с причиной</span></div>
+    <div class="step"><b>Склейка</b><span>пересказы одной новости в разных источниках становятся одной записью</span></div>
+    <div class="step"><b>Запись</b><span>тип, карточка, приоритет, выжимка, «почему важно»</span></div>
+    <div class="step check"><b>Проверка</b><span>чего нет в статье, нет в карточке; номера сверяются с CISA KEV и БДУ</span></div>
+    <div class="step"><b>Выпуск</b><span>Markdown с YAML и оглавлением, DOCX, история</span></div>
+  </div>
+  <div class="body" style="margin-top: 40px">
+    <div class="col">
+      <ul class="dots">
+        <li>Сборка - граф LangGraph с чекпоинтами: если воркер упадёт, выпуск продолжится с прерванного шага.</li>
+        <li>Ответы модели кешируются: повторная сборка по тому же профилю занимает секунды.</li>
+        <li>Без модели работает автономный режим: поиск, оценка и выжимки без языковой модели.</li>
+      </ul>
+    </div>
+    <div class="col">
+      <div class="card">
+        <h2>Веб или консоль</h2>
+        <p>Стек поднимается одной командой, выпуск без браузера - второй:</p>
+        <div class="cmd">docker compose up -d --build</div>
+        <div class="cmd">docker compose run --rm cli digest --audience specialist</div>
+        <p class="small" style="margin-top: 12px">Файлы .md и .docx в out/. Веб открывается без экрана входа.</p>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>FastAPI, PostgreSQL с pgvector, Valkey, taskiq, ClickHouse, React; всё в Docker Compose</span><span>5</span></div>
+</section>
+
+<!-- 6 -->
+<section class="slide">
+  <div class="kicker">Сбор</div>
+  <h1>Сайт не пускает бота - ассистент поднимается по лестнице</h1>
+  <div class="body" style="gap: 48px">
+    <div class="col" style="flex: 0 0&nbsp;720px">
+      <div class="ladder">
+        <div class="rung"><div class="n">1</div><div><b>Обычный запрос</b><span>SecurityLab, Habr: 0,2-0,7 с</span></div></div>
+        <div class="rung"><div class="n">2</div><div><b>Заголовки браузера</b><span>Cybernews: 403 и заглушка Cloudflare на шаге 1</span></div></div>
+        <div class="rung"><div class="n">3</div><div><b>TLS-отпечаток Chrome, curl_cffi</b><span>Netskope, SecurityWeek, Dark Reading: 0,9-4,2 с</span></div></div>
+        <div class="rung"><div class="n">4</div><div><b>Браузер в стеке</b><span>БДУ АСУ ТП, Forbes, dbugs, McAfee: страницы, которые собирает скрипт</span></div></div>
+        <div class="rung"><div class="n">5</div><div><b>FlareSolverr</b><span>проверка Cloudflare с JS: 15,9 с</span></div></div>
+        <div class="rung"><div class="n">+</div><div><b>Прокси</b><span>общий, на источник или пулом с ротацией при 403 и 429</span></div></div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="shot" style="height: 500px"><img src="img/sources-protected.jpg" alt="Источники, фильтр «Защищённые»: ступень чтения у каждого"></div>
+      <p style="margin-top: 24px">Из списков датасета читалось <b>42 из 62</b>, теперь <b>61 из 62</b>; Broadcom отдаёт JSON без ссылок на статьи.</p>
+      <p class="small" style="margin-top: 8px">Ступень и причина видны у источника. Защита от SSRF работает на каждой ступени.</p>
+    </div>
+  </div>
+  <div class="footer"><span>Время - замеры 2-3 октября 2026, DECISIONS, «Сбор: лестница способов чтения»</span><span>6</span></div>
+</section>
+
+<!-- 7 -->
+<section class="slide">
+  <div class="kicker">Любой источник</div>
+  <h1>Не только датасет: любой сайт или канал</h1>
+  <div class="body" style="gap: 48px">
+    <div class="col">
+      <div class="shot"><img src="img/detect.jpg" alt="Форма «Любой адрес»: найдена лента и три последние статьи"></div>
+    </div>
+    <div class="col" style="flex: 0 0&nbsp;600px">
+      <ul class="dots">
+        <li>Читатель вставляет адрес: сайт, раздел новостей, ленту или <code>@канал</code>.</li>
+        <li>Ассистент сам определяет, что это: лента RSS или Atom, страница новостей без ленты, WordPress API или Telegram-канал.</li>
+        <li>До сохранения видно, как сайт читается, и три последние статьи.</li>
+        <li>Добавить может любой читатель, менять и удалять - автор и администратор.</li>
+      </ul>
+      <p class="small" style="margin-top: 26px">На стенде: <code>securitycode.ru/company/news/</code> определён как лента за 8,1 с, <code>t.me/dataleak</code> как канал за 1,1 с.</p>
+    </div>
+  </div>
+  <div class="footer"><span>Tail&amp;Grep</span><span>7</span></div>
+</section>
+
+<!-- 8 -->
+<section class="slide">
+  <div class="kicker">Отбор и приоритизация</div>
+  <h1>Каждая запись объяснима и проверена по первоисточнику</h1>
+  <div class="body" style="gap: 48px">
+    <div class="col" style="flex: 0 0&nbsp;820px">
+      <div class="shot" style="height: 640px"><img src="img/rejected.jpg" alt="«Не вошло в выпуск»: кандидаты с оценкой и причиной: повтор, выпуск заполнен, ниже порога"></div>
+    </div>
+    <div class="col">
+      <ul class="dots">
+        <li>Приоритет по правилу датасета: атака на энергетику и промышленность РФ выше атаки на другие отрасли РФ, за рубежом ниже всех; уязвимость с эксплойтом выше.</li>
+        <li>Модель сама вызывает инструмент <code>lookup_vulnerability</code>: каталог CISA KEV и БДУ ФСТЭК. Номера, о которых она не спросила, граф проверяет сам.</li>
+        <li>Поле карточки, которого нет в тексте статьи, убирается проверкой.</li>
+        <li>«Не вошло в выпуск»: каждый кандидат с оценкой и причиной. Правка интересов сразу видна в предпросмотре и в «Сравнении».</li>
+      </ul>
+      <p class="small" style="margin-top: 26px">21 пример датасета прогнан через решение: тип записи совпал в 6 из 6, приоритет в 4 из 6.</p>
+    </div>
+  </div>
+  <div class="footer"><span>examples/dataset</span><span>8</span></div>
+</section>
+
+<!-- 9 -->
+<section class="slide">
+  <div class="kicker">Модели</div>
+  <h1>Модель меняется в <code style="font-size: .8em">.env</code>, код не трогается</h1>
+  <div class="body" style="flex-direction: column; gap: 22px; margin-top: 36px">
+    <table>
+      <tr><th>Модель</th><th>Где работает</th><th class="num">Сборка, с</th><th class="num">Совпало с первым прогоном</th></tr>
+      <tr class="hl"><td><b>gpt-oss:120b</b></td><td>облако Ollama, стенд и примеры</td><td class="num">120</td><td class="num">20 из 20</td></tr>
+      <tr><td>gpt-oss:120b, повтор</td><td>облако Ollama</td><td class="num">155</td><td class="num">18 из 20</td></tr>
+      <tr><td>gemma4:31b</td><td>облако Ollama</td><td class="num">111</td><td class="num">17 из 20</td></tr>
+      <tr><td>gpt-oss:20b</td><td>облако Ollama</td><td class="num">237</td><td class="num">12 из 20</td></tr>
+      <tr><td>nemotron-3-nano:30b</td><td>облако Ollama</td><td class="num">95</td><td class="num">9 из 20</td></tr>
+      <tr><td>qwen3.5:9b</td><td>в стеке, видеокарта 8 ГБ</td><td class="num">165</td><td class="num">13 из 20</td></tr>
+      <tr><td>без модели</td><td>автономный режим</td><td class="num">2</td><td class="num">13 из 20</td></tr>
+    </table>
+    <p class="muted">Разделы, карточки, приоритеты и проверка работают на всех. Два прогона одной gpt-oss:120b совпадают в 18 записях из 20 - это шум самой модели. Ollama и OpenAI-совместимый API: Yandex AI Studio, vLLM. По умолчанию в режиме с моделью - локальная Qwen3.6 35B-A3B в Ollama стека.</p>
+  </div>
+  <div class="footer"><span>Выпуск специалисту по ИБ АСУ ТП за неделю примеров, 60 кандидатов, 20 записей; examples/models</span><span>9</span></div>
+</section>
+
+<!-- 10 -->
+<section class="slide">
+  <div class="kicker">Закрытый контур</div>
+  <h1>Всё работает внутри контура, наружу ходит только загрузчик источников</h1>
+  <div class="body" style="gap: 56px">
+    <div class="col">
+      <h2>Поставка без интернета</h2>
+      <ul class="dots">
+        <li><code>offline_bundle.sh save</code>: 7 образов ядра 4,7 ГБ и модели 1,6 ГБ за 4 мин 21 с.</li>
+        <li><code>load</code> в пустой каталог за 3 мин 29 с; копия поднялась без сети, проверочный сценарий прошёл целиком.</li>
+        <li>Стек во внутренней сети Docker: соединение наружу из <code>api</code> - «Network is unreachable».</li>
+        <li>Сбор через корпоративный прокси, модель эмбеддингов в образе.</li>
+      </ul>
+    </div>
+    <div class="col">
+      <h2>Железо, свои замеры</h2>
+      <table>
+        <tr><th>Конфигурация</th><th class="num">Сборка</th><th class="num">Выпусков в час</th></tr>
+        <tr><td>Без языковой модели</td><td class="num">0,5 с</td><td class="num">тысячи</td></tr>
+        <tr><td>qwen3.5:9b, RTX 5070 12 ГБ</td><td class="num">81-102 с</td><td class="num">35-44</td></tr>
+        <tr><td>qwen3.5:0.8b на процессоре ноутбука</td><td class="num">731,5 с</td><td class="num">4-5</td></tr>
+      </table>
+      <p class="small" style="margin-top: 18px">Qwen3.6 35B-A3B и gpt-oss-120b локально ждут замера на карте NVIDIA: команда замера готова.</p>
+    </div>
+  </div>
+  <div class="footer"><span>README, «Закрытый контур» и «Требования к железу»</span><span>10</span></div>
+</section>
+
+<!-- 11 -->
+<section class="slide">
+  <div class="kicker">Экономика</div>
+  <h1>Команда из трёх специалистов экономит около 60&nbsp;600&nbsp;₽ в месяц</h1>
+  <div class="money">
+    <div class="card">
+      <div class="big spark">89&nbsp;000&nbsp;₽</div>
+      <p>в месяц стоит ручной мониторинг: час в день у трёх специалистов и сводка руководству. При 30 минутах - 52&nbsp;000&nbsp;₽, при двух часах - 163&nbsp;000&nbsp;₽.</p>
+    </div>
+    <div class="card">
+      <div class="big">28&nbsp;700&nbsp;₽</div>
+      <p>в месяц с ассистентом: тариф модели 1&nbsp;670&nbsp;₽, сервер 6&nbsp;137&nbsp;₽, сопровождение 2&nbsp;350&nbsp;₽ и 15 минут в день на чтение выпуска 18&nbsp;500&nbsp;₽.</p>
+    </div>
+    <div class="card">
+      <div class="big green">0,73 млн&nbsp;₽</div>
+      <p>в год на одну команду. Вложений на старте нет, окупаемость с первого месяца.</p>
+    </div>
+  </div>
+  <p class="muted" style="margin-top: 40px">Токены замерены на неделе снимка: выпуск специалисту - 166&nbsp;511 на вход и 16&nbsp;127 на выход, около 2,9&nbsp;₽; руководству - около 1,9&nbsp;₽. Ассистент забирает поиск, отбор, приоритет и сводку; чтение выпуска остаётся у человека.</p>
+  <div class="footer"><span>Хабр Карьера; тарифы Ollama на 03.10.2026; курс ЦБ 83,48&nbsp;₽; Selectel. Источник каждой цифры - BUSINESS.md, «Экономика»</span><span>11</span></div>
+</section>
+
+<!-- 12 -->
+<section class="slide">
+  <div class="kicker">Внедрение и что дальше</div>
+  <h1>Пилот проверяет гипотезу числом</h1>
+  <div class="body" style="gap: 56px">
+    <div class="col">
+      <h2>Пилот в энергокомпании</h2>
+      <ul class="dots">
+        <li>Установка в закрытом контуре: образы, веса модели, корпоративный прокси, проверочный сценарий.</li>
+        <li>Специалист ИБ размечает неделю: оценка 0-3, «обязательно в выпуск», приоритет. Комплект и скрипт метрик готовы.</li>
+        <li>Успех: полнота выпуска не ниже 90% от того, что нашёл аналитик, при проверке выпуска не дольше 15 минут в день.</li>
+      </ul>
+    </div>
+    <div class="col">
+      <h2>К финалу</h2>
+      <ul class="dots">
+        <li>Сравнение с аналитиком на одной неделе: время, полнота, ошибки, слепая оценка.</li>
+        <li>Модели финала локально: Qwen3.6 35B-A3B, gpt-oss-120b, Alice AI ART.</li>
+        <li>Специалистам - техники MITRE ATT&amp;CK и индикаторы компрометации в карточке атаки.</li>
+        <li>Доставка выпуска на корпоративную почту.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom: 40px">
+    <h2>Попробовать</h2>
+    <div class="cmd">docker compose up -d --build</div>
+    <p class="small" style="margin-top: 12px">Интерфейс на localhost:8080, консоль - <code>docker compose run --rm cli digest</code>, примеры выпусков - examples/. Репозиторий: git.codenrock.com/codenrock/ii-assistenty/misis-mojarung/assistent-dlya-sozdaniya-it-ib-daydzhestov</p>
+  </div>
+  <div class="footer"><span>Tail&amp;Grep</span><span>12</span></div>
+</section>
+
+</body>
+</html>
