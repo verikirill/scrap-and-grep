@@ -189,6 +189,9 @@ DEFAULT_PROFILES: tuple[ProfileSpec, ...] = (
             ),
         ),
         exclusions=("вакансии и карьера", "обзор смартфона", "игры и киберспорт"),
+        # What a grid company runs on its substations and its perimeter; all
+        # of it turns up in the stand's digests.
+        systems=("Siemens", "Schneider Electric", "ABB PCM600", "CODESYS", "Cisco", "Fortinet"),
         min_score=0.5,
         max_items=20,
     ),
