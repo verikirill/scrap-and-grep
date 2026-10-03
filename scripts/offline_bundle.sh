@@ -43,10 +43,12 @@ save() {
   for profile in "$@"; do profiles+=(--profile "$profile"); done
 
   echo "building and pulling the images of: ollama $*"
-  docker compose "${profiles[@]}" build
-  docker compose "${profiles[@]}" pull --ignore-buildable
+  # The closed network's overlay adds the egress proxy to the images.
+  local files=(-f docker-compose.yml -f docker-compose.airgap.yml)
+  docker compose "${files[@]}" "${profiles[@]}" build
+  docker compose "${files[@]}" "${profiles[@]}" pull --ignore-buildable
   local images
-  mapfile -t images < <(docker compose "${profiles[@]}" config --images | sort -u)
+  mapfile -t images < <(docker compose "${files[@]}" "${profiles[@]}" config --images | sort -u)
   echo "saving ${#images[@]} images"
   docker save -o "$dir/radar-images.tar" "${images[@]}"
 
@@ -120,7 +122,7 @@ load() {
   cat "$target/.env"
   echo
   echo "start without building, the images are already here:"
-  echo "  cd $target && docker compose -f docker-compose.yml -f docker-compose.gpu.yml --profile ollama up -d --no-build"
+  echo "  cd $target && docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.airgap.yml --profile ollama up -d --no-build"
 }
 
 case ${1:-} in

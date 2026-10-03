@@ -148,6 +148,11 @@ class Settings(BaseSettings):
     # Proxies tried in turn when a site refuses every step without one
     # (403, 429 or no answer), comma-separated: for geo-blocks and limits.
     http_proxies: Annotated[list[str], NoDecode] = Field(default_factory=list)
+    # A closed network that resolves no outside names: a name that does not
+    # resolve here goes to the proxy as it is, and the proxy resolves it. Only
+    # with a proxy that refuses internal addresses itself, as the stack's own
+    # egress proxy does (docker-compose.airgap.yml).
+    fetch_dns_via_proxy: bool = False
 
     # Longest a digest build may run. A build whose worker died is handed to
     # another worker after this long, and resumes from its last checkpoint.

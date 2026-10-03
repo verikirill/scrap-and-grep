@@ -17,6 +17,7 @@ proxy.py, which the routing cannot be bypassed around.
 import asyncio
 import contextlib
 import html
+import os
 import ssl
 import time
 from dataclasses import dataclass, field
@@ -33,6 +34,9 @@ from playwright.async_api import Browser, Playwright, Request, Route, async_play
 from radar_browser.guard import Guard, Refused
 from radar_browser.proxy import REFUSED_HEADER, FilteringProxy
 
+# A closed network resolves no outside names: through an upstream proxy a
+# name that does not resolve here goes out as it is (BROWSER_DNS_VIA_PROXY).
+DNS_VIA_PROXY = os.environ.get("BROWSER_DNS_VIA_PROXY", "").lower() in {"1", "true", "yes"}
 # Not needed to read a page, and the most of its weight.
 SKIPPED_TYPES = frozenset({"image", "media", "font"})
 # What a page shows while a challenge has not let the browser in yet.
@@ -151,6 +155,8 @@ class Renderer:
         if parts.scheme not in {"http", "https"} or not parts.hostname:
             raise Refused("only http and https URLs with a host")
         guard = self._guard()
+        # Names go out to the upstream proxy unresolved only through a proxy.
+        guard.by_name = DNS_VIA_PROXY and bool(proxy)
         # Checked before a tab is taken: an internal address costs nothing.
         await guard.address(parts.hostname, parts.port or (443 if parts.scheme == "https" else 80))
         async with self._slots:

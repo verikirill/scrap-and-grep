@@ -63,6 +63,11 @@ async def resolve_public(url: str) -> str | None:
     try:
         infos = await loop.getaddrinfo(parts.hostname, port, type=socket.SOCK_STREAM)
     except socket.gaierror as exc:
+        if get_settings().fetch_dns_via_proxy:
+            # A closed network resolves no outside names; its proxy does, and
+            # refuses internal addresses itself. A name that resolves here (a
+            # service of the stack, an address literal) is still checked.
+            return None
         raise UnresolvableHostError(f"cannot resolve host {parts.hostname}") from exc
     addresses = [ipaddress.ip_address(info[4][0]) for info in infos]
     if not addresses or any(not address.is_global for address in addresses):

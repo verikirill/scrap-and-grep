@@ -44,6 +44,10 @@ class Guard:
     allow: Allow = only_global
     # What the guard turned away, for the answer.
     refused: list[str] = field(default_factory=list)
+    # A closed network with a proxy that resolves outside names: a name that
+    # does not resolve here goes to the upstream proxy as it is ("" for its
+    # address), and that proxy refuses internal addresses itself.
+    by_name: bool = False
     # Names already checked in this render: the proxy and the routing ask alike.
     _known: dict[tuple[str, int], str] = field(default_factory=dict)
 
@@ -61,7 +65,13 @@ class Guard:
         try:
             found = [ipaddress.ip_address(name)]
         except ValueError:
-            resolved = await self.resolve(name, port)
+            try:
+                resolved = await self.resolve(name, port)
+            except Refused:
+                if not self.by_name:
+                    raise
+                self._known[name, port] = ""
+                return ""
             found = [ipaddress.ip_address(item.split("%", 1)[0]) for item in resolved]
         if not found or not all(self.allow(address, name) for address in found):
             self.refused.append(f"{name}:{port}")

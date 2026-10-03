@@ -158,10 +158,21 @@ scripts/offline_bundle.sh save /media/radar-bundle docling  # плюс нужн�
 ```bash
 bash /media/radar-bundle/offline_bundle.sh load /media/radar-bundle /srv/radar
 cd /srv/radar
-docker compose -f docker-compose.yml -f docker-compose.gpu.yml --profile ollama up -d --no-build
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.airgap.yml --profile ollama up -d --no-build
 ```
 
 `load` сверяет контрольные суммы, загружает образы, распаковывает модели в `/srv/radar/ollama-models` и пишет `.env`, где `OLLAMA_MODELS_DIR` указывает на эту папку. Веса для vLLM в поставку не входят: каталог кеша Hugging Face копируется на целевую машину отдельно, в `.env` задаются `VLLM_MODELS_DIR=<каталог>` и `VLLM_OFFLINE=1`.
+
+### Без выхода в интернет
+
+`docker-compose.airgap.yml` закрывает стеку дорогу наружу: все сети Docker внутренние, у сервисов нет ни маршрута, ни внешнего DNS. Источники читаются через один прокси стека, `egress` (squid): он резолвит имена сам, пускает только к публичным адресам на портах 80 и 443 и пишет каждый запрос в свой журнал. С `EGRESS_UPSTREAM=proxy.corp.local:3128` в `.env` он ходит через корпоративный прокси. Наружу смотрит только порт интерфейса.
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.airgap.yml --profile ollama up -d
+docker compose -f docker-compose.yml -f docker-compose.airgap.yml logs -f egress   # что уходит наружу
+```
+
+Если прокси нет совсем, выпуски собираются из того, что уже в базе: снимок публикаций и прошлые опросы. Публикация в Telegram и картинки в предпросмотре поста в этом режиме не работают. Список хостов, к которым стек обращается, - в DECISIONS, «Закрытый контур».
 
 ### Требования к железу
 
