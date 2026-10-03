@@ -101,6 +101,9 @@ class ProfileSpec(BaseModel):
     role: str = Field(default="", max_length=600)
     interests: tuple[Interest, ...] = Field(min_length=1, max_length=20)
     exclusions: tuple[str, ...] = Field(default=(), max_length=20)
+    # Products the company runs: an entry that names one is marked and goes
+    # first in its topic (radar.systems).
+    systems: tuple[str, ...] = Field(default=(), max_length=40)
     min_score: float = Field(default=0.5, ge=0.0, le=1.0)
     max_items: int = Field(default=20, ge=3, le=60)
     languages: tuple[Language, ...] = Field(default=("ru", "en"), min_length=1, max_length=2)
@@ -123,11 +126,24 @@ class ProfileSpec(BaseModel):
             return tuple(dict.fromkeys(cleaned))
         return value
 
+    @field_validator("systems", mode="before")
+    @classmethod
+    def _clean_systems(cls, value: object) -> object:
+        if isinstance(value, (list, tuple)):
+            cleaned = [str(item).strip()[:80] for item in value if str(item).strip()]
+            # "Cisco ASA" and "cisco asa" are one system; the first spelling stays.
+            unique: dict[str, str] = {}
+            for item in cleaned:
+                unique.setdefault(item.casefold(), item)
+            return tuple(unique.values())
+        return value
+
     def fingerprint(self) -> str:
         """Changes whenever anything that affects grading changes."""
-        # The audience changes how an entry is written, not how it is graded.
+        # The audience changes how an entry is written, not how it is graded;
+        # the model never sees the systems, an entry is marked by their words.
         return stable_hash(
-            self.model_dump_json(exclude={"name", "max_items", "min_score", "audience"})
+            self.model_dump_json(exclude={"name", "max_items", "min_score", "audience", "systems"})
         )
 
     def interest(self, interest_id: str | None) -> Interest | None:
