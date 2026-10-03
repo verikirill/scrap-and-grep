@@ -152,6 +152,22 @@ def test_a_dotted_version_is_not_an_indicator() -> None:
     assert indicators("Обновите до 20.9.10.1 или 7.18.1; адрес 10.0.0.1 в тексте без защиты") == ()
 
 
+def test_an_indicator_keeps_no_markup_around_it() -> None:
+    found = indicators(
+        "<hxxp://a[.]b/x> и **evil[.]com/path**, номер 12345678901234567890123456789012"
+    )
+
+    assert found == ("hxxp://a[.]b/x", "evil[.]com/path")
+
+
+def test_a_defanged_address_alone_keeps_the_indicators_flag() -> None:
+    checked, removed = check_attack(AttackCard(iocs=True), "Сервер управления: evil[.]com.")
+
+    assert checked.iocs is True
+    assert checked.indicators == ("evil[.]com",)
+    assert removed == []
+
+
 class Scripted:
     """A model that gives the answers in turn and keeps the prompts it got."""
 

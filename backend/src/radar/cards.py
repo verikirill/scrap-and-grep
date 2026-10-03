@@ -186,13 +186,18 @@ _HASH_RE = re.compile(r"\b(?:[0-9a-fA-F]{64}|[0-9a-fA-F]{40}|[0-9a-fA-F]{32})\b"
 _DEFANGED_RE = re.compile(
     r"\bhxxps?(?:://|\[:\]//)\S+|[\w.-]+(?:\[\.\][\w-]+)+(?:[/:]\S*)?", re.IGNORECASE
 )
-_TRAILING = ".,;:!?)»\"'"
+_TRAILING = ".,;:!?)»\"'”>*_]"
 MAX_INDICATORS = 10
 
 
 def indicators(source: str) -> tuple[str, ...]:
     """The hashes and defanged addresses an article gives, in its order."""
-    found = [match.group(0).lower() for match in _HASH_RE.finditer(source)]
+    # A hash mixes digits and letters; a long decimal number is not one.
+    found = [
+        match.group(0).lower()
+        for match in _HASH_RE.finditer(source)
+        if not match.group(0).isdigit() and not match.group(0).isalpha()
+    ]
     found += [match.group(0).rstrip(_TRAILING) for match in _DEFANGED_RE.finditer(source)]
     return tuple(dict.fromkeys(found))[:MAX_INDICATORS]
 
@@ -307,14 +312,15 @@ def check_attack(card: AttackCard, source: str) -> tuple[AttackCard, list[str]]:
     if card.attack_date and not _figures_supported(card.attack_date, allowed):
         updates["attack_date"] = ""
         removed.append("Дата атаки")
-    if card.iocs and not _IOC_RE.search(source):
-        updates["iocs"] = None
-        removed.append("Индикаторы компрометации")
     # What a specialist acts on comes from the text itself, not from the model:
     # the indicators it prints and the ATT&CK techniques it names by id.
-    updates["indicators"] = indicators(source)
-    if updates["indicators"]:
+    found = indicators(source)
+    if found:
         updates["iocs"] = True
+    elif card.iocs and not _IOC_RE.search(source):
+        updates["iocs"] = None
+        removed.append("Индикаторы компрометации")
+    updates["indicators"] = found
     updates["techniques"] = techniques(source)
     return card.model_copy(update=updates), removed
 
