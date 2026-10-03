@@ -370,9 +370,12 @@ export function Layout({ children }: { children: ReactNode }) {
             </motion.div>
           </main>
         </div>
-        <footer className="mx-auto hidden max-w-[1320px] px-10 pb-8 md:block">
-          <StatusLine />
-        </footer>
+        {/* The model and the size of the base are the operator's business, not a reader's. */}
+        {isAdmin && (
+          <footer className="mx-auto hidden max-w-[1320px] px-10 pb-8 md:block">
+            <StatusLine />
+          </footer>
+        )}
       </div>
 
       {/* Navigation bar on phones. */}
