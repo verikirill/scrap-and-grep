@@ -11,10 +11,12 @@ import {
 import { motion } from 'motion/react'
 import type { ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router'
-import { INPUT_CLASS, buttonClass, rowMotion } from '../components/tokens'
+import { SelectField } from '../components/SelectField'
+import { buttonClass, rowMotion } from '../components/tokens'
 import { AnimatedNumber, Card, Chip, EmptyState, ErrorNote, PageHeader } from '../components/ui'
 import type { DigestItem, DigestSummary, InterestChange } from '../lib/api'
 import { externalHref, formatDateTime, SETTING_LABELS } from '../lib/format'
+import { sameKind } from '../lib/digestPairs'
 import { useComparison, useDigests } from '../lib/queries'
 
 const CHANGE_LABELS: Record<InterestChange['change'], string> = {
@@ -26,7 +28,9 @@ const CHANGE_LABELS: Record<InterestChange['change'], string> = {
 const CHANGE_TONES = { added: 'ok', removed: 'danger', changed: 'spark' } as const
 
 function optionLabel(digest: DigestSummary): string {
-  return `${formatDateTime(digest.created_at)} · ${digest.profile_name} v${digest.profile_version} · ${digest.stats.selected ?? 0} публ.`
+  // The two issues of one «Обеим аудиториям» build differ by audience alone.
+  const audience = digest.audience === 'management' ? ' · руководству' : ''
+  return `${formatDateTime(digest.created_at)} · ${digest.profile_name} v${digest.profile_version}${audience} · ${digest.stats.selected ?? 0} публ.`
 }
 
 function Column({
@@ -106,9 +110,17 @@ export function ComparePage() {
   const digests = useDigests()
   const done = digests.data?.filter((digest) => digest.status === 'done') ?? []
 
-  // Default to the two most recent issues: "what changed since last time".
+  // Default to the latest issue against the one before it for the same profile
+  // and audience: "what changed since last time". The pair of one build for
+  // both audiences shares its selection and would compare as unchanged.
   const other = search.get('other') ?? done[0]?.id
-  const base = search.get('base') ?? done.find((digest) => digest.id !== other)?.id
+  const latest = done.find((digest) => digest.id === other)
+  const base =
+    search.get('base') ??
+    (
+      done.find((digest) => latest !== undefined && sameKind(digest, latest)) ??
+      done.find((digest) => digest.id !== other)
+    )?.id
   const comparison = useComparison(base, other)
 
   const pick = (key: 'base' | 'other', value: string) => {
@@ -138,31 +150,27 @@ export function ComparePage() {
       ) : (
         <>
           <Card className="mb-5 grid items-center gap-3 p-4 sm:grid-cols-[1fr_auto_1fr]">
-            <select
-              aria-label="Было"
-              className={INPUT_CLASS}
+            <SelectField
+              label="Было"
               value={base ?? ''}
-              onChange={(event) => pick('base', event.target.value)}
-            >
-              {done.map((digest) => (
-                <option key={digest.id} value={digest.id} disabled={digest.id === other}>
-                  {optionLabel(digest)}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => pick('base', value)}
+              options={done.map((digest) => ({
+                value: digest.id,
+                label: optionLabel(digest),
+                disabled: digest.id === other,
+              }))}
+            />
             <ArrowRight size={18} className="mx-auto hidden text-outline sm:block" />
-            <select
-              aria-label="Стало"
-              className={INPUT_CLASS}
+            <SelectField
+              label="Стало"
               value={other ?? ''}
-              onChange={(event) => pick('other', event.target.value)}
-            >
-              {done.map((digest) => (
-                <option key={digest.id} value={digest.id} disabled={digest.id === base}>
-                  {optionLabel(digest)}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => pick('other', value)}
+              options={done.map((digest) => ({
+                value: digest.id,
+                label: optionLabel(digest),
+                disabled: digest.id === base,
+              }))}
+            />
           </Card>
 
           <ErrorNote error={comparison.error} />

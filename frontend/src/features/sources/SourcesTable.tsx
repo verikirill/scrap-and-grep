@@ -5,6 +5,7 @@ import { useId, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useSearchParams } from 'react-router'
 import { Segmented } from '../../components/Segmented'
+import { SelectField } from '../../components/SelectField'
 import { EASE, INPUT_CLASS } from '../../components/tokens'
 import { Button, Card, Chip, ErrorNote, Field, Toggle } from '../../components/ui'
 import type { Source, SourceCategory, SourceCreate } from '../../lib/api'
@@ -22,6 +23,11 @@ import {
 import type { SourceGrouping, SourceOrder } from '../../lib/sourceList'
 import { SourceAvatar } from '../feed/SourceAvatar'
 import { DetectSourceForm } from './DetectSourceForm'
+
+const LANGUAGES = [
+  { value: 'ru', label: 'Русский' },
+  { value: 'en', label: 'Английский' },
+]
 
 function StatusDot({ source }: { source: Source }) {
   const failing = source.last_status === 'error'
@@ -166,29 +172,23 @@ function AddSourceForm({ onDone, onAdded }: { onDone: () => void; onAdded: () =>
           />
         </Field>
         <Field label="Категория">
-          <select
-            className={INPUT_CLASS}
+          <SelectField
+            label="Категория"
             value={form.category}
-            onChange={(event) =>
-              setForm({ ...form, category: event.target.value as SourceCategory })
-            }
-          >
-            {CATEGORY_ORDER.map((category) => (
-              <option key={category} value={category}>
-                {CATEGORY_LABELS[category]}
-              </option>
-            ))}
-          </select>
+            onChange={(value) => setForm({ ...form, category: value as SourceCategory })}
+            options={CATEGORY_ORDER.map((category) => ({
+              value: category,
+              label: CATEGORY_LABELS[category],
+            }))}
+          />
         </Field>
         <Field label="Язык">
-          <select
-            className={INPUT_CLASS}
+          <SelectField
+            label="Язык"
             value={form.language}
-            onChange={(event) => setForm({ ...form, language: event.target.value as 'ru' | 'en' })}
-          >
-            <option value="ru">Русский</option>
-            <option value="en">Английский</option>
-          </select>
+            onChange={(value) => setForm({ ...form, language: value as 'ru' | 'en' })}
+            options={LANGUAGES}
+          />
         </Field>
       </div>
       <label className="flex items-center gap-2.5 text-sm text-muted-foreground">

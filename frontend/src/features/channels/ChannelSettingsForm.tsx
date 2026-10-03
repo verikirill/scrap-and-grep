@@ -3,6 +3,7 @@ import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { ChipsInput } from '../../components/ChipsInput'
 import { Button, Field, Toggle } from '../../components/ui'
+import { SelectField } from '../../components/SelectField'
 import { INPUT_CLASS, TEXTAREA_CLASS } from '../../components/tokens'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs'
 import { WEEKDAYS } from '../../lib/publishing'
@@ -293,17 +294,12 @@ export function ChannelSettingsForm({
             {digest.enabled && (
               <div className="mt-3 grid grid-cols-3 gap-3">
                 <Field label="День">
-                  <select
-                    value={digest.weekday}
-                    onChange={(event) => set('digest', { weekday: Number(event.target.value) })}
-                    className={INPUT_CLASS}
-                  >
-                    {WEEKDAYS.map((day, index) => (
-                      <option key={day} value={index}>
-                        {day}
-                      </option>
-                    ))}
-                  </select>
+                  <SelectField
+                    label="День"
+                    value={String(digest.weekday)}
+                    onChange={(value) => set('digest', { weekday: Number(value) })}
+                    options={WEEKDAYS.map((day, index) => ({ value: String(index), label: day }))}
+                  />
                 </Field>
                 <Field label="Время">
                   <input

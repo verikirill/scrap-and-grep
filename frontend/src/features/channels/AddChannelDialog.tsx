@@ -2,6 +2,7 @@ import { Plus } from '../../components/icons'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button, ErrorNote, Field } from '../../components/ui'
+import { SelectField } from '../../components/SelectField'
 import { INPUT_CLASS } from '../../components/tokens'
 import {
   Dialog,
@@ -74,17 +75,15 @@ export function AddChannelDialog() {
             }}
           >
             <Field label="Бот">
-              <select
+              <SelectField
+                label="Бот"
                 value={bot}
-                onChange={(event) => setBotId(event.target.value)}
-                className={INPUT_CLASS}
-              >
-                {bots?.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    @{item.username}
-                  </option>
-                ))}
-              </select>
+                onChange={setBotId}
+                options={(bots ?? []).map((item) => ({
+                  value: item.id,
+                  label: `@${item.username}`,
+                }))}
+              />
             </Field>
             <Field label="Канал" hint="@имя, t.me/имя или -100…">
               <input
@@ -96,17 +95,15 @@ export function AddChannelDialog() {
               />
             </Field>
             <Field label="Аудитория" hint="по чьему профилю отбирать новости">
-              <select
+              <SelectField
+                label="Аудитория"
                 value={profile}
-                onChange={(event) => setProfileId(event.target.value)}
-                className={INPUT_CLASS}
-              >
-                {profiles?.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.spec.name}
-                  </option>
-                ))}
-              </select>
+                onChange={setProfileId}
+                options={(profiles ?? []).map((item) => ({
+                  value: item.id,
+                  label: item.spec.name,
+                }))}
+              />
             </Field>
             <ErrorNote error={add.error} />
             <div className="flex justify-end gap-2 pt-1">

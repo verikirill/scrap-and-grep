@@ -18,6 +18,7 @@ import {
   useDigests,
   useProfiles,
 } from '../lib/queries'
+import { sameKind } from '../lib/digestPairs'
 import { useMediaQuery } from '../lib/useMediaQuery'
 
 const DAY_MS = 86_400_000
@@ -60,12 +61,13 @@ export function DigestPage() {
     if (isPhone) node.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
   // The issue built before this one for the same profile, for the compare link.
+  // A management issue is compared with management ones, not with the
+  // specialist's issue built together with it.
   const previous = digests.data?.find(
     (other) =>
       current &&
-      other.id !== current.id &&
       other.status === 'done' &&
-      other.profile_id === current.profile_id &&
+      sameKind(other, current) &&
       other.created_at < current.created_at,
   )
 

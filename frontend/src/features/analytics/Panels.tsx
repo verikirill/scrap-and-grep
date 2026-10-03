@@ -159,7 +159,8 @@ export function Funnel({ totals }: { totals: Rates }) {
           key={step.label}
           className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)_6.5rem] items-center gap-3"
         >
-          <span className="truncate text-sm">{step.label}</span>
+          {/* Two lines rather than "«Больше такого» ил…": the column is narrow. */}
+          <span className="text-sm leading-snug">{step.label}</span>
           <RateBar rate={step.share} scale={1} tone={step.tone} />
           <span className="text-right text-sm tabular-nums">
             {formatNumber(step.value)}

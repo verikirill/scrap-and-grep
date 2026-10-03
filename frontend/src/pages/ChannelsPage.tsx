@@ -7,9 +7,13 @@ import { ChannelCard } from '../features/channels/ChannelCard'
 import { PostsPanel } from '../features/channels/PostsPanel'
 import { Segmented } from '../components/Segmented'
 import { useChannels, usePublishingDefaults } from '../lib/publishingQueries'
+import { useMe } from '../lib/queries'
 
 export function ChannelsPage() {
   const { data: defaults } = usePublishingDefaults()
+  const me = useMe()
+  // How to turn publishing on is the operator's business; a reader learns only that it is off.
+  const isAdmin = Boolean(me.data?.is_admin && !me.data.is_demo)
   const { data: channels, isPending } = useChannels()
   const [selected, setSelected] = useState<string>('all')
   const isMock = defaults?.mock ?? false
@@ -27,10 +31,16 @@ export function ChannelsPage() {
       {defaults && !defaults.enabled && (
         <Card variant="filled" className="mb-6 flex items-start gap-3 p-5">
           <KeyRound size={20} className="mt-0.5 shrink-0 text-spark" />
-          <p className="text-sm">
-            Публикация выключена: на сервере не задан <code>RADAR_SECRET_KEY</code>, без него токены
-            ботов негде хранить. Добавьте его в <code>.env</code> и перезапустите стек.
-          </p>
+          {isAdmin ? (
+            <p className="text-sm">
+              Публикация выключена: на сервере не задан <code>RADAR_SECRET_KEY</code>, без него
+              токены ботов негде хранить. Добавьте его в <code>.env</code> и перезапустите стек.
+            </p>
+          ) : (
+            <p className="text-sm">
+              Публикация в Telegram на этом стенде пока выключена: её включает администратор.
+            </p>
+          )}
         </Card>
       )}
       {isMock && (

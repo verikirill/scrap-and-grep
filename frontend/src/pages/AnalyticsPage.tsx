@@ -124,7 +124,7 @@ export function AnalyticsPage() {
     return (
       <Card>
         <EmptyState icon={<AnalyticsIcon size={22} />} title="Раздел для администратора">
-          Аналитику видит администратор стенда. Роль выдаётся командой radar grant-admin.
+          Аналитику видит администратор стенда.
         </EmptyState>
       </Card>
     )

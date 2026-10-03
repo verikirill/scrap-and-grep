@@ -1,6 +1,7 @@
 import { ShieldCheck } from '../../components/icons'
 import { Chip } from '../../components/ui'
 import type { DigestItem, Priority } from '../../lib/api'
+import { inSentence } from '../../lib/format'
 
 const PRIORITY_LABELS: Record<Priority, string> = {
   high: 'Высокий приоритет',
@@ -49,7 +50,7 @@ export function EntryDetails({ item }: { item: DigestItem }) {
           ))}
           {missing.length > 0 && (
             <p className="text-xs text-outline sm:col-span-2 max-sm:mt-1.5">
-              Нет в тексте: {missing.map((field) => field.label.toLowerCase()).join(', ')}
+              Нет в тексте: {missing.map((field) => inSentence(field.label)).join(', ')}
             </p>
           )}
         </dl>
@@ -79,7 +80,7 @@ export function EntryDetails({ item }: { item: DigestItem }) {
           title="Число, идентификатор или название, которых нет в тексте статьи, в выпуск не попадают"
         >
           <ShieldCheck size={14} className="mt-px shrink-0" />
-          Нет в тексте статьи, убрано проверкой: {item.unsupported.join(', ').toLowerCase()}
+          Нет в тексте статьи, убрано проверкой: {item.unsupported.map(inSentence).join(', ')}
         </p>
       )}
     </>

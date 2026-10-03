@@ -1,4 +1,3 @@
-import { cn } from '../../lib/utils'
 import clsx from 'clsx'
 import {
   CalendarClock,
@@ -12,7 +11,8 @@ import { motion } from 'motion/react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button, Card, Chip, Toggle } from '../../components/ui'
-import { EASE, INPUT_CLASS } from '../../components/tokens'
+import { SelectField } from '../../components/SelectField'
+import { EASE } from '../../components/tokens'
 import {
   Sheet,
   SheetContent,
@@ -136,24 +136,19 @@ export function ChannelCard({
         </p>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <select
+          <SelectField
             value={channel.profile_id ?? ''}
-            onChange={(event) =>
-              update.mutate({
-                id: channel.id,
-                profile_id: event.target.value || null,
-              })
-            }
-            className={cn(INPUT_CLASS, 'h-9 w-auto max-w-[220px] rounded-full text-[13px]')}
-            aria-label="Аудитория канала"
-          >
-            <option value="">Без аудитории</option>
-            {profiles?.map((profile) => (
-              <option key={profile.id} value={profile.id}>
-                {profile.spec.name}
-              </option>
-            ))}
-          </select>
+            onChange={(value) => update.mutate({ id: channel.id, profile_id: value || null })}
+            className="h-9 w-auto max-w-[220px] rounded-full text-[13px]"
+            label="Аудитория канала"
+            options={[
+              { value: '', label: 'Без аудитории' },
+              ...(profiles ?? []).map((profile) => ({
+                value: profile.id,
+                label: profile.spec.name,
+              })),
+            ]}
+          />
           <Button
             size="sm"
             variant="tonal"

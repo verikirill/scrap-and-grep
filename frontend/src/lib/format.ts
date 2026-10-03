@@ -148,3 +148,13 @@ export function externalHref(url: string | null | undefined): string | undefined
     return undefined
   }
 }
+
+/**
+ * A field name inside a sentence: "Дата атаки" becomes "дата атаки", while an
+ * abbreviation keeps its case: "CVSS", "Техники ATT&CK" -> "техники ATT&CK".
+ */
+export function inSentence(label: string): string {
+  const [first = '', second = ''] = label
+  const isAbbreviation = second !== second.toLowerCase()
+  return isAbbreviation ? label : first.toLowerCase() + label.slice(1)
+}
