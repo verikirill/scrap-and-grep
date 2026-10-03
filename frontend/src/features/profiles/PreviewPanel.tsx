@@ -68,7 +68,11 @@ export function PreviewPanel({ draft, saved, isDirty }: Props) {
               />{' '}
               из {current.data.candidates} кандидатов
             </span>
-            <span className="tabular">{current.data.window_total} публикаций за период</span>
+            <span className="tabular">
+              {current.data.window_total}{' '}
+              {plural(current.data.window_total, ['публикация', 'публикации', 'публикаций'])} за
+              период
+            </span>
           </div>
         )}
         <AnimatePresence>
