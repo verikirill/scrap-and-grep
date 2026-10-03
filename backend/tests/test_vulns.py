@@ -161,4 +161,6 @@ async def test_attack_techniques_come_from_the_snapshot_then_from_mitre(api: str
     # Loaded: the table answers, and only for what it has.
     async with session_scope() as session:
         assert await attack.lookup(session, ["T1566", "T1003"]) == {"T1566": "Phishing (renamed)"}
+        # The table keeps the enterprise matrix; ICS comes from the snapshot.
+        assert await attack.lookup(session, ["T0817", "T1003"]) == {"T0817": "Drive-by Compromise"}
         await session.execute(delete(AttackTechniqueRow))

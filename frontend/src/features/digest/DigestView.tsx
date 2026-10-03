@@ -100,6 +100,11 @@ function ItemCard({ item, index, placement, reactions, onReact }: ItemCardProps)
       </div>
       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
         <span className="font-medium text-foreground">{item.source_name}</span>
+        {item.source_read_via && (
+          <Chip tone="spark" title="Сайт не пускает бота, источник читается этим способом">
+            {item.source_read_via}
+          </Chip>
+        )}
         <span>{formatDate(item.published_at)}</span>
         <ReadingTime minutes={item.reading_minutes} />
         <PriorityChip item={item} />

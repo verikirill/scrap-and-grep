@@ -16,7 +16,7 @@ from radar.cards import (
     vulnerability_rows,
 )
 from radar.domain import AttackCard, AttackTechnique, VulnerabilityCard, VulnerabilityReference
-from radar.vulns.attack import parse_stix
+from radar.vulns.attack import parse_stix, snapshot
 from radar.vulns.kev import parse_catalog
 
 SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -53,6 +53,7 @@ def test_a_defanged_domain_is_an_indicator() -> None:
 def test_a_cvss_3_vector_reads_in_words() -> None:
     assert parse_cvss_vector("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H") == [
         ("Доступ", "по сети"),
+        ("Сложность", "низкая"),
         ("Права", "не нужны"),
         ("Действия пользователя", "не нужны"),
     ]
@@ -63,8 +64,16 @@ def test_a_cvss_4_vector_reads_in_words() -> None:
 
     assert parse_cvss_vector(vector) == [
         ("Доступ", "локально"),
+        ("Сложность", "низкая"),
         ("Права", "низкие"),
         ("Действия пользователя", "нужны"),
+    ]
+
+
+def test_a_cvss_2_vector_reads_its_access_and_complexity() -> None:
+    assert parse_cvss_vector("AV:N/AC:M/Au:N/C:P/I:P/A:P") == [
+        ("Доступ", "по сети"),
+        ("Сложность", "средняя"),
     ]
 
 
@@ -233,3 +242,37 @@ def test_a_technique_id_has_the_mitre_shape(value: str) -> None:
 
 def test_a_version_of_four_numbers_is_no_address() -> None:
     assert extract_indicators("Обновите до версии 5.4.2.1, сервер 185.12.4.7.") == ["185.12.4[.]7"]
+
+
+def test_a_technique_the_article_prints_counts_without_the_model() -> None:
+    known = {**KNOWN, "T0817": "Drive-by Compromise"}
+    source = "Вход через T1190, затем T0817 на станции оператора; сканер T1000 ни при чём."
+
+    checked, removed = check_attack(AttackCard(), source, known)
+
+    assert checked.techniques == (
+        AttackTechnique(id="T1190", name="Exploit Public-Facing Application"),
+        AttackTechnique(id="T0817", name="Drive-by Compromise"),
+    )
+    assert removed == []
+
+
+def test_an_id_in_the_text_does_not_hide_a_technique_taken_out() -> None:
+    card = AttackCard(techniques=(AttackTechnique(id="T1566", name="Фишинг"),))
+
+    checked, removed = check_attack(card, "Вход через T1190.", KNOWN)
+
+    assert checked.techniques == (AttackTechnique(id="T1190", name=KNOWN["T1190"]),)
+    assert removed == ["Техники ATT&CK"]
+
+
+def test_the_snapshot_knows_the_ics_matrix() -> None:
+    assert snapshot()["T0817"] == "Drive-by Compromise"
+
+
+def test_a_long_decimal_number_is_no_hash() -> None:
+    assert extract_indicators("Номер заявки 12345678901234567890123456789012.") == []
+
+
+def test_an_update_to_a_four_number_version_is_no_address() -> None:
+    assert extract_indicators("Обновите до 20.9.10.1, сервер 185.12.4.7.") == ["185.12.4[.]7"]

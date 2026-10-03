@@ -1,4 +1,4 @@
-import type { SourceCategory } from './api'
+import type { Audience, SourceCategory } from './api'
 
 const MOSCOW = 'Europe/Moscow'
 
@@ -71,6 +71,16 @@ export function formatDuration(ms: number): string {
 /** File size in megabytes with one decimal: "5,4 МБ". */
 export const formatMegabytes = (bytes: number) =>
   `${(bytes / 1_000_000).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} МБ`
+
+/**
+ * The period an audience reads by default: a specialist's issue covers a day, management's a
+ * week. The same as radar.domain.AUDIENCE_PERIOD_DAYS; a draft's audience may not be saved yet,
+ * so the preview cannot take the profile's defaults from the API.
+ */
+export const AUDIENCE_DAYS: Record<Audience, number> = { specialist: 1, management: 7 }
+
+/** "сутки" or "неделю": the default period of an audience, after "за". */
+export const periodWords = (days: number) => (days === 1 ? 'сутки' : 'неделю')
 
 /** Russian plural form: plural(5, ['статья', 'статьи', 'статей']). */
 export function plural(count: number, forms: [string, string, string]): string {

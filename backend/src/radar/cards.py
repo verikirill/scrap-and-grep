@@ -278,6 +278,16 @@ def _about(ids: Sequence[str], source: str) -> str:
     return " ".join(sentences) or source
 
 
+# An ATT&CK id as an article prints it: "T1190", "T1021.003", or "T0817" of ICS.
+_TECHNIQUE_ID_RE = re.compile(r"\bT[01]\d{3}(?:\.\d{3})?\b")
+MAX_TECHNIQUES = 12
+
+
+def technique_ids(text: str) -> list[str]:
+    """The ATT&CK ids a text prints, in its order, without repeats."""
+    return list(dict.fromkeys(_TECHNIQUE_ID_RE.findall(text)))
+
+
 def _techniques(
     techniques: Sequence[AttackTechnique], source: str, known: Mapping[str, str] | None
 ) -> tuple[AttackTechnique, ...]:
@@ -295,7 +305,16 @@ def _techniques(
             continue
         if technique.id in source or _mentioned(name, source) or _mentioned(technique.name, source):
             kept.append(AttackTechnique(id=technique.id, name=name))
-    return tuple(dict.fromkeys(kept))
+    if known is not None:
+        # An id the article prints counts even when the model left it out; one
+        # the reference lacks ("T1000" of a product's name) is no technique.
+        named = {technique.id for technique in kept}
+        kept += [
+            AttackTechnique(id=value, name=known[value])
+            for value in technique_ids(source)
+            if value in known and value not in named
+        ]
+    return tuple(dict.fromkeys(kept))[:MAX_TECHNIQUES]
 
 
 def _indicators(card: AttackCard, source: str) -> tuple[tuple[str, ...], bool]:
@@ -339,7 +358,8 @@ def check_attack(
         updates["affected"] = ""
         removed.append("Затронутые продукты")
     kept = _techniques(card.techniques, source, techniques)
-    if len(kept) < len(card.techniques):
+    # Ids the article printed may stand in for a technique the check took out.
+    if {technique.id for technique in card.techniques} - {technique.id for technique in kept}:
         removed.append("Техники ATT&CK")
     updates["techniques"] = kept
     indicators, invented = _indicators(card, source)

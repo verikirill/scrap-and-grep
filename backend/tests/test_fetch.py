@@ -2,6 +2,8 @@
 """The fetch ladder: a site that refuses a bot is asked again the way a browser
 would ask, and no step reaches an internal address."""
 
+import asyncio
+import socket
 import threading
 from collections.abc import Callable, Iterator
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -259,6 +261,20 @@ async def test_a_site_that_checks_the_fingerprint_is_read_by_curl_pinned_to_the_
     assert ladder.first.note == "403 на шаге «обычный запрос», прочитан через curl_cffi"
     # Every step went to the checked address under the site's own name.
     assert [host for _, host, _ in _Site.seen] == [f"site.test:{local_site}"] * 3
+
+
+async def test_a_host_without_an_address_is_told_from_an_internal_one(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from radar.ingest import net
+
+    async def no_address(*args: object, **kwargs: object) -> list[object]:
+        raise socket.gaierror(socket.EAI_NONAME, "Name or service not known")
+
+    monkeypatch.setattr(asyncio.get_running_loop(), "getaddrinfo", no_address)
+
+    with pytest.raises(net.UnresolvableHostError):
+        await net.resolve_public("https://nonexistent.invalid/news")
 
 
 async def test_curl_does_not_follow_a_redirect_to_an_internal_address(

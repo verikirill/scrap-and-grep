@@ -26,14 +26,15 @@ import feedparser
 import httpx
 from selectolax.lexbor import LexborHTMLParser
 
+from radar.db.models import Source
 from radar.ingest import listing, telegram, wordpress
 from radar.ingest.feeds import parse_entries
 from radar.ingest.fetch import LIGHT, Blocked, Ladder, Outcome
-from radar.ingest.net import UnsafeUrlError
+from radar.ingest.net import UnresolvableHostError, UnsafeUrlError
 from radar.ingest.pages import MarkupChanged
 from radar.logging import get_logger
 from radar.store.articles import NewArticle
-from radar.text import detect_language, untracked_url
+from radar.text import detect_language, stable_hash, untracked_url
 
 log = get_logger(__name__)
 
@@ -84,6 +85,8 @@ async def detect(address: str, client: httpx.AsyncClient, selector: str | None =
     async with Ladder(client) as ladder, Ladder(client, steps=LIGHT) as light:
         try:
             response = await ladder.get(url, expect="any")
+        except UnresolvableHostError as exc:
+            raise NotFound("Такого сайта нет: имя не находится в DNS.") from exc
         except UnsafeUrlError as exc:
             raise NotFound("Адрес ведёт во внутреннюю сеть: такой источник читать нельзя.") from exc
         except Blocked as exc:
@@ -113,6 +116,37 @@ async def detect(address: str, client: httpx.AsyncClient, selector: str | None =
             found.name = _page_name(response.text, final) if _is_html(response) else parts.hostname
         found.language = _language([sample.title for sample in found.samples])
         return found
+
+
+def as_source(found: Found, category: str = "security") -> Source:
+    """The catalog's row for what an address turned out to be, as the form in
+    «Источники» adds it: a channel by its name, anything else by the address
+    it is polled at."""
+    name = found.name.strip()[:200] or found.address[:200]
+    language = "en" if found.language == "en" else "ru"
+    if found.kind == "telegram":
+        return Source(
+            slug=f"tg-{found.address}",
+            name=name,
+            kind="telegram",
+            feed_url=telegram.feed_url(found.address),
+            site_url=telegram.site_url(found.address),
+            category=category,
+            language=language,
+            # A channel's short posts mostly point to articles worth opening.
+            fetch_full_text=True,
+        )
+    return Source(
+        slug=f"custom-{stable_hash(found.address)[:12]}",
+        name=name,
+        kind=found.kind,
+        link_selector=found.link_selector,
+        feed_url=found.address,
+        site_url=found.site_url,
+        category=category,
+        language=language,
+        fetch_full_text=False,
+    )
 
 
 def detect_key(request_id: str) -> str:

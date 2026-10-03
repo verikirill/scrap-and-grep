@@ -39,6 +39,7 @@ from radar.cards import (
     priority,
     section_overview,
     source_text,
+    technique_ids,
 )
 from radar.domain import (
     Candidate,
@@ -381,7 +382,7 @@ class DigestNodes:
         evidence = "\n".join(
             [source, *(reference.text() for reference in written.references if reference.found)]
         )
-        techniques = await self._techniques(written)
+        techniques = await self._techniques(written, evidence)
         text = check_entry(written, evidence, techniques)
         # Past the cache as well: a brief written before the rule keeps to it.
         if profile.audience == "management":
@@ -389,15 +390,17 @@ class DigestNodes:
         _emit("summarize", done=1)
         return {"summaries": [{"article_id": item.article.id, "text": text.model_dump()}]}
 
-    async def _techniques(self, text: ItemSummary) -> dict[str, str] | None:
-        """The ATT&CK reference for the card's techniques; None when it could
-        not be asked, and the check then takes only ids printed in the text."""
-        if text.attack is None or not text.attack.techniques:
+    async def _techniques(self, text: ItemSummary, source: str) -> dict[str, str] | None:
+        """The ATT&CK reference for the card's techniques and for the ids the
+        article prints; None when it could not be asked, and the check then
+        takes only the card's ids printed in the text."""
+        if text.attack is None:
+            return {}
+        ids = [technique.id for technique in text.attack.techniques] + technique_ids(source)
+        if not ids:
             return {}
         try:
-            return await self._deps.store.attack_techniques(
-                [technique.id for technique in text.attack.techniques]
-            )
+            return await self._deps.store.attack_techniques(ids)
         except Exception as exc:
             log.warning("attack_lookup_failed", error=f"{type(exc).__name__}: {exc}"[:300])
             return None

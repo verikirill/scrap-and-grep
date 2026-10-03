@@ -15,7 +15,8 @@ _HASH_RE = re.compile(r"\b(?:[a-f0-9]{64}|[a-f0-9]{40}|[a-f0-9]{32})\b", re.IGNO
 # Only a defanged address is an indicator; an ordinary link is a reference.
 _DEFANGED_URL_RE = re.compile(r"\b(?:hxxps?|https?)(?::|\[:\])//[^\s<>\"'`]+", re.IGNORECASE)
 _DEFANGED_DOMAIN_RE = re.compile(r"\b[a-z0-9][a-z0-9-]*(?:\[\.\][a-z0-9-]+)+\b", re.IGNORECASE)
-_VERSION_BEFORE_RE = re.compile(r"(?:верси\w*|version|\bv)\s*$", re.IGNORECASE)
+# "Обновите до 20.9.10.1" names a version, not a host.
+_VERSION_BEFORE_RE = re.compile(r"(?:верси\w*|version|\bv|\bдо)\s*$", re.IGNORECASE)
 MAX_INDICATORS = 20
 
 
@@ -62,6 +63,9 @@ def extract_indicators(text: str) -> list[str]:
             found.append((match.start(), address, _defanged_ip(address)))
     for match in _HASH_RE.finditer(text):
         value = match.group(0).lower()
+        # A hash mixes digits and letters; a long decimal number is no hash.
+        if value.isdigit() or value.isalpha():
+            continue
         found.append((match.start(), value, value))
     for match in _DEFANGED_URL_RE.finditer(text):
         raw = match.group(0).rstrip(".,;)")
@@ -86,14 +90,16 @@ def extract_indicators(text: str) -> list[str]:
 # --- CVSS ------------------------------------------------------------------------
 
 _ACCESS = {"N": "по сети", "A": "из смежной сети", "L": "локально", "P": "физический доступ"}
+_COMPLEXITY = {"L": "низкая", "M": "средняя", "H": "высокая"}
 _PRIVILEGES = {"N": "не нужны", "L": "низкие", "H": "высокие"}
 # CVSS 3 has R (required); CVSS 4 has P (passive) and A (active).
 _INTERACTION = {"N": "не нужны", "R": "нужны", "P": "нужны", "A": "нужны"}
 
 
 def parse_cvss_vector(vector: str) -> list[tuple[str, str]]:
-    """Network or local access, the privileges and the user's part, in words;
-    nothing for a string that is no vector."""
+    """Network or local access, the complexity, the privileges and the user's
+    part, in words; nothing for a string that is no vector. CVSS 2 has a
+    medium complexity and neither privileges nor the user."""
     metrics = dict(
         part.split(":", 1)
         for part in re.sub(r"\s", "", vector).split("/")
@@ -102,6 +108,8 @@ def parse_cvss_vector(vector: str) -> list[tuple[str, str]]:
     if metrics.get("AV") not in _ACCESS:
         return []
     rows = [("Доступ", _ACCESS[metrics["AV"]])]
+    if metrics.get("AC") in _COMPLEXITY:
+        rows.append(("Сложность", _COMPLEXITY[metrics["AC"]]))
     if metrics.get("PR") in _PRIVILEGES:
         rows.append(("Права", _PRIVILEGES[metrics["PR"]]))
     if metrics.get("UI") in _INTERACTION:

@@ -2,7 +2,7 @@
 
 Решение полуфинала хакатона «ИИ-ассистенты для энергетики» ([задание](docs/task/TASK.md)). Жюри проверяет, может ли ИИ-ассистент заменить аналитика ИБ в поиске, отборе и приоритизации новостей. Tail&Grep делает эту работу сам: собирает 87 источников, включая сайты без ленты, защищённые от ботов, и Telegram-каналы, отбирает статьи по интересам читателя, ставит приоритет по правилу датасета организаторов, сверяет записи с текстом статей и с CISA KEV и БДУ ФСТЭК и выдаёт два выпуска: специалисту подробно за сутки, руководству тезисно за неделю, в Markdown и DOCX, из браузера или одной командой в консоли. Выпуск собирается за одну-четыре минуты на облачной модели. Сравнение с аналитиком-человеком подготовлено и ждёт разметки ([docs/eval/human](docs/eval/human/README.md)), расчёт экономии - в [BUSINESS](docs/BUSINESS.md).
 
-[Видео](https://git.codenrock.com/codenrock/ii-assistenty/misis-mojarung/assistent-dlya-sozdaniya-it-ib-daydzhestov/uploads/0330749424fd4ca4d8207d44f8679eba/tailgrep-demo.mp4), 4,5 минуты с голосом и субтитрами. [Презентация](docs/presentation/tailgrep.pdf), 12 слайдов. Примеры: [выпуск специалисту за сутки](examples/specialist-daily.md), [выпуск руководству за неделю](examples/management-weekly.md). Кратко о возможностях и ограничениях - [docs/SUMMARY.md](docs/SUMMARY.md), план показа - [docs/DEMO.md](docs/DEMO.md).
+[Видео](https://git.codenrock.com/codenrock/ii-assistenty/misis-mojarung/assistent-dlya-sozdaniya-it-ib-daydzhestov/uploads/df3e9226c8f30f20d9e7e34e6cbd2bdf/tailgrep-demo.mp4), 4,5 минуты с голосом и субтитрами. [Презентация](docs/presentation/tailgrep.pdf), 12 слайдов. Примеры: [выпуск специалисту за сутки](examples/specialist-daily.md), [выпуск руководству за неделю](examples/management-weekly.md). Кратко о возможностях и ограничениях - [docs/SUMMARY.md](docs/SUMMARY.md), план показа - [docs/DEMO.md](docs/DEMO.md).
 
 ## Где что посмотреть по заданию
 
@@ -67,7 +67,7 @@ docker compose run --rm cli digest --audience management   # руководст�
 ls out/
 ```
 
-Без `--audience` собираются оба выпуска. Период меняет `--days`, свежий опрос источников перед сборкой - `--fresh`, свой профиль берётся из файла: `--profile-file profile.json` в формате [examples/profiles](examples/profiles). Пока идёт сборка, в терминале видны её этапы.
+Без `--audience` собираются оба выпуска. Период меняет `--days`, свежий опрос источников перед сборкой - `--fresh`, свой профиль берётся из файла: `--profile-file profile.json` в формате [examples/profiles](examples/profiles). Свои источники добавляет `--sources out/sources.txt`: в файле по адресу на строку, сайт, раздел новостей, лента или `@канал`; каждый адрес определяется и опрашивается до сборки, как «Любой адрес» в браузере. Файлы для `--profile-file` и `--sources` кладутся в `out/`, в контейнере это `/out`. Пока идёт сборка, в терминале видны её этапы.
 
 При первом старте стек сам применит миграции, заведёт 87 источников и четыре примера профилей, загрузит снимок из 1728 реальных публикаций за 23 сентября - 2 октября 2026 года и поставит в очередь опрос лент. Дайджест можно собирать сразу, не дожидаясь опроса.
 
@@ -342,11 +342,11 @@ docker compose up -d --scale api=4 --scale worker-ingest=2 --scale worker-digest
 
 | Проверка | Результат |
 |---|---|
-| Тесты бэкенда, `uv run pytest` | 534 теста; 76 из них идут через HTTP на отдельной базе PostgreSQL, 7 требуют ClickHouse (своя база `radar_test`), ещё один требует Valkey; без них они пропускаются |
+| Тесты бэкенда, `uv run pytest` | 545 тестов; 76 из них идут через HTTP на отдельной базе PostgreSQL, 7 требуют ClickHouse (своя база `radar_test`), ещё один требует Valkey; без них они пропускаются |
 | Линтер и типы бэкенда, `ruff` и `mypy --strict` | без замечаний |
 | Фронтенд: `tsc`, `oxlint`, `vitest` | без ошибок, 35 тестов; семь предупреждений `only-export-components`: четыре в сгенерированных файлах shadcn, три в `features/analytics/charts.tsx` |
 | Сервис рендера и сервис голоса | `tsc` и 20 тестов `node --test`; `ruff`, `mypy --strict` и 17 тестов `pytest` |
-| Защищённые сайты, лестница способов чтения (2 октября 2026 года) | SecurityLab, Habr, Kaspersky, PT, Security Vision, Broadcom, dbugs, CTFIOT, SecurityMedia отдают страницы обычному запросу. McAfee не отвечает боту, лента и блог прочитаны через curl_cffi за 21,4 с, из них 20 с - тайм-аут первой ступени; следующий опрос сразу с curl_cffi, 304 за 0,4 с. Cybernews, Netskope, SecurityWeek, Dark Reading: 403 с заглушкой Cloudflare, прочитаны через curl_cffi за 0,9-4,2 с. Тестовая страница Cloudflare Challenge пройдена только FlareSolverr, 15,9 с. Таблица в DECISIONS.md, «Сбор: лестница способов чтения» |
+| Защищённые сайты, лестница способов чтения (2 октября 2026 года) | SecurityLab, Habr, Kaspersky, PT, Security Vision, Broadcom, dbugs, CTFIOT, SecurityMedia отдают страницы обычному запросу. McAfee не отвечает боту, лента и блог прочитаны через curl_cffi за 21,4 с, из них 20 с - тайм-аут первой ступени; следующий опрос сразу с curl_cffi, 304 за 0,4 с. Cybernews, Netskope, SecurityWeek, Dark Reading: 403 с заглушкой Cloudflare, прочитаны через curl_cffi за 0,9-4,2 с. Тестовая страница Cloudflare Challenge пройдена только FlareSolverr, 15,9 с. 3 октября Akamai у McAfee стал отвечать 403 и браузеру в стеке; источник снова читается FlareSolverr, поэтому его стоит включать: `--profile solver` и `RADAR_FLARESOLVERR_URL` в `.env`. Таблица в DECISIONS.md, «Сбор: лестница способов чтения» |
 | Опрос каталога в стеке после пересборки | 67 источников за 18 с, ошибок 0; `robots.txt` семи сайтов запрещает ленту боту, это записано у источника, лента прочитана |
 | Прокси | через локальный mitmproxy как HTTP-прокси и как SOCKS5 прочитаны SecurityLab, Cybernews (curl_cffi) и PT (сертификат Минцифры проверяется и через туннель) |
 | Изоляция FlareSolverr | из его контейнера не резолвятся `postgres`, `valkey`, `pgbouncer`, `api`; api до него не достаёт, воркер сбора достаёт |

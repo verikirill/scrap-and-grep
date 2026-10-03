@@ -85,6 +85,13 @@ def file_stem(label: str, days: int, now: datetime) -> str:
     return f"{label}-{days}d-{now:%Y%m%d-%H%M}"
 
 
+def addresses(text: str) -> list[str]:
+    """The addresses of a --sources file: one per line, blank lines and lines
+    starting with "#" skipped, each address once."""
+    lines = (line.strip() for line in text.splitlines())
+    return list(dict.fromkeys(line for line in lines if line and not line.startswith("#")))
+
+
 def progress_line(stage: str | None, progress: float) -> str:
     label = STAGE_LABELS.get(stage or "", stage or "В очереди")
     return f"{progress:4.0%}  {label}"

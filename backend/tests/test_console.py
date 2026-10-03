@@ -6,7 +6,17 @@ from pathlib import Path
 
 import pytest
 
-from radar.console import Audience, ConsoleError, Target, file_stem, progress_line, targets
+from radar.console import (
+    Audience,
+    ConsoleError,
+    Target,
+    addresses,
+    file_stem,
+    progress_line,
+    targets,
+)
+from radar.ingest import telegram
+from radar.ingest.detect import Found, as_source
 from radar.seed import DEFAULT_PROFILES
 
 
@@ -69,3 +79,46 @@ def test_files_say_who_they_are_for_and_the_period() -> None:
 
     assert file_stem("specialist", 1, built) == "specialist-1d-20261003-0930"
     assert progress_line("grade", 0.42) == " 42%  Оцениваем релевантность"
+
+
+def test_a_sources_file_skips_comments_blank_lines_and_repeats() -> None:
+    text = "\n".join(
+        [
+            "# сайты вне датасета",
+            "https://www.securitycode.ru/company/news/",
+            "",
+            "@dataleak",
+            "  https://www.securitycode.ru/company/news/  ",
+        ]
+    )
+
+    assert addresses(text) == ["https://www.securitycode.ru/company/news/", "@dataleak"]
+
+
+def test_a_detected_address_becomes_the_row_the_form_would_add() -> None:
+    channel = as_source(
+        Found(kind="telegram", address="dataleak", name="Утечки", site_url=None, language="ru")
+    )
+    page = as_source(
+        Found(
+            kind="page",
+            address="https://example.org/news",
+            name="",
+            site_url="https://example.org",
+            language="en",
+            link_selector="article h2 a",
+        )
+    )
+
+    assert (channel.slug, channel.feed_url, channel.fetch_full_text) == (
+        "tg-dataleak",
+        telegram.feed_url("dataleak"),
+        True,
+    )
+    assert page.slug.startswith("custom-")
+    assert (page.name, page.kind, page.language, page.link_selector) == (
+        "https://example.org/news",
+        "page",
+        "en",
+        "article h2 a",
+    )

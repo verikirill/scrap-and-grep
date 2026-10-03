@@ -39,6 +39,10 @@ class UnsafeUrlError(ValueError):
     """The URL points somewhere the service must not connect to."""
 
 
+class UnresolvableHostError(UnsafeUrlError):
+    """The host has no address: a typo or a site that is gone, not a threat."""
+
+
 class ResponseTooLargeError(Exception):
     pass
 
@@ -59,7 +63,7 @@ async def resolve_public(url: str) -> str | None:
     try:
         infos = await loop.getaddrinfo(parts.hostname, port, type=socket.SOCK_STREAM)
     except socket.gaierror as exc:
-        raise UnsafeUrlError(f"cannot resolve host {parts.hostname}") from exc
+        raise UnresolvableHostError(f"cannot resolve host {parts.hostname}") from exc
     addresses = [ipaddress.ip_address(info[4][0]) for info in infos]
     if not addresses or any(not address.is_global for address in addresses):
         raise UnsafeUrlError(f"host {parts.hostname} resolves to a non-public address")

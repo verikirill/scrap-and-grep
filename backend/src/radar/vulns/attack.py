@@ -5,7 +5,9 @@ The enterprise matrix is one STIX bundle of about 45 MB, updated a couple of
 times a year; the loader takes it once a day with a conditional request and
 keeps only the id and the name of each technique. Until the table has been
 filled, and in a closed network that never fills it, the snapshot shipped
-with the package answers instead (backend/scripts/attack_snapshot.py).
+with the package answers instead (backend/scripts/attack_snapshot.py). The
+snapshot also carries the ICS matrix, which an energy company's attacks name
+and the table does not keep.
 """
 
 import json
@@ -93,9 +95,11 @@ async def lookup(session: AsyncSession, ids: Sequence[str]) -> dict[str, str]:
             )
         )
     ).all()
-    if rows:
-        return {str(key): str(name) for key, name in rows}
-    if await session.scalar(select(func.count()).select_from(AttackTechniqueRow)):
-        return {}
+    found = {str(key): str(name) for key, name in rows}
     known = snapshot()
-    return {key: known[key] for key in wanted if key in known}
+    if not found and not await session.scalar(select(func.count()).select_from(AttackTechniqueRow)):
+        return {key: known[key] for key in wanted if key in known}
+    # The table keeps the enterprise matrix fresh; ICS techniques (T0800 on)
+    # come from the snapshot alone.
+    ics = {key: known[key] for key in wanted if key.startswith("T0") and key in known}
+    return {**ics, **found}

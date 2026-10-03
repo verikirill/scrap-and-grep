@@ -377,6 +377,28 @@ async def test_a_specialist_digest_opens_with_attacks_and_vulnerabilities_by_pri
     assert store.saved["stats"]["priorities"] == {"high": 2, "medium": 1, "low": 1}
 
 
+async def test_a_technique_the_article_prints_reaches_an_offline_card(
+    profile: ProfileSpec, make_article: ArticleFactory
+) -> None:
+    article = make_article(
+        "Атака группировки на SCADA электросетей",
+        "Вход был через фишинговое письмо (T1566); сканер T1000 тут ни при чём.",
+    )
+    store = FakeStore([article])
+    graph = build_graph(_deps(store, HeuristicIntelligence())).compile(checkpointer=InMemorySaver())
+
+    await graph.ainvoke(_input(profile.model_copy(update={"max_items": 10})), CONFIG)
+
+    assert store.saved is not None
+    cards = [
+        item.text.attack
+        for topic in store.saved["topics"]
+        for item in topic.items
+        if item.text is not None and item.text.attack is not None
+    ]
+    assert [technique.id for card in cards for technique in card.techniques] == ["T1566"]
+
+
 async def test_a_management_digest_has_topics_and_tags_instead_of_cards(
     profile: ProfileSpec, security_week: list[ArticleRef]
 ) -> None:
