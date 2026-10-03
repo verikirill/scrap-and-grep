@@ -10,8 +10,8 @@ from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
 
+from radar.domain import AUDIENCE_PERIOD_DAYS, ProfileSpec
 from radar.domain import Audience as ProfileAudience
-from radar.domain import ProfileSpec
 
 
 class Audience(StrEnum):
@@ -25,9 +25,6 @@ AUDIENCE_PROFILES: dict[ProfileAudience, str] = {
     "specialist": "Специалист по ИБ АСУ ТП",
     "management": "Руководство и сотрудники: кибербезопасность",
 }
-# How often each audience reads, as the jury put it: technical people every
-# day, management once a week. A command without --days takes this period.
-AUDIENCE_DAYS: dict[ProfileAudience, int] = {"specialist": 1, "management": 7}
 
 STAGE_LABELS = {
     "prepare": "Готовим публикации",
@@ -54,7 +51,7 @@ class Target:
     spec: ProfileSpec | None = None
 
     def period(self, audience: ProfileAudience) -> int:
-        return self.days or AUDIENCE_DAYS[audience]
+        return self.days or AUDIENCE_PERIOD_DAYS[audience]
 
 
 def targets(

@@ -308,6 +308,8 @@ class DigestCreate(BaseModel):
         explicit = self.period_start is not None and self.period_end is not None
         if explicit and self.period_start >= self.period_end:  # type: ignore[operator]
             raise ValueError("period_start must be before period_end")
+        if (self.period_start is None) != (self.period_end is None):
+            raise ValueError("a period takes both bounds or none")
         return self
 
 

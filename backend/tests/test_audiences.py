@@ -1,11 +1,14 @@
 """Two audiences from the jury's Q&A: specialists daily and in detail,
 management weekly and in theses."""
 
-from datetime import datetime
+import uuid
+from datetime import UTC, datetime
 
 import httpx
 import pytest
+from pydantic import ValidationError
 
+from radar.api.schemas import DigestCreate
 from radar.domain import AUDIENCE_PERIOD_DAYS, AUDIENCE_SCHEDULE, ScheduleDefault
 from tests.test_accounts_api import api, database, profile_spec, register  # noqa: F401  (fixtures)
 
@@ -79,3 +82,9 @@ async def test_an_explicit_period_still_wins(api: str) -> None:  # noqa: F811
         )
 
     assert _days(response.json()) == 3.0
+
+
+def test_a_period_takes_both_bounds_or_none() -> None:
+    # One bound alone would quietly mix with the audience's period.
+    with pytest.raises(ValidationError, match="both bounds or none"):
+        DigestCreate(profile_id=uuid.uuid4(), period_start=datetime.now(UTC))
