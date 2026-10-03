@@ -511,6 +511,35 @@ def attack_rows(card: AttackCard) -> list[tuple[str, str]]:
     ] + ([("Техники MITRE ATT&CK", ", ".join(card.techniques))] if card.techniques else [])
 
 
+# What a CVSS vector says an attacker needs, in a specialist's words. Values
+# of CVSS 2, 3 and 4 alike: v2 has a medium complexity, v4 two kinds of user
+# interaction.
+_VECTOR_WORDS: dict[str, dict[str, str]] = {
+    "AV": {
+        "N": "по сети",
+        "A": "из соседней сети",
+        "L": "локально",
+        "P": "при физическом доступе",
+    },
+    "AC": {"L": "сложность низкая", "M": "сложность средняя", "H": "сложность высокая"},
+    "PR": {"N": "без прав", "L": "с правами пользователя", "H": "с правами администратора"},
+    "UI": {
+        "N": "без участия пользователя",
+        "R": "нужно действие пользователя",
+        "P": "нужно пассивное участие пользователя",
+        "A": "нужно действие пользователя",
+    },
+}
+
+
+def vector_words(vector: str) -> str:
+    """ "AV:N/AC:L/PR:N/UI:N/..." as "по сети, сложность низкая, без прав, без
+    участия пользователя"; empty for a vector it cannot read."""
+    metrics = dict(part.split(":", 1) for part in vector.split("/") if ":" in part)
+    words = (_VECTOR_WORDS[key].get(metrics.get(key, "")) for key in _VECTOR_WORDS)
+    return ", ".join(word for word in words if word)
+
+
 def vulnerability_rows(card: VulnerabilityCard) -> list[tuple[str, str]]:
     score = card.cvss_score
     cvss = (
@@ -524,6 +553,7 @@ def vulnerability_rows(card: VulnerabilityCard) -> list[tuple[str, str]]:
         ("Эксплойт", EXPLOIT_LABELS[card.exploit]),
         ("Идентификаторы", ", ".join(card.ids) or NO_DATA),
         ("CVSS", cvss or NO_DATA),
+        *([("Вектор атаки", words)] if (words := vector_words(card.cvss_vector)) else []),
         ("Последствия", card.impact or NO_DATA),
     ]
 

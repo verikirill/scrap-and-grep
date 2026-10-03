@@ -16,6 +16,8 @@ from radar.cards import (
     indicators,
     priority,
     technical_marks,
+    vector_words,
+    vulnerability_rows,
     without_marks,
 )
 from radar.domain import (
@@ -146,6 +148,33 @@ def test_a_card_without_techniques_shows_no_empty_attack_row() -> None:
 
     assert "Техники MITRE ATT&CK" not in labels
     assert dict(attack_rows(AttackCard(iocs=False)))["Индикаторы компрометации"] == "нет"
+
+
+@pytest.mark.parametrize(
+    ("vector", "words"),
+    [
+        (
+            "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "по сети, сложность низкая, без прав, без участия пользователя",
+        ),
+        (
+            "AV:L/AC:H/PR:H/UI:R/S:U/C:H/I:N/A:N",
+            "локально, сложность высокая, с правами администратора, нужно действие пользователя",
+        ),
+        ("AV:N/AC:M/Au:N/C:P/I:P/A:P", "по сети, сложность средняя"),
+        ("не вектор", ""),
+    ],
+)
+def test_the_cvss_vector_reads_as_what_an_attacker_needs(vector: str, words: str) -> None:
+    assert vector_words(vector) == words
+
+
+def test_a_vulnerability_card_shows_the_vector_in_words_only_when_there_is_one() -> None:
+    with_vector = dict(vulnerability_rows(VulnerabilityCard(cvss_vector="AV:N/AC:L/PR:N/UI:N")))
+    without = dict(vulnerability_rows(VulnerabilityCard(cvss_score="9.8")))
+
+    assert with_vector["Вектор атаки"].startswith("по сети")
+    assert "Вектор атаки" not in without
 
 
 def test_a_dotted_version_is_not_an_indicator() -> None:
