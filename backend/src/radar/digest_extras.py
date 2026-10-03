@@ -11,7 +11,7 @@ from datetime import date, datetime
 from typing import TYPE_CHECKING, Any
 from zoneinfo import ZoneInfo
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from radar.cards import EXPLOIT_LABELS, TAG_LABELS
 from radar.domain import Exploit, ItemSummary, ManagementTag, RecordKind, VulnerabilityReference
@@ -79,18 +79,20 @@ class TagCount(BaseModel):
     before: int | None = None
 
 
+def _count(value: object) -> float:
+    """A number from the stats a build wrote; anything else counts as none."""
+    return float(value) if isinstance(value, (int, float)) and value > 0 else 0.0
+
+
 def manual_work(stats: Mapping[str, Any]) -> ManualWork | None:
-    headlines = int(stats.get("window_total") or 0)
+    headlines = int(_count(stats.get("window_total")))
     if headlines == 0:
         return None
-    entries = int(stats.get("selected") or 0)
+    entries = int(_count(stats.get("selected")))
     minutes = round(headlines * SECONDS_PER_HEADLINE / 60 + entries * MINUTES_PER_ENTRY)
-    seconds = stats.get("duration_seconds")
+    seconds = _count(stats.get("duration_seconds"))
     return ManualWork(
-        headlines=headlines,
-        entries=entries,
-        minutes=minutes,
-        seconds=float(seconds) if seconds else None,
+        headlines=headlines, entries=entries, minutes=minutes, seconds=seconds or None
     )
 
 
@@ -231,7 +233,10 @@ def vulnerability_states(
     entries: Iterable[tuple[ItemSummary, str, str, datetime]],
 ) -> dict[str, VulnerabilityState]:
     """The vulnerabilities of some entries by id: (text, headline, url, when).
-    A later entry of the same id overrides an earlier one."""
+
+    What any entry knew is kept: a later article with a thinner card does not
+    take the catalogue or the exploit back. The headline and the day are the
+    latest entry's."""
     states: dict[str, VulnerabilityState] = {}
     for text, headline, url, when in sorted(entries, key=lambda entry: entry[3]):
         card = text.vulnerability
@@ -240,7 +245,7 @@ def vulnerability_states(
         references = {ref.id: ref for ref in text.references}
         for identifier in dict.fromkeys([*card.ids, *references]):
             reference = references.get(identifier)
-            states[identifier] = VulnerabilityState(
+            state = VulnerabilityState(
                 id=identifier,
                 headline=headline,
                 url=url,
@@ -250,7 +255,34 @@ def vulnerability_states(
                 fixed=bool(card.fix)
                 or bool(reference and (reference.bdu_fix or reference.nvd_patch)),
             )
+            states[identifier] = _merged(states.get(identifier), state)
     return states
+
+
+def _merged(known: VulnerabilityState | None, new: VulnerabilityState) -> VulnerabilityState:
+    if known is None:
+        return new
+    listed = [day for day in (known.kev_added, new.kev_added) if day is not None]
+    exploit = max(known.exploit, new.exploit, key=_EXPLOIT_RANK.__getitem__)
+    return new.model_copy(
+        update={
+            "exploit": exploit,
+            "kev_added": min(listed) if listed else None,
+            "fixed": known.fixed or new.fixed,
+        }
+    )
+
+
+def stored_changes(raw: object) -> list[Change]:
+    """The changes a build kept in its stats; a row that does not read is skipped
+    rather than taking the whole issue down."""
+    found = []
+    for row in raw if isinstance(raw, list) else []:
+        try:
+            found.append(Change.model_validate(row))
+        except ValidationError:
+            continue
+    return found
 
 
 def changes(

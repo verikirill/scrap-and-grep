@@ -181,6 +181,38 @@ def test_the_latest_issue_decides_what_was_known() -> None:
     assert states["CVE-2026-1"].kev_added == date(2026, 9, 29)
 
 
+def test_a_thinner_card_later_does_not_take_back_the_catalogue_or_the_exploit() -> None:
+    known = ItemSummary(
+        summary="",
+        vulnerability=VulnerabilityCard(ids=("CVE-2026-1",), exploit="in_the_wild"),
+        references=(VulnerabilityReference(id="CVE-2026-1", kev_added=date(2026, 9, 20)),),
+    )
+    thinner = ItemSummary(
+        summary="", vulnerability=VulnerabilityCard(ids=("CVE-2026-1",), exploit="unknown")
+    )
+    earlier = vulnerability_states(
+        [
+            (known, "Первое", "https://example.org/1", datetime(2026, 9, 21, tzinfo=UTC)),
+            (thinner, "Повтор", "https://example.org/2", datetime(2026, 9, 28, tzinfo=UTC)),
+        ]
+    )
+    now = vulnerability_states(
+        [(known, "Сегодня", "https://example.org/3", datetime(2026, 10, 3, tzinfo=UTC))]
+    )
+
+    assert earlier["CVE-2026-1"].headline == "Повтор"
+    assert changes(earlier, now) == []
+
+
+def test_stats_a_build_did_not_write_do_not_break_the_issue() -> None:
+    digest = _digest("specialist", [], {"changes": None, "window_total": "много"})
+    garbled = _digest("specialist", [], {"changes": [{"id": "CVE-2026-1"}]})
+
+    assert digest.changes == []
+    assert digest.manual is None
+    assert garbled.changes == []
+
+
 def test_managements_numbers_count_the_tags_beside_the_previous_issue() -> None:
     items = [
         _item(1, "Атака на ТЭЦ", tags=["ru", "energy"]),

@@ -17,6 +17,7 @@ from radar.digest_extras import (
     numbers_title,
     period_numbers,
     shift_plan,
+    stored_changes,
 )
 from radar.domain import (
     AttackCard,
@@ -146,11 +147,12 @@ class DigestView(DigestSummaryView):
         selected = [item for topic in self.topics for item in topic.items]
         self.manual = manual_work(self.stats)
         if self.profile.audience == "management":
-            self.numbers = period_numbers(selected, self.stats.get("tags_before"))
+            before = self.stats.get("tags_before")
+            self.numbers = period_numbers(selected, before if isinstance(before, dict) else None)
             self.numbers_title = numbers_title(self.period_start, self.period_end)
         else:
             self.plan = shift_plan(selected)
-            self.changes = [Change.model_validate(raw) for raw in self.stats.get("changes", [])]
+            self.changes = stored_changes(self.stats.get("changes"))
         return self
 
 

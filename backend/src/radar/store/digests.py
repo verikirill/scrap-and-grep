@@ -268,7 +268,13 @@ async def _history(
             Digest.status == STATUS_DONE,
             Digest.id != digest_id,
             Digest.created_at < digest.created_at,
-            Digest.created_at >= digest.created_at - timedelta(days=HISTORY_DAYS),
+            # A month's issue looks back far enough to find the month before.
+            Digest.created_at
+            >= digest.created_at
+            - max(
+                timedelta(days=HISTORY_DAYS),
+                digest.period_end - digest.period_start + timedelta(days=2),
+            ),
         )
         .order_by(Digest.created_at.desc())
         # One build for both audiences writes two digests of one profile.
