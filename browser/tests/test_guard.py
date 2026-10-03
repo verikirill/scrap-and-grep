@@ -9,7 +9,7 @@ from typing import ClassVar
 
 import pytest
 
-from radar_browser.guard import Guard, Refused, system_resolve
+from radar_browser.guard import Guard, Refused, allowing, system_resolve
 from radar_browser.proxy import FilteringProxy
 
 # Resolves to the loopback in the test, and only it is let through there:
@@ -30,6 +30,22 @@ def test_guard() -> Guard:
 
 
 test_guard.__test__ = False  # type: ignore[attr-defined]
+
+
+async def test_named_hosts_may_be_private_and_nothing_else() -> None:
+    """BROWSER_PRIVATE_HOSTS opens the names it lists, with their subdomains."""
+
+    async def resolve(host: str, _port: int) -> list[str]:
+        return ["10.0.0.5"]
+
+    guard = Guard(resolve=resolve, allow=allowing(["farm", " "]))
+    assert await guard.address("farm", 80) == "10.0.0.5"
+    assert await guard.address("s001.farm", 80) == "10.0.0.5"
+    for host in ("pharm", "farm.evil", "notfarm"):
+        with pytest.raises(Refused):
+            await guard.address(host, 80)
+    with pytest.raises(Refused):
+        await Guard(resolve=resolve, allow=allowing([])).address("farm", 80)
 
 
 class Site(BaseHTTPRequestHandler):

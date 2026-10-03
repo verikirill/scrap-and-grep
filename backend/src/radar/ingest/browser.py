@@ -27,17 +27,15 @@ from radar.logging import get_logger
 log = get_logger(__name__)
 
 
-# Pages one process asks the browser for at once: as many as it has tabs.
-# More would only wait in its queue, and the wait would eat their time.
-CONCURRENCY = 2
 _slots: dict[int, asyncio.Semaphore] = {}
 
 
 def _slot() -> asyncio.Semaphore:
-    """The semaphore of the running loop: tests and workers run several."""
+    """Pages at once (settings.browser_tabs), per running loop: tests and
+    workers run several."""
     loop = id(asyncio.get_running_loop())
     if loop not in _slots:
-        _slots[loop] = asyncio.Semaphore(CONCURRENCY)
+        _slots[loop] = asyncio.Semaphore(get_settings().browser_tabs)
     return _slots[loop]
 
 

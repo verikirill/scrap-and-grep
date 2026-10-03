@@ -20,6 +20,7 @@ import html
 import os
 import ssl
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import cache
 from pathlib import Path
@@ -86,7 +87,7 @@ class Renderer:
         *,
         tabs: int = 2,
         national_ca: Path | None = None,
-        guard: type[Guard] | None = None,
+        guard: Callable[[], Guard] | None = None,
         prefs: dict[str, Any] | None = None,
     ) -> None:
         self._slots = asyncio.Semaphore(tabs)

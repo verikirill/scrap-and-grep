@@ -44,6 +44,7 @@ x-backend: &backend
     # it and FlareSolverr (the solver profile: http://flaresolverr:8191);
     # the reader in the api stays on the lighter steps.
     RADAR_BROWSER_URL: ${RADAR_BROWSER_URL-http://browser:8000}
+    RADAR_BROWSER_TABS: ${BROWSER_TABS:-2}
     RADAR_FLARESOLVERR_URL: ${RADAR_FLARESOLVERR_URL:-}
     RADAR_FETCH_HOST_INTERVAL_SECONDS: ${RADAR_FETCH_HOST_INTERVAL_SECONDS:-1}
     # NVD answers 50 requests in 30 s with a key, 5 without (see .env.example).

@@ -15,13 +15,17 @@ import uvicorn
 from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel, Field
 
-from radar_browser.guard import Refused
+from radar_browser.guard import Guard, Refused, allowing
 from radar_browser.render import Renderer, RenderFailed
 
 TIMEOUT_SECONDS = float(os.environ.get("BROWSER_TIMEOUT_SECONDS", "30"))
+# Names the browser may open on the stack's own network: the sites of a load
+# test (docker-compose.load.yml). Empty everywhere else.
+PRIVATE_HOSTS = os.environ.get("BROWSER_PRIVATE_HOSTS", "").split(",")
 renderer = Renderer(
     tabs=int(os.environ.get("BROWSER_TABS", "2")),
     national_ca=Path(os.environ.get("BROWSER_NATIONAL_CA", "/app/certs/russian_trusted_ca.pem")),
+    guard=(lambda: Guard(allow=allowing(PRIVATE_HOSTS))) if any(PRIVATE_HOSTS) else None,
 )
 
 

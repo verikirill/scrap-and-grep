@@ -11,7 +11,7 @@ request to an internal address fails at once and is named in the answer.
 import asyncio
 import ipaddress
 import socket
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Collection
 from dataclasses import dataclass, field
 
 Resolve = Callable[[str, int], Awaitable[list[str]]]
@@ -34,6 +34,20 @@ async def system_resolve(host: str, port: int) -> list[str]:
 
 def only_global(address: ipaddress.IPv4Address | ipaddress.IPv6Address, _host: str) -> bool:
     return address.is_global
+
+
+def allowing(hosts: Collection[str]) -> Allow:
+    """Public addresses, and any address for `hosts` and their subdomains.
+
+    For a test stand on the stack's own network (backend/scripts/load_farm.py),
+    set by whoever runs the stack (BROWSER_PRIVATE_HOSTS), never by a page.
+    """
+    names = frozenset(host.strip().strip(".").lower() for host in hosts if host.strip())
+
+    def allow(address: ipaddress.IPv4Address | ipaddress.IPv6Address, host: str) -> bool:
+        return address.is_global or any(host == name or host.endswith(f".{name}") for name in names)
+
+    return allow
 
 
 @dataclass(slots=True)
