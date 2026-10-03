@@ -83,6 +83,13 @@ export const AUDIENCE_DAYS: Record<Audience, number> = { specialist: 1, manageme
 export const periodWords = (days: number) => (days === 1 ? 'сутки' : 'неделю')
 
 /** Russian plural form: plural(5, ['статья', 'статьи', 'статей']). */
+/** "52 мин", "1,5 ч", "12 ч": a span of work at a glance. */
+export function durationWords(minutes: number): string {
+  if (minutes < 90) return `${minutes} мин`
+  const hours = Math.round(minutes / 6) / 10
+  return hours < 10 ? `${String(hours).replace('.', ',')} ч` : `${Math.round(hours)} ч`
+}
+
 export function plural(count: number, forms: [string, string, string]): string {
   const mod10 = count % 10
   const mod100 = count % 100

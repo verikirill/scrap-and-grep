@@ -28,6 +28,7 @@ import { ReactionBar } from '../feed/ReactionBar'
 import { OriginalLink } from '../reader/OriginalLink'
 import { articlePath } from '../reader/paths'
 import { EntryDetails, PriorityChip } from './EntryCard'
+import { IssueExtras, ManualWork } from './IssueExtras'
 import { ShortPanel } from './ShortPanel'
 
 function Funnel({ digest }: { digest: Digest }) {
@@ -339,6 +340,7 @@ export function DigestView({ digest, previousId }: { digest: Digest; previousId?
 
         <div className="mt-5">
           <Funnel digest={digest} />
+          <ManualWork digest={digest} />
         </div>
 
         {stats.degraded && (
@@ -403,6 +405,8 @@ export function DigestView({ digest, previousId }: { digest: Digest; previousId?
           {digest.finished_at && ` · ${formatDateTime(digest.finished_at)}`}
         </p>
       </Card>
+
+      <IssueExtras digest={digest} />
 
       {/* Keyed by the digest: a voice picked for one must not carry over to the next. */}
       {digest.topics.length > 0 && <ShortPanel key={digest.id} digestId={digest.id} />}

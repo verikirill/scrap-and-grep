@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDuration, formatPostTime, inSentence, pause } from './format'
+import { durationWords, formatDuration, formatPostTime, inSentence, pause } from './format'
 
 describe('formatPostTime', () => {
   // 00:30 on 2 October in Moscow, still 1 October in UTC.
@@ -45,5 +45,11 @@ describe('pause', () => {
     expect(pause(6.2)).toBe('6 ч')
     expect(pause(47)).toBe('47 ч')
     expect(pause(72)).toBe('3 дн.')
+  })
+})
+
+describe('durationWords', () => {
+  it('reads minutes under an hour and a half, hours above, whole hours past ten', () => {
+    expect([52, 91, 120, 600].map(durationWords)).toEqual(['52 мин', '1,5 ч', '2 ч', '10 ч'])
   })
 })
