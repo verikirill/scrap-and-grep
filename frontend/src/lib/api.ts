@@ -958,4 +958,35 @@ export const api = {
 
   exportUrl: (id: string, format: 'md' | 'docx') => `${API_BASE}/digests/${id}/export.${format}`,
   eventsUrl: (id: string) => `${API_BASE}/digests/${id}/events`,
+  /** Management digests only; `available` is false without a voice service. */
+  briefing: (digestId: string) => request<BriefingState>(`/digests/${digestId}/briefing`),
+  createBriefing: (digestId: string, voice: string | null) =>
+    request<Briefing>(`/digests/${digestId}/briefing`, json('POST', { voice })),
+}
+
+/** The spoken brief of a management digest, about two minutes long. */
+export interface Briefing {
+  status: DigestStatus
+  progress: number
+  error: string | null
+  /** "qwen3-tts:<speaker>" once voiced. */
+  voice: string | null
+  /** The voice the reader picked, one of BriefingState.voices. */
+  requested_voice: string | null
+  /** What is said, line by line: the transcript under the player. */
+  lines: string[]
+  duration_ms: number | null
+  size_bytes: number | null
+  created_at: string
+  finished_at: string | null
+  /** Where to listen to it; set once it is done. */
+  url: string | null
+}
+
+export interface BriefingState {
+  /** False when the server has no voice service: no button then. */
+  available: boolean
+  /** Voices to pick from; empty when the service offers no choice. */
+  voices: VoiceOption[]
+  briefing: Briefing | null
 }

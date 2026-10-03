@@ -27,6 +27,7 @@ import { useFeedback, useReactions } from '../../lib/queries'
 import { ReactionBar } from '../feed/ReactionBar'
 import { OriginalLink } from '../reader/OriginalLink'
 import { articlePath } from '../reader/paths'
+import { BriefingPlayer } from './BriefingPlayer'
 import { EntryDetails, PriorityChip } from './EntryCard'
 import { ShortPanel } from './ShortPanel'
 
@@ -334,6 +335,7 @@ export function DigestView({ digest, previousId }: { digest: Digest; previousId?
               <Download size={15} />
               DOCX
             </a>
+            <BriefingPlayer digest={digest} />
           </div>
         </div>
 
