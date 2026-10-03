@@ -88,6 +88,7 @@
 | Habr, лента и статья | нет (раньше одна статья отвечала 403) | 1 | 0,3-0,7 с |
 | Kaspersky, пресс-релизы; PT, новости; Security Vision; Broadcom; dbugs PT; CTFIOT; SecurityMedia | нет | 1 | 0,4-1,2 с |
 | McAfee Labs, блог и лента | Akamai: боту не отвечает, Chrome-заголовкам 403 | 3 | 21,4 с, из них 20 с - тайм-аут ступени 1; следующий опрос сразу с 3, 304 за 0,4 с |
+| McAfee Labs, 3 октября | Akamai начал отвечать 403 с заглушкой «доступ запрещён» всем ступеням до браузера включительно, с того же адреса стенда | 5, FlareSolverr | без FlareSolverr источник стоит с ошибкой; поэтому на стенде он включён (`--profile solver`, `RADAR_FLARESOLVERR_URL`) |
 | Cybernews | Cloudflare, 403 и заглушка | 3 | 1,0 с |
 | Netskope, блог | Cloudflare, 403 и заглушка | 3 | 4,2 с |
 | SecurityWeek, Dark Reading | Cloudflare, 403 и заглушка | 3 | 1,4 и 0,9 с |
