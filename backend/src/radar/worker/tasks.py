@@ -10,6 +10,7 @@ from taskiq import Context, TaskiqDepends, TaskiqEvents, TaskiqState
 from radar.ai.factory import get_embedder
 from radar.auth import service as auth_service
 from radar.auth import sessions as auth_sessions
+from radar.briefing import service as briefing_service
 from radar.cache import get_cache
 from radar.config import get_settings
 from radar.db import session_scope
@@ -535,3 +536,35 @@ async def send_post(post_id: str) -> str:
         if not acquired:
             return "locked"
         return await publishing_service.send(uuid.UUID(post_id))
+
+
+BRIEFING_ATTEMPTS = 2
+
+
+@media_broker.task(task_name="make_briefing", retry_on_error=True, max_retries=BRIEFING_ATTEMPTS)
+async def make_briefing(briefing_id: str, context: Context = TaskiqDepends()) -> None:
+    """Write and voice the spoken brief of a management digest. Runs on the
+    media worker, next to the voice service, under the limits of a video."""
+    async with get_cache().lock(f"briefing:{briefing_id}", SHORT_LOCK_TTL) as acquired:
+        if not acquired:
+            return
+        try:
+            async with asyncio.timeout(SHORT_RUN_LIMIT):
+                await briefing_service.process(uuid.UUID(briefing_id))
+        except Exception as exc:
+            attempt = int(context.message.labels.get("_retries", 0)) + 1
+            log.warning(
+                "briefing_attempt_failed",
+                briefing_id=briefing_id,
+                attempt=attempt,
+                error=type(exc).__name__,
+            )
+            if attempt >= BRIEFING_ATTEMPTS:
+                await briefing_service.fail(uuid.UUID(briefing_id))
+            raise
+    # The voices the service offers, for the api to list: the housekeeping
+    # round asks only when videos are on, a brief needs the voice alone.
+    try:
+        await shorts_service.refresh_voices(get_cache())
+    except Exception as exc:
+        log.warning("briefing_voices_not_refreshed", error=type(exc).__name__)
