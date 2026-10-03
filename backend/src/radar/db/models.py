@@ -49,7 +49,8 @@ class Source(Base):
     # feed_url = https://t.me/s/<name>, "pt_trending" for the trending
     # vulnerabilities page of Positive Technologies, "wordpress" for the REST
     # API of a WordPress site (its posts with their text), "page" for a news
-    # page or a sitemap whose links lead to the articles (ingest/listing.py).
+    # page or a sitemap whose links lead to the articles (ingest/listing.py),
+    # "broadcom" for the JSON of Symantec's protection bulletins.
     kind: Mapped[str] = mapped_column(String(16), default="rss", server_default="rss")
     feed_url: Mapped[str] = mapped_column(Text, unique=True)
     site_url: Mapped[str | None] = mapped_column(Text)
