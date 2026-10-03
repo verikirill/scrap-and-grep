@@ -7,29 +7,36 @@
     uv run scripts/demo_prep.py --email demo@tailgrep.local --password '...' --fresh
 
 The account is registered if it does not exist and gets the four example
-profiles. Then three weekly digests are built on the model the stack runs:
+profiles. Then three digests are built on the model the stack runs, each over
+its audience's period (a day for the specialist, a week for management):
 
 1. management, to open from the history during the demo;
 2. the ICS specialist as it is: the issue the demo compares against;
 3. the ICS specialist with the exclusion the demo adds by hand: built only to
    put the model's answers in the cache, then deleted.
 
+The exclusion is the vendor with the most vulnerabilities in the issue, unless
+--exclusion names another; the script prints it and the entries that leave.
 During the demo the same exclusion is added in «Интересы», the issue builds
 from the cache in seconds, and «Сравнение» opens on the two ICS issues.
-Run it no earlier than an hour before the demo: the week moves on, and
+Run it no earlier than an hour before the demo: the period moves on, and
 publications that entered it since have not been graded yet.
 """
 
 import argparse
+import re
 import sys
 import time
+from collections import Counter
 from typing import Any
 
 import httpx
 
 ICS = "Специалист по ИБ АСУ ТП"
 MANAGEMENT = "Руководство и сотрудники: кибербезопасность"
-EXCLUSION = "уязвимости продуктов Citrix"
+# The demo excludes one vendor's vulnerabilities; which one, the issue decides.
+EXCLUSION_PREFIX = "уязвимости продуктов "
+VENDOR = re.compile(r"\b[A-Z][\w-]+")
 BUILD_TIMEOUT_SECONDS = 900
 # The API lets a reader create and delete ten digests a minute.
 LIMITED_ATTEMPTS = 12
@@ -41,7 +48,9 @@ def options() -> argparse.Namespace:
     parser.add_argument("--email", required=True)
     parser.add_argument("--password", required=True)
     parser.add_argument("--name", default="Демо")
-    parser.add_argument("--exclusion", default=EXCLUSION)
+    parser.add_argument(
+        "--exclusion", help="the edit made on stage; by default the vendor most present"
+    )
     parser.add_argument("--fresh", action="store_true", help="delete the account's digests first")
     return parser.parse_args()
 
@@ -98,7 +107,9 @@ def save(client: httpx.Client, api: str, profile_id: str, spec: dict[str, Any]) 
 
 def build(client: httpx.Client, api: str, profile_id: str, label: str) -> dict[str, Any]:
     started = time.monotonic()
-    body = {"profile_id": profile_id, "period_days": 7}
+    # No period: the profile's audience gives it, as the build panel does on
+    # stage (a day for the specialist, a week for management).
+    body = {"profile_id": profile_id}
     created = limited(client, "POST", f"{api}/digests", json=body)
     deadline = started + BUILD_TIMEOUT_SECONDS
     while time.monotonic() < deadline:
@@ -119,6 +130,26 @@ def build(client: httpx.Client, api: str, profile_id: str, label: str) -> dict[s
     raise SystemExit(f"{label} did not finish in {BUILD_TIMEOUT_SECONDS} s")
 
 
+def vendor_of(digest: dict[str, Any]) -> str | None:
+    """The vendor with the most vulnerabilities in the issue: excluding it on
+    stage makes entries leave for a reason the audience sees."""
+    names: Counter[str] = Counter()
+    for topic in digest["topics"]:
+        for item in topic["items"]:
+            # «Затронутые продукты» open with the vendor: "Cisco Catalyst ...".
+            if found := VENDOR.search(affected(item)):
+                names[found.group()] += 1
+    return names.most_common(1)[0][0] if names else None
+
+
+def affected(item: dict[str, Any]) -> str:
+    return str((item.get("vulnerability") or {}).get("affected") or "")
+
+
+def about(item: dict[str, Any], vendor: str) -> bool:
+    return vendor.lower() in f"{item['headline']} {item['title']} {affected(item)}".lower()
+
+
 def main() -> None:
     args = options()
     api = f"{args.base.rstrip('/')}/api/v1"
@@ -132,16 +163,23 @@ def main() -> None:
         if missing := {ICS, MANAGEMENT} - profiles.keys():
             raise SystemExit(f"no example profile {', '.join(sorted(missing))} on this stack")
         ics = profiles[ICS]
-        spec = {
-            **ics["spec"],
-            "exclusions": [e for e in ics["spec"]["exclusions"] if e != args.exclusion],
-        }
+        # The example as it is: an edit left by an earlier demo goes.
+        kept = [
+            e
+            for e in ics["spec"]["exclusions"]
+            if e != args.exclusion and not e.startswith(EXCLUSION_PREFIX)
+        ]
+        spec = {**ics["spec"], "exclusions": kept}
         save(client, api, ics["id"], spec)
 
         build(client, api, profiles[MANAGEMENT]["id"], "management")
         before = build(client, api, ics["id"], "ICS as it is")
+        vendor = vendor_of(before)
+        exclusion = args.exclusion or (f"{EXCLUSION_PREFIX}{vendor}" if vendor else None)
+        if exclusion is None:
+            raise SystemExit("No vulnerability in the issue to exclude: pass --exclusion.")
 
-        save(client, api, ics["id"], {**spec, "exclusions": [*spec["exclusions"], args.exclusion]})
+        save(client, api, ics["id"], {**spec, "exclusions": [*kept, exclusion]})
         after = None
         try:
             after = build(client, api, ics["id"], "ICS with the exclusion (for the cache)")
@@ -158,14 +196,18 @@ def main() -> None:
             if after is not None:
                 limited(client, "DELETE", f"{api}/digests/{after['id']}")
 
-    print(f"\nIn the demo add the exclusion «{args.exclusion}» to «{ICS}».")
+    print(f"\nIn the demo add the exclusion «{exclusion}» to «{ICS}».")
     print(f"The issue will lose {len(change['removed'])} and gain {len(change['added'])}:")
     for item in change["removed"]:
         print(f"  - {item['headline']}")
     for item in change["added"]:
         print(f"  + {item['headline']}")
-    if not change["removed"]:
-        print("Nothing leaves: pick an exclusion that matches this week's issue (--exclusion).")
+    # The grader's noise moves an entry or two by itself; the edit must show.
+    word = exclusion.removeprefix(EXCLUSION_PREFIX)
+    caused = [item for item in change["removed"] if about(item, word)]
+    print(f"{len(caused)} of the entries that leave are about {word}.")
+    if not caused:
+        print("The edit shows nothing on stage: pass another --exclusion.")
         sys.exit(1)
 
 

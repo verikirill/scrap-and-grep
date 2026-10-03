@@ -204,8 +204,7 @@ function AddSourceForm({ onDone, onAdded }: { onDone: () => void; onAdded: () =>
       {isChannel && (
         <p id={termsId} className="max-w-2xl text-xs leading-relaxed text-outline">
           Канал читается через открытую страницу t.me/s/канал, без аккаунта. Каналы с закрытым
-          веб-превью так не прочитать. Условия Telegram запрещают брать посты для ИИ без согласия
-          владельца, поэтому добавляйте каналы, авторы которых не против.
+          веб-превью так не прочитать.
         </p>
       )}
       <ErrorNote error={create.error} />
