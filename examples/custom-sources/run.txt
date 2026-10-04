@@ -1,0 +1,20 @@
+Источники из sources.txt: 14
+  + The Record from Recorded Future News (rss, plain): новых публикаций 5
+  + Help Net Security (rss, plain): новых публикаций 10
+  + Security Affairs (rss, plain): новых публикаций 10
+  + Hackread – Cybersecurity News, Data Breaches, AI and More (rss, plain): новых публикаций 10
+  + Код Безопасности - лидер в области средств защиты информации (rss, plain): новых публикаций 9
+  + GBHackers Security | #1 Globally Trusted Cyber Security News Platform (rss, plain): новых публикаций 10
+  + Infosecurity Magazine (page, plain): новых публикаций 20
+  + F6 (page, plain): новых публикаций 20
+  + BI.ZONE (page, browser_headers): новых публикаций 11
+  + usergate.com (page, plain): новых публикаций 6
+{"source_id": 99, "error": "HTTPStatusError: Client error '404 Not Found' for url 'https://www.rosseti.ru/press/news/'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404", "kind": "http", "event": "ingest_failed", "level": "warning", "timestamp": "2026-10-04T14:44:15.822540Z"}
+  + Проверка безопасности (page, plain): новых публикаций 0
+  + SecurityLab.ru (telegram, plain): новых публикаций 5
+  + Утечки информации (telegram, plain): новых публикаций 18
+  - https://www.so-ups.ru/news/press-release/: Сайт ответил 404.
+
+specialist: выпуск за 3 дн.
+Готово: 6 записей из 52 публикаций, модель ollama:gpt-oss:120b, 53 с
+Markdown: /out/custom/specialist-3d-20261004-1746.md  DOCX: /out/custom/specialist-3d-20261004-1746.docx

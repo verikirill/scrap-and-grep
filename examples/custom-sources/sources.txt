@@ -1,0 +1,23 @@
+# Лента RSS по прямому адресу
+https://therecord.media/feed/
+https://www.helpnetsecurity.com/feed/
+# Главная страница: лента находится по ссылке в разметке или по обычному пути
+https://securityaffairs.com/
+https://www.hackread.com/
+# Новостной раздел: лента сайта находится по разделу
+https://www.securitycode.ru/company/news/
+# Сайт за Cloudflare, боту отвечает 403
+https://gbhackers.com/
+# Страница новостей без ленты
+https://www.infosecurity-magazine.com/
+https://www.f6.ru/media-center/news/
+# QRATOR: обычный запрос получил 403
+https://bi.zone/news/
+# Страница собирается скриптом
+https://www.usergate.com/ru/news
+https://www.rosseti.ru/press/news/
+# Telegram-каналы
+@SecLabNews
+@dataleak
+# Неверный адрес: раздела нет
+https://www.so-ups.ru/news/press-release/
