@@ -148,6 +148,25 @@ def test_the_score_table(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> 
     assert f"| Взвешенная каппа оценок модели и человека | {expected_kappa:.2f} |" in table
 
 
+def test_a_must_merged_into_a_digest_entry_is_found(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # 2 is a copy of 1's story from another source: the digest keeps it among
+    # 1's links, and the candidates list it as rejected for a duplicate.
+    kept = {**item(1, 3), "duplicates": [{"url": item(2)["url"], "title": "Копия"}]}
+    digest = {"topics": [{"items": [kept]}], "rejected": [item(2, 3), item(3, 2)]}
+    digest_path = tmp_path / "digest.json"
+    digest_path.write_text(json.dumps(digest), encoding="utf-8")
+    grades = tmp_path / "grades.csv"
+    grades.write_text("article_id,grade,must\n1,3,\n2,3,1\n3,3,1\n", encoding="utf-8")
+
+    evaluation.score(digest_path, grades)
+
+    assert "| Полнота: «обязательных» по мнению человека в выпуске | 1 из 2 (50%) |" in (
+        capsys.readouterr().out
+    )
+
+
 def test_an_empty_file_says_no_data(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     grades = tmp_path / "grades.csv"
     grades.write_text(",".join(evaluation.FIELDS) + "\n", encoding="utf-8")

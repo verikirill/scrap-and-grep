@@ -46,14 +46,21 @@ FIELDS = [
 
 
 def candidates(digest: dict[str, Any]) -> list[dict[str, Any]]:
-    """Every candidate of the digest, the selected ones in the digest's order first."""
+    """Every candidate of the digest, the selected ones in the digest's order first.
+
+    A rejected copy of a selected story is `merged`: the digest has its story
+    and keeps its link, so a person's must on it is not a miss."""
     chosen = [
-        {**item, "selected": True, "rank": rank}
+        {**item, "selected": True, "merged": False, "rank": rank}
         for rank, item in enumerate(
             (item for topic in digest["topics"] for item in topic["items"]), start=1
         )
     ]
-    left = [{**item, "selected": False, "rank": None} for item in digest.get("rejected", [])]
+    copies = {copy["url"] for item in chosen for copy in item.get("duplicates") or []}
+    left = [
+        {**item, "selected": False, "merged": item["url"] in copies, "rank": None}
+        for item in digest.get("rejected", [])
+    ]
     return chosen + left
 
 
@@ -144,7 +151,7 @@ def score(digest_path: Path, grades_path: Path) -> None:
         return f"{part} из {whole} ({part / whole:.0%})" if whole else "нет данных"
 
     precision = sum(human[row["article_id"]]["grade"] >= RELEVANT for row in chosen)
-    found = sum(row["selected"] for row in must)
+    found = sum(row["selected"] or row["merged"] for row in must)
     same_grade = sum(model == person for model, person in pairs)
     same_priority = sum(
         row["priority"] == human[row["article_id"]]["priority"] for row in with_priority
