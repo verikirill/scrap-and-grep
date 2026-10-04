@@ -738,7 +738,7 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
       headers: init?.headers ?? (init?.body ? { 'Content-Type': 'application/json' } : undefined),
     })
   } catch {
-    throw new ApiError(0, 'Сервис недоступен. Убедитесь, что контейнеры запущены.')
+    throw new ApiError(0, 'Сервис недоступен. Попробуйте обновить страницу через минуту.')
   }
   if (!response.ok) {
     const body = await response.json().catch(() => null)

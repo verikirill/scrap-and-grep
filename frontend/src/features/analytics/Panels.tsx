@@ -402,7 +402,7 @@ export function Ranker({ data }: { data: Analytics }) {
             </ul>
           ) : (
             <p className="mt-3 text-sm text-muted-foreground">
-              Обучение ещё не запускалось: оно идёт каждую ночь.
+              Обучение ещё не запускалось, оно идёт каждую ночь.
             </p>
           )}
         </div>

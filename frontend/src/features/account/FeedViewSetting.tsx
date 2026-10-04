@@ -68,7 +68,7 @@ export function FeedViewSetting({ me }: { me: Me }) {
       <fieldset>
         <legend className="text-base font-semibold">Вид ленты</legend>
         <p className="mt-1 text-sm text-muted-foreground">
-          Состав и порядок статей не меняются: переключается только оформление.
+          Состав и порядок статей не меняются, переключается только оформление.
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           {VIEWS.map((view) => {

@@ -21,9 +21,9 @@ export const KIND_LABELS: Partial<Record<SourceKind, string>> = {
 
 /** What a source of each kind in KIND_LABELS is, for the chip's hint and the legend. */
 export const KIND_HINTS: Partial<Record<SourceKind, string>> = {
-  page: 'У сайта нет RSS-ленты: статьи берутся со страницы новостей.',
+  page: 'У сайта нет RSS-ленты, поэтому статьи берутся со страницы новостей.',
   wordpress: 'Статьи берутся через API сайта на WordPress.',
-  pt_trending: 'У сайта нет RSS-ленты: статьи берутся со страницы новостей.',
+  pt_trending: 'У сайта нет RSS-ленты, поэтому статьи берутся со страницы новостей.',
   broadcom: 'Статьи берутся через собственный API сайта.',
 }
 
@@ -41,7 +41,7 @@ export const FETCH_HINTS: Record<Exclude<FetchMethod, 'plain'>, string> = {
     'Сайт не отвечает простому запросу, поэтому сервис отправляет запрос с заголовками, как у браузера.',
   impersonate: 'Запрос повторяет сетевой отпечаток Chrome, чтобы пройти защиту от ботов.',
   browser:
-    'Страница открывается в настоящем браузере: сайт рисует статьи скриптом или проверяет посетителя.',
+    'Страница открывается в настоящем браузере, потому что сайт рисует статьи скриптом или проверяет посетителя.',
   solver: 'Проверку Cloudflare проходит отдельный сервис FlareSolverr.',
 }
 

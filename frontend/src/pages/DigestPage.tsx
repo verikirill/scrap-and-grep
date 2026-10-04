@@ -201,8 +201,8 @@ export function DigestPage() {
               <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <Card>
                   <EmptyState icon={<FileText size={22} />} title="Выпусков пока нет">
-                    Соберите первый: на неделю публикаций уходит от нескольких секунд в автономном
-                    режиме до пары минут с языковой моделью.
+                    Выпуск за неделю собирается за несколько секунд в автономном режиме и за пару
+                    минут с языковой моделью.
                   </EmptyState>
                 </Card>
               </motion.div>

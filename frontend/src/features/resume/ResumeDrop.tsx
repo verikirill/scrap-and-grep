@@ -131,7 +131,7 @@ export function ResumeDrop({ meta, isBusy, onFile, isCompact = false }: Props) {
           {hasOcr && (
             <span className="mt-2 inline-flex items-center gap-1.5 text-xs text-outline">
               <ScanText size={13} />
-              Сканы и фото страниц тоже подойдут: сервис распознает текст
+              Сканы и фото страниц тоже подойдут, сервис распознает текст
             </span>
           )}
         </button>

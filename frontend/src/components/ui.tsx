@@ -103,7 +103,7 @@ export function Card({
   )
 }
 
-type ChipTone = 'neutral' | 'accent' | 'spark' | 'ok' | 'danger'
+type ChipTone = 'neutral' | 'accent' | 'spark' | 'ok' | 'danger' | 'alarm'
 
 const CHIP_STYLES: Record<ChipTone, string> = {
   neutral: 'border border-outline-variant text-on-surface-variant',
@@ -111,6 +111,8 @@ const CHIP_STYLES: Record<ChipTone, string> = {
   spark: 'bg-spark-container text-on-spark-container',
   ok: 'bg-success-container text-on-success-container',
   danger: 'bg-error-container text-on-error-container',
+  // Solid red: what needs acting on first.
+  alarm: 'bg-error text-on-error font-semibold',
 }
 
 /**

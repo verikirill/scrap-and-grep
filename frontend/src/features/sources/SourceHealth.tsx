@@ -11,14 +11,15 @@ import { useSourceHealth } from '../../lib/queries'
 const ERROR_HINTS: Record<string, string> = {
   dns: 'Адрес сайта не находится в DNS: сайт закрылся, сменил домен или не работает DNS.',
   tls: 'Сертификат сайта просрочен или ему нельзя доверять, поэтому соединение не установлено.',
-  refused: 'Сайт ответил отказом (401, 403 или 429): так обычно срабатывает защита от ботов.',
+  refused: 'Сайт ответил отказом (401, 403 или 429). Так обычно срабатывает защита от ботов.',
   stub: 'Вместо страницы пришла проверка Cloudflare или DDoS-Guard.',
   timeout: 'Сайт не ответил за отведённое время.',
   connect: 'Соединение с сайтом не установилось или оборвалось.',
   http: 'Сайт вернул ошибку, например 404 или 500.',
-  markup: 'Страница открылась, но статьи на ней больше не находятся: сайт сменил вёрстку.',
-  unsafe: 'Адрес ведёт во внутреннюю сеть: такие адреса сервис не читает.',
-  other: 'Ошибка другого рода: её текст виден в подсказке у источника.',
+  markup:
+    'Страница открылась, но статьи на ней больше не находятся. Скорее всего, сайт сменил вёрстку.',
+  unsafe: 'Адрес ведёт во внутреннюю сеть, а такие адреса сервис не читает.',
+  other: 'Ошибка другого рода. Её текст виден в подсказке у источника.',
 }
 
 // Longer lists open on demand: twenty silent sources on a Sunday push the table off the screen.
@@ -46,7 +47,7 @@ function Summary({ health }: { health: Health }) {
       {health.silent.length > 0 && (
         <span className="text-muted-foreground">
           {' '}
-          · молчат дольше обычного: {health.silent.length}
+          · давно не публиковали: {health.silent.length}
         </span>
       )}
     </p>
@@ -111,7 +112,7 @@ export function SourceHealth() {
               <div className="flex flex-wrap gap-2">
                 {Object.entries(errors).map(([kind, count]) => (
                   <Chip key={kind} tone="danger" hint={ERROR_HINTS[kind]}>
-                    {kindOf(kind)} - {count} {plural(count, ['раз', 'раза', 'раз'])}
+                    {kindOf(kind)} — {count} {plural(count, ['раз', 'раза', 'раз'])}
                   </Chip>
                 ))}
               </div>
@@ -126,7 +127,7 @@ export function SourceHealth() {
             <section>
               <SectionTitle
                 title="Не читаются"
-                note="Несколько опросов подряд закончились ошибкой. Текст ошибки - при наведении на строку."
+                note="Несколько опросов подряд закончились ошибкой. Текст ошибки — при наведении на строку."
               />
               <ShortList
                 items={failing}
@@ -139,7 +140,7 @@ export function SourceHealth() {
                     <span className="font-medium">{item.name}</span>
                     <span className="text-muted-foreground">
                       {' '}
-                      - {kindOf(item.kind)}: {item.failures}{' '}
+                      — {kindOf(item.kind)}: {item.failures}{' '}
                       {plural(item.failures, ['опрос', 'опроса', 'опросов'])} подряд с ошибкой
                       {item.since && `, последний удачный ${formatRelative(item.since)}`}
                     </span>
@@ -154,7 +155,7 @@ export function SourceHealth() {
           {silent.length > 0 && (
             <section>
               <SectionTitle
-                title="Молчат дольше обычного"
+                title="Давно не публиковали"
                 note="Новых публикаций нет дольше, чем самая долгая пауза у источника за последний месяц."
               />
               <ShortList
@@ -164,7 +165,7 @@ export function SourceHealth() {
                     <span className="font-medium">{item.name}</span>
                     <span className="text-muted-foreground">
                       {' '}
-                      - последняя публикация {formatRelative(item.last_article)}, а за месяц пауза
+                      — последняя публикация {formatRelative(item.last_article)}, а за месяц пауза
                       не превышала{' '}
                       {item.longest_gap_hours < 1 ? 'часа' : pause(item.longest_gap_hours)}
                     </span>

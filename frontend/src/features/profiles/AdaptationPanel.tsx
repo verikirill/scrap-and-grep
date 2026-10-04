@@ -4,11 +4,11 @@ import { Switch as SwitchPrimitive } from 'radix-ui'
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
-  AutoAwesome,
   Block,
   ChevronDown,
   LibraryAdd,
   RotateCcw,
+  SlidersHorizontal,
   TrendingDown,
   TrendingUp,
   Users,
@@ -261,7 +261,7 @@ export function AdaptationPanel({
     >
       <div className="flex items-start gap-3">
         <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-primary-container text-on-primary-container">
-          <AutoAwesome size={22} filled={isOn} />
+          <SlidersHorizontal size={22} filled={isOn} />
         </span>
         <div className="min-w-0 flex-1">
           <h2
@@ -270,14 +270,14 @@ export function AdaptationPanel({
             tabIndex={-1}
             className="font-semibold outline-none"
           >
-            Подстраивается под вас
+            Подстройка по отметкам
           </h2>
           <p id="adaptation-summary" className="mt-0.5 text-sm text-muted-foreground">
             {!isOn
-              ? 'Выключено: лента и выпуски используют профиль без изменений.'
+              ? 'Выключено. Лента и выпуски используют профиль без изменений.'
               : hasLearned && marks
                 ? `Отметки по темам профиля: «больше такого» ${amount(marks.positives)}, «меньше такого» ${amount(marks.negatives)}, пролистано ${marks.skipped}${data?.updated_at ? ` · пересчитано ${formatRelative(data.updated_at)}` : ''}`
-                : 'Отмечайте публикации в ленте и выпусках: сервис подстроит веса интересов, а новые темы предложит здесь.'}
+                : 'Отмечайте публикации в ленте и выпусках, и сервис подстроит веса интересов, а новые темы предложит здесь.'}
           </p>
         </div>
         <M3Switch

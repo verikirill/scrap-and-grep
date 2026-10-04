@@ -58,7 +58,8 @@ function Overview({ data, days }: { data: Analytics; days: number }) {
     return (
       <Card>
         <EmptyState icon={<AnalyticsIcon size={22} />} title="Событий за период пока нет">
-          Откройте ленту или выпуск: показы и отметки появятся здесь в течение минуты.
+          Показы и отметки появляются здесь в течение минуты после того, как читатель открыл ленту
+          или выпуск.
         </EmptyState>
       </Card>
     )
@@ -70,7 +71,7 @@ function Overview({ data, days }: { data: Analytics; days: number }) {
       <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
         <Panel
           title="От показа к отметке"
-          hint="Пары «читатель и статья»: повторные открытия считаются один раз. Если статья открыта до фиксации показа, показ также засчитывается."
+          hint="Каждая пара «читатель и статья» считается один раз. Открытая статья считается и увиденной."
         >
           <Funnel totals={totals} />
         </Panel>
@@ -96,7 +97,7 @@ function Overview({ data, days }: { data: Analytics; days: number }) {
         </Panel>
         <Panel
           title="Подстройка профилей"
-          hint="Группы состоят из разных читателей, это не A/B-тест: разница носит ориентировочный характер."
+          hint="В группах разные читатели, поэтому разница между ними не доказывает эффект подстройки."
         >
           <Adaptation cohorts={data.adaptation} />
         </Panel>
@@ -149,8 +150,8 @@ export function AnalyticsPage() {
       {analytics.data && !analytics.data.enabled ? (
         <Card>
           <EmptyState icon={<AnalyticsIcon size={22} />} title="События выключены">
-            Укажите RADAR_CLICKHOUSE_URL, чтобы включить запись показов и отметок. В docker compose
-            переменная задана по умолчанию.
+            На этом стенде не подключено хранилище событий, поэтому показы и отметки не
+            записываются.
           </EmptyState>
         </Card>
       ) : analytics.data ? (

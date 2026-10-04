@@ -50,14 +50,14 @@ export function History({ digests, activeId, onSelect, onDelete }: Props) {
                   aria-current={isActive}
                   className={clsx(
                     'relative isolate w-full rounded-2xl px-3 py-2.5 pr-9 text-left transition-colors duration-300',
-                    isActive ? 'text-on-primary-container' : 'hover:bg-surface-container-high',
+                    isActive ? 'text-primary-foreground' : 'hover:bg-surface-container-high',
                   )}
                 >
                   {/* One highlight for the list: it flows to the row that opens. */}
                   {isActive && (
                     <motion.span
                       layoutId="history-highlight"
-                      className="absolute inset-0 -z-10 bg-primary-container ring-2 ring-primary ring-inset"
+                      className="absolute inset-0 -z-10 bg-primary shadow-elevation-1"
                       style={{ borderRadius: 16 }}
                       transition={{ type: 'spring', stiffness: 380, damping: 32 }}
                     />
@@ -75,14 +75,29 @@ export function History({ digests, activeId, onSelect, onDelete }: Props) {
                       </span>
                     </MorphingTitle>
                   )}
-                  <span className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-                    {isRunning && <Spinner className="size-3 border-[1.5px] text-primary" />}
+                  {/* On the highlight the lines take its text colour, a shade lighter. */}
+                  <span
+                    className={clsx(
+                      'mt-1 flex items-center gap-1.5 text-xs',
+                      isActive ? 'opacity-85' : 'text-muted-foreground',
+                    )}
+                  >
+                    {isRunning && (
+                      <Spinner
+                        className={clsx('size-3 border-[1.5px]', !isActive && 'text-primary')}
+                      />
+                    )}
                     {digest.status === 'failed' && (
                       <CircleAlert size={12} className="text-destructive" />
                     )}
                     <span className="truncate">{statusLine(digest)}</span>
                   </span>
-                  <span className="mt-0.5 flex items-center gap-1 truncate text-[11px] text-outline">
+                  <span
+                    className={clsx(
+                      'mt-0.5 flex items-center gap-1 truncate text-[11px]',
+                      isActive ? 'opacity-70' : 'text-outline',
+                    )}
+                  >
                     {digest.origin === 'schedule' && (
                       <EventRepeat
                         size={12}
@@ -106,7 +121,11 @@ export function History({ digests, activeId, onSelect, onDelete }: Props) {
                       if (window.confirm(`Удалить выпуск «${name}»?`)) onDelete(digest.id)
                     }}
                     // Always visible on touch screens, where there is no hover.
-                    className="absolute top-2 right-2 grid size-6 place-items-center rounded-md text-outline transition-opacity hover:bg-error-container hover:text-destructive focus-visible:opacity-100 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100"
+                    className={clsx(
+                      'absolute top-2 right-2 grid size-6 place-items-center rounded-md transition-opacity',
+                      isActive ? 'text-primary-foreground' : 'text-outline',
+                      'hover:bg-error-container hover:text-destructive focus-visible:opacity-100 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100',
+                    )}
                   >
                     <Trash2 size={13} />
                   </button>

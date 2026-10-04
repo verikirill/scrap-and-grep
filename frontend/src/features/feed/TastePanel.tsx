@@ -43,13 +43,13 @@ export function TastePanel({ taste }: { taste: Taste }) {
     <Card className="p-5">
       <Collapsible
         storageKey="feed-taste"
-        title="что лента знает о вас"
+        title="из чего собрана лента"
         head={
           <>
-            <h2 className="text-sm font-semibold">Что лента знает о вас</h2>
+            <h2 className="text-sm font-semibold">Из чего собрана лента</h2>
             <p className="mt-1 text-xs text-muted-foreground">
               {signals === 0
-                ? 'Отметок пока нет. Отмечайте публикации: лента учтёт уже первую.'
+                ? 'Отметок пока нет. Лента учитывает уже первую.'
                 : `${signals} ${plural(signals, ['отметка', 'отметки', 'отметок'])} за последнее время. Влияние давних отметок со временем снижается.`}
             </p>
           </>
@@ -126,7 +126,7 @@ export function TastePanel({ taste }: { taste: Taste }) {
           <Link to="/profiles" className="text-on-primary-container hover:underline">
             «Интересы»
           </Link>
-          , резюме - в{' '}
+          , резюме — в{' '}
           <Link to="/account" className="text-on-primary-container hover:underline">
             аккаунте
           </Link>

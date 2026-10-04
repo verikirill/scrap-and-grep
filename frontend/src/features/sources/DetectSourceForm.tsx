@@ -134,7 +134,7 @@ export function DetectSourceForm({ onDone, onAdded }: Props) {
 
       {isChecking && (
         <p className="text-sm text-muted-foreground" role="status">
-          Ищем RSS-ленту, новости и статьи. Если сайт блокирует бота, откроем его в браузере: это
+          Ищем RSS-ленту, новости и статьи. Если сайт блокирует бота, откроем его в браузере, это
           займёт до минуты.
         </p>
       )}

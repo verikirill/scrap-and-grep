@@ -461,7 +461,7 @@ export function useSignIn() {
     forgetReaderData(client)
     const me = await client.fetchQuery({ queryKey: keys.me, queryFn: api.me, staleTime: 0 })
     if (!me) {
-      throw new ApiError(401, 'Не удалось войти: браузер заблокировал cookie сессии.')
+      throw new ApiError(401, 'Не удалось войти, потому что браузер заблокировал cookie сессии.')
     }
   }
   return {

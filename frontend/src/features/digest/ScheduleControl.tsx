@@ -191,8 +191,8 @@ export function ScheduleControl({
             />
           </label>
           <p className="text-xs text-muted-foreground">
-            В каждый выпуск войдут публикации со времени прошлого сбора: при сборке по будням
-            понедельничный выпуск захватит выходные. Время по поясу {zone}.
+            В каждый выпуск войдут публикации со времени прошлого сбора, поэтому при сборке по
+            будням понедельничный выпуск захватит и выходные. Время по поясу {zone}.
           </p>
           <ErrorNote error={save.error ?? remove.error} />
           <div className="flex flex-wrap justify-end gap-2">

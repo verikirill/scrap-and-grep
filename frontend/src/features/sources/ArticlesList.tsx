@@ -146,8 +146,7 @@ export function ArticlesList() {
       >
         {pages && items.length === 0 && (
           <EmptyState icon={<FileText size={22} />} title="Ничего не найдено">
-            Попробуйте изменить запрос. Поиск учитывает словоформы и смысл, включая запросы на
-            других языках.
+            Поиск учитывает словоформы и смысл, включая запросы на других языках.
           </EmptyState>
         )}
         {!pages && articles.isLoading && (

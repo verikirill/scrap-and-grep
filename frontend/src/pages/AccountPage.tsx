@@ -35,7 +35,7 @@ function ResumeSection() {
     <Card className="p-5 sm:p-6">
       <h2 className="text-base font-semibold">Резюме</h2>
       <p className="mt-1 mb-4 text-sm text-muted-foreground">
-        Резюме задаёт специализацию: лента учитывает её наравне с интересами.
+        Резюме задаёт специализацию, и лента учитывает её наравне с интересами.
       </p>
 
       {isProcessing ? (
@@ -282,7 +282,7 @@ export function AccountPage() {
               const isSure =
                 !user.is_demo ||
                 window.confirm(
-                  'Войти во временный аккаунт повторно нельзя: все профили, выпуски и отметки будут потеряны. Выйти?',
+                  'Войти во временный аккаунт повторно нельзя, поэтому все профили, выпуски и отметки будут потеряны. Выйти?',
                 )
               if (isSure) logout.mutate()
             }}

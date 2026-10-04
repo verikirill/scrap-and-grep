@@ -3,11 +3,12 @@ import {
   ArrowUp,
   Bookmark,
   FileUp,
-  Psychology,
+  Layers,
   RefreshCw,
   Schedule,
   SlidersHorizontal,
-  Sparkles,
+  Search,
+  Target,
 } from '../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { useQueryClient } from '@tanstack/react-query'
@@ -45,18 +46,22 @@ import { useMediaQuery } from '../lib/useMediaQuery'
 // chosen is kept with the account and opens next time.
 const TABS = [
   { id: 'new', label: 'Новое', icon: Schedule },
-  { id: 'top', label: 'Важное', icon: Sparkles },
+  { id: 'top', label: 'Важное', icon: Target },
   { id: 'saved', label: 'Сохранённое', icon: Bookmark },
 ] as const
 type Tab = (typeof TABS)[number]['id']
 
 const SUBTITLES: Record<Tab, string> = {
-  new: 'Публикации по вашим интересам за две недели: от новых к старым. Прочитанное уходит вниз, свежее появляется автоматически.',
+  new: 'Публикации по вашим интересам за две недели, от новых к старым. Прочитанное уходит вниз, свежее появляется автоматически.',
   top: 'Публикации за две недели, подобранные по интересам, резюме и вашим отметкам. У каждой видно, почему она здесь.',
   saved: 'Публикации, которые вы отложили кнопкой «Сохранить».',
 }
 
 const isTab = (value: string | null): value is Tab => TABS.some((tab) => tab.id === value)
+
+// A look at the other order and back keeps both lists as they were; an
+// order left longer ago than this is ranked anew.
+const TAB_REUSE_MS = 5 * 60_000
 
 // Signals that change what the next feed looks like.
 const TEACHING: ReactionKind[] = ['like', 'dislike', 'save', 'hide']
@@ -101,8 +106,8 @@ function PostColumn({ view, children }: { view: FeedView; children: React.ReactN
 /** Where the articles the reader has not met end, as a chat marks unread messages. */
 function SeenDivider({ view, isFirst }: { view: FeedView; isFirst: boolean }) {
   const text = isFirst
-    ? 'Новых публикаций нет, ниже - прочитанные'
-    : 'Ниже - прочитанные публикации'
+    ? 'Новых публикаций нет, ниже — прочитанные'
+    : 'Ниже — прочитанные публикации'
   if (view === 'telegram') {
     return (
       <p className="mx-auto w-fit max-w-full rounded-full bg-on-surface/10 px-4 py-1.5 text-xs text-foreground/80 backdrop-blur">
@@ -142,6 +147,8 @@ export function FeedPage() {
   // Reactions given since the feed was built: they are saved at once, but the
   // order on screen changes only when the reader asks.
   const [pendingSignals, setPendingSignals] = useState(0)
+  // After a tab switch the list is just there: its cards do not rise one by one again.
+  const [isQuiet, setIsQuiet] = useState(false)
 
   const list = tab === 'saved' ? saved : feed
   // Pages come from one snapshot and do not overlap; the check is a guard
@@ -206,6 +213,7 @@ export function FeedPage() {
   /** Start over from the first page of a freshly ranked feed. */
   const rebuild = () => {
     setPendingSignals(0)
+    setIsQuiet(false)
     void client.resetQueries({ queryKey: keys.feed })
     void taste.refetch()
   }
@@ -216,8 +224,10 @@ export function FeedPage() {
   }
 
   const selectTab = (id: Tab) => {
-    // An order left a while ago would come back as it was: it is made anew.
-    if (id !== 'saved' && id !== tab) void client.resetQueries({ queryKey: [...keys.feed, id] })
+    const queryKey = [...keys.feed, id]
+    const age = Date.now() - (client.getQueryState(queryKey)?.dataUpdatedAt ?? 0)
+    if (id !== 'saved' && id !== tab && age > TAB_REUSE_MS) void client.resetQueries({ queryKey })
+    setIsQuiet(true)
     setSearch({ tab: id })
     if (id !== 'saved' && me && me.feed_order !== id) settings.mutate({ feed_order: id })
   }
@@ -286,17 +296,17 @@ export function FeedPage() {
               <SheetTrigger asChild>
                 <button
                   type="button"
-                  aria-label="Что лента знает о вас"
-                  title="Что лента знает о вас"
+                  aria-label="Из чего собрана лента"
+                  title="Из чего собрана лента"
                   className="state-layer relative inline-flex h-10 items-center gap-2 overflow-hidden rounded-full px-2.5 text-sm font-medium text-primary sm:px-4"
                 >
-                  <Psychology size={19} />
-                  <span className="hidden sm:inline">Что лента знает о вас</span>
+                  <Layers size={19} />
+                  <span className="hidden sm:inline">Из чего собрана лента</span>
                 </button>
               </SheetTrigger>
               <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto rounded-t-3xl">
                 <SheetHeader className="sr-only">
-                  <SheetTitle>Что лента знает о вас</SheetTitle>
+                  <SheetTitle>Из чего собрана лента</SheetTitle>
                   <SheetDescription>Интересы, резюме и выученные по отметкам темы</SheetDescription>
                 </SheetHeader>
                 <div className="p-4 pt-2">{tastePanel}</div>
@@ -368,7 +378,7 @@ export function FeedPage() {
 
           {tab !== 'saved' && taste.isSuccess && !knowsReader && (
             <Card className="p-5">
-              <h2 className="text-base font-semibold">Лента пока не знает, что вам интересно</h2>
+              <h2 className="text-base font-semibold">Интересы пока не заданы</h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 Ниже показаны свежие публикации подряд. Загрузите резюме или настройте интересы,
                 чтобы лента подстроилась под вас.
@@ -394,13 +404,11 @@ export function FeedPage() {
             <Card>
               {tab === 'saved' ? (
                 <EmptyState icon={<Bookmark size={22} />} title="Сохранённого пока нет">
-                  Кнопка «Сохранить» на карточке откладывает публикацию в эту вкладку и помогает
-                  ленте точнее подбирать похожие темы.
+                  Здесь будут публикации, отложенные кнопкой «Сохранить».
                 </EmptyState>
               ) : (
-                <EmptyState icon={<Sparkles size={22} />} title="Подходящих публикаций не нашлось">
-                  За две недели публикаций по вашим интересам не нашлось. Убедитесь, что источники
-                  опрашиваются, или добавьте новые темы.
+                <EmptyState icon={<Search size={22} />} title="Подходящих публикаций не нашлось">
+                  За две недели публикаций по вашим интересам не нашлось.
                 </EmptyState>
               )}
             </Card>
@@ -414,6 +422,7 @@ export function FeedPage() {
                   <Item
                     item={item}
                     index={index}
+                    isQuiet={isQuiet}
                     placement={placementOf(item)}
                     onReact={(kind, isActive) => react(item, kind, isActive)}
                   />
@@ -423,7 +432,10 @@ export function FeedPage() {
                 <div className="flex justify-center pt-2">
                   <Button
                     isBusy={list.isFetchingNextPage}
-                    onClick={() => void list.fetchNextPage()}
+                    onClick={() => {
+                      setIsQuiet(false)
+                      void list.fetchNextPage()
+                    }}
                   >
                     Показать ещё
                   </Button>

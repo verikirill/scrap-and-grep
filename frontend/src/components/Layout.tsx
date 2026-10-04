@@ -13,8 +13,9 @@ import {
 } from './icons'
 import type { IconComponent } from './icons'
 import { AnimatePresence, motion } from 'motion/react'
-import { useEffect, useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
+import { flushSync } from 'react-dom'
 import { Link, NavLink, useLocation } from 'react-router'
 import { formatNumber, modelLabel } from '../lib/format'
 import { useMe, useMeta } from '../lib/queries'
@@ -50,13 +51,47 @@ function initialTheme(): boolean {
   return window.matchMedia('(prefers-color-scheme: dark)').matches
 }
 
-function useDarkMode(): [boolean, () => void] {
+function useDarkMode(): [boolean, (from: HTMLElement) => void] {
   const [dark, setDark] = useState(initialTheme)
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', dark)
+  useLayoutEffect(() => {
+    const root = document.documentElement
+    // Every colour changes in one frame. With transitions on, text and chips
+    // lagged behind the backgrounds, which change at once.
+    root.classList.add('theme-switching')
+    root.classList.toggle('dark', dark)
+    void root.offsetHeight
+    root.classList.remove('theme-switching')
     localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light')
   }, [dark])
-  return [dark, () => setDark((value) => !value)]
+  // The new theme grows as a circle out of the button that was pressed.
+  const toggle = (from: HTMLElement) => {
+    const flip = () => flushSync(() => setDark((value) => !value))
+    if (!document.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      flip()
+      return
+    }
+    const box = from.getBoundingClientRect()
+    const x = box.left + box.width / 2
+    const y = box.top + box.height / 2
+    const radius = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y))
+    const transition = document.startViewTransition(flip)
+    transition.ready
+      .then(() => {
+        document.documentElement.animate(
+          {
+            clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`],
+          },
+          {
+            duration: DURATION.long * 1000,
+            easing: `cubic-bezier(${EASE.join(', ')})`,
+            pseudoElement: '::view-transition-new(root)',
+          },
+        )
+      })
+      // Skipped (another transition began): the theme has changed all the same.
+      .catch(() => {})
+  }
+  return [dark, toggle]
 }
 
 /**
@@ -234,11 +269,11 @@ function AccountButton({ compact }: { compact?: boolean }) {
   )
 }
 
-function ThemeButton({ dark, onToggle }: { dark: boolean; onToggle: () => void }) {
+function ThemeButton({ dark, onToggle }: { dark: boolean; onToggle: (from: HTMLElement) => void }) {
   return (
     <button
       type="button"
-      onClick={onToggle}
+      onClick={(event) => onToggle(event.currentTarget)}
       // The icon and the name both say where a press leads, not where one is.
       aria-label={dark ? 'Включить светлую тему' : 'Включить тёмную тему'}
       title={dark ? 'Включить светлую тему' : 'Включить тёмную тему'}

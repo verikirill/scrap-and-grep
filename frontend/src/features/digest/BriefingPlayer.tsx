@@ -53,7 +53,7 @@ function Progress({ briefing }: { briefing: Briefing }) {
         />
       </div>
       <p className="mt-2 text-xs text-muted-foreground">
-        Озвучиваем выпуск по частям. Окно можно закрыть: брифинг соберётся в фоне.
+        Озвучиваем выпуск по частям. Окно можно закрыть, брифинг соберётся в фоне.
       </p>
     </div>
   )

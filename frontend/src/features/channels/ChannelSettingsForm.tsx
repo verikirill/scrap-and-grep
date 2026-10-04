@@ -125,7 +125,7 @@ export function ChannelSettingsForm({
               className={TEXTAREA_CLASS}
             />
           </Field>
-          <Field label="Целевая аудитория" hint="по умолчанию - роль из профиля">
+          <Field label="Целевая аудитория" hint="по умолчанию — роль из профиля">
             <input
               value={style.audience}
               maxLength={600}
@@ -204,8 +204,8 @@ export function ChannelSettingsForm({
             />
           </Field>
           <p className="px-1 text-xs text-muted-foreground">
-            «Словом» - ссылка в конце текста, «Карточкой» - превью статьи с изображением, «Без
-            ссылки» - только текст.
+            «Словом» — ссылка в конце текста, «Карточкой» — превью статьи с изображением, «Без
+            ссылки» — только текст.
           </p>
           <div className="grid grid-cols-2 gap-4">
             <Field label="Текст ссылки">

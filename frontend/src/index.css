@@ -103,6 +103,7 @@
   --color-tertiary-container: var(--md-tertiary-container);
   --color-on-tertiary-container: var(--md-on-tertiary-container);
   --color-error: var(--md-error);
+  --color-on-error: var(--md-on-error);
   --color-error-container: var(--md-error-container);
   --color-on-error-container: var(--md-on-error-container);
   --color-surface: var(--md-surface);
@@ -170,9 +171,6 @@
     font-size: 15px;
     line-height: 1.55;
     letter-spacing: 0.005em;
-    transition:
-      background-color 0.3s var(--ease-standard),
-      color 0.3s var(--ease-standard);
   }
 }
 
@@ -380,6 +378,13 @@
   }
 }
 
+/* Set for the one frame the theme changes in (Layout.tsx). */
+.theme-switching *,
+.theme-switching *::before,
+.theme-switching *::after {
+  transition: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -395,4 +400,6 @@
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;
+  /* The theme's circle (Layout.tsx) lays the new page over the old one. */
+  mix-blend-mode: normal;
 }
