@@ -74,7 +74,7 @@ LIGHT: tuple[Step, ...] = tuple(step for step in LADDER if step not in HEAVY)
 LABELS: dict[str, str] = {
     "plain": "обычный запрос",
     "browser_headers": "заголовки браузера",
-    "impersonate": "curl_cffi",
+    "impersonate": "отпечаток Chrome",
     "browser": "браузер",
     "solver": "FlareSolverr",
 }
@@ -103,7 +103,7 @@ CHALLENGES: tuple[tuple[str, str], ...] = (
 )
 NO_ANSWER = "тайм-аут ответа"
 THIN_FEED = "HTML вместо RSS-ленты"
-JS_SHELL = "пустая страница (SPA)"
+JS_SHELL = "пустая страница: статьи рисует скрипт"
 SHORT_TEXT = "объём текста ниже порога"
 # A news page whose links the caller could not find (ingest/listing.py).
 NO_LINKS = "ссылки на статьи не найдены"
@@ -125,7 +125,7 @@ class Blocked(httpx.HTTPError):
 
 
 def label(step: str) -> str:
-    """For a person: "impersonate+proxy" is "curl_cffi через прокси"."""
+    """For a person: "impersonate+proxy" is "отпечаток Chrome через прокси"."""
     base, _, proxied = step.partition("+")
     return LABELS.get(base, base) + (" через прокси" if proxied else "")
 
@@ -141,12 +141,12 @@ class Outcome:
 
     @property
     def note(self) -> str | None:
-        """For a person: "403 на шаге «обычный запрос», прочитан через curl_cffi"."""
+        """For a person: "Шаг «обычный запрос» не сработал (403), сработал «отпечаток Chrome»."."""
         if not self.refusals:
             return None
         first_step, first_reason = self.refusals[0]
         way = label(self.step) + (f" ({proxy_name(self.proxy)})" if self.proxy else "")
-        return f"{first_reason} на шаге «{label(first_step)}», прочитан через {way}"
+        return f"Шаг «{label(first_step)}» не сработал ({first_reason}), сработал «{way}»."
 
 
 @dataclass(slots=True)

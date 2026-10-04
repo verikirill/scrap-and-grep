@@ -112,7 +112,7 @@ async def test_a_challenge_passed_by_flaresolverr_lets_curl_in_with_its_cookies(
     assert ladder.first is not None
     assert ladder.first.step == "solver"
     assert ladder.first.note == (
-        "403, заглушка Cloudflare на шаге «обычный запрос», прочитан через FlareSolverr"
+        "Шаг «обычный запрос» не сработал (403, заглушка Cloudflare), сработал «FlareSolverr»."
     )
     assert [command["url"] for command in flaresolverr.commands] == [feed]
     assert "Уязвимость в SCADA" in article.text

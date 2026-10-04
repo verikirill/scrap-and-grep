@@ -271,7 +271,7 @@ async def test_a_list_drawn_by_script_is_read_by_the_browser(
     assert ladder.first.step == "browser"
     assert (
         ladder.first.note
-        == "ссылки на статьи не найдены на шаге «обычный запрос», прочитан через браузер"
+        == "Шаг «обычный запрос» не сработал (ссылки на статьи не найдены), сработал «браузер»."
     )
 
 

@@ -6,7 +6,7 @@ import { Button, Chip, ErrorNote, Field } from '../../components/ui'
 import type { DetectedSource, SourceCategory, SourceCreate } from '../../lib/api'
 import { CATEGORY_LABELS, externalHref, formatDate } from '../../lib/format'
 import { useSourceDetection, useSourceMutations } from '../../lib/queries'
-import { CATEGORY_ORDER, readVia } from '../../lib/sourceList'
+import { CATEGORY_ORDER, readVia, viaHint } from '../../lib/sourceList'
 
 const FOUND_LABELS: Record<DetectedSource['kind'], string> = {
   rss: 'Лента RSS или Atom',
@@ -150,7 +150,7 @@ export function DetectSourceForm({ onDone, onAdded }: Props) {
           <div className="flex flex-wrap items-center gap-2">
             <Chip tone="accent">{FOUND_LABELS[found.kind]}</Chip>
             {via && (
-              <Chip tone="spark" title={via.note ?? undefined}>
+              <Chip tone="spark" hint={viaHint(via)}>
                 {via.label}
               </Chip>
             )}

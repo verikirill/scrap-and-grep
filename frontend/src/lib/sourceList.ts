@@ -19,13 +19,33 @@ export const KIND_LABELS: Partial<Record<SourceKind, string>> = {
   broadcom: 'API сайта',
 }
 
+/** What a source of each kind in KIND_LABELS is, for the chip's hint and the legend. */
+export const KIND_HINTS: Partial<Record<SourceKind, string>> = {
+  page: 'У сайта нет RSS-ленты: статьи берутся со страницы новостей.',
+  wordpress: 'Статьи берутся через API сайта на WordPress.',
+  pt_trending: 'У сайта нет RSS-ленты: статьи берутся со страницы новостей.',
+  broadcom: 'Статьи берутся через собственный API сайта.',
+}
+
 /** The fetch ladder's steps above a plain request, as a reader would name them. */
-const FETCH_LABELS: Record<Exclude<FetchMethod, 'plain'>, string> = {
+export const FETCH_LABELS: Record<Exclude<FetchMethod, 'plain'>, string> = {
   browser_headers: 'Заголовки браузера',
   impersonate: 'Отпечаток Chrome',
   browser: 'Браузер',
   solver: 'FlareSolverr',
 }
+
+/** Why each step is needed: a site that refuses a plain request is read so. */
+export const FETCH_HINTS: Record<Exclude<FetchMethod, 'plain'>, string> = {
+  browser_headers:
+    'Сайт не отвечает простому запросу, поэтому сервис отправляет запрос с заголовками, как у браузера.',
+  impersonate: 'Запрос повторяет сетевой отпечаток Chrome, чтобы пройти защиту от ботов.',
+  browser:
+    'Страница открывается в настоящем браузере: сайт рисует статьи скриптом или проверяет посетителя.',
+  solver: 'Проверку Cloudflare проходит отдельный сервис FlareSolverr.',
+}
+
+export const PROXY_HINT = 'Запросы к сайту идут через прокси.'
 
 /**
  * How a site that refuses a bot is read: the step of the ladder and its
@@ -33,11 +53,28 @@ const FETCH_LABELS: Record<Exclude<FetchMethod, 'plain'>, string> = {
  */
 export function readVia(
   source: Pick<Source, 'fetch_method' | 'fetch_note' | 'fetch_via_proxy'>,
-): { label: string; note: string | null } | null {
+): { label: string; hint: string; note: string | null } | null {
   const method = source.fetch_method
-  const step = method && method !== 'plain' ? FETCH_LABELS[method] : null
-  const label = [step, source.fetch_via_proxy ? 'через прокси' : null].filter(Boolean).join(', ')
-  return label ? { label, note: source.fetch_note ?? null } : null
+  const isStep = method !== null && method !== undefined && method !== 'plain'
+  const label = [
+    isStep ? FETCH_LABELS[method] : null,
+    source.fetch_via_proxy ? 'через прокси' : null,
+  ]
+    .filter(Boolean)
+    .join(', ')
+  const hint = [isStep ? FETCH_HINTS[method] : null, source.fetch_via_proxy ? PROXY_HINT : null]
+    .filter(Boolean)
+    .join(' ')
+  return label ? { label, hint, note: source.fetch_note ?? null } : null
+}
+
+/** The chip's hint: what the step does, then why this site needed it. */
+export function viaHint(via: { hint: string; note: string | null }): string {
+  return via.note
+    ? `${via.hint}
+
+${via.note}`
+    : via.hint
 }
 
 /** A source behind protection: read above a plain request or through a proxy. */
