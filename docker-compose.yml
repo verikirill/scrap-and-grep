@@ -72,6 +72,15 @@ x-backend: &backend
     # One request to the voice: a few lines on a GPU take seconds, on a CPU
     # minutes, so a stand without a GPU raises it.
     RADAR_TTS_TIMEOUT_SECONDS: ${RADAR_TTS_TIMEOUT_SECONDS:-300}
+    # A digest by email through the company's mail server; empty host turns
+    # it off. With the mail profile: host mail, port 1025, security none.
+    RADAR_SMTP_HOST: ${RADAR_SMTP_HOST:-}
+    RADAR_SMTP_PORT: ${RADAR_SMTP_PORT:-587}
+    RADAR_SMTP_USER: ${RADAR_SMTP_USER:-}
+    RADAR_SMTP_PASSWORD: ${RADAR_SMTP_PASSWORD:-}
+    RADAR_SMTP_FROM: "${RADAR_SMTP_FROM:-Scrap&Grep <digest@localhost>}"
+    RADAR_SMTP_SECURITY: ${RADAR_SMTP_SECURITY:-starttls}
+    RADAR_MAIL_DOMAINS: ${RADAR_MAIL_DOMAINS:-}
     RADAR_MEDIA_DIR: /data/media
     # Publishing to Telegram channels. Bot tokens are stored encrypted with a
     # key derived from RADAR_SECRET_KEY; without it no bot can be added. With
@@ -407,6 +416,23 @@ services:
   # Qwen3-TTS voice. Measured on an NVIDIA GPU (-f docker-compose.gpu.yml);
   # without one it falls back to the CPU, at a speed nobody has measured.
   # The model is baked into the image.
+  # A mail server that keeps every letter and sends none: delivery by email
+  # tried without the company's server. Letters at http://localhost:8025.
+  mail:
+    profiles: ["mail"]
+    image: axllent/mailpit:v1.31.4
+    restart: unless-stopped
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+    ports:
+      - "127.0.0.1:${MAIL_UI_PORT:-8025}:8025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
   tts:
     profiles: ["voice"]
     build:
