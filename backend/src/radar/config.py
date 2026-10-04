@@ -242,6 +242,24 @@ class Settings(BaseSettings):
     # not a schedule. The media worker makes them one after another anyway.
     max_active_shorts: int = 10
 
+    # A digest by email: the Markdown as HTML, the DOCX attached. An empty
+    # host turns it off; the mail profile starts Mailpit, which keeps every
+    # letter and shows it at http://localhost:8025 (host mail, port 1025).
+    smtp_host: str = ""
+    smtp_port: int = Field(default=587, ge=1, le=65535)
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = "Scrap&Grep <digest@localhost>"
+    # How the connection is protected: STARTTLS on 587, TLS from the start on
+    # 465, none for a relay inside the contour or the mock.
+    smtp_security: Literal["starttls", "ssl", "none"] = "starttls"
+    smtp_timeout_seconds: float = Field(default=30.0, ge=1)
+    # Domains a digest may be sent to, comma-separated (the company's own);
+    # empty allows any. Without it any visitor of an open stand could send
+    # letters to anyone through the company's server.
+    mail_domains: str = ""
+    mail_rate_limit_per_minute: int = 6
+
     # Copies of article pictures, kept when a link is not enough (see
     # radar.images.store): on the media volume, or in any S3-compatible store.
     image_store: Literal["local", "s3"] = "local"
