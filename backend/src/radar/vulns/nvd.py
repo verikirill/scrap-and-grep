@@ -203,9 +203,12 @@ def parse_page(raw: dict[str, Any]) -> list[NvdEntry]:
     return entries
 
 
-async def store(session: AsyncSession, entries: Sequence[NvdEntry]) -> None:
-    """Upsert, the last version winning; checked_at marks when it was taken."""
-    now = datetime.now(UTC)
+async def store(
+    session: AsyncSession, entries: Sequence[NvdEntry], now: datetime | None = None
+) -> None:
+    """Upsert, the last version winning; checked_at marks when it was taken,
+    by the caller's clock when it has one."""
+    now = now or datetime.now(UTC)
     unique = {entry.cve_id: entry for entry in entries}
     columns = [field for field in NvdEntry.__dataclass_fields__ if field != "cve_id"]
     rows = [
@@ -272,7 +275,7 @@ async def refresh_changed(
             key,
         )
         entries = parse_page(page)
-        await store(session, entries)
+        await store(session, entries, end)
         taken += len(entries)
         index += int(page.get("resultsPerPage") or _PAGE)
         if index >= int(page.get("totalResults") or 0):
@@ -352,6 +355,7 @@ async def backfill(
         await store(
             session,
             entries or [NvdEntry(cve_id=cve, status=ABSENT, published=None, last_modified=None)],
+            moment,
         )
     if wanted:
         log.info("nvd_backfilled", asked=len(wanted))
