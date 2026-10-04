@@ -23,7 +23,12 @@ from radar.ingest import health as source_health
 from radar.ingest.detect import DETECT_TTL_SECONDS, NotFound, detect, detect_key, detected_json
 from radar.ingest.measure import measure
 from radar.ingest.net import build_client
-from radar.ingest.service import embed_pending, enabled_source_ids, ingest_source
+from radar.ingest.service import (
+    LOCK_TTL_SECONDS,
+    embed_pending,
+    enabled_source_ids,
+    ingest_source,
+)
 from radar.logging import get_logger
 from radar.pipeline.runner import report_failure, run_digest
 from radar.publishing import service as publishing_service
@@ -116,10 +121,21 @@ async def check_source_health() -> dict[str, int]:
     return {"purged": purged, "failing": len(found.failing), "silent": len(found.silent)}
 
 
+# A poll ends before the source's lock does, so a delivery of the same message
+# after the queue's idle timeout never finds the lock free mid-poll.
+INGEST_RUN_LIMIT = LOCK_TTL_SECONDS - 30
+
+
 @ingest_broker.task(task_name="ingest_source", retry_on_error=True, max_retries=2)
 async def ingest_source_task(source_id: int) -> dict[str, object]:
-    async with build_client() as client:
-        report = await ingest_source(source_id, client, get_cache())
+    try:
+        async with asyncio.timeout(INGEST_RUN_LIMIT), build_client() as client:
+            report = await ingest_source(source_id, client, get_cache())
+    except TimeoutError:
+        # Not retried: the articles stored so far stay, and the next round in
+        # 15 minutes picks up the full texts this one did not reach.
+        log.warning("ingest_cut", source_id=source_id, limit_seconds=INGEST_RUN_LIMIT)
+        return {"source_id": source_id, "status": "cut", "new": 0}
     if report.new_articles:
         await embed_pending_task.kiq()
     return {"source_id": source_id, "status": report.status, "new": report.new_articles}
