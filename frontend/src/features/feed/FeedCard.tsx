@@ -17,12 +17,14 @@ import { hasBreakdown, reasonIcon } from './reasons'
 export type FeedCardProps = {
   item: FeedItem
   index: number
+  /** Shown without the entrance, as after switching the feed's tab. */
+  isQuiet?: boolean
   placement: Placement
   onReact: (kind: ReactionKind, isActive: boolean) => void
 }
 
 /** One article of the feed: what it is, why it is here, and the reader's verdict. */
-export function FeedCard({ item, index, placement, onReact }: FeedCardProps) {
+export function FeedCard({ item, index, isQuiet, placement, onReact }: FeedCardProps) {
   const [isWhyOpen, setIsWhyOpen] = useState(false)
   // Scrolled past without a mark is a quiet "not this": adaptive profiles learn from it.
   const seenRef = useSeen(item.article_id, 'feed', item.reactions.length === 0, placement)
@@ -37,7 +39,7 @@ export function FeedCard({ item, index, placement, onReact }: FeedCardProps) {
   return (
     <motion.article
       ref={seenRef}
-      {...rowMotion(index)}
+      {...rowMotion(index, isQuiet)}
       className="group rounded-2xl border border-outline-variant bg-card px-5 py-4 shadow-card transition-colors duration-200 hover:border-outline"
     >
       <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted-foreground">

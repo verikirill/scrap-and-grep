@@ -18,10 +18,13 @@ export const INPUT_CLASS =
 export const TEXTAREA_CLASS =
   INPUT_CLASS + ' h-auto min-h-20 py-3 leading-5 field-sizing-content resize-y'
 
-/** Entrance for list rows: fade and rise, staggered only for the first screen. */
-export function rowMotion(index: number) {
+/**
+ * Entrance for list rows: fade and rise, staggered only for the first screen.
+ * A quiet row is just there, as in a list the reader switched back to.
+ */
+export function rowMotion(index: number, isQuiet = false) {
   return {
-    initial: { opacity: 0, y: 12 },
+    initial: isQuiet ? false : { opacity: 0, y: 12 },
     animate: { opacity: 1, y: 0 },
     transition: { duration: DURATION.medium, ease: EASE, delay: Math.min(index, 10) * 0.035 },
   }

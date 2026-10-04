@@ -59,6 +59,10 @@ const SUBTITLES: Record<Tab, string> = {
 
 const isTab = (value: string | null): value is Tab => TABS.some((tab) => tab.id === value)
 
+// A look at the other order and back keeps both lists as they were; an
+// order left longer ago than this is ranked anew.
+const TAB_REUSE_MS = 5 * 60_000
+
 // Signals that change what the next feed looks like.
 const TEACHING: ReactionKind[] = ['like', 'dislike', 'save', 'hide']
 // What a mark does, said where the reader is; a hidden card says it in its own place.
@@ -141,6 +145,8 @@ export function FeedPage() {
   // Reactions given since the feed was built: they are saved at once, but the
   // order on screen changes only when the reader asks.
   const [pendingSignals, setPendingSignals] = useState(0)
+  // After a tab switch the list is just there: its cards do not rise one by one again.
+  const [isQuiet, setIsQuiet] = useState(false)
 
   const list = tab === 'saved' ? saved : feed
   // Pages come from one snapshot and do not overlap; the check is a guard
@@ -205,6 +211,7 @@ export function FeedPage() {
   /** Start over from the first page of a freshly ranked feed. */
   const rebuild = () => {
     setPendingSignals(0)
+    setIsQuiet(false)
     void client.resetQueries({ queryKey: keys.feed })
     void taste.refetch()
   }
@@ -215,8 +222,10 @@ export function FeedPage() {
   }
 
   const selectTab = (id: Tab) => {
-    // An order left a while ago would come back as it was: it is made anew.
-    if (id !== 'saved' && id !== tab) void client.resetQueries({ queryKey: [...keys.feed, id] })
+    const queryKey = [...keys.feed, id]
+    const age = Date.now() - (client.getQueryState(queryKey)?.dataUpdatedAt ?? 0)
+    if (id !== 'saved' && id !== tab && age > TAB_REUSE_MS) void client.resetQueries({ queryKey })
+    setIsQuiet(true)
     setSearch({ tab: id })
     if (id !== 'saved' && me && me.feed_order !== id) settings.mutate({ feed_order: id })
   }
@@ -411,6 +420,7 @@ export function FeedPage() {
                   <Item
                     item={item}
                     index={index}
+                    isQuiet={isQuiet}
                     placement={placementOf(item)}
                     onReact={(kind, isActive) => react(item, kind, isActive)}
                   />
@@ -420,7 +430,10 @@ export function FeedPage() {
                 <div className="flex justify-center pt-2">
                   <Button
                     isBusy={list.isFetchingNextPage}
-                    onClick={() => void list.fetchNextPage()}
+                    onClick={() => {
+                      setIsQuiet(false)
+                      void list.fetchNextPage()
+                    }}
                   >
                     Показать ещё
                   </Button>

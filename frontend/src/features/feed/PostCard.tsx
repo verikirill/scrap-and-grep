@@ -22,7 +22,7 @@ import { sourceTint } from './sourceLook'
  * the article's picture, its headline and summary, one reason, and the
  * reader's verdict as reactions. The other reasons and the score open on tap.
  */
-export function PostCard({ item, index, placement, onReact }: FeedCardProps) {
+export function PostCard({ item, index, isQuiet, placement, onReact }: FeedCardProps) {
   const [isWhyOpen, setIsWhyOpen] = useState(false)
   // A picture the site would not give leaves a post of text, until the feed is reloaded.
   const [isPictureBroken, setIsPictureBroken] = useState(false)
@@ -48,7 +48,7 @@ export function PostCard({ item, index, placement, onReact }: FeedCardProps) {
   return (
     <motion.article
       ref={seenRef}
-      {...rowMotion(index)}
+      {...rowMotion(index, isQuiet)}
       aria-label={item.title}
       className="group flex items-end sm:gap-2.5"
     >
