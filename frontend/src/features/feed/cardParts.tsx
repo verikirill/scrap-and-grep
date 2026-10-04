@@ -105,7 +105,7 @@ export function RejectedRow({ item, onReact, look = 'card' }: RejectedProps) {
       )}
     >
       <span role="status" className="min-w-0 truncate">
-        {isDisliked ? 'Меньше такого: ' : 'Скрыто: '}
+        {isDisliked ? 'Меньше похожих:' : 'Скрыто: '}
         {item.title}
       </span>
       <button
@@ -114,7 +114,7 @@ export function RejectedRow({ item, onReact, look = 'card' }: RejectedProps) {
         onClick={() => onReact(isDisliked ? 'dislike' : 'hide', false)}
         className="shrink-0 font-medium text-on-primary-container hover:underline"
       >
-        Вернуть
+        Вернуть в ленту
       </button>
     </motion.div>
   )

@@ -51,8 +51,8 @@ const TABS = [
 type Tab = (typeof TABS)[number]['id']
 
 const SUBTITLES: Record<Tab, string> = {
-  new: 'Публикации за две недели, прошедшие отбор по вашим интересам, от новых к старым. Просмотренное уходит ниже, новое появляется само.',
-  top: 'Публикации за две недели, упорядоченные под вас: по интересам, резюме и прошлым отметкам. У каждой видно, почему она здесь.',
+  new: 'Публикации по вашим интересам за две недели: от новых к старым. Прочитанное уходит вниз, свежее появляется автоматически.',
+  top: 'Публикации за две недели, подобранные по интересам, резюме и вашим отметкам. У каждой видно, почему она здесь.',
   saved: 'Публикации, которые вы отложили кнопкой «Сохранить».',
 }
 
@@ -100,7 +100,9 @@ function PostColumn({ view, children }: { view: FeedView; children: React.ReactN
 
 /** Where the articles the reader has not met end, as a chat marks unread messages. */
 function SeenDivider({ view, isFirst }: { view: FeedView; isFirst: boolean }) {
-  const text = isFirst ? 'Нового пока нет, ниже уже просмотренное' : 'Ниже уже просмотренное'
+  const text = isFirst
+    ? 'Новых публикаций нет, ниже - прочитанные'
+    : 'Ниже - прочитанные публикации'
   if (view === 'telegram') {
     return (
       <p className="mx-auto w-fit max-w-full rounded-full bg-on-surface/10 px-4 py-1.5 text-xs text-foreground/80 backdrop-blur">
@@ -368,8 +370,8 @@ export function FeedPage() {
             <Card className="p-5">
               <h2 className="text-base font-semibold">Лента пока не знает, что вам интересно</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Ниже просто свежие публикации. Загрузите резюме или задайте интересы, и порядок
-                станет вашим.
+                Ниже показаны свежие публикации подряд. Загрузите резюме или настройте интересы,
+                чтобы лента подстроилась под вас.
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <Link to="/welcome" className={buttonClass('primary', 'sm')}>
@@ -378,7 +380,7 @@ export function FeedPage() {
                 </Link>
                 <Link to="/profiles" className={buttonClass('secondary', 'sm')}>
                   <SlidersHorizontal size={15} />
-                  Задать интересы
+                  Настроить интересы
                 </Link>
               </div>
             </Card>
@@ -392,13 +394,13 @@ export function FeedPage() {
             <Card>
               {tab === 'saved' ? (
                 <EmptyState icon={<Bookmark size={22} />} title="Сохранённого пока нет">
-                  Кнопка «Сохранить» на карточке откладывает публикацию сюда и заодно говорит ленте,
-                  что тема вам важна.
+                  Кнопка «Сохранить» на карточке откладывает публикацию в эту вкладку и помогает
+                  ленте точнее подбирать похожие темы.
                 </EmptyState>
               ) : (
                 <EmptyState icon={<Sparkles size={22} />} title="Подходящих публикаций не нашлось">
-                  За две недели по вашим интересам ничего не набралось. Проверьте, что источники
-                  опрашиваются, или расширьте интересы.
+                  За две недели публикаций по вашим интересам не нашлось. Убедитесь, что источники
+                  опрашиваются, или добавьте новые темы.
                 </EmptyState>
               )}
             </Card>

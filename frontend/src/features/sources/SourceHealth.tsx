@@ -8,20 +8,20 @@ function Summary({ health }: { health: Health }) {
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
       <p className="text-sm">
-        <span className="font-semibold">Здоровье за сутки:</span>{' '}
+        <span className="font-semibold">Состояние источников за сутки:</span>{' '}
         {health.polls === 0 ? (
           'опросов ещё не было'
         ) : (
           <>
             {formatNumber(health.polls)} {plural(health.polls, ['опрос', 'опроса', 'опросов'])},{' '}
             <span className={share !== null && share < 90 ? 'text-destructive' : 'text-success'}>
-              {share}% успешных
+              {share}% успешно
             </span>
           </>
         )}
       </p>
       {Object.entries(health.errors).map(([kind, count]) => (
-        <Chip key={kind} tone="danger" title="Неудачных опросов этого рода за сутки">
+        <Chip key={kind} tone="danger" title="Ошибок этого типа за сутки">
           {health.kinds[kind] ?? kind}: {count}
         </Chip>
       ))}
@@ -42,13 +42,13 @@ export function SourceHealth() {
       <Summary health={health.data} />
       {failing.length === 0 && silent.length === 0 && (
         <p className="text-sm text-muted-foreground">
-          Все источники читаются, и никто не молчит дольше обычного.
+          Все источники доступны и обновляются вовремя.
         </p>
       )}
       {failing.length > 0 && (
         <section>
           <h3 className="mb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-            Не читаются
+            Ошибки чтения
           </h3>
           <ul className="space-y-1 text-sm">
             {failing.map((item) => (
@@ -56,9 +56,9 @@ export function SourceHealth() {
                 <span className="font-medium">{item.name}</span>
                 <span className="text-muted-foreground">
                   {' '}
-                  - {kinds[item.kind ?? 'other'] ?? item.kind}, {item.failures}{' '}
-                  {plural(item.failures, ['неудача', 'неудачи', 'неудач'])} подряд
-                  {item.since && `, последний удачный опрос ${formatRelative(item.since)}`}
+                  - {kinds[item.kind ?? 'other'] ?? item.kind}: {item.failures}{' '}
+                  {plural(item.failures, ['сбой', 'сбоя', 'сбоев'])} подряд
+                  {item.since && `, последний успешный опрос ${formatRelative(item.since)}`}
                 </span>
               </li>
             ))}
@@ -68,7 +68,7 @@ export function SourceHealth() {
       {silent.length > 0 && (
         <section>
           <h3 className="mb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-            Молчат дольше обычного
+            Не обновлялись дольше обычного
           </h3>
           <ul className="space-y-1 text-sm">
             {silent.map((item) => (

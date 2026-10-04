@@ -201,7 +201,7 @@ def test_a_post_names_what_telegram_would_refuse() -> None:
         buttons=(Button(text="Ссылка", url="https://a.org"),),
     )
 
-    assert album.problems() == ["К альбому Telegram не прикрепляет кнопки."]
+    assert album.problems() == ["Telegram не поддерживает кнопки под медиаальбомами."]
     with pytest.raises(ValueError, match="http"):
         Media(url="javascript:alert(1)")
 

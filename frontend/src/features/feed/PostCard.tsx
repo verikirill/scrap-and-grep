@@ -132,7 +132,7 @@ export function PostCard({ item, index, placement, onReact }: FeedCardProps) {
               >
                 <ChevronDown size={13} />
               </motion.span>
-              <span className="sr-only">Почему эта статья здесь</span>
+              <span className="sr-only">Причины подбора статьи</span>
             </button>
           )}
           {reason && ReasonIcon && !canExplain && (

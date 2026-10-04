@@ -51,17 +51,17 @@ def answer(status: int, text: str, url: str = "https://site.example/news/1") -> 
         (
             answer(200, "<html><body><div id=root></div><script src=/app.js></script></body>"),
             "page",
-            "пустая страница-приложение",
+            "пустая страница (SPA)",
         ),
         (
             answer(200, "<html><body><p>Коротко.</p></body></html>"),
             "article",
-            "текст короче порога",
+            "объём текста ниже порога",
         ),
         (
             answer(200, "<!doctype html><html><body>сайт</body></html>"),
             "feed",
-            "страница вместо ленты",
+            "HTML вместо RSS-ленты",
         ),
     ],
 )

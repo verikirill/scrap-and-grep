@@ -23,7 +23,7 @@ function announcement(briefing: Briefing | null): string {
   if (!briefing) return ''
   if (briefing.status === 'queued') return 'Брифинг в очереди'
   if (briefing.status === 'running') return 'Брифинг озвучивается'
-  return briefing.status === 'done' ? 'Брифинг готов' : 'Брифинг озвучить не удалось'
+  return briefing.status === 'done' ? 'Брифинг готов' : 'Не удалось озвучить брифинг'
 }
 
 function voiceName(briefing: Briefing, voices: VoiceOption[]): string | null {
@@ -53,7 +53,7 @@ function Progress({ briefing }: { briefing: Briefing }) {
         />
       </div>
       <p className="mt-2 text-xs text-muted-foreground">
-        Голос читает выпуск по частям; окно можно закрыть, брифинг соберётся сам.
+        Озвучиваем выпуск по частям. Окно можно закрыть: брифинг соберётся в фоне.
       </p>
     </div>
   )
@@ -137,7 +137,7 @@ export function BriefingPlayer({ digest }: { digest: Digest }) {
         icon={busy ? <Loader2 size={15} className="animate-spin" /> : <Mic size={15} />}
         onClick={open}
       >
-        {busy ? 'Брифинг озвучивается' : 'Слушать брифинг'}
+        {busy ? 'Озвучиваем брифинг' : 'Слушать брифинг'}
       </Button>
       <Dialog open={isOpen} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-lg">
@@ -147,8 +147,8 @@ export function BriefingPlayer({ digest }: { digest: Digest }) {
               Голосовой брифинг
             </DialogTitle>
             <DialogDescription>
-              Полторы-две минуты для руководства: что период значит для компании, главное и самые
-              важные записи простыми словами, без номеров уязвимостей и адресов.
+              Полторы-две минуты для руководства: главное за период простыми словами, без номеров
+              уязвимостей и технических деталей.
             </DialogDescription>
           </DialogHeader>
 
@@ -166,7 +166,7 @@ export function BriefingPlayer({ digest }: { digest: Digest }) {
           {briefing?.status === 'done' && <Player briefing={briefing} voices={voices} />}
           {briefing?.status === 'failed' && (
             <p className="rounded-lg bg-error-container px-3 py-2 text-sm text-destructive">
-              {briefing.error ?? 'Брифинг озвучить не удалось.'}
+              {briefing.error ?? 'Не удалось озвучить брифинг.'}
             </p>
           )}
 

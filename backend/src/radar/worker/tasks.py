@@ -296,7 +296,7 @@ async def make_short(video_id: str, context: Context = TaskiqDepends()) -> None:
             )
             if attempt >= SHORT_ATTEMPTS:
                 message = (
-                    "Видеосервис занят. Попробуйте через несколько минут."
+                    "Сервис генерации видео перегружен. Попробуйте через несколько минут."
                     if isinstance(exc, RendererBusy)
                     else shorts_service.GENERIC_FAILURE
                 )

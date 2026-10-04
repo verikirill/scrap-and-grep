@@ -32,7 +32,7 @@ def parse_chat(reference: str) -> int | str:
         return int(value)
     value = value.removeprefix("@")
     if not _USERNAME_RE.match(value):
-        raise PublishingRefused("Укажите @имя канала, ссылку t.me/имя или числовой id чата.")
+        raise PublishingRefused("Укажите @username канала, ссылку t.me/ или числовой ID чата.")
     return f"@{value}"
 
 
@@ -47,12 +47,12 @@ async def add_bot(
     again only gets its token replaced."""
     token = token.strip()
     if not TOKEN_RE.match(token):
-        raise PublishingRefused("Это не похоже на токен бота от @BotFather.")
+        raise PublishingRefused("Не похоже на токен бота от @BotFather.")
     try:
         info = await TelegramClient(token, transport=transport).get_me()
     except TelegramError as exc:
         raise PublishingRefused(
-            "Telegram не принял токен: проверьте, что он скопирован целиком."
+            "Telegram отклонил токен: убедитесь, что скопировали его полностью."
         ) from exc
     existing = await session.scalar(
         select(TelegramBot).where(
@@ -87,13 +87,13 @@ async def add_channel(
         allowed = await client.can_post(chat.id, bot.telegram_id)
     except TelegramError as exc:
         raise PublishingRefused(
-            "Бот не видит этот чат. Добавьте бота в канал администратором и повторите."
+            "Бот не видит этот чат. Добавьте бота в канал администратором и повторите попытку."
         ) from exc
     if chat.type not in POSTING_CHATS:
         raise PublishingRefused("Публиковать можно в канал или группу.")
     if not allowed:
         raise PublishingRefused(
-            "У бота нет права публиковать сообщения: дайте его в настройках администратора."
+            "У бота нет права публиковать сообщения. Выдайте его в настройках администратора."
         )
     existing = await session.scalar(
         select(TelegramChannel).where(

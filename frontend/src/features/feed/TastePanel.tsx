@@ -6,9 +6,9 @@ import type { Taste, TasteFacet } from '../../lib/api'
 import { plural } from '../../lib/format'
 
 const GROUPS: { kind: TasteFacet['kind']; title: string; empty?: string }[] = [
-  { kind: 'interest', title: 'Заявленные интересы', empty: 'Профиль интересов не задан.' },
-  { kind: 'resume', title: 'Из резюме', empty: 'Резюме не загружено.' },
-  { kind: 'learned', title: 'Выучено по вашим отметкам' },
+  { kind: 'interest', title: 'Выбранные интересы', empty: 'Профиль интересов не задан.' },
+  { kind: 'resume', title: 'Навыки из резюме', empty: 'Резюме не загружено.' },
+  { kind: 'learned', title: 'Учтено по вашим отметкам' },
   { kind: 'avoid', title: 'Показываем реже' },
 ]
 
@@ -44,7 +44,7 @@ export function TastePanel({ taste }: { taste: Taste }) {
       <p className="mt-1 text-xs text-muted-foreground">
         {signals === 0
           ? 'Отметок пока нет. Отмечайте публикации: лента учтёт уже первую.'
-          : `${signals} ${plural(signals, ['отметка', 'отметки', 'отметок'])} за последнее время. Старые отметки постепенно теряют вес.`}
+          : `${signals} ${plural(signals, ['отметка', 'отметки', 'отметок'])} за последнее время. Влияние давних отметок со временем снижается.`}
       </p>
 
       <div className="mt-3">
@@ -114,7 +114,7 @@ export function TastePanel({ taste }: { taste: Taste }) {
       </div>
 
       <p className="mt-5 border-t border-outline-variant pt-3 text-xs text-muted-foreground">
-        Интересы правятся в разделе{' '}
+        Настроить интересы можно в разделе{' '}
         <Link to="/profiles" className="text-on-primary-container hover:underline">
           «Интересы»
         </Link>

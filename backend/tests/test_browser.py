@@ -107,7 +107,7 @@ async def test_a_page_drawn_by_script_is_read_by_the_browser(
     assert ladder.first is not None
     assert ladder.first.step == "browser"
     assert ladder.first.note == (
-        "пустая страница-приложение на шаге «обычный запрос», прочитан через браузер"
+        "пустая страница (SPA) на шаге «обычный запрос», прочитан через браузер"
     )
     # The browser opens the route itself, fragment and all, and is told which
     # hosts the national CA may sign for.

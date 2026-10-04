@@ -94,7 +94,10 @@ function InterestEditor({
                   onChange={(event) => onChange({ ...interest, title: event.target.value })}
                 />
               </Field>
-              <Field label="Что именно интересует" hint="по этому тексту идёт смысловой поиск">
+              <Field
+                label="Что именно интересует"
+                hint="по этому описанию строится смысловой поиск"
+              >
                 <textarea
                   className={cn(TEXTAREA_CLASS, 'min-h-16')}
                   value={interest.description}
@@ -153,12 +156,12 @@ const AUDIENCES: { id: Audience; title: string; description: string }[] = [
   {
     id: 'specialist',
     title: 'Специалисту',
-    description: 'Атаки и уязвимости карточками с приоритетом, остальное по темам',
+    description: 'Карточки атак и уязвимостей с приоритетом, остальные новости - по темам',
   },
   {
     id: 'management',
     title: 'Руководству',
-    description: 'Коротко и без жаргона, с признаками: в РФ, ущерб, утечка, энергетика',
+    description: 'Кратко и без терминов. С ключевыми метками: в РФ, ущерб, утечка, энергетика',
   },
 ]
 
@@ -213,7 +216,7 @@ export function ProfileForm({
             />
           </Field>
         </div>
-        <Field label="Кто читатель" hint="по этому тексту модель пишет «почему важно»">
+        <Field label="Роль читателя" hint="по этому описанию модель формулирует «почему важно»">
           <textarea
             className={TEXTAREA_CLASS}
             value={spec.role}
@@ -291,7 +294,7 @@ export function ProfileForm({
       </div>
 
       <Card className="space-y-5 p-5">
-        <Field isGroup label="Не показывать" hint="темы, которые в выпуск не нужны">
+        <Field isGroup label="Не показывать" hint="темы, которых не должно быть в выпуске">
           <ChipsInput
             label="Исключения"
             values={spec.exclusions}

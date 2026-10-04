@@ -175,13 +175,13 @@ function Numbers({ rows, title }: { rows: TagCount[]; title: string }) {
       <SectionHead
         icon={<Analytics size={18} />}
         title={title}
-        note="Записи выпуска по признакам датасета"
+        note="Записи выпуска по ключевым категориям"
       />
       <ul className="mt-4 space-y-3">
         {rows.map((row, index) => (
           <li
             key={row.tag}
-            title={`${row.label}: ${row.count}${row.before !== null && row.before !== undefined ? `, в прошлом выпуске ${row.before}` : ''}`}
+            title={`${row.label}: ${row.count}${row.before !== null && row.before !== undefined ? `, в прошлом выпуске: ${row.before}` : ''}`}
           >
             <div className="flex items-baseline justify-between gap-3 text-sm">
               <span>{row.label}</span>

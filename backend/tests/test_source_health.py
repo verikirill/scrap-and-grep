@@ -143,7 +143,7 @@ async def test_the_health_of_the_sources(api: str) -> None:
         await reader.post("/auth/demo")
         answer = (await reader.get("/sources/health")).json()
     assert answer["hours"] == 24
-    assert answer["kinds"]["stub"] == "заглушка защиты"
+    assert answer["kinds"]["stub"] == "антибот-проверка"
     assert any(item["name"] == "Не читается" for item in answer["failing"])
     assert any(item["name"] == "Замолчал" for item in answer["silent"])
 

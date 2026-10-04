@@ -255,13 +255,15 @@ def _applied(spec: ProfileSpec, suggestion: ProfileSuggestion) -> ProfileSpec:
     if suggestion.kind == "exclusion":
         if len(spec.exclusions) >= _MAX_EXCLUSIONS:
             raise HTTPException(
-                status.HTTP_409_CONFLICT, detail="В профиле уже 20 исключений, удалите лишние."
+                status.HTTP_409_CONFLICT,
+                detail="В профиле уже 20 исключений. Удалите ненужные, чтобы добавить новые.",
             )
         data["exclusions"].append(suggestion.title)
     else:
         if len(spec.interests) >= _MAX_INTERESTS:
             raise HTTPException(
-                status.HTTP_409_CONFLICT, detail="В профиле уже 20 интересов, удалите лишние."
+                status.HTTP_409_CONFLICT,
+                detail="В профиле уже 20 интересов. Удалите ненужные, чтобы добавить новые.",
             )
         interest = Interest(
             # The random tail of the id: the head is a timestamp, the same for

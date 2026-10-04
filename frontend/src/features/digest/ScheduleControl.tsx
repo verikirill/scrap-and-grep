@@ -148,7 +148,7 @@ export function ScheduleControl({
           </>
         ) : (
           <span className="text-muted-foreground">
-            Выпуск этого профиля может собираться сам, по расписанию
+            Выпуск по этому профилю может собираться автоматически по расписанию
           </span>
         )}
       </p>
@@ -163,7 +163,7 @@ export function ScheduleControl({
           collisionPadding={12}
           className="w-[min(22rem,calc(100vw-2rem))] space-y-4 rounded-3xl p-4"
         >
-          <p className="font-medium break-words">Собирать «{profile.spec.name}» самому</p>
+          <p className="font-medium break-words">Собирать «{profile.spec.name}» по расписанию</p>
           <Segmented
             label="Как часто"
             value={draft.cadence}
@@ -191,8 +191,8 @@ export function ScheduleControl({
             />
           </label>
           <p className="text-xs text-muted-foreground">
-            Каждый выпуск берёт новости с прошлого раза: в понедельник по будням это все выходные.
-            Время по поясу {zone}.
+            В каждый выпуск войдут публикации со времени прошлого сбора: при сборке по будням
+            понедельничный выпуск захватит выходные. Время по поясу {zone}.
           </p>
           <ErrorNote error={save.error ?? remove.error} />
           <div className="flex flex-wrap justify-end gap-2">

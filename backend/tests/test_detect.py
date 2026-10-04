@@ -137,7 +137,7 @@ async def test_a_page_with_no_articles_asks_for_a_selector(site: str) -> None:
     ("address", "said"),
     [
         ("http://intranet.test/news/", "внутреннюю сеть"),
-        ("ftp://site.test/news/", "не похоже на адрес"),
+        ("ftp://site.test/news/", "похоже на корректный адрес"),
     ],
 )
 async def test_an_address_that_cannot_be_read(site: str, address: str, said: str) -> None:
@@ -179,5 +179,5 @@ async def test_a_host_with_no_address_is_no_site(
     for module in (net, fetch, solver, browser):
         monkeypatch.setattr(module, "resolve_public", resolve)
 
-    with pytest.raises(NotFound, match="Такого сайта нет"):
+    with pytest.raises(NotFound, match="Сайт не найден"):
         await found("https://gone.test/news/")

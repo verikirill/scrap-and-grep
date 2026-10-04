@@ -11,7 +11,7 @@ import { CATEGORY_ORDER, readVia } from '../../lib/sourceList'
 const FOUND_LABELS: Record<DetectedSource['kind'], string> = {
   rss: 'Лента RSS или Atom',
   telegram: 'Telegram-канал',
-  page: 'Страница новостей без ленты',
+  page: 'Веб-страница без RSS',
   wordpress: 'WordPress API',
 }
 
@@ -92,7 +92,7 @@ export function DetectSourceForm({ onDone, onAdded }: Props) {
   return (
     <div className="space-y-4 p-5">
       <form onSubmit={check} className="space-y-3">
-        <Field label="Адрес" hint="сайт, раздел новостей, лента или @канал">
+        <Field label="Адрес" hint="URL сайта, RSS-лента или @канал">
           <div className="flex gap-2">
             <input
               required
@@ -111,7 +111,7 @@ export function DetectSourceForm({ onDone, onAdded }: Props) {
           </div>
         </Field>
         {isSelectorShown ? (
-          <Field label="CSS-селектор ссылок" hint="если статьи не нашлись сами">
+          <Field label="CSS-селектор ссылок" hint="если ссылки не найдены автоматически">
             <input
               placeholder="article h2 a"
               autoComplete="off"
@@ -134,8 +134,8 @@ export function DetectSourceForm({ onDone, onAdded }: Props) {
 
       {isChecking && (
         <p className="text-sm text-muted-foreground" role="status">
-          Ищем ленту, раздел новостей и статьи. Сайт, который не пускает бота, открывается в
-          браузере: это до минуты.
+          Ищем RSS-ленту, новости и статьи. Если сайт блокирует бота, откроем его в браузере: это
+          займёт до минуты.
         </p>
       )}
       <ErrorNote error={start.error ?? result.error} />

@@ -84,13 +84,13 @@ async def create_short(
     previous video of the same digest."""
     if not settings.shorts_url:
         raise HTTPException(
-            status.HTTP_503_SERVICE_UNAVAILABLE, detail="Видео на этом сервере выключено."
+            status.HTTP_503_SERVICE_UNAVAILABLE, detail="Сборка видео отключена на этом сервере."
         )
     digest = await digest_store.get(session, digest_id, user_id=user.id)
     if digest is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Дайджест не найден.")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Выпуск не найден.")
     if digest.status != digest_store.STATUS_DONE:
-        raise HTTPException(status.HTTP_409_CONFLICT, detail="Дайджест ещё не готов.")
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="Выпуск ещё не готов.")
     voice = payload.voice if payload is not None else None
     known = {item.id for item in await service.known_voices(cache)}
     # With no list at hand (the worker has not reported yet) the voice is
@@ -105,7 +105,7 @@ async def create_short(
     if await service.count_active(session) >= settings.max_active_shorts:
         raise HTTPException(
             status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Сейчас собирается много видео. Попробуйте через пару минут.",
+            detail="Сервис монтажа видео перегружен. Попробуйте через пару минут.",
             headers={"Retry-After": "120"},
         )
     try:
@@ -113,14 +113,14 @@ async def create_short(
     except service.AlreadyMaking as exc:
         raise HTTPException(
             status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Уже собирается видео другого выпуска. Дождитесь, пока оно будет готово.",
+            detail="Уже собирается видео для другого выпуска. Дождитесь его готовности.",
             headers={"Retry-After": "60"},
         ) from exc
     if video is None:
         # Another request for this digest got there first.
         running = await service.get(session, digest_id, user.id)
         if running is None:
-            raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Дайджест не найден.")
+            raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Выпуск не найден.")
         return _out(running)
     # The worker must find the row, so commit before the task is queued.
     await session.commit()
@@ -128,7 +128,7 @@ async def create_short(
         await make_short.kiq(str(video.id))
     except Exception as exc:
         log.exception("short_enqueue_failed", video_id=str(video.id))
-        await service.fail(video.id, "Очередь задач недоступна. Повторите позже.")
+        await service.fail(video.id, "Очередь задач недоступна. Попробуйте позже.")
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE, detail="Очередь задач недоступна."
         ) from exc

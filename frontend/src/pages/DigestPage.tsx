@@ -122,7 +122,7 @@ export function DigestPage() {
 
           {digest.isError && (
             <Card className="p-6">
-              <h2 className="text-base font-semibold">Выпуск не открылся</h2>
+              <h2 className="text-base font-semibold">Не удалось открыть выпуск</h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 {digest.error instanceof Error ? digest.error.message : 'Неизвестная ошибка.'}
               </p>
@@ -167,7 +167,7 @@ export function DigestPage() {
                 exit={{ opacity: 0 }}
               >
                 <Card className="p-6">
-                  <h2 className="text-base font-semibold">Выпуск собрать не удалось</h2>
+                  <h2 className="text-base font-semibold">Не удалось собрать выпуск</h2>
                   <p className="mt-1 text-sm text-muted-foreground">
                     {current.error ?? 'Причина неизвестна.'}
                   </p>

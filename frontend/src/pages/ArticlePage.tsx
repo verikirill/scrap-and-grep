@@ -57,7 +57,7 @@ function Loading() {
 function NotFound() {
   return (
     <EmptyState icon={<FileText size={26} />} title="Статья не найдена">
-      Её источник могли удалить из каталога.
+      Возможно, источник удалили из каталога.
     </EmptyState>
   )
 }
@@ -89,8 +89,8 @@ function Article({ article }: { article: ArticleRead }) {
 
       {!article.complete && (
         <p className="mt-6 rounded-xl bg-surface-container px-4 py-3 text-sm text-muted-foreground">
-          Сайт {host} не отдал страницу, поэтому здесь только текст из ленты. Целиком статья
-          открывается в источнике.
+          Сайт {host} не вернул страницу, поэтому показан только текст из ленты. Полная версия
+          доступна в источнике.
         </p>
       )}
 
@@ -100,7 +100,7 @@ function Article({ article }: { article: ArticleRead }) {
         </div>
       ) : (
         <EmptyState icon={<FileText size={26} />} title="Текста нет">
-          Источник прислал только заголовок. Статья открывается по ссылке на оригинал.
+          В источнике был только заголовок. Статью можно открыть по ссылке на оригинал.
         </EmptyState>
       )}
 

@@ -29,11 +29,11 @@ def zone(name: str) -> ZoneInfo:
 
 def validate(cadence: str, weekday: int | None, minute: int, timezone: str) -> Cadence:
     if cadence not in CADENCES:
-        raise ScheduleError("Расписание бывает ежедневным, по будням или раз в неделю.")
+        raise ScheduleError("Расписание может быть ежедневным, по будням или раз в неделю.")
     if cadence == "weekly" and (weekday is None or not 0 <= weekday <= 6):
-        raise ScheduleError("Для выпуска раз в неделю нужен день недели.")
+        raise ScheduleError("Для еженедельного выпуска укажите день недели.")
     if not 0 <= minute < MINUTES_IN_DAY:
-        raise ScheduleError("Время выпуска должно быть от 00:00 до 23:59.")
+        raise ScheduleError("Укажите время выпуска от 00:00 до 23:59.")
     zone(timezone)
     return cadence
 
@@ -60,7 +60,7 @@ def next_run(
         day = start + timedelta(days=offset)
         if _runs_on(cadence, weekday, day) and (slot := _slot(day, minute, tz)) > after:
             return slot.astimezone(UTC)
-    raise ScheduleError("Расписание не даёт ни одного выпуска.")
+    raise ScheduleError("По этому расписанию нет запланированных выпусков.")
 
 
 def previous_run(
@@ -73,4 +73,4 @@ def previous_run(
         day = start - timedelta(days=offset)
         if _runs_on(cadence, weekday, day) and (slot := _slot(day, minute, tz)) < before:
             return slot.astimezone(UTC)
-    raise ScheduleError("Расписание не даёт ни одного выпуска.")
+    raise ScheduleError("По этому расписанию нет запланированных выпусков.")

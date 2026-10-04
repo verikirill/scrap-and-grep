@@ -575,10 +575,10 @@ def section_overview(kind: RecordKind, texts: list[ItemSummary | None]) -> str:
         f"{PRIORITY_LABELS[level]} приоритет: {count}" for level, count in counts.items() if count
     ]
     rule = (
-        "атака на энергетику или промышленность РФ выше атаки на другие отрасли РФ, "
-        "атаки вне РФ ниже всех"
+        "атаки на ТЭК и промышленность РФ приоритетнее других отраслей РФ, "
+        "зарубежные инциденты - в конце"
         if kind == "attack"
-        else "уязвимость с эксплойтом выше уязвимости без него"
+        else "уязвимости с известным эксплойтом показываются первыми"
     )
     return f"{'; '.join(parts).capitalize()}. Порядок по правилу: {rule}."
 

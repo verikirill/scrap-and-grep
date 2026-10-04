@@ -31,7 +31,9 @@ from radar.resume.scrub import scrub
 
 log = get_logger(__name__)
 
-_GENERIC_FAILURE = "Не удалось обработать файл. Попробуйте ещё раз или загрузите другой формат."
+_GENERIC_FAILURE = (
+    "Не удалось разобрать файл. Попробуйте ещё раз или загрузите документ в другом формате."
+)
 
 
 @lru_cache

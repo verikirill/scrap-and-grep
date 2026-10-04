@@ -378,7 +378,7 @@ export function PostEditor({
             disabled={length > limit}
             onClick={() => onSave(cleaned(content), true)}
           >
-            Сохранить и в очередь
+            Поставить в очередь
           </Button>
           <Button
             variant="tonal"

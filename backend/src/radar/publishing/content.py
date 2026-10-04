@@ -93,9 +93,9 @@ class PostContent(BaseModel):
         if not self.html.strip() and not self.media:
             found.append("Пост пустой.")
         if self.length() > self.limit():
-            found.append(f"Текст длиннее {self.limit()} знаков: {self.length()}.")
+            found.append(f"Текст превышает лимит в {self.limit()} знаков: сейчас {self.length()}.")
         if self.format == "classic" and len(self.media) > 1 and self.buttons:
-            found.append("К альбому Telegram не прикрепляет кнопки.")
+            found.append("Telegram не поддерживает кнопки под медиаальбомами.")
         return found
 
 
