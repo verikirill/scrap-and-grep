@@ -400,4 +400,6 @@
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;
+  /* The theme's circle (Layout.tsx) lays the new page over the old one. */
+  mix-blend-mode: normal;
 }
