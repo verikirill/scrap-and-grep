@@ -10,7 +10,7 @@ import type { NewMcpKey } from '../../lib/api'
 import { formatDateTime, formatRelative } from '../../lib/format'
 import { useCreateMcpKey, useMcpKeys, useRevokeMcpKey } from '../../lib/queries'
 
-const SERVER_NAME = 'tail-and-grep'
+const SERVER_NAME = 'scrap-and-grep'
 
 function CopyButton({ text, label }: { text: string; label: string }) {
   const [isCopied, setCopied] = useState(false)

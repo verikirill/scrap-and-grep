@@ -271,7 +271,7 @@ class KeyAuth:
             response = JSONResponse(
                 {"error": "invalid_token", "detail": "Нужен действующий ключ доступа Scrap&Grep."},
                 status_code=401,
-                headers={"WWW-Authenticate": 'Bearer realm="tail-and-grep"'},
+                headers={"WWW-Authenticate": 'Bearer realm="scrap-and-grep"'},
             )
             await response(scope, receive, send)
             return
