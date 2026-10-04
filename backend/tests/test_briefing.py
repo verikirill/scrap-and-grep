@@ -477,3 +477,35 @@ async def test_a_brief_left_by_a_dead_worker_can_be_ordered_again(
     assert shown["status"] == "failed"
     assert again.status_code == 202
     assert again.json()["status"] == "queued"
+
+
+@pytest.mark.parametrize(
+    ("tts_url", "refreshed"),
+    [
+        pytest.param("http://tts.test", True, id="voice-without-video"),
+        pytest.param("", False, id="no-voice"),
+    ],
+)
+async def test_the_voices_are_listed_with_the_voice_alone_without_videos(
+    api: str,  # noqa: F811
+    monkeypatch: pytest.MonkeyPatch,
+    tts_url: str,
+    refreshed: bool,
+) -> None:
+    from radar.config import get_settings
+    from radar.worker import tasks
+
+    monkeypatch.setenv("RADAR_TTS_URL", tts_url)
+    monkeypatch.setenv("RADAR_SHORTS_URL", "")
+    get_settings.cache_clear()
+    refresh, purge = AsyncMock(), AsyncMock()
+    monkeypatch.setattr(tasks.refresh_short_voices, "kiq", refresh)
+    monkeypatch.setattr(tasks.purge_short_files, "kiq", purge)
+    try:
+        await tasks.housekeeping()
+    finally:
+        get_settings.cache_clear()
+
+    assert refresh.await_count == (1 if refreshed else 0)
+    # No videos, no video files to purge.
+    purge.assert_not_awaited()
