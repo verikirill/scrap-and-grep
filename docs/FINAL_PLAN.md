@@ -43,7 +43,7 @@
 
 ### П1. Видео
 
-Есть: [scrapgrep-demo.mp4](https://git.codenrock.com/codenrock/ii-assistenty/misis-mojarung/assistent-dlya-sozdaniya-it-ib-daydzhestov/uploads/3fe9e322bb650a169a0b4e48900b698d/scrapgrep-demo.mp4) во вложениях GitLab, ссылка на первом экране README; 5 мин 28 с, 1920×1080, без голоса, субтитры вшиты, записано 4 октября на `gpt-oss:120b` в облаке Ollama. В ролике план на смену, «Что это значит для нас», брифинг и короткое видео; ролик шортса собран стендом 2 октября и заново не генерировался.
+Есть: [scrapgrep-demo.mp4](https://git.codenrock.com/codenrock/ii-assistenty/misis-mojarung/assistent-dlya-sozdaniya-it-ib-daydzhestov/uploads/36d3943d5863dd953afaaeee3f1b9afe/scrapgrep-demo.mp4) во вложениях GitLab, ссылка на первом экране README; 5 мин 28 с, 1920×1080, без голоса, субтитры вшиты, записано 4 октября на `gpt-oss:120b` в облаке Ollama. В ролике план на смену, «Что это значит для нас», брифинг и короткое видео; ролик шортса собран стендом 2 октября и заново не генерировался.
 
 Осталось:
 - ссылка открывается только участникам проекта (П5);
@@ -55,10 +55,7 @@
 
 ### П2. Презентация
 
-Есть: `docs/presentation/scrapgrep.pdf` и исходник `slides.html`, 22 слайда, ссылка в README.
-
-Осталось:
-- редактируемая версия в PPTX.
+Есть: `docs/presentation/scrapgrep.pdf`, исходник `slides.html` и редактируемая `scrapgrep.pptx`, 22 слайда, ссылки в README. Цифры на слайдах подписаны источником в `docs/` или в README.
 
 Готово, когда: каждая цифра на слайдах есть в `docs/` с источником.
 
