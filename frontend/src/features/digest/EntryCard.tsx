@@ -8,13 +8,14 @@ const PRIORITY_LABELS: Record<Priority, string> = {
   medium: 'Средний приоритет',
   low: 'Низкий приоритет',
 }
+const PRIORITY_TONES = { high: 'alarm', medium: 'spark', low: 'neutral' } as const
 const NO_DATA = 'нет данных'
 
 /** The priority the organizers' dataset gives an attack or a vulnerability. */
 export function PriorityChip({ item }: { item: DigestItem }) {
   if (!item.priority) return null
   return (
-    <Chip tone={item.priority === 'high' ? 'spark' : 'neutral'} title={item.priority_reason}>
+    <Chip tone={PRIORITY_TONES[item.priority]} title={item.priority_reason}>
       {PRIORITY_LABELS[item.priority]}
     </Chip>
   )
