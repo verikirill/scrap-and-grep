@@ -171,9 +171,6 @@
     font-size: 15px;
     line-height: 1.55;
     letter-spacing: 0.005em;
-    transition:
-      background-color 0.3s var(--ease-standard),
-      color 0.3s var(--ease-standard);
   }
 }
 
@@ -379,6 +376,13 @@
     left: 107%;
     right: -8%;
   }
+}
+
+/* Set for the one frame the theme changes in (Layout.tsx). */
+.theme-switching *,
+.theme-switching *::before,
+.theme-switching *::after {
+  transition: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

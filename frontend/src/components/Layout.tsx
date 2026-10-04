@@ -13,7 +13,7 @@ import {
 } from './icons'
 import type { IconComponent } from './icons'
 import { AnimatePresence, motion } from 'motion/react'
-import { useEffect, useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link, NavLink, useLocation } from 'react-router'
 import { formatNumber, modelLabel } from '../lib/format'
@@ -52,8 +52,14 @@ function initialTheme(): boolean {
 
 function useDarkMode(): [boolean, () => void] {
   const [dark, setDark] = useState(initialTheme)
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', dark)
+  useLayoutEffect(() => {
+    const root = document.documentElement
+    // Every colour changes in one frame. With transitions on, text and chips
+    // lagged behind the backgrounds, which change at once.
+    root.classList.add('theme-switching')
+    root.classList.toggle('dark', dark)
+    void root.offsetHeight
+    root.classList.remove('theme-switching')
     localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light')
   }, [dark])
   return [dark, () => setDark((value) => !value)]
