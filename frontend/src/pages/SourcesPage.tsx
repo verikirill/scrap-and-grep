@@ -24,7 +24,7 @@ export function SourcesPage() {
     <>
       <PageHeader
         title="Источники"
-        subtitle="Ленты, сайты без ленты и Telegram-каналы, из которых собирается материал, и сами публикации: всё, что ассистент видел, доступно для проверки."
+        subtitle="Ленты, сайты и Telegram-каналы, из которых собирается материал, и сами публикации. Всё, что видел ассистент, можно проверить."
       />
       <div
         className="mb-5 inline-flex gap-1 rounded-xl bg-surface-container p-1"

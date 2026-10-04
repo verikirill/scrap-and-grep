@@ -81,7 +81,7 @@ export function AuthPage({ mode }: Props) {
         </div>
         <div className="max-w-md">
           <p className="font-serif text-[28px] leading-tight font-semibold text-balance">
-            Новости по вашей работе, а не по всей отрасли
+            Новости ИТ и ИБ под вашу работу
           </p>
           <p className="mt-3 text-sm leading-relaxed text-white/60">
             Ассистент читает почти сорок источников по ИТ, информационной безопасности и энергетике,
@@ -104,13 +104,13 @@ export function AuthPage({ mode }: Props) {
           </div>
 
           <h1 className="text-2xl font-semibold tracking-tight">
-            {isRegister ? 'Новый аккаунт' : 'С возвращением'}
+            {isRegister ? 'Новый аккаунт' : 'Вход'}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {isSharedProfile
-              ? 'С вами поделились профилем интересов. Войдите или зарегистрируйтесь, и он откроется: добавить его себе или нет, решите сами.'
+              ? 'С вами поделились профилем интересов. Он откроется после входа или регистрации, и вы решите, добавлять ли его себе.'
               : isRegister
-                ? 'После регистрации можно загрузить резюме: по нему соберём профиль интересов.'
+                ? 'После регистрации можно загрузить резюме, и по нему соберётся профиль интересов.'
                 : 'Войдите, чтобы открыть свои дайджесты и ленту.'}
           </p>
 

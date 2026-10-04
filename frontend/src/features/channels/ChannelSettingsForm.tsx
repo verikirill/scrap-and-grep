@@ -125,7 +125,7 @@ export function ChannelSettingsForm({
               className={TEXTAREA_CLASS}
             />
           </Field>
-          <Field label="Для кого пишем" hint="пусто - роль из профиля">
+          <Field label="Для кого пишем" hint="если пусто, берётся роль из профиля">
             <input
               value={style.audience}
               maxLength={600}
@@ -204,8 +204,8 @@ export function ChannelSettingsForm({
             />
           </Field>
           <p className="px-1 text-xs text-muted-foreground">
-            «Словом» - в конце поста «Подробности - здесь», «Карточкой» - превью статьи с её
-            картинкой, «Без ссылки» - только текст. Каналы могут подавать одну и ту же новость
+            «Словом» — в конце поста «Подробности — здесь», «Карточкой» — превью статьи с её
+            картинкой, «Без ссылки» — только текст. Каналы могут подавать одну и ту же новость
             по-разному.
           </p>
           <div className="grid grid-cols-2 gap-4">
@@ -249,8 +249,8 @@ export function ChannelSettingsForm({
             />
           </Field>
           <p className="px-1 text-xs text-muted-foreground">
-            Rich-пост - формат нового редактора Telegram (июль 2026): заголовки, списки, цитаты,
-            слайдшоу картинок, до 32 768 знаков. Обычный пост - картинка с подписью до 1024 знаков
+            Rich-пост — формат нового редактора Telegram (июль 2026): заголовки, списки, цитаты,
+            слайдшоу картинок, до 32 768 знаков. Обычный пост — картинка с подписью до 1024 знаков
             или текст до 4096.
           </p>
           <div className="divide-y divide-outline-variant">

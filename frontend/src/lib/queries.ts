@@ -461,7 +461,7 @@ export function useSignIn() {
     forgetReaderData(client)
     const me = await client.fetchQuery({ queryKey: keys.me, queryFn: api.me, staleTime: 0 })
     if (!me) {
-      throw new ApiError(401, 'Вход не сохранился: браузер не принял cookie сессии.')
+      throw new ApiError(401, 'Вход не сохранился, потому что браузер не принял cookie сессии.')
     }
   }
   return {

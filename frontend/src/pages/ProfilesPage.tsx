@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { Plus, RotateCcw, Save, Sparkles, Trash2 } from '../components/icons'
+import { Newspaper, Plus, RotateCcw, Save, Trash2 } from '../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
@@ -130,7 +130,7 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
             </Button>
             <Button
               variant="primary"
-              icon={<Sparkles size={15} />}
+              icon={<Newspaper size={15} />}
               disabled={Boolean(problem) || save.isPending}
               onClick={() =>
                 dirty || !stored

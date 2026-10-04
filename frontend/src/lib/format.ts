@@ -59,7 +59,7 @@ export function formatPostTime(iso: string, now: Date = new Date()): string {
 }
 
 export function formatPeriod(startIso: string, endIso: string): string {
-  return `${formatDate(startIso)} - ${formatDate(endIso)}`
+  return `${formatDate(startIso)} – ${formatDate(endIso)}`
 }
 
 /** Video length as a player shows it: 42_300 -> "0:42". */

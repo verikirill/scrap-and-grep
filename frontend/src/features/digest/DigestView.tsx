@@ -422,8 +422,7 @@ export function DigestView({ digest, previousId }: { digest: Digest; previousId?
 
       {digest.topics.length === 0 ? (
         <Card className="px-6 py-10 text-center text-sm text-muted-foreground">
-          За этот период по интересам профиля ничего не нашлось. Попробуйте период длиннее или
-          снизьте порог релевантности в настройках интересов.
+          За этот период по интересам профиля ничего не нашлось.
         </Card>
       ) : (
         <div className="space-y-7">

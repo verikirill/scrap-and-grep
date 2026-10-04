@@ -307,7 +307,7 @@ export function SourcesTable({ sources, isAdmin, canAdd }: Props) {
             </>
           )}
           <span className="mt-0.5 block text-xs text-outline">
-            Число у источника - публикаций всего, <span className="text-success">+N</span> за сутки.
+            Число у источника — публикаций всего, <span className="text-success">+N</span> за сутки.
             {!isAdmin &&
               (canAdd
                 ? ' Добавить можно любой сайт или канал; свои источники вы отключаете и удаляете сами.'

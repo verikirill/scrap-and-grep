@@ -191,8 +191,8 @@ export function ScheduleControl({
             />
           </label>
           <p className="text-xs text-muted-foreground">
-            Каждый выпуск берёт новости с прошлого раза: в понедельник по будням это все выходные.
-            Время по поясу {zone}.
+            Каждый выпуск берёт новости с прошлого раза, поэтому понедельничный выпуск по будням
+            захватывает и выходные. Время по поясу {zone}.
           </p>
           <ErrorNote error={save.error ?? remove.error} />
           <div className="flex flex-wrap justify-end gap-2">

@@ -52,7 +52,7 @@ function rangeLabel(range: DateRange | undefined): string {
   if (!range?.from) return 'Даты'
   const from = format(range.from, 'd MMM', { locale: ru })
   if (!range.to || range.to.getTime() === range.from.getTime()) return from
-  return `${from} - ${format(range.to, 'd MMM', { locale: ru })}`
+  return `${from} – ${format(range.to, 'd MMM', { locale: ru })}`
 }
 
 /** The whole of the last day of a range: a digest "to 20 September" includes the 20th. */

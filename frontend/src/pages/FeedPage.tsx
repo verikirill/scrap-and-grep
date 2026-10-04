@@ -3,11 +3,12 @@ import {
   ArrowUp,
   Bookmark,
   FileUp,
-  Psychology,
+  Layers,
   RefreshCw,
   Schedule,
   SlidersHorizontal,
-  Sparkles,
+  Search,
+  Target,
 } from '../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { useQueryClient } from '@tanstack/react-query'
@@ -45,7 +46,7 @@ import { useMediaQuery } from '../lib/useMediaQuery'
 // chosen is kept with the account and opens next time.
 const TABS = [
   { id: 'new', label: 'Новое', icon: Schedule },
-  { id: 'top', label: 'Важное', icon: Sparkles },
+  { id: 'top', label: 'Важное', icon: Target },
   { id: 'saved', label: 'Сохранённое', icon: Bookmark },
 ] as const
 type Tab = (typeof TABS)[number]['id']
@@ -284,17 +285,17 @@ export function FeedPage() {
               <SheetTrigger asChild>
                 <button
                   type="button"
-                  aria-label="Что лента знает о вас"
-                  title="Что лента знает о вас"
+                  aria-label="Из чего собрана лента"
+                  title="Из чего собрана лента"
                   className="state-layer relative inline-flex h-10 items-center gap-2 overflow-hidden rounded-full px-2.5 text-sm font-medium text-primary sm:px-4"
                 >
-                  <Psychology size={19} />
-                  <span className="hidden sm:inline">Что лента знает о вас</span>
+                  <Layers size={19} />
+                  <span className="hidden sm:inline">Из чего собрана лента</span>
                 </button>
               </SheetTrigger>
               <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto rounded-t-3xl">
                 <SheetHeader className="sr-only">
-                  <SheetTitle>Что лента знает о вас</SheetTitle>
+                  <SheetTitle>Из чего собрана лента</SheetTitle>
                   <SheetDescription>Интересы, резюме и выученные по отметкам темы</SheetDescription>
                 </SheetHeader>
                 <div className="p-4 pt-2">{tastePanel}</div>
@@ -366,10 +367,10 @@ export function FeedPage() {
 
           {tab !== 'saved' && taste.isSuccess && !knowsReader && (
             <Card className="p-5">
-              <h2 className="text-base font-semibold">Лента пока не знает, что вам интересно</h2>
+              <h2 className="text-base font-semibold">Интересы пока не заданы</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Ниже просто свежие публикации. Загрузите резюме или задайте интересы, и порядок
-                станет вашим.
+                Ниже свежие публикации по времени. Загрузите резюме или задайте интересы, чтобы
+                лента подбирала их под вас.
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <Link to="/welcome" className={buttonClass('primary', 'sm')}>
@@ -392,13 +393,11 @@ export function FeedPage() {
             <Card>
               {tab === 'saved' ? (
                 <EmptyState icon={<Bookmark size={22} />} title="Сохранённого пока нет">
-                  Кнопка «Сохранить» на карточке откладывает публикацию сюда и заодно говорит ленте,
-                  что тема вам важна.
+                  Здесь будут публикации, отложенные кнопкой «Сохранить».
                 </EmptyState>
               ) : (
-                <EmptyState icon={<Sparkles size={22} />} title="Подходящих публикаций не нашлось">
-                  За две недели по вашим интересам ничего не набралось. Проверьте, что источники
-                  опрашиваются, или расширьте интересы.
+                <EmptyState icon={<Search size={22} />} title="Подходящих публикаций не нашлось">
+                  За две недели по вашим интересам ничего не набралось.
                 </EmptyState>
               )}
             </Card>

@@ -52,7 +52,7 @@ export function ChannelCard({
   const { settings } = channel
   const schedule =
     settings.schedule.mode === 'interval'
-      ? `каждые ${settings.schedule.every_minutes} мин, ${settings.schedule.window_start}-${settings.schedule.window_end}`
+      ? `каждые ${settings.schedule.every_minutes} мин, ${settings.schedule.window_start}–${settings.schedule.window_end}`
       : settings.schedule.times.join(', ')
 
   const write = (publish: boolean) =>
@@ -192,7 +192,7 @@ export function ChannelCard({
         <SheetContent className="w-full overflow-y-auto rounded-l-[28px] p-6 data-[side=right]:w-full data-[side=right]:sm:max-w-xl">
           <SheetHeader className="p-0">
             <SheetTitle>{channel.title}</SheetTitle>
-            <SheetDescription>Как канал звучит, когда и о чём пишет.</SheetDescription>
+            <SheetDescription>Тон, ссылки, формат, расписание и отбор новостей.</SheetDescription>
           </SheetHeader>
           <ChannelSettingsForm
             key={channel.id}

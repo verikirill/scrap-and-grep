@@ -105,7 +105,7 @@ function Preview({
           </div>
         </div>
         <DialogDescription className="line-clamp-4 text-sm">
-          {spec.role || 'Роль не описана: профиль задан только интересами.'}
+          {spec.role || 'Роль не описана, профиль задан только интересами.'}
         </DialogDescription>
       </DialogHeader>
 
@@ -132,7 +132,7 @@ function Preview({
         </p>
       ) : (
         <p className="text-sm text-on-surface-variant">
-          Добавится ваша копия: её можно менять как угодно, у отправителя ничего не изменится.
+          Добавится ваша копия. Её можно менять как угодно, у отправителя ничего не изменится.
         </p>
       )}
       <ErrorNote error={error} />

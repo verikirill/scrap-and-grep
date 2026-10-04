@@ -4,11 +4,11 @@ import { Switch as SwitchPrimitive } from 'radix-ui'
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
-  AutoAwesome,
   Block,
   ChevronDown,
   LibraryAdd,
   RotateCcw,
+  SlidersHorizontal,
   TrendingDown,
   TrendingUp,
   Users,
@@ -261,7 +261,7 @@ export function AdaptationPanel({
     >
       <div className="flex items-start gap-3">
         <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-primary-container text-on-primary-container">
-          <AutoAwesome size={22} filled={isOn} />
+          <SlidersHorizontal size={22} filled={isOn} />
         </span>
         <div className="min-w-0 flex-1">
           <h2
@@ -270,14 +270,14 @@ export function AdaptationPanel({
             tabIndex={-1}
             className="font-semibold outline-none"
           >
-            Подстраивается под вас
+            Подстройка по отметкам
           </h2>
           <p id="adaptation-summary" className="mt-0.5 text-sm text-muted-foreground">
             {!isOn
-              ? 'Выключено: лента и выпуски берут профиль таким, как он записан.'
+              ? 'Выключена. Лента и выпуски берут профиль таким, как он записан.'
               : hasLearned && marks
                 ? `Отметки по темам профиля: «больше такого» ${amount(marks.positives)}, «меньше такого» ${amount(marks.negatives)}, пролистано ${marks.skipped}${data?.updated_at ? ` · пересчитано ${formatRelative(data.updated_at)}` : ''}`
-                : 'Отмечайте «больше такого» и «меньше такого» в ленте и выпусках: веса интересов и их смысл подстроятся, а новые темы появятся здесь предложениями.'}
+                : 'Отмечайте «больше такого» и «меньше такого» в ленте и выпусках. По отметкам подстроятся веса интересов, а новые темы появятся здесь предложениями.'}
           </p>
         </div>
         <M3Switch
@@ -357,9 +357,8 @@ export function AdaptationPanel({
                   ))}
                 </ul>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Вес интереса растёт, когда то, что он приносит, вам нравится, и падает, когда вы
-                  это отклоняете, но не больше чем на десятую часть. Смысл интереса сдвигается к
-                  статьям, которые вам понравились. Записанный профиль при этом не меняется.
+                  Вес интереса меняется по вашим отметкам, не больше чем на десятую часть, а смысл
+                  сдвигается к понравившимся статьям. Записанный профиль не меняется.
                 </p>
                 <div className="mt-3 flex justify-end">
                   <Button

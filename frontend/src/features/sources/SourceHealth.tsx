@@ -8,7 +8,7 @@ function Summary({ health }: { health: Health }) {
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
       <p className="text-sm">
-        <span className="font-semibold">Здоровье за сутки:</span>{' '}
+        <span className="font-semibold">Опросы за сутки:</span>{' '}
         {health.polls === 0 ? (
           'опросов ещё не было'
         ) : (
@@ -42,7 +42,7 @@ export function SourceHealth() {
       <Summary health={health.data} />
       {failing.length === 0 && silent.length === 0 && (
         <p className="text-sm text-muted-foreground">
-          Все источники читаются, и никто не молчит дольше обычного.
+          Ошибок нет, все источники публикуют в обычном темпе.
         </p>
       )}
       {failing.length > 0 && (
@@ -56,7 +56,7 @@ export function SourceHealth() {
                 <span className="font-medium">{item.name}</span>
                 <span className="text-muted-foreground">
                   {' '}
-                  - {kinds[item.kind ?? 'other'] ?? item.kind}, {item.failures}{' '}
+                  — {kinds[item.kind ?? 'other'] ?? item.kind}, {item.failures}{' '}
                   {plural(item.failures, ['неудача', 'неудачи', 'неудач'])} подряд
                   {item.since && `, последний удачный опрос ${formatRelative(item.since)}`}
                 </span>
@@ -68,7 +68,7 @@ export function SourceHealth() {
       {silent.length > 0 && (
         <section>
           <h3 className="mb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-            Молчат дольше обычного
+            Давно не публиковали
           </h3>
           <ul className="space-y-1 text-sm">
             {silent.map((item) => (
@@ -76,8 +76,8 @@ export function SourceHealth() {
                 <span className="font-medium">{item.name}</span>
                 <span className="text-muted-foreground">
                   {' '}
-                  - последняя публикация {formatRelative(item.last_article)}, а самая долгая пауза
-                  за месяц - {pause(item.longest_gap_hours)}
+                  — последняя публикация {formatRelative(item.last_article)}, а самая долгая пауза
+                  за месяц — {pause(item.longest_gap_hours)}
                 </span>
               </li>
             ))}

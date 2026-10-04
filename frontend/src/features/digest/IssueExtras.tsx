@@ -111,7 +111,7 @@ function ShiftPlan({ entries }: { entries: PlanEntry[] }) {
       <SectionHead
         icon={<ListOrdered size={18} />}
         title="План на смену"
-        note="Срочное из выпуска: сначала эксплуатируемые уязвимости, шаги взяты из карточек"
+        note="Срочное из выпуска, эксплуатируемые уязвимости первыми. Шаги взяты из карточек"
       />
       <ol className="mt-3 divide-y divide-outline-variant">
         {entries.map((entry, index) => (

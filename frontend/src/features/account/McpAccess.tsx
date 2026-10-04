@@ -20,7 +20,7 @@ function CopyButton({ text, label }: { text: string; label: string }) {
       setCopied(true)
       window.setTimeout(() => setCopied(false), 1600)
     } catch {
-      toast.error('Не получилось скопировать: выделите текст вручную')
+      toast.error('Не получилось скопировать, выделите текст вручную')
     }
   }
   return (
@@ -66,7 +66,7 @@ function NewKey({ created, url }: { created: NewMcpKey; url: string }) {
       className="flex flex-col gap-3 rounded-3xl bg-primary-container p-5 text-on-primary-container"
     >
       <p className="text-sm font-medium">
-        Ключ «{created.name}» готов. Скопируйте его сейчас: больше он показан не будет.
+        Ключ «{created.name}» готов. Скопируйте его сейчас, больше он показан не будет.
       </p>
       <Snippet text={created.token} label="Скопировать ключ" />
       <Tabs defaultValue="claude">
