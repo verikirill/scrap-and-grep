@@ -110,6 +110,8 @@ import GroupOutlineRoundedSvg from '~icons/material-symbols/group-outline-rounde
 import GroupRoundedSvg from '~icons/material-symbols/group-rounded'
 import HideImageOutlineRoundedSvg from '~icons/material-symbols/hide-image-outline-rounded'
 import HideImageRoundedSvg from '~icons/material-symbols/hide-image-rounded'
+import HelpOutlineRoundedSvg from '~icons/material-symbols/help-outline-rounded'
+import HelpRoundedSvg from '~icons/material-symbols/help-rounded'
 import HubOutlineRoundedSvg from '~icons/material-symbols/hub-outline-rounded'
 import HubRoundedSvg from '~icons/material-symbols/hub-rounded'
 import InfoOutlineRoundedSvg from '~icons/material-symbols/info-outline-rounded'
@@ -301,6 +303,7 @@ export const FilePen = /* @__PURE__ */ icon(EditDocumentOutlineRoundedSvg, EditD
 export const FileText = /* @__PURE__ */ icon(DescriptionOutlineRoundedSvg, DescriptionRoundedSvg)
 export const Heading2 = /* @__PURE__ */ icon(FormatH2OutlineRoundedSvg, FormatH2RoundedSvg)
 export const Heart = /* @__PURE__ */ icon(FavoriteOutlineRoundedSvg, FavoriteRoundedSvg)
+export const Help = /* @__PURE__ */ icon(HelpOutlineRoundedSvg, HelpRoundedSvg)
 export const ImageOff = /* @__PURE__ */ icon(HideImageOutlineRoundedSvg, HideImageRoundedSvg)
 export const Info = /* @__PURE__ */ icon(InfoOutlineRoundedSvg, InfoRoundedSvg)
 export const Italic = /* @__PURE__ */ icon(FormatItalicOutlineRoundedSvg, FormatItalicRoundedSvg)

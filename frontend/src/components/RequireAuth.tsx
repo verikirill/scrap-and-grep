@@ -37,7 +37,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
     return (
       <Splash>
         <ErrorNote error={me.error} />
-        <Button onClick={() => void me.refetch()}>Повторить</Button>
+        <Button onClick={() => void me.refetch()}>Повторить попытку</Button>
       </Splash>
     )
   }

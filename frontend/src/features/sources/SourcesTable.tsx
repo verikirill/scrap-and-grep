@@ -18,11 +18,14 @@ import {
   isProtected,
   matchesSource,
   queryWords,
+  KIND_HINTS,
   readVia,
+  viaHint,
 } from '../../lib/sourceList'
 import type { SourceGrouping, SourceOrder } from '../../lib/sourceList'
 import { SourceAvatar } from '../feed/SourceAvatar'
 import { DetectSourceForm } from './DetectSourceForm'
+import { SourcesLegend } from './SourcesLegend'
 
 const LANGUAGES = [
   { value: 'ru', label: 'Русский' },
@@ -35,7 +38,7 @@ function StatusDot({ source }: { source: Source }) {
   const title = failing
     ? `Ошибка: ${source.last_error ?? 'неизвестна'}`
     : never
-      ? 'Ещё не опрашивался'
+      ? 'Не опрашивался'
       : `Опрошен ${formatRelative(source.last_fetched_at as string)}`
   // The colour repeats what the line under the source name says in words.
   return (
@@ -85,7 +88,7 @@ function ArticleCount({ source }: { source: Source }) {
     <>
       <span title="Публикаций всего">{formatNumber(source.articles)}</span>
       {source.articles_last_day > 0 && (
-        <span className="ml-1.5 text-success" title="Публикаций за последние сутки">
+        <span className="ml-1.5 text-success" title="Публикаций за сутки">
           +{source.articles_last_day}
           <span className="sr-only"> за сутки</span>
         </span>
@@ -120,7 +123,7 @@ function AddSourceForm({ onDone, onAdded }: { onDone: () => void; onAdded: () =>
 
   const modes = (
     <Segmented
-      label="Что добавить"
+      label="Тип источника"
       value={mode}
       options={MODES}
       // An address of one kind means nothing to the other. A channel's short
@@ -151,7 +154,7 @@ function AddSourceForm({ onDone, onAdded }: { onDone: () => void; onAdded: () =>
           <input
             required={!isChannel}
             minLength={2}
-            placeholder={isChannel ? 'по умолчанию из канала' : undefined}
+            placeholder={isChannel ? 'определится автоматически' : undefined}
             className={INPUT_CLASS}
             value={form.name}
             onChange={(event) => setForm({ ...form, name: event.target.value })}
@@ -198,13 +201,13 @@ function AddSourceForm({ onDone, onAdded }: { onDone: () => void; onAdded: () =>
           onChange={(fetch_full_text) => setForm({ ...form, fetch_full_text })}
         />
         {isChannel
-          ? 'Открывать статьи, на которые ведут короткие посты'
+          ? 'Загружать статьи по ссылкам из коротких постов'
           : 'Загружать полный текст статей (если в ленте только анонс)'}
       </label>
       {isChannel && (
         <p id={termsId} className="max-w-2xl text-xs leading-relaxed text-outline">
-          Канал читается через открытую страницу t.me/s/канал, без аккаунта. Каналы с закрытым
-          веб-превью так не прочитать.
+          Канал читается через веб-страницу t.me/s/ без авторизации. Каналы с закрытым веб-превью
+          прочитать нельзя.
         </p>
       )}
       <ErrorNote error={create.error} />
@@ -250,9 +253,13 @@ function ReadBadges({ source }: { source: Source }) {
   const via = readVia(source)
   return (
     <>
-      {kind && <Chip className="max-sm:hidden">{kind}</Chip>}
+      {kind && (
+        <Chip hint={KIND_HINTS[source.kind]} className="max-sm:hidden">
+          {kind}
+        </Chip>
+      )}
       {via && (
-        <Chip tone="spark" title={via.note ?? undefined} className="max-sm:hidden">
+        <Chip tone="spark" hint={viaHint(via)} className="max-sm:hidden">
           {via.label}
         </Chip>
       )}
@@ -306,13 +313,13 @@ export function SourcesTable({ sources, isAdmin, canAdd }: Props) {
               из {sources.length} источников включено · опрос каждые 15 минут
             </>
           )}
-          <span className="mt-0.5 block text-xs text-outline">
-            Число у источника - публикаций всего, <span className="text-success">+N</span> за сутки.
-            {!isAdmin &&
-              (canAdd
-                ? ' Добавить можно любой сайт или канал; свои источники вы отключаете и удаляете сами.'
-                : ' Включает и отключает источники администратор.')}
-          </span>
+          {!isAdmin && (
+            <span className="mt-0.5 block text-xs text-outline">
+              {canAdd
+                ? 'Добавить можно любой сайт или канал. Добавленные вами источники вы отключаете и удаляете самостоятельно.'
+                : 'Включать и отключать источники может только администратор.'}
+            </span>
+          )}
         </p>
         <div className={clsx('flex gap-2', !canAdd && 'hidden')}>
           {/* The whole catalogue at once is the administrator's call. */}
@@ -338,7 +345,7 @@ export function SourcesTable({ sources, isAdmin, canAdd }: Props) {
             icon={<Plus size={15} />}
             onClick={() => setAdding(true)}
           >
-            Источник
+            Добавить источник
           </Button>
         </div>
       </div>
@@ -384,6 +391,8 @@ export function SourcesTable({ sources, isAdmin, canAdd }: Props) {
           {isSearching ? `Найдено ${found.length} из ${sources.length}` : ''}
         </p>
       </div>
+
+      <SourcesLegend />
 
       <ErrorNote error={toggle.error ?? remove.error ?? refreshOne.error ?? refreshAll.error} />
 
@@ -471,7 +480,9 @@ export function SourcesTable({ sources, isAdmin, canAdd }: Props) {
                 </div>
                 {/* On a phone the name needs the room more than these do. */}
                 <ReadBadges source={source} />
-                <Chip className="max-sm:hidden">{source.language.toUpperCase()}</Chip>
+                <Chip title="Язык публикаций" className="max-sm:hidden">
+                  {source.language.toUpperCase()}
+                </Chip>
                 <span className="tabular w-24 shrink-0 text-right text-xs text-muted-foreground max-sm:hidden">
                   <ArticleCount source={source} />
                 </span>

@@ -51,14 +51,14 @@ async def _load(
     """The reader's own digest; someone else's is reported as missing."""
     digest = await digest_store.get(session, digest_id, user_id=user.id, full=full)
     if digest is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Дайджест не найден.")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Выпуск не найден.")
     return digest
 
 
 async def _load_done(session: SessionDep, user: CurrentUser, digest_id: uuid.UUID) -> DigestView:
     digest = await _load(session, user, digest_id, full=True)
     if digest.status != digest_store.STATUS_DONE:
-        raise HTTPException(status.HTTP_409_CONFLICT, detail="Дайджест ещё не готов.")
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="Выпуск ещё не готов.")
     return digest_view(digest)
 
 
@@ -84,7 +84,7 @@ async def _ready_to_build(
     ):
         raise HTTPException(
             status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Уже собирается несколько выпусков. Дождитесь их завершения.",
+            detail="Уже собирается несколько выпусков. Дождитесь окончания текущих сборок.",
             headers={"Retry-After": "30"},
         )
     return profile
@@ -327,7 +327,7 @@ async def digest_events(
     # Ownership is checked before subscribing: the channel name is derived
     # from the id, and progress of someone else's build is not ours to relay.
     if await _status_event(digest_id, user.id) is None:
-        yield ServerSentEvent(event="error", data={"detail": "Дайджест не найден."})
+        yield ServerSentEvent(event="error", data={"detail": "Выпуск не найден."})
         return
     # Each open stream holds a subscription and polls the database; a reader
     # needs a couple, not hundreds. The counter expires on its own if a
@@ -344,7 +344,7 @@ async def digest_events(
         await anext(stream)
         current = await _status_event(digest_id, user.id)
         if current is None:
-            yield ServerSentEvent(event="error", data={"detail": "Дайджест не найден."})
+            yield ServerSentEvent(event="error", data={"detail": "Выпуск не найден."})
             return
         yield ServerSentEvent(event="progress", data=current)
         if current["status"] in _TERMINAL:

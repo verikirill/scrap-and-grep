@@ -73,9 +73,9 @@ export function ShareProfileButton({ profile }: { profile: Profile }) {
           <DialogHeader>
             <DialogTitle className="text-lg">Поделиться профилем</DialogTitle>
             <DialogDescription>
-              По ссылке откроется окно с этим профилем: название, роль, интересы и исключения.
-              Получатель решит, добавить ли копию себе. Ваши выпуски, отметки и резюме по ссылке не
-              видны.
+              По ссылке откроется карточка профиля: название, роль, интересы и исключения.
+              Получатель сможет добавить копию себе. Ваши выпуски, отметки и резюме останутся
+              скрыты.
             </DialogDescription>
           </DialogHeader>
 
@@ -105,8 +105,8 @@ export function ShareProfileButton({ profile }: { profile: Profile }) {
                 </Button>
               </div>
               <p className="text-xs text-on-surface-variant">
-                Ссылка отдаёт профиль таким, каким он будет в момент открытия. Копии, которые уже
-                добавили, остаются у получателей и после того, как вы закроете доступ.
+                Ссылка показывает профиль в актуальном виде на момент открытия. Добавленные копии
+                останутся у получателей, даже если вы закроете доступ.
               </p>
               <div className="flex flex-wrap justify-end gap-2">
                 <Button

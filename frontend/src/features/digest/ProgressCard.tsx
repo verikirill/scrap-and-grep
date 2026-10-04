@@ -36,7 +36,7 @@ export function ProgressCard({ digest, event }: Props) {
   const progress = Math.max(event?.progress ?? 0, digest.progress, 0.02)
   const current = stepIndex(stage)
   const isQueued = (event?.status ?? digest.status) === 'queued'
-  const stageLabel = isQueued ? 'В очереди' : (STAGE_LABELS[stage ?? 'prepare'] ?? 'Работаем')
+  const stageLabel = isQueued ? 'В очереди' : (STAGE_LABELS[stage ?? 'prepare'] ?? 'Обработка')
   const counter =
     event?.total && event.done !== null && event.done !== undefined
       ? `${event.done} из ${event.total}`

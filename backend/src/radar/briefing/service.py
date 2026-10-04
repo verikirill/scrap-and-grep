@@ -42,8 +42,8 @@ from radar.worker.brokers import MEDIA_IDLE_TIMEOUT_MS
 log = get_logger(__name__)
 
 GENERIC_FAILURE = "Не удалось озвучить брифинг. Попробуйте ещё раз."
-MANAGEMENT_ONLY = "Брифинг есть только у выпуска для руководства."
-NO_VOICE = "Голос на этом сервере не подключён."
+MANAGEMENT_ONLY = "Брифинг доступен только для выпуска в формате для руководства."
+NO_VOICE = "Синтез речи не подключён на этом сервере."
 # Lines sent to the voice service at once. It takes twelve, but on a CPU one
 # request of a whole brief outlasts its timeout; parts also move the progress.
 PART_LINES = 4

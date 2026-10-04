@@ -27,7 +27,7 @@ import {
 const SOURCE: Record<Suggestion['source'], string> = {
   likes: 'по вашим отметкам',
   similar_readers: 'читают коллеги с похожими интересами',
-  dislikes: 'по тому, что вы отклонили',
+  dislikes: 'по скрытым публикациям',
 }
 // The weight factor runs 0.9..1.1; the bar shows it around the middle.
 const FACTOR_SPAN = 0.1
@@ -92,7 +92,7 @@ function InterestRow({ item }: { item: InterestLearning }) {
   const marks = [
     item.positives > 0 && `«больше такого» ${amount(item.positives)}`,
     item.negatives > 0 && `«меньше такого» ${amount(item.negatives)}`,
-    item.skipped > 0 && `пролистано ${item.skipped}`,
+    item.skipped > 0 && `пропущено ${item.skipped}`,
   ].filter(Boolean)
   const Trend = item.weight >= item.stated_weight ? TrendingUp : TrendingDown
   return (
@@ -121,7 +121,7 @@ function InterestRow({ item }: { item: InterestLearning }) {
       <span className="col-span-2 text-xs text-muted-foreground">
         {marks.length > 0 ? marks.join(' · ') : 'отметок пока нет'}
         {item.drift >= 0.005 &&
-          ` · смысл сдвинут к понравившемуся на ${Math.round(item.drift * 100)}%`}
+          `· фокус сдвинут к понравившемуся на ${Math.round(item.drift * 100)}%`}
       </span>
     </li>
   )
@@ -156,7 +156,7 @@ function SuggestionCard({
       <p className="mt-1.5 font-semibold break-words">{suggestion.title}</p>
       {isExclusion ? (
         <p className="mt-1 text-sm text-muted-foreground">
-          Статьи с этим словом перестанут попадать в ленту и выпуски этого профиля.
+          Публикации с этим словом не попадут в ленту и выпуски по этому профилю.
         </p>
       ) : (
         suggestion.description && (
@@ -199,10 +199,10 @@ function SuggestionCard({
           size="sm"
           variant="ghost"
           disabled={isBusy || isLocked}
-          aria-label={`Не нужно: «${suggestion.title}»`}
+          aria-label={`Отклонить: «${suggestion.title}»`}
           onClick={() => onDecide(false)}
         >
-          Не нужно
+          Отклонить
         </Button>
         <Button
           size="sm"
@@ -274,10 +274,10 @@ export function AdaptationPanel({
           </h2>
           <p id="adaptation-summary" className="mt-0.5 text-sm text-muted-foreground">
             {!isOn
-              ? 'Выключено: лента и выпуски берут профиль таким, как он записан.'
+              ? 'Выключено: лента и выпуски используют профиль без изменений.'
               : hasLearned && marks
                 ? `Отметки по темам профиля: «больше такого» ${amount(marks.positives)}, «меньше такого» ${amount(marks.negatives)}, пролистано ${marks.skipped}${data?.updated_at ? ` · пересчитано ${formatRelative(data.updated_at)}` : ''}`
-                : 'Отмечайте «больше такого» и «меньше такого» в ленте и выпусках: веса интересов и их смысл подстроятся, а новые темы появятся здесь предложениями.'}
+                : 'Отмечайте публикации в ленте и выпусках: сервис подстроит веса интересов, а новые темы предложит здесь.'}
           </p>
         </div>
         <M3Switch
@@ -357,9 +357,9 @@ export function AdaptationPanel({
                   ))}
                 </ul>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Вес интереса растёт, когда то, что он приносит, вам нравится, и падает, когда вы
-                  это отклоняете, но не больше чем на десятую часть. Смысл интереса сдвигается к
-                  статьям, которые вам понравились. Записанный профиль при этом не меняется.
+                  Вес интереса растёт от положительных отметок и снижается от отрицательных (не
+                  больше чем на 10%). Фокус подстраивается под понравившиеся статьи, а сохранённый
+                  профиль не меняется.
                 </p>
                 <div className="mt-3 flex justify-end">
                   <Button
@@ -368,12 +368,14 @@ export function AdaptationPanel({
                     icon={<RotateCcw size={14} />}
                     isBusy={reset.isPending}
                     onClick={() => {
-                      if (window.confirm('Забыть всё, чему профиль научился по вашим отметкам?')) {
+                      if (
+                        window.confirm('Сбросить результаты адаптации профиля по вашим отметкам?')
+                      ) {
                         reset.mutate(profile.id)
                       }
                     }}
                   >
-                    Начать заново
+                    Сбросить обучение
                   </Button>
                 </div>
               </motion.div>

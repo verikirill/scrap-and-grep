@@ -1,89 +1,180 @@
+import { useState, type ReactNode } from 'react'
+
+import { Collapsible } from '../../components/Collapsible'
+import { Help } from '../../components/icons'
 import { Card, Chip } from '../../components/ui'
 import type { SourceHealth as Health } from '../../lib/api'
-import { formatNumber, formatRelative, pause, plural } from '../../lib/format'
+import { formatNumber, formatRelative, pause, plural, shareOfGood } from '../../lib/format'
 import { useSourceHealth } from '../../lib/queries'
 
+/** What each kind of failed poll means, for the hint on its chip. */
+const ERROR_HINTS: Record<string, string> = {
+  dns: 'Адрес сайта не находится в DNS: сайт закрылся, сменил домен или не работает DNS.',
+  tls: 'Сертификат сайта просрочен или ему нельзя доверять, поэтому соединение не установлено.',
+  refused: 'Сайт ответил отказом (401, 403 или 429): так обычно срабатывает защита от ботов.',
+  stub: 'Вместо страницы пришла проверка Cloudflare или DDoS-Guard.',
+  timeout: 'Сайт не ответил за отведённое время.',
+  connect: 'Соединение с сайтом не установилось или оборвалось.',
+  http: 'Сайт вернул ошибку, например 404 или 500.',
+  markup: 'Страница открылась, но статьи на ней больше не находятся: сайт сменил вёрстку.',
+  unsafe: 'Адрес ведёт во внутреннюю сеть: такие адреса сервис не читает.',
+  other: 'Ошибка другого рода: её текст виден в подсказке у источника.',
+}
+
+// Longer lists open on demand: twenty silent sources on a Sunday push the table off the screen.
+const SHOWN_AT_FIRST = 5
+
+/** The line that stays when the block is folded: is anything wrong at all. */
 function Summary({ health }: { health: Health }) {
-  const share = health.polls ? Math.round((health.ok / health.polls) * 100) : null
+  const share = health.polls ? (health.ok / health.polls) * 100 : null
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-      <p className="text-sm">
-        <span className="font-semibold">Здоровье за сутки:</span>{' '}
-        {health.polls === 0 ? (
-          'опросов ещё не было'
-        ) : (
-          <>
-            {formatNumber(health.polls)} {plural(health.polls, ['опрос', 'опроса', 'опросов'])},{' '}
-            <span className={share !== null && share < 90 ? 'text-destructive' : 'text-success'}>
-              {share}% успешных
-            </span>
-          </>
-        )}
-      </p>
-      {Object.entries(health.errors).map(([kind, count]) => (
-        <Chip key={kind} tone="danger" title="Неудачных опросов этого рода за сутки">
-          {health.kinds[kind] ?? kind}: {count}
-        </Chip>
-      ))}
+    <p className="text-sm">
+      <span className="font-semibold">Источники за сутки:</span>{' '}
+      {health.polls === 0 ? (
+        'опросов ещё не было'
+      ) : (
+        <>
+          {formatNumber(health.polls)} {plural(health.polls, ['опрос', 'опроса', 'опросов'])},{' '}
+          <span className={share !== null && share < 90 ? 'text-destructive' : 'text-success'}>
+            {shareOfGood(health.ok, health.polls)}% успешно
+          </span>
+        </>
+      )}
+      {health.failing.length > 0 && (
+        <span className="text-destructive"> · не читаются: {health.failing.length}</span>
+      )}
+      {health.silent.length > 0 && (
+        <span className="text-muted-foreground">
+          {' '}
+          · молчат дольше обычного: {health.silent.length}
+        </span>
+      )}
+    </p>
+  )
+}
+
+/** A list that shows its first rows and the rest on demand. */
+function ShortList<T>({ items, render }: { items: T[]; render: (item: T) => ReactNode }) {
+  const [isAll, setIsAll] = useState(false)
+  const shown = isAll ? items : items.slice(0, SHOWN_AT_FIRST)
+  return (
+    <>
+      <ul className="space-y-1 text-sm">{shown.map(render)}</ul>
+      {items.length > SHOWN_AT_FIRST && (
+        <button
+          type="button"
+          onClick={() => setIsAll((value) => !value)}
+          className="mt-1.5 text-xs font-medium text-primary hover:underline"
+        >
+          {isAll ? 'Показать первые ' + SHOWN_AT_FIRST : `Показать все ${items.length}`}
+        </button>
+      )}
+    </>
+  )
+}
+
+function SectionTitle({ title, note }: { title: string; note: string }) {
+  return (
+    <div className="mb-1.5">
+      <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+        {title}
+      </h3>
+      <p className="text-xs text-outline">{note}</p>
     </div>
   )
 }
 
 /**
- * How the sources are doing: the share of good polls in a day, the errors by
- * kind, the sources that fail and those silent longer than usual for them.
+ * How the sources are doing: the share of good polls in a day, why the others
+ * failed, the sources that fail and those silent longer than usual for them.
+ * Every part says what it counts; the hints only add the details.
  */
 export function SourceHealth() {
   const health = useSourceHealth()
   if (!health.data) return null
-  const { failing, silent, kinds } = health.data
+  const { errors, failing, silent, kinds } = health.data
+  const kindOf = (kind: string | null) => kinds[kind ?? 'other'] ?? kind ?? kinds.other
   return (
-    <Card className="mb-5 space-y-3 px-5 py-4">
-      <Summary health={health.data} />
-      {failing.length === 0 && silent.length === 0 && (
-        <p className="text-sm text-muted-foreground">
-          Все источники читаются, и никто не молчит дольше обычного.
-        </p>
-      )}
-      {failing.length > 0 && (
-        <section>
-          <h3 className="mb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-            Не читаются
-          </h3>
-          <ul className="space-y-1 text-sm">
-            {failing.map((item) => (
-              <li key={item.source_id} title={item.error ?? undefined}>
-                <span className="font-medium">{item.name}</span>
-                <span className="text-muted-foreground">
-                  {' '}
-                  - {kinds[item.kind ?? 'other'] ?? item.kind}, {item.failures}{' '}
-                  {plural(item.failures, ['неудача', 'неудачи', 'неудач'])} подряд
-                  {item.since && `, последний удачный опрос ${formatRelative(item.since)}`}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-      {silent.length > 0 && (
-        <section>
-          <h3 className="mb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-            Молчат дольше обычного
-          </h3>
-          <ul className="space-y-1 text-sm">
-            {silent.map((item) => (
-              <li key={item.source_id}>
-                <span className="font-medium">{item.name}</span>
-                <span className="text-muted-foreground">
-                  {' '}
-                  - последняя публикация {formatRelative(item.last_article)}, а самая долгая пауза
-                  за месяц - {pause(item.longest_gap_hours)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+    <Card className="mb-5 px-5 py-4">
+      <Collapsible
+        storageKey="source-health"
+        title="состояние источников"
+        head={<Summary health={health.data} />}
+      >
+        <div className="space-y-4 pt-3">
+          {Object.keys(errors).length > 0 && (
+            <section>
+              <SectionTitle
+                title="Почему опросы не прошли"
+                note="Сколько раз за сутки опрос закончился ошибкой каждого рода."
+              />
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(errors).map(([kind, count]) => (
+                  <Chip key={kind} tone="danger" hint={ERROR_HINTS[kind]}>
+                    {kindOf(kind)} - {count} {plural(count, ['раз', 'раза', 'раз'])}
+                  </Chip>
+                ))}
+              </div>
+            </section>
+          )}
+          {failing.length === 0 && silent.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              Все источники доступны и обновляются вовремя.
+            </p>
+          )}
+          {failing.length > 0 && (
+            <section>
+              <SectionTitle
+                title="Не читаются"
+                note="Несколько опросов подряд закончились ошибкой. Текст ошибки - при наведении на строку."
+              />
+              <ShortList
+                items={failing}
+                render={(item) => (
+                  <li
+                    key={item.source_id}
+                    title={item.error ?? undefined}
+                    className={item.error ? 'cursor-help' : undefined}
+                  >
+                    <span className="font-medium">{item.name}</span>
+                    <span className="text-muted-foreground">
+                      {' '}
+                      - {kindOf(item.kind)}: {item.failures}{' '}
+                      {plural(item.failures, ['опрос', 'опроса', 'опросов'])} подряд с ошибкой
+                      {item.since && `, последний удачный ${formatRelative(item.since)}`}
+                    </span>
+                    {item.error && (
+                      <Help size={14} className="ml-1 inline align-[-2px] text-outline" />
+                    )}
+                  </li>
+                )}
+              />
+            </section>
+          )}
+          {silent.length > 0 && (
+            <section>
+              <SectionTitle
+                title="Молчат дольше обычного"
+                note="Новых публикаций нет дольше, чем самая долгая пауза у источника за последний месяц."
+              />
+              <ShortList
+                items={silent}
+                render={(item) => (
+                  <li key={item.source_id}>
+                    <span className="font-medium">{item.name}</span>
+                    <span className="text-muted-foreground">
+                      {' '}
+                      - последняя публикация {formatRelative(item.last_article)}, а за месяц пауза
+                      не превышала{' '}
+                      {item.longest_gap_hours < 1 ? 'часа' : pause(item.longest_gap_hours)}
+                    </span>
+                  </li>
+                )}
+              />
+            </section>
+          )}
+        </div>
+      </Collapsible>
     </Card>
   )
 }

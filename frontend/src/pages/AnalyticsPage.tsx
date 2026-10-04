@@ -58,7 +58,7 @@ function Overview({ data, days }: { data: Analytics; days: number }) {
     return (
       <Card>
         <EmptyState icon={<AnalyticsIcon size={22} />} title="Событий за период пока нет">
-          Откройте ленту или выпуск: через минуту показы и отметки появятся здесь.
+          Откройте ленту или выпуск: показы и отметки появятся здесь в течение минуты.
         </EmptyState>
       </Card>
     )
@@ -70,7 +70,7 @@ function Overview({ data, days }: { data: Analytics; days: number }) {
       <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
         <Panel
           title="От показа к отметке"
-          hint="Пары «читатель и статья»: открытая дважды считается один раз. Увиденной считается и статья, открытая раньше, чем успел засчитаться показ."
+          hint="Пары «читатель и статья»: повторные открытия считаются один раз. Если статья открыта до фиксации показа, показ также засчитывается."
         >
           <Funnel totals={totals} />
         </Panel>
@@ -83,7 +83,7 @@ function Overview({ data, days }: { data: Analytics; days: number }) {
       </Panel>
       <Panel
         title="Места в ленте и выпусках"
-        hint="Тонкая линия поверх полосы: разброс, в котором доля открытий могла оказаться случайно. Если линии двух строк перекрываются, разница может быть случайной."
+        hint="Отрезок на полосе показывает доверительный интервал. Если отрезки пересекаются, разница между показателями может быть случайной."
       >
         <Slots slots={data.slots} />
       </Panel>
@@ -96,14 +96,14 @@ function Overview({ data, days }: { data: Analytics; days: number }) {
         </Panel>
         <Panel
           title="Подстройка профилей"
-          hint="Это разные читатели, а не эксперимент: разница подсказывает, но не доказывает."
+          hint="Группы состоят из разных читателей, это не A/B-тест: разница носит ориентировочный характер."
         >
           <Adaptation cohorts={data.adaptation} />
         </Panel>
       </div>
       <Panel
         title="Ранжирование ленты"
-        hint="Пока модель включена, читатели поделены на две постоянные группы: одна получает её порядок, другая остаётся на ручных весах. Сравнивать стоит только эти две строки."
+        hint="При активной модели читатели поделены на две постоянные группы: модельную и контрольную (на ручных весах). Сравнивать корректно только эти две строки."
       >
         <Ranker data={data} />
       </Panel>
@@ -134,7 +134,7 @@ export function AnalyticsPage() {
     <>
       <PageHeader
         title="Аналитика"
-        subtitle="Что читатели видели и что с этим делали: показы, открытия, отметки, выпуски. Только числа, без текстов и адресов."
+        subtitle="Активность читателей: показы, открытия, отметки и собранные выпуски. Только обезличенные числовые данные."
         actions={
           <>
             <label className="flex items-center gap-2.5 text-sm text-muted-foreground">
@@ -149,8 +149,8 @@ export function AnalyticsPage() {
       {analytics.data && !analytics.data.enabled ? (
         <Card>
           <EmptyState icon={<AnalyticsIcon size={22} />} title="События выключены">
-            Задайте RADAR_CLICKHOUSE_URL, и показы с отметками начнут записываться. В стеке docker
-            compose он задан по умолчанию.
+            Укажите RADAR_CLICKHOUSE_URL, чтобы включить запись показов и отметок. В docker compose
+            переменная задана по умолчанию.
           </EmptyState>
         </Card>
       ) : analytics.data ? (

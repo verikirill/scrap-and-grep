@@ -33,18 +33,18 @@ SILENT_AT_LEAST = timedelta(days=1)
 SILENT_HISTORY_DAYS = 30
 SILENT_MIN_ARTICLES = 5
 
-# The kinds of failure, as a reader calls them.
+# The kinds of failure, as a reader calls them: what happened to the site.
 ERROR_KINDS: dict[str, str] = {
-    "dns": "нет такого имени",
-    "tls": "сертификат",
-    "refused": "отказ сайта",
-    "stub": "заглушка защиты",
-    "timeout": "нет ответа",
+    "dns": "сайт не найден",
+    "tls": "ошибка сертификата",
+    "refused": "сайт не пускает бота",
+    "stub": "проверка на бота",
+    "timeout": "сайт не ответил вовремя",
     "connect": "нет соединения",
-    "http": "ошибка сервера",
-    "markup": "разметка изменилась",
-    "unsafe": "внутренний адрес",
-    "other": "другое",
+    "http": "ошибка на сайте",
+    "markup": "сменилась вёрстка",
+    "unsafe": "адрес во внутренней сети",
+    "other": "другая ошибка",
 }
 
 

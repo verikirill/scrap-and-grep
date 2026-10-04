@@ -33,7 +33,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <TriangleAlert size={22} className="text-destructive" />
           <p className="text-base font-medium">{this.props.title ?? 'Раздел не загрузился'}</p>
           <p className="text-sm text-muted-foreground">
-            Возможно, вышла новая версия сайта. Обновите страницу; если не поможет, попробуйте
+            Возможно, сервис обновился. Перезагрузите страницу; если ошибка повторится, попробуйте
             позже.
           </p>
           <div className="flex flex-wrap gap-2 pt-1">

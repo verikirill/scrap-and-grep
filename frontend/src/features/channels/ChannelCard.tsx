@@ -27,7 +27,7 @@ import { useProfiles } from '../../lib/queries'
 import { ChannelSettingsForm } from './ChannelSettingsForm'
 
 const LINK_LABEL = {
-  inline: 'ссылка словом',
+  inline: 'ссылка в тексте',
   button: 'кнопка',
   preview: 'карточка',
   none: 'без ссылки',
@@ -60,8 +60,8 @@ export function ChannelCard({
       { channelId: channel.id, publish },
       {
         onSuccess: () =>
-          toast.success(publish ? 'Пишем пост и сразу публикуем' : 'Пишем черновик', {
-            description: 'Он появится в очереди через несколько секунд.',
+          toast.success(publish ? 'Публикуем пост' : 'Создаём черновик', {
+            description: 'Пост появится в очереди через несколько секунд.',
           }),
       },
     )
@@ -132,7 +132,7 @@ export function ChannelCard({
             ? `следующий пост ${formatDateTime(channel.next_slot)} · ${schedule}`
             : channel.profile_id
               ? 'автопостинг выключен'
-              : 'выберите аудиторию, чтобы включить автопостинг'}
+              : 'Выберите аудиторию, чтобы включить автопостинг'}
         </p>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -156,7 +156,7 @@ export function ChannelCard({
             isBusy={create.isPending && !create.variables?.publish}
             onClick={() => write(false)}
           >
-            Черновик
+            Создать черновик
           </Button>
           <Button
             size="sm"
@@ -165,7 +165,7 @@ export function ChannelCard({
             isBusy={create.isPending && Boolean(create.variables?.publish)}
             onClick={() => write(true)}
           >
-            Пост сейчас
+            Опубликовать сейчас
           </Button>
           <Button
             size="sm"
@@ -192,7 +192,7 @@ export function ChannelCard({
         <SheetContent className="w-full overflow-y-auto rounded-l-[28px] p-6 data-[side=right]:w-full data-[side=right]:sm:max-w-xl">
           <SheetHeader className="p-0">
             <SheetTitle>{channel.title}</SheetTitle>
-            <SheetDescription>Как канал звучит, когда и о чём пишет.</SheetDescription>
+            <SheetDescription>Стиль текстов, расписание и тематика публикаций.</SheetDescription>
           </SheetHeader>
           <ChannelSettingsForm
             key={channel.id}

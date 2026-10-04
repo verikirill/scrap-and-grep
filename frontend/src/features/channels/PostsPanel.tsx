@@ -138,7 +138,7 @@ function PostRow({
                 icon={<PenLine size={14} />}
                 onClick={() => setEditing(true)}
               >
-                Править
+                Редактировать
               </Button>
             )}
             {post.status === 'draft' && (
@@ -176,7 +176,7 @@ function PostRow({
               <Button
                 size="sm"
                 variant="danger"
-                aria-label="Убрать пост"
+                aria-label="Удалить пост"
                 icon={<Trash2 size={14} />}
                 onClick={() => remove.mutate(post.id)}
               />
@@ -214,7 +214,7 @@ function PostRow({
               </p>
             ))}
             {post.status === 'composing' && (
-              <div className="space-y-2 pt-1" aria-label="Пост пишется">
+              <div className="space-y-2 pt-1" aria-label="Генерируем текст поста">
                 <div className="skeleton h-4 w-3/4" />
                 <div className="skeleton h-4 w-full" />
                 <div className="skeleton h-4 w-2/3" />
@@ -256,7 +256,7 @@ function PostRow({
                       { id: post.id, content, approve },
                       {
                         onSuccess: () => {
-                          toast.success(approve ? 'Сохранено и в очереди' : 'Черновик сохранён')
+                          toast.success(approve ? 'Пост добавлен в очередь' : 'Черновик сохранён')
                           setEditing(false)
                         },
                       },
@@ -288,7 +288,8 @@ export function PostsPanel({ channelId, channels }: { channelId?: string; channe
     return (
       <Card variant="outlined">
         <EmptyState icon={<Send size={22} />} title="Постов пока нет">
-          Нажмите «Пост сейчас» или «Черновик» у канала, или дождитесь расписания.
+          Создайте пост вручную («Опубликовать сейчас» или «Создать черновик») либо дождитесь
+          публикации по расписанию.
         </EmptyState>
       </Card>
     )

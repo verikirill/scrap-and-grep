@@ -84,20 +84,20 @@ export function Figures({
         before={previous?.readers}
       />
       <Figure
-        label="Увидено статей"
+        label="Показано статей"
         value={formatNumber(totals.seen)}
         now={totals.seen}
         before={previous?.seen}
       />
       <Figure
-        label="Открывают"
+        label="Доля открытий"
         value={formatPercent(totals.ctr)}
         now={totals.ctr}
         before={rateBefore(previous?.ctr)}
         isRate
       />
       <Figure
-        label="Отмечают «больше такого» или сохраняют"
+        label="Реакции «больше» и сохранения"
         value={formatPercent(totals.like_rate)}
         now={totals.like_rate}
         before={rateBefore(previous?.like_rate)}
@@ -110,10 +110,10 @@ export function Figures({
 export function Activity({ totals }: { totals: AnalyticsTotals }) {
   const decided = totals.suggestions_accepted + totals.suggestions_dismissed
   const items = [
-    ['В выдачах ленты', formatNumber(totals.served), 'статей'],
-    ['Выпусков собрано', formatNumber(totals.digests_built), ''],
-    ['Выпусков открыто', formatNumber(totals.digests_opened), ''],
-    ['Вызовов через MCP', formatNumber(totals.mcp_calls), ''],
+    ['Показано в ленте', formatNumber(totals.served), 'статей'],
+    ['Собрано выпусков', formatNumber(totals.digests_built), ''],
+    ['Открыто выпусков', formatNumber(totals.digests_opened), ''],
+    ['Запросов через MCP', formatNumber(totals.mcp_calls), ''],
     [
       'Предложений подстройки',
       decided ? `${totals.suggestions_accepted} из ${decided}` : '0',
@@ -137,16 +137,16 @@ export function Activity({ totals }: { totals: AnalyticsTotals }) {
 /** Seen, then opened, then marked: each step as a share of the first. */
 export function Funnel({ totals }: { totals: Rates }) {
   const steps = [
-    { label: 'Увидели', value: totals.seen, share: 1, tone: 'text-primary' },
-    { label: 'Открыли', value: totals.opened, share: totals.ctr, tone: 'text-primary' },
+    { label: 'Показано', value: totals.seen, share: 1, tone: 'text-primary' },
+    { label: 'Открыто', value: totals.opened, share: totals.ctr, tone: 'text-primary' },
     {
-      label: '«Больше такого» или сохранили',
+      label: '«Больше такого» и сохранения',
       value: totals.liked,
       share: totals.like_rate,
       tone: 'text-spark',
     },
     {
-      label: '«Меньше такого» или скрыли',
+      label: '«Меньше такого» и скрытия',
       value: totals.rejected,
       share: totals.reject_rate,
       tone: 'text-destructive',
@@ -176,10 +176,10 @@ export function Days({ daily }: { daily: Analytics['daily'] }) {
   const days = daily.map((day) => day.day)
   return (
     <div className="grid gap-6 lg:grid-cols-2">
-      <DayBars days={days} values={daily.map((day) => day.seen)} label="Увидено статей за день" />
+      <DayBars days={days} values={daily.map((day) => day.seen)} label="Показы статей по дням" />
       <RateLines
         days={days}
-        label="Доля открытий и отметок; дни, где увидено меньше 30, пропущены"
+        label="Доля открытий и отметок (дни менее чем с 30 показами пропущены)"
         series={[
           {
             label: 'открывают',
@@ -211,7 +211,7 @@ export function RateRows({
     <div className="space-y-3.5">
       <div className="hidden grid-cols-[minmax(0,15rem)_5rem_minmax(0,1fr)_5rem_4.5rem] gap-3 text-[11px] text-outline sm:grid">
         <span />
-        <span className="text-right">увидено</span>
+        <span className="text-right">показы</span>
         <span>доля открытий</span>
         <span className="text-right">открыли</span>
         <span className="text-right">«больше»</span>
@@ -227,7 +227,7 @@ export function RateRows({
           </div>
           <span className="text-right text-sm text-muted-foreground tabular-nums">
             {/* A phone has no header row: each number carries its name. */}
-            <span className="mr-1 text-xs text-outline sm:hidden">увидено</span>
+            <span className="mr-1 text-xs text-outline sm:hidden">показов</span>
             {formatNumber(rates.seen)}
           </span>
           <div className="col-span-2 sm:col-span-1">
@@ -259,9 +259,9 @@ export function RateRows({
 }
 
 const SLOT_LABELS: Record<string, [string, string]> = {
-  ranked: ['Лента по интересам', 'подобрано под читателя'],
-  explore: ['Что-то новое', 'каждое седьмое место'],
-  newest: ['Свежее', 'пока о читателе ничего не известно'],
+  ranked: ['Лента по интересам', 'с учётом интересов читателя'],
+  explore: ['Что-то новое', 'каждая 7-я карточка'],
+  newest: ['Свежее', 'пока профиль читателя не настроен'],
   saved: ['Сохранённое', 'вкладка «Сохранённое»'],
   digest: ['Выпуски', 'статьи в выпусках'],
 }
@@ -286,7 +286,7 @@ export function Sources({ data }: { data: Analytics }) {
       <div>
         <h3 className="mb-3 text-sm font-medium">Чаще открывают</h3>
         <RateRows
-          empty="Ни у одного источника пока нет 30 увиденных статей."
+          empty="Ни у одного источника пока нет 30 показов статей."
           rows={data.sources_best.map((row) => ({
             key: String(row.source_id),
             label: row.name,
@@ -342,7 +342,7 @@ export function Adaptation({ cohorts }: { cohorts: Analytics['adaptation'] }) {
       empty="Показов пока нет."
       rows={cohorts.map((row) => ({
         key: String(row.adaptive),
-        label: row.adaptive ? 'Профили подстраиваются' : 'Подстройка выключена',
+        label: row.adaptive ? 'С автоподстройкой' : 'Без автоподстройки',
         detail: `${formatNumber(row.readers)} ${plural(row.readers, ['читатель', 'читателя', 'читателей'])}`,
         rates: row,
       }))}
@@ -351,9 +351,9 @@ export function Adaptation({ cohorts }: { cohorts: Analytics['adaptation'] }) {
 }
 
 const VARIANT_LABELS: Record<string, [string, string]> = {
-  hand: ['Ручные веса', 'модель не включена'],
-  control: ['Ручные веса, контрольная группа', 'пока модель включена'],
-  learned: ['Обученная модель', 'её группа читателей'],
+  hand: ['Ручные веса', 'при выключенной модели'],
+  control: ['Ручные веса, контрольная группа', 'при включённой модели'],
+  learned: ['Обученная модель', 'группа обученной модели'],
 }
 
 const STATUS: Record<RankerRun['status'], { label: string; tone: 'ok' | 'neutral' | 'danger' }> = {
@@ -380,8 +380,8 @@ export function Ranker({ data }: { data: Analytics }) {
           <h3 className="text-sm font-medium">Ночные обучения</h3>
           <p className="mt-1 text-xs text-muted-foreground">
             {ranker.active
-              ? `Включена модель ${ranker.active}: её порядок получает ${formatPercent(ranker.share)} читателей.`
-              : `Сейчас у всех ручные веса. Модель включится, только если обгонит их на последних днях, и получит ${formatPercent(ranker.share)} читателей.`}
+              ? `Включена модель ${ranker.active}: её порядок выдачи получают ${formatPercent(ranker.share)} читателей.`
+              : `Сейчас ранжирование идёт по ручным весам. Модель включится, только если превзойдёт их по качеству на последних днях, и охватит ${formatPercent(ranker.share)} читателей.`}
           </p>
           {ranker.runs.length ? (
             <ul className="mt-3 divide-y divide-outline-variant">

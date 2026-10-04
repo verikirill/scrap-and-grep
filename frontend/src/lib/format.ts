@@ -172,3 +172,12 @@ export function pause(hours: number): string {
   if (hours < 48) return `${Math.round(hours)} ч`
   return `${Math.round(hours / 24)} дн.`
 }
+
+/**
+ * The share of good tries as a percent, never rounded up to 100 while some
+ * failed: 4 229 of 4 245 is «99,6», not «100».
+ */
+export function shareOfGood(ok: number, total: number): string {
+  if (ok >= total) return '100'
+  return (Math.floor((ok / total) * 1000) / 10).toLocaleString('ru-RU')
+}

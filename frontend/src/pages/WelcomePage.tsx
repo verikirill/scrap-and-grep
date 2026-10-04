@@ -62,8 +62,8 @@ function Review({ resume, suggestion, onReplace }: ReviewProps) {
       <Card className="p-6">
         <h2 className="text-base font-semibold">Профиль интересов</h2>
         <p className="mt-1 mb-5 text-sm text-muted-foreground">
-          Оставьте темы, которые нужны в работе. Ключевые слова, важность и исключения можно будет
-          поправить в разделе «Интересы».
+          Выберите темы, нужные для работы. Ключевые слова, важность и исключения можно настроить
+          позже в разделе «Интересы».
         </p>
         <SuggestionEditor spec={spec} kept={kept} onSpecChange={setSpec} onKeptChange={setKept} />
         <div className="mt-6 space-y-3">
@@ -116,8 +116,8 @@ export function WelcomePage() {
           : 'Расскажите о своей работе'}
       </h1>
       <p className="mt-2 mb-7 text-sm text-muted-foreground">
-        Загрузите резюме: ассистент определит специализацию и предложит темы новостей. Лента и
-        дайджесты будут подобраны под вас уже при первом открытии.
+        Загрузите резюме: сервис определит специализацию и предложит темы публикаций. Лента и
+        выпуски сразу подстроятся под ваши задачи.
       </p>
 
       <AnimatePresence mode="wait">
@@ -162,9 +162,9 @@ export function WelcomePage() {
             )}
             <p className="flex items-start gap-2 text-xs text-muted-foreground">
               <ShieldCheck size={15} className="mt-px shrink-0 text-success" />
-              Файл удаляется сразу после разбора. Имя, телефон, почта и адрес вырезаются до анализа;
-              в системе остаются должность, навыки и предложенные темы. Их можно стереть в разделе
-              «Аккаунт».
+              Файл удаляется сразу после обработки. Личные данные (имя, контакты, адрес) вырезаются
+              до анализа. В системе остаются только должность, навыки и темы - их можно удалить в
+              разделе «Аккаунт».
             </p>
           </motion.div>
         )}

@@ -247,7 +247,7 @@ class DigestNodes:
             verdict = Grade(
                 relevance=0,
                 interest_id=candidate.interest_id,
-                reason=f"Попадает под исключение «{candidate.excluded_by}».",
+                reason=f"Отклонено по исключению «{candidate.excluded_by}».",
             )
         else:
             verdict = await self._deps.intelligence.grade(candidate, profile)

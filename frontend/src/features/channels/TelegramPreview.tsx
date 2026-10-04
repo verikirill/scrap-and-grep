@@ -10,7 +10,7 @@ function Picture({ url }: { url: string }) {
     return (
       <div className="grid h-40 place-items-center bg-black/5 text-xs text-[#707579] dark:bg-white/5 dark:text-[#7f91a4]">
         <span className="flex items-center gap-1.5">
-          <ImageOff size={14} /> картинку не загрузить отсюда
+          <ImageOff size={14} /> Не удалось загрузить изображение
         </span>
       </div>
     )

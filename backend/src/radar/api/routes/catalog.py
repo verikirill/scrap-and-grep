@@ -114,7 +114,7 @@ async def _editable(
     if not _may_edit(source, user, settings):
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,
-            detail="Этот источник меняет администратор или тот, кто его добавил.",
+            detail="Редактировать источник может только автор или администратор.",
         )
     return source
 
@@ -243,7 +243,10 @@ async def detect_result(request_id: str, cache: CacheDep, _: CatalogWriter) -> D
     if answer is None:
         return DetectOut(status="pending")
     if not answer.get("ok"):
-        return DetectOut(status="done", error=str(answer.get("error") or "Адрес не прочитан."))
+        return DetectOut(
+            status="done",
+            error=str(answer.get("error") or "Не удалось прочитать данные по адресу."),
+        )
     return DetectOut.model_validate({"status": "done", "found": answer["found"]})
 
 
@@ -285,13 +288,13 @@ async def _channel(payload: SourceCreate) -> Source:
     except telegram.ChannelUnavailable as exc:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail=f"Канал @{name} не найден или закрыл веб-превью: так его читать нельзя.",
+            detail=f"Канал @{name} не найден или закрыл веб-превью.",
         ) from exc
     except MarkupChanged as exc:
         log.warning("channel_page_unreadable", channel=name, error=str(exc))
         raise HTTPException(
             status.HTTP_502_BAD_GATEWAY,
-            detail="t.me ответил страницей, в которой не нашлось постов канала.",
+            detail="По адресу t.me не найдены посты канала.",
         ) from exc
     except (httpx.HTTPError, OSError, UnsafeUrlError) as exc:
         log.warning("channel_check_failed", channel=name, error=type(exc).__name__)

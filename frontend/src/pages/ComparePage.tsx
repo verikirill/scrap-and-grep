@@ -28,7 +28,7 @@ const CHANGE_LABELS: Record<InterestChange['change'], string> = {
 const CHANGE_TONES = { added: 'ok', removed: 'danger', changed: 'spark' } as const
 
 function optionLabel(digest: DigestSummary): string {
-  // The two issues of one «Обеим аудиториям» build differ by audience alone.
+  // The two issues of one «Собрать оба выпуска» build differ by audience alone.
   const audience = digest.audience === 'management' ? ' · руководству' : ''
   return `${formatDateTime(digest.created_at)} · ${digest.profile_name} v${digest.profile_version}${audience} · ${digest.stats.selected ?? 0} публ.`
 }

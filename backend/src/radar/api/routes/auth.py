@@ -58,7 +58,7 @@ _DECODING = asyncio.Semaphore(2)
 _BAD_CREDENTIALS = "Неверная почта или пароль."
 _TOO_MANY_ATTEMPTS = HTTPException(
     status.HTTP_429_TOO_MANY_REQUESTS,
-    detail="Слишком много неудачных попыток входа, повторите через минуту.",
+    detail="Слишком много неудачных попыток входа. Попробуйте через минуту.",
     headers={"Retry-After": "60"},
 )
 
@@ -241,7 +241,7 @@ def _avatar_url(updated_at: datetime | None) -> str | None:
 async def set_avatar(request: Request, user: CurrentUser, session: SessionDep) -> AvatarOut:
     """Take a picture as the raw request body and keep a small square copy of it."""
     data = await read_limited(
-        request, AVATAR_MAX_BYTES, f"Картинка больше {AVATAR_MAX_BYTES // 1_000_000} МБ."
+        request, AVATAR_MAX_BYTES, f"Размер файла превышает {AVATAR_MAX_BYTES // 1_000_000} МБ."
     )
     try:
         # Decoding is CPU work: off the event loop, other requests keep moving,

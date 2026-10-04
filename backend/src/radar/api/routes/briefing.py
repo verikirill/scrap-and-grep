@@ -86,7 +86,7 @@ def _out(briefing: Briefing) -> BriefingOut:
 async def _management_digest(session: AsyncSession, user: AuthUser, digest_id: uuid.UUID) -> Digest:
     digest = await digest_store.get(session, digest_id, user_id=user.id)
     if digest is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Дайджест не найден.")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Выпуск не найден.")
     if digest.profile_spec.get("audience") != "management":
         raise HTTPException(status.HTTP_409_CONFLICT, detail=service.MANAGEMENT_ONLY)
     return digest
@@ -132,7 +132,7 @@ async def create_briefing(
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, detail=service.NO_VOICE)
     digest = await _management_digest(session, user, digest_id)
     if digest.status != digest_store.STATUS_DONE:
-        raise HTTPException(status.HTTP_409_CONFLICT, detail="Дайджест ещё не готов.")
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="Выпуск ещё не готов.")
     voice = payload.voice if payload is not None else None
     known = {item.id for item in await known_voices(cache)}
     # With no list at hand the voice is taken on trust: the worker falls back
@@ -145,7 +145,7 @@ async def create_briefing(
     if await service.count_active(session) >= settings.max_active_shorts:
         raise HTTPException(
             status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Сейчас озвучивается много брифингов. Попробуйте через пару минут.",
+            detail="Сервис синтеза речи перегружен. Попробуйте через пару минут.",
             headers={"Retry-After": "120"},
         )
     try:
@@ -153,14 +153,14 @@ async def create_briefing(
     except service.AlreadyMaking as exc:
         raise HTTPException(
             status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Уже озвучивается брифинг другого выпуска. Дождитесь, пока он будет готов.",
+            detail="Уже озвучивается брифинг для другого выпуска. Дождитесь его готовности.",
             headers={"Retry-After": "60"},
         ) from exc
     if briefing is None:
         # Another request for this digest got there first.
         running = await service.get(session, digest_id, user.id)
         if running is None:
-            raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Дайджест не найден.")
+            raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Выпуск не найден.")
         return _out(running)
     # The worker must find the row, so commit before the task is queued.
     await session.commit()
@@ -168,7 +168,7 @@ async def create_briefing(
         await make_briefing.kiq(str(briefing.id))
     except Exception as exc:
         log.exception("briefing_enqueue_failed", briefing_id=str(briefing.id))
-        await service.fail(briefing.id, "Очередь задач недоступна. Повторите позже.")
+        await service.fail(briefing.id, "Очередь задач недоступна. Попробуйте позже.")
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE, detail="Очередь задач недоступна."
         ) from exc

@@ -141,7 +141,7 @@ async def get_overview(
         log.warning("analytics_unavailable", error=f"{type(exc).__name__}: {exc}"[:300])
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Хранилище событий не отвечает, попробуйте через минуту.",
+            detail="Хранилище событий недоступно. Попробуйте через минуту.",
         ) from exc
     ids = {row["source_id"] for row in found["sources_best"] + found["sources_rejected"]}
     names = dict(

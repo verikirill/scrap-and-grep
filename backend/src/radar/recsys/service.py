@@ -898,9 +898,11 @@ async def personal_adjustments(
             continue
         note = ""
         if parts["avoid"] < 0 and abs(parts["avoid"]) > abs(learned):
-            note = "близко к тому, что вы скрыли"
+            note = "похоже на то, что вы скрыли"
         elif learned > 0 and "learned" in ranked.best:
-            note = f"похоже на отмеченное «{truncate(labels[ranked.best['learned']], 60)}»"
+            note = (
+                f"похоже на отмеченную публикацию «{truncate(labels[ranked.best['learned']], 60)}»"
+            )
         result[item.article_id] = Personal(delta=round(delta, 3), note=note)
     return result
 

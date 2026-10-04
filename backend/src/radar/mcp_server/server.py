@@ -39,7 +39,7 @@ from radar.text import content_tokens
 from radar.views import digest_summary, digest_view
 
 SCOPE = "news:read"
-TOO_MANY = "Слишком много запросов, повторите через минуту."
+TOO_MANY = "Слишком много запросов. Попробуйте через минуту."
 MAX_ITEMS = 50
 # A query word matches a word of the article that starts with its stem: the
 # word without its last two letters, the usual length of a Russian ending,

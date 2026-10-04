@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { durationWords, formatDuration, formatPostTime, inSentence, pause } from './format'
+import {
+  durationWords,
+  formatDuration,
+  formatPostTime,
+  inSentence,
+  pause,
+  shareOfGood,
+} from './format'
 
 describe('formatPostTime', () => {
   // 00:30 on 2 October in Moscow, still 1 October in UTC.
@@ -51,5 +58,13 @@ describe('pause', () => {
 describe('durationWords', () => {
   it('reads minutes under an hour and a half, hours above, whole hours past ten', () => {
     expect([52, 91, 120, 600].map(durationWords)).toEqual(['52 мин', '1,5 ч', '2 ч', '10 ч'])
+  })
+})
+
+describe('shareOfGood', () => {
+  it('does not round a share with failures up to a clean 100', () => {
+    expect(shareOfGood(4229, 4245)).toBe('99,6')
+    expect(shareOfGood(4244, 4245)).toBe('99,9')
+    expect(shareOfGood(4245, 4245)).toBe('100')
   })
 })

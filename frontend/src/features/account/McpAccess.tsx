@@ -66,7 +66,7 @@ function NewKey({ created, url }: { created: NewMcpKey; url: string }) {
       className="flex flex-col gap-3 rounded-3xl bg-primary-container p-5 text-on-primary-container"
     >
       <p className="text-sm font-medium">
-        Ключ «{created.name}» готов. Скопируйте его сейчас: больше он показан не будет.
+        Ключ «{created.name}» создан. Скопируйте его сейчас: посмотреть его снова будет нельзя.
       </p>
       <Snippet text={created.token} label="Скопировать ключ" />
       <Tabs defaultValue="claude">
@@ -120,8 +120,8 @@ export function McpAccess() {
         <div>
           <h2 className="text-base font-medium">Доступ для ИИ-ассистентов</h2>
           <p className="mt-1 text-sm text-on-surface-variant">
-            MCP-сервер отдаёт ассистенту вашу ленту, сохранённое, дайджесты и интересы. Ключ
-            открывает только ваши данные.
+            MCP-сервер открывает ассистенту доступ к вашей ленте, сохранённым статьям, выпускам и
+            интересам. Ключ действует только для ваших данных.
           </p>
         </div>
       </div>

@@ -25,11 +25,11 @@ export function ResumeProcessing({ usesModel, usesDocling }: Props) {
       </div>
       <h2 className="text-base font-semibold">Читаем резюме</h2>
       <p className="mt-1.5 max-w-sm text-sm text-muted-foreground">
-        {usesDocling ? 'Разбираем вёрстку документа, ' : 'Достаём текст, '}
+        {usesDocling ? 'Разбираем структуру документа,' : 'Извлекаем текст,'}
         убираем контакты и подбираем темы новостей.{' '}
         {usesModel
           ? 'С языковой моделью это занимает 10-30 секунд.'
-          : 'Без модели это занимает пару секунд.'}
+          : 'Без модели обработка занимает несколько секунд.'}
       </p>
     </Card>
   )

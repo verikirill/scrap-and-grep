@@ -81,18 +81,20 @@ async def detect(address: str, client: httpx.AsyncClient, selector: str | None =
     url = address if "://" in address else f"https://{address}"
     parts = urlsplit(url)
     if parts.scheme not in {"http", "https"} or not parts.hostname:
-        raise NotFound("Это не похоже на адрес сайта или Telegram-канала.")
+        raise NotFound("Не похоже на корректный адрес сайта или Telegram-канала.")
     async with Ladder(client) as ladder, Ladder(client, steps=LIGHT) as light:
         try:
             response = await ladder.get(url, expect="any")
         except UnresolvableHostError as exc:
-            raise NotFound("Такого сайта нет: имя не находится в DNS.") from exc
+            raise NotFound("Сайт не найден: доменное имя отсутствует в DNS.") from exc
         except UnsafeUrlError as exc:
-            raise NotFound("Адрес ведёт во внутреннюю сеть: такой источник читать нельзя.") from exc
+            raise NotFound(
+                "Адрес ведёт во внутреннюю сеть: добавление таких источников запрещено."
+            ) from exc
         except Blocked as exc:
-            raise NotFound(f"Сайт не отдал страницу ни одним способом: {exc}") from exc
+            raise NotFound(f"Не удалось загрузить страницу ни одним из способов: {exc}") from exc
         except httpx.HTTPError as exc:
-            raise NotFound(f"Сайт не ответил: {type(exc).__name__}.") from exc
+            raise NotFound(f"Сайт не ответил ({type(exc).__name__}).") from exc
         if response.status_code >= 400:
             raise NotFound(f"Сайт ответил {response.status_code}.")
         final = str(response.request.url)
@@ -107,8 +109,8 @@ async def detect(address: str, client: httpx.AsyncClient, selector: str | None =
             found = await _sitemap(light, final)
         if found is None:
             raise NotFound(
-                "На странице нет ни ленты, ни ссылок на статьи. Укажите CSS-селектор ссылок "
-                "или адрес раздела новостей."
+                "На странице нет ленты новостей или ссылок на статьи. "
+                "Укажите CSS-селектор ссылок или адрес новостного раздела."
             )
         if found.fetch_method is None:
             _note(found, ladder.first)
@@ -192,9 +194,9 @@ async def _channel(address: str, client: httpx.AsyncClient) -> Found:
     except ValueError as exc:
         raise NotFound(str(exc)) from exc
     except telegram.ChannelUnavailable as exc:
-        raise NotFound("Канал не найден или закрыл веб-превью: так его читать нельзя.") from exc
+        raise NotFound("Канал не найден или закрыл веб-превью.") from exc
     except (httpx.HTTPError, MarkupChanged, OSError) as exc:
-        raise NotFound("t.me не ответил или показал страницу без постов канала.") from exc
+        raise NotFound("Сервис t.me не ответил либо на странице нет постов канала.") from exc
     newest = sorted(feed.articles, key=lambda item: item.published_at, reverse=True)
     return Found(
         kind="telegram",
