@@ -393,8 +393,47 @@ export interface Digest extends DigestSummary {
   highlights: string[]
   /** Management only: what the period means for the company. */
   implications: string[]
+  /** The handwork the issue spares, by the rule it states. */
+  manual?: ManualWork | null
+  /** Specialist: the high-priority entries as a checklist for the shift. */
+  plan?: PlanEntry[]
+  /** Specialist: what became known about vulnerabilities of earlier issues. */
+  changes?: VulnerabilityChange[]
+  /** Management: entries per dataset tag, beside the previous issue's. */
+  numbers?: TagCount[]
+  numbers_title?: string
   topics: Topic[]
   rejected: DigestItem[]
+}
+
+export interface ManualWork {
+  headlines: number
+  entries: number
+  minutes: number
+  seconds: number | null
+}
+
+export interface PlanEntry {
+  headline: string
+  url: string
+  kind: RecordKind
+  steps: string[]
+  facts: string[]
+}
+
+export interface VulnerabilityChange {
+  id: string
+  headline: string
+  url: string
+  since: string
+  what: string[]
+}
+
+export interface TagCount {
+  tag: string
+  label: string
+  count: number
+  before: number | null
 }
 
 export interface PreviewItem {

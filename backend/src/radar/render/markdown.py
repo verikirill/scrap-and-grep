@@ -16,6 +16,7 @@ from radar.cards import (
     TAG_LABELS,
     defang,
 )
+from radar.digest_extras import Change, manual_line
 from radar.views import DigestView, ItemView
 
 MOSCOW = ZoneInfo("Europe/Moscow")
@@ -88,6 +89,7 @@ def front_matter(digest: DigestView) -> list[str]:
         "publications": stats.get("window_total", 0),
         "candidates": stats.get("candidates", 0),
         "entries": sum(len(topic.items) for topic in digest.topics),
+        "manual_minutes": digest.manual.minutes if digest.manual else None,
     }
     return ["---", *(f"{key}: {_yaml(value)}" for key, value in fields.items()), "---", ""]
 
@@ -219,6 +221,50 @@ def _left_out(digest: DigestView) -> list[str]:
     return [*lines, "", "</details>", ""]
 
 
+PLAN_TITLE = "План на смену"
+CHANGES_TITLE = "Что изменилось с прошлых выпусков"
+
+
+def manual_sentence(digest: DigestView) -> str:
+    """The handwork the issue spares, for its head; empty for an issue of nothing."""
+    return f"Вместо ручной работы: {manual_line(digest.manual)}." if digest.manual else ""
+
+
+def _plan(digest: DigestView) -> list[str]:
+    lines = [f"## {PLAN_TITLE}", ""]
+    for entry in digest.plan:
+        lines.append(f"- [ ] {_link(entry.headline, entry.url)}")
+        lines += [f"  - {_escape(step)}" for step in entry.steps]
+        if entry.facts:
+            lines.append(f"  - {_escape('; '.join(entry.facts))}")
+    return [*lines, ""]
+
+
+def change_line(change: Change) -> str:
+    return f"{'; '.join(change.what)} (в выпуске от {change.since:%d.%m.%Y} этого не было)"
+
+
+def _changes(digest: DigestView) -> list[str]:
+    lines = [f"## {CHANGES_TITLE}", ""]
+    lines += [
+        f"- **{_escape(change.id)}**, {_link(change.headline, change.url)}: "
+        f"{_escape(change_line(change))}"
+        for change in digest.changes
+    ]
+    return [*lines, ""]
+
+
+def _numbers(digest: DigestView) -> list[str]:
+    before = any(row.before is not None for row in digest.numbers)
+    lines = [f"## {digest.numbers_title}", ""]
+    lines.append("| Признак | Записей |" + (" В прошлом выпуске |" if before else ""))
+    lines.append("|---|---|" + ("---|" if before else ""))
+    for row in digest.numbers:
+        tail = f" {row.before} |" if before else ""
+        lines.append(f"| {_cell(row.label)} | {row.count} |{tail}")
+    return [*lines, ""]
+
+
 def render_markdown(digest: DigestView) -> str:
     title = digest.title or f"Дайджест для профиля «{digest.profile_name}»"
     management = digest.profile.audience == "management"
@@ -233,6 +279,9 @@ def render_markdown(digest: DigestView) -> str:
         ("Содержание", contents),
         ("Что это значит для нас", implications),
         ("Главное", bool(digest.highlights)),
+        (PLAN_TITLE, bool(digest.plan)),
+        (CHANGES_TITLE, bool(digest.changes)),
+        (digest.numbers_title, bool(digest.numbers)),
     ):
         if present:
             gitlab_anchor(fixed, seen)
@@ -251,6 +300,8 @@ def render_markdown(digest: DigestView) -> str:
         f"**Сформирован:** {format_datetime(digest.finished_at or digest.created_at)} МСК",
         "",
     ]
+    if digest.manual:
+        lines += [f"*{_escape(manual_sentence(digest))}*", ""]
     if contents:
         lines += ["## Содержание", ""]
         lines += [
@@ -266,6 +317,12 @@ def render_markdown(digest: DigestView) -> str:
         lines += ["## Главное", ""]
         lines += [f"- {_escape(highlight)}" for highlight in digest.highlights]
         lines.append("")
+    if digest.plan:
+        lines += _plan(digest)
+    if digest.changes:
+        lines += _changes(digest)
+    if digest.numbers:
+        lines += _numbers(digest)
     if not digest.topics:
         lines += ["За выбранный период публикаций по интересам профиля не найдено.", ""]
     for heading, topic in zip(headings, digest.topics, strict=True):

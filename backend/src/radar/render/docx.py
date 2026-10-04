@@ -11,7 +11,17 @@ from docx.shared import Pt, RGBColor
 from docx.text.paragraph import Paragraph
 
 from radar.cards import TAG_LABELS, defang
-from radar.render.markdown import card_rows, format_date, format_datetime, item_meta, methodology
+from radar.render.markdown import (
+    CHANGES_TITLE,
+    PLAN_TITLE,
+    card_rows,
+    change_line,
+    format_date,
+    format_datetime,
+    item_meta,
+    manual_sentence,
+    methodology,
+)
 from radar.views import DigestView, ItemView
 
 _LINK_COLOR = "1F5FBF"
@@ -91,6 +101,38 @@ def _item(document: Document, item: ItemView) -> None:  # type: ignore[valid-typ
             add_hyperlink(also, duplicate.url, duplicate.source_name)
 
 
+def _extras(document: Document, digest: DigestView) -> None:  # type: ignore[valid-type]
+    """The plan for the shift, what changed and the period in numbers, as in Markdown."""
+    if digest.plan:
+        document.add_heading(PLAN_TITLE, level=1)  # type: ignore[attr-defined]
+        for entry in digest.plan:
+            paragraph = document.add_paragraph("☐ ")  # type: ignore[attr-defined]
+            add_hyperlink(paragraph, entry.url, entry.headline, bold=True)
+            for step in entry.steps:
+                document.add_paragraph(step, style="List Bullet")  # type: ignore[attr-defined]
+            if entry.facts:
+                _muted(document.add_paragraph(), "; ".join(entry.facts))  # type: ignore[attr-defined]
+    if digest.changes:
+        document.add_heading(CHANGES_TITLE, level=1)  # type: ignore[attr-defined]
+        for change in digest.changes:
+            paragraph = document.add_paragraph(style="List Bullet")  # type: ignore[attr-defined]
+            paragraph.add_run(f"{change.id}, ").bold = True
+            add_hyperlink(paragraph, change.url, change.headline)
+            paragraph.add_run(f": {change_line(change)}")
+    if digest.numbers:
+        document.add_heading(digest.numbers_title, level=1)  # type: ignore[attr-defined]
+        before = any(row.before is not None for row in digest.numbers)
+        header = ["Признак", "Записей", *(["В прошлом выпуске"] if before else [])]
+        table = document.add_table(rows=1, cols=len(header))  # type: ignore[attr-defined]
+        table.style = "Table Grid"
+        for cell, text in zip(table.rows[0].cells, header, strict=True):
+            cell.text = text
+        for row in digest.numbers:
+            values = [row.label, str(row.count), *([str(row.before)] if before else [])]
+            for cell, text in zip(table.add_row().cells, values, strict=True):
+                cell.text = text
+
+
 def render_docx(digest: DigestView) -> bytes:
     document = Document()
     style = document.styles["Normal"]
@@ -104,6 +146,8 @@ def render_docx(digest: DigestView) -> bytes:
         f"Период: {format_date(digest.period_start)} - {format_date(digest.period_end)} · "
         f"Сформирован: {format_datetime(digest.finished_at or digest.created_at)} МСК",
     )
+    if digest.manual:
+        document.add_paragraph().add_run(manual_sentence(digest)).italic = True
 
     if digest.profile.audience == "management" and digest.implications:
         document.add_heading("Что это значит для нас", level=1)
@@ -113,6 +157,7 @@ def render_docx(digest: DigestView) -> bytes:
         document.add_heading("Главное", level=1)
         for highlight in digest.highlights:
             document.add_paragraph(highlight, style="List Bullet")
+    _extras(document, digest)
     if not digest.topics:
         document.add_paragraph("За выбранный период публикаций по интересам профиля не найдено.")
 

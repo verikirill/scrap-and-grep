@@ -8,6 +8,17 @@ from pydantic import BaseModel, model_validator
 
 from radar.cards import TAG_LABELS, attack_rows, priority_reason, reference_rows, vulnerability_rows
 from radar.db.models import Digest, DigestItem
+from radar.digest_extras import (
+    Change,
+    ManualWork,
+    PlanEntry,
+    TagCount,
+    manual_work,
+    numbers_title,
+    period_numbers,
+    shift_plan,
+    stored_changes,
+)
 from radar.domain import (
     AttackCard,
     Audience,
@@ -125,6 +136,27 @@ class DigestView(DigestSummaryView):
     implications: list[str] = []
     topics: list[TopicView]
     rejected: list[ItemView]
+    # Worked out from the entries, never by the model (radar.digest_extras):
+    # the handwork the issue spares; for a specialist the plan for the shift and
+    # what changed since earlier issues; for management the period in numbers.
+    manual: ManualWork | None = None
+    plan: list[PlanEntry] = []
+    changes: list[Change] = []
+    numbers: list[TagCount] = []
+    numbers_title: str = ""
+
+    @model_validator(mode="after")
+    def _extras(self) -> Self:
+        selected = [item for topic in self.topics for item in topic.items]
+        self.manual = manual_work(self.stats)
+        if self.profile.audience == "management":
+            before = self.stats.get("tags_before")
+            self.numbers = period_numbers(selected, before if isinstance(before, dict) else None)
+            self.numbers_title = numbers_title(self.period_start, self.period_end)
+        else:
+            self.plan = shift_plan(selected)
+            self.changes = stored_changes(self.stats.get("changes"))
+        return self
 
 
 # The fetch ladder's steps above a plain request, as an entry names them.
