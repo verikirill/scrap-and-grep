@@ -32,7 +32,7 @@ export function LogoMark({ size = 40, className }: { size?: number; className?: 
 export function Wordmark({ className }: { className?: string }) {
   return (
     <span className={cn('font-semibold tracking-tight', className)}>
-      Tail<span className="text-primary">&amp;</span>Grep
+      Scrap<span className="text-primary">&amp;</span>Grep
     </span>
   )
 }

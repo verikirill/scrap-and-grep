@@ -107,7 +107,7 @@ class Settings(BaseSettings):
     # Ingestion
     ingest_cron: str = "*/15 * * * *"
     http_timeout_seconds: float = 20.0
-    http_user_agent: str = "TailGrepBot/0.1 (+hackathon prototype)"
+    http_user_agent: str = "ScrapGrepBot/0.1 (+hackathon prototype)"
     fulltext_concurrency: int = 4
     max_feed_bytes: int = 8_000_000
     allow_private_feed_hosts: bool = False

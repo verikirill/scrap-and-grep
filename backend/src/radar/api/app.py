@@ -103,7 +103,7 @@ def _route_template(request: Request) -> str:
 def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(
-        title="Tail&Grep: дайджесты ИТ и ИБ",
+        title="Scrap&Grep: дайджесты ИТ и ИБ",
         version="0.1.0",
         lifespan=lifespan,
         docs_url="/api/docs",

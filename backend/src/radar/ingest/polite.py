@@ -34,7 +34,7 @@ ROBOTS_MAX_BYTES = 500_000
 # A site that holds a bot's connection open would hold the run up for it.
 ROBOTS_TIMEOUT_SECONDS = 5.0
 # The name robots.txt rules are matched against.
-ROBOTS_AGENT = "TailGrepBot"
+ROBOTS_AGENT = "ScrapGrepBot"
 
 
 class HostResting(httpx.HTTPError):

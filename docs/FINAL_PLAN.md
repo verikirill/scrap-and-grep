@@ -55,7 +55,7 @@
 
 ### П2. Презентация
 
-Есть: `docs/presentation/tailgrep.pdf` и исходник `slides.html`, 12 слайдов, ссылка в README.
+Есть: `docs/presentation/scrapgrep.pdf` и исходник `slides.html`, 12 слайдов, ссылка в README.
 
 Осталось:
 - слайд о том, что появилось 4 октября: план на смену, «Наши системы», брифинг голосом;

@@ -23,7 +23,7 @@ from radar.shorts.model import (
 )
 from radar.shorts.speech import clean
 
-BRAND = "Tail&Grep"
+BRAND = "Scrap&Grep"
 # Dates are shown on the calendar the interface uses.
 MOSCOW = ZoneInfo("Europe/Moscow")
 _VOWELS = frozenset("аеёиоуыэюяaeiouy")

@@ -100,7 +100,7 @@ def test_retry_after_is_read_in_seconds_and_as_a_date() -> None:
     ("answer", "verdict"),
     [
         (httpx.Response(200, text="User-agent: *\nDisallow: /feed\n"), False),
-        (httpx.Response(200, text="User-agent: TailGrepBot\nAllow: /\n"), True),
+        (httpx.Response(200, text="User-agent: ScrapGrepBot\nAllow: /\n"), True),
         (httpx.Response(404), True),
         (httpx.Response(500), None),
     ],

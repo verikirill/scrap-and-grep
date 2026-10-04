@@ -4,7 +4,7 @@
 # ///
 """Prepare the account the demo is shown from (docs/DEMO.md, «Подготовка»).
 
-    uv run scripts/demo_prep.py --email demo@tailgrep.local --password '...' --fresh
+    uv run scripts/demo_prep.py --email demo@scrapgrep.local --password '...' --fresh
 
 The account is registered if it does not exist and gets the four example
 profiles. Then three digests are built on the model the stack runs, each over

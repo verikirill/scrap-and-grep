@@ -48,7 +48,7 @@ export function ShareProfileButton({ profile }: { profile: Profile }) {
     try {
       await navigator.share({
         title: profile.spec.name,
-        text: 'Профиль интересов в Tail&Grep',
+        text: 'Профиль интересов в Scrap&Grep',
         url,
       })
     } catch {

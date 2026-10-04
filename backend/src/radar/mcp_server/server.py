@@ -48,7 +48,7 @@ MAX_ITEMS = 50
 MIN_STEM = 4
 
 mcp = MCPServer(
-    "Tail&Grep",
+    "Scrap&Grep",
     instructions=(
         "Новости ИТ и информационной безопасности, подобранные под этого читателя: "
         "его персональная лента, сохранённые статьи, его дайджесты и интересы. "
@@ -109,7 +109,7 @@ def _reader() -> uuid.UUID:
     """The owner of the key the request came with."""
     token = get_access_token()
     if token is None:
-        raise PermissionError("Нужен ключ доступа Tail&Grep.")
+        raise PermissionError("Нужен ключ доступа Scrap&Grep.")
     return uuid.UUID(token.client_id)
 
 
@@ -269,7 +269,7 @@ class KeyAuth:
                 reader = await keys.owner(session, token)
         if reader is None:
             response = JSONResponse(
-                {"error": "invalid_token", "detail": "Нужен действующий ключ доступа Tail&Grep."},
+                {"error": "invalid_token", "detail": "Нужен действующий ключ доступа Scrap&Grep."},
                 status_code=401,
                 headers={"WWW-Authenticate": 'Bearer realm="tail-and-grep"'},
             )

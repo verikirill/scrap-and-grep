@@ -1,6 +1,6 @@
 {
-  "name": "Tail&Grep",
-  "short_name": "Tail&Grep",
+  "name": "Scrap&Grep",
+  "short_name": "Scrap&Grep",
   "description": "Новости ИТ и ИБ под вашу работу: дайджесты, лента, видео и каналы",
   "lang": "ru",
   "start_url": "/",
