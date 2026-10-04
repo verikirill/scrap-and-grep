@@ -158,7 +158,7 @@ export function BuildPanel({ profiles, initialProfileId, isBuilding = false, onC
                 className={clsx(
                   'group relative isolate flex items-start gap-3 rounded-2xl p-3.5 text-left transition-colors duration-300',
                   isActive
-                    ? 'text-on-primary-container'
+                    ? 'text-primary-foreground'
                     : 'bg-surface-container-low text-on-surface ring-1 ring-outline-variant ring-inset hover:bg-surface-container',
                 )}
               >
@@ -166,7 +166,7 @@ export function BuildPanel({ profiles, initialProfileId, isBuilding = false, onC
                 {isActive && (
                   <motion.span
                     layoutId="profile-highlight"
-                    className="absolute inset-0 -z-10 bg-primary-container ring-2 ring-primary ring-inset"
+                    className="absolute inset-0 -z-10 bg-primary shadow-elevation-1"
                     style={{ borderRadius: 16 }}
                     transition={SPRING}
                   />
@@ -202,7 +202,6 @@ export function BuildPanel({ profiles, initialProfileId, isBuilding = false, onC
                       animate={{ scale: 1, opacity: 1 }}
                       exit={{ scale: 0.4, opacity: 0 }}
                       transition={SPRING}
-                      className="text-primary"
                     >
                       <CircleCheck size={22} filled />
                     </motion.span>
