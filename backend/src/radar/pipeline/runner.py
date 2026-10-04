@@ -48,7 +48,7 @@ async def report_failure(
     reader gets only the kind of failure, because driver messages can name
     internal hosts.
     """
-    error = f"Сборка прервалась ({type(exc).__name__}). Подробности в журнале сервиса."
+    error = f"Сборка прервана ({type(exc).__name__}). Подробности в журнале сервиса."
     async with session_scope() as session:
         await digest_store.mark_failed(session, digest_id, error)
     await (cache or get_cache()).publish(

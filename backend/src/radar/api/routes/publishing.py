@@ -30,7 +30,7 @@ _limit = Depends(
 )
 EDITABLE = (publishing_service.DRAFT, publishing_service.QUEUED, publishing_service.FAILED)
 TELEGRAM_HOST = "api.telegram.org"
-DISABLED_MESSAGE = "Публикация выключена: задайте RADAR_SECRET_KEY, чтобы хранить токены ботов."
+DISABLED_MESSAGE = "Публикация отключена: укажите RADAR_SECRET_KEY для хранения токенов ботов."
 
 
 class BotIn(BaseModel):
@@ -124,11 +124,11 @@ def _refused(exc: Exception) -> HTTPException:
     if isinstance(exc, TokenUnreadable):
         return HTTPException(
             status.HTTP_409_CONFLICT,
-            detail="Токен бота сохранён под другим RADAR_SECRET_KEY: добавьте бота заново.",
+            detail="Токен бота был зашифрован с другим RADAR_SECRET_KEY. Добавьте бота заново.",
         )
     if isinstance(exc, TelegramUnavailable):
         return HTTPException(
-            status.HTTP_502_BAD_GATEWAY, detail="Telegram не ответил. Повторите через минуту."
+            status.HTTP_502_BAD_GATEWAY, detail="Telegram API не отвечает. Попробуйте через минуту."
         )
     return HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(exc))
 
@@ -294,7 +294,7 @@ async def create_bot(
 ) -> BotOut:
     count = await session.scalar(select(func.count()).where(TelegramBot.user_id == user.id))
     if (count or 0) >= settings.max_bots_per_user:
-        raise HTTPException(status.HTTP_409_CONFLICT, detail="Ботов уже слишком много.")
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="Достигнут лимит ботов.")
     try:
         bot = await add_bot(session, user.id, payload.token)
     except (PublishingRefused, SecretKeyMissing, TelegramUnavailable) as exc:
@@ -327,7 +327,7 @@ async def create_channel(
 ) -> ChannelOut:
     count = await session.scalar(select(func.count()).where(TelegramChannel.user_id == user.id))
     if (count or 0) >= settings.max_channels_per_user:
-        raise HTTPException(status.HTTP_409_CONFLICT, detail="Каналов уже слишком много.")
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="Достигнут лимит каналов.")
     bot = await _bot(session, user, payload.bot_id)
     if payload.profile_id is not None:
         await _own_profile(session, user, payload.profile_id)
@@ -428,7 +428,9 @@ async def update_post(
 ) -> PostOut:
     post = await _post(session, user, post_id, lock=True)
     if post.status not in EDITABLE:
-        raise HTTPException(status.HTTP_409_CONFLICT, detail="Этот пост уже нельзя изменить.")
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, detail="Этот пост уже нельзя отредактировать."
+        )
     if payload.content is not None:
         if payload.content.problems():
             raise HTTPException(
@@ -463,9 +465,13 @@ async def delete_post(post_id: uuid.UUID, session: SessionDep, user: CurrentUser
     """Drop a post that is not out yet; a sent one stays in the history."""
     post = await _post(session, user, post_id, lock=True)
     if post.status in {publishing_service.SENT, publishing_service.SENDING}:
-        raise HTTPException(status.HTTP_409_CONFLICT, detail="Отправленный пост не удаляется.")
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="Опубликованный пост нельзя удалить.")
     # A slot post is kept as skipped, so the planner does not plan it again.
     if post.slot_at is not None:
-        post.status, post.content, post.error = publishing_service.SKIPPED, None, "Отменён вручную."
+        post.status, post.content, post.error = (
+            publishing_service.SKIPPED,
+            None,
+            "Отменён пользователем.",
+        )
     else:
         await session.delete(post)

@@ -104,12 +104,12 @@ function ItemCard({ item, index, placement, reactions, onReact }: ItemCardProps)
       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
         <span className="font-medium text-foreground">{item.source_name}</span>
         {item.source_read_via && (
-          <Chip tone="spark" title="Сайт не пускает бота, источник читается этим способом">
+          <Chip tone="spark" title="Сайт блокирует бота. Читаем страницу в обход защиты">
             {item.source_read_via}
           </Chip>
         )}
         {item.ours && item.ours.length > 0 && (
-          <Chip tone="ok" title="Запись называет системы из вашего профиля">
+          <Chip tone="ok" title="В записи упомянуты системы из вашего профиля">
             касается нас: {item.ours.join(', ')}
           </Chip>
         )}
@@ -142,14 +142,14 @@ function ItemCard({ item, index, placement, reactions, onReact }: ItemCardProps)
       <EntryDetails item={item} />
       {item.why && (
         <p className="mt-2.5 border-l-2 border-spark pl-3 text-sm text-muted-foreground">
-          <span className="font-medium text-foreground">Почему важно. </span>
+          <span className="font-medium text-foreground">Почему это важно. </span>
           {item.why}
         </p>
       )}
       {item.duplicates.length > 0 && (
         <p className="mt-2.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
           <Layers size={13} />
-          Также об этом:
+          Другие источники:
           {item.duplicates.map((duplicate) => (
             <a
               key={duplicate.url}
@@ -355,10 +355,9 @@ export function DigestView({ digest, previousId }: { digest: Digest; previousId?
         {stats.degraded && (
           <p className="mt-4 flex items-start gap-2 rounded-lg bg-spark-container px-3 py-2 text-sm text-spark">
             <Info size={16} className="mt-0.5 shrink-0" />
-            Модель была недоступна часть времени: моделью оценено {stats.graded_by_model ??
-              0} из{' '}
-            {stats.candidates ?? 0} кандидатов, написано {stats.written_by_model ?? 0} из{' '}
-            {stats.selected ?? 0} записей. Остальное сделал резервный алгоритм.
+            Модель была частично недоступна: оценила {stats.graded_by_model ?? 0} из{' '}
+            {stats.candidates ?? 0} кандидатов и составила {stats.written_by_model ?? 0} из{' '}
+            {stats.selected ?? 0} записей. Остальное обработал резервный алгоритм.
           </p>
         )}
 
@@ -422,7 +421,7 @@ export function DigestView({ digest, previousId }: { digest: Digest; previousId?
 
       {digest.topics.length === 0 ? (
         <Card className="px-6 py-10 text-center text-sm text-muted-foreground">
-          За этот период по интересам профиля ничего не нашлось.
+          За этот период по выбранным интересам ничего не нашлось.
         </Card>
       ) : (
         <div className="space-y-7">

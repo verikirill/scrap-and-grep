@@ -130,7 +130,7 @@ def create_app() -> FastAPI:
             response: Response
             if is_cross_site(request, settings.cors_origins):
                 response = JSONResponse(
-                    status_code=403, content={"detail": "Запрос с другого сайта отклонён."}
+                    status_code=403, content={"detail": "Запрос с внешнего сайта отклонён."}
                 )
             else:
                 response = await call_next(request)

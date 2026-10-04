@@ -27,8 +27,8 @@ export function BotsPanel() {
         <BotIcon size={18} className="text-primary" /> Боты
       </h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Создайте бота у @BotFather и вставьте его токен. Токен хранится зашифрованным и больше не
-        показывается.
+        Создайте бота через @BotFather и вставьте его токен. Токен хранится в зашифрованном виде и
+        больше не показывается.
       </p>
 
       <ul className="mt-4 space-y-2">

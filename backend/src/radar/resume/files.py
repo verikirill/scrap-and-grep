@@ -23,9 +23,9 @@ def _office_format(data: bytes) -> str:
         with zipfile.ZipFile(io.BytesIO(data)) as archive:
             entries = archive.infolist()
             if len(entries) > _ZIP_MAX_ENTRIES:
-                raise ResumeError("Файл выглядит повреждённым: в нём слишком много частей.")
+                raise ResumeError("Файл повреждён или содержит слишком много вложенных частей.")
             if sum(entry.file_size for entry in entries) > _ZIP_MAX_UNPACKED:
-                raise ResumeError("Файл слишком велик в распакованном виде.")
+                raise ResumeError("Размер файла в распакованном виде превышает допустимый лимит.")
             names = {entry.filename for entry in entries}
             if "word/document.xml" in names:
                 return "docx"
@@ -38,7 +38,7 @@ def _office_format(data: bytes) -> str:
                         return "odt"
     except zipfile.BadZipFile as exc:
         raise ResumeError("Файл повреждён и не открывается.") from exc
-    raise ResumeError("Это архив, а не документ. Загрузите PDF, DOCX или текст.")
+    raise ResumeError("Архивы не поддерживаются. Загрузите PDF, DOCX или TXT.")
 
 
 def decode_text(data: bytes) -> str | None:
@@ -61,7 +61,7 @@ def detect_format(data: bytes, filename: str) -> str:
     by its signature, so a renamed executable does not reach a parser.
     """
     if not data:
-        raise ResumeError("Файл пуст.")
+        raise ResumeError("Файл пустой.")
     head = data[:8]
     if head.startswith(b"%PDF-"):
         return "pdf"
@@ -72,10 +72,10 @@ def detect_format(data: bytes, filename: str) -> str:
     if head.startswith(b"\xff\xd8\xff"):
         return "jpg"
     if head.startswith(b"\xd0\xcf\x11\xe0"):
-        raise ResumeError("Старый формат .doc не поддерживается. Сохраните файл как DOCX или PDF.")
+        raise ResumeError("Формат .doc устарел. Сохраните файл как DOCX или PDF.")
     text = decode_text(data)
     if text is None:
-        raise ResumeError("Формат файла не распознан. Подойдут PDF, DOCX, TXT или Markdown.")
+        raise ResumeError("Формат файла не поддерживается. Подойдут PDF, DOCX, TXT или Markdown.")
     extension = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
     if text.lstrip()[:200].lower().startswith(("<!doctype html", "<html")):
         return "html"

@@ -312,7 +312,7 @@ async def make_short(video_id: str, context: Context = TaskiqDepends()) -> None:
             )
             if attempt >= SHORT_ATTEMPTS:
                 message = (
-                    "Видеосервис занят. Попробуйте через несколько минут."
+                    "Сервис генерации видео перегружен. Попробуйте через несколько минут."
                     if isinstance(exc, RendererBusy)
                     else shorts_service.GENERIC_FAILURE
                 )
@@ -469,10 +469,15 @@ async def housekeeping() -> dict[str, int]:
     if settings.shorts_url:
         try:
             await purge_short_files.kiq()
-            if settings.tts_url:
-                await refresh_short_voices.kiq()
         except Exception as exc:
             log.warning("short_purge_not_queued", error=type(exc).__name__)
+    # The voices for the api to list: a video and a spoken brief both pick
+    # one, and the brief needs the voice alone.
+    if settings.tts_url:
+        try:
+            await refresh_short_voices.kiq()
+        except Exception as exc:
+            log.warning("voices_not_queued", error=type(exc).__name__)
     return {
         "resumes": resumes,
         "shorts": shorts,

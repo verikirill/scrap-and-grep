@@ -64,12 +64,12 @@ GIVE_UP_AFTER = timedelta(hours=6)
 # A scheduled post this late is not sent on its own: news an hour old may be
 # stale, and a backlog must not flood the channel. It waits for a human.
 LATE_AFTER = timedelta(hours=1)
-LATE_NOTE = "Пост написан с опозданием и ждёт проверки."
+LATE_NOTE = "Пост подготовлен с опозданием и ожидает проверки."
 MAX_ATTEMPTS = 5
 RETRY_STEP = timedelta(minutes=2)
 # Telegram has no idempotency key: a post that may have gone out is never
 # sent again on its own. Posting once or not at all beats posting twice.
-MAYBE_SENT = "Отправка прервалась, пост мог выйти: проверьте канал, прежде чем отправлять снова."
+MAYBE_SENT = "Отправка прервалась, но пост мог выйти: проверьте канал перед повторной отправкой."
 
 
 def utcnow() -> datetime:
@@ -174,7 +174,7 @@ async def recover(now: datetime | None = None) -> dict[str, list[uuid.UUID]]:
                 TelegramPost.updated_at < now - STUCK_AFTER,
                 TelegramPost.created_at < now - GIVE_UP_AFTER,
             )
-            .values(status=FAILED, error="Пост так и не удалось написать.", updated_at=now)
+            .values(status=FAILED, error="Не удалось сформировать пост.", updated_at=now)
         )
         rewrite = await session.execute(
             update(TelegramPost)
@@ -285,7 +285,7 @@ async def _write(
             min_score=settings.selection.min_score,
         )
     if not articles:
-        raise NothingToPost("нет свежих новостей под интересы аудитории, которых не было в канале")
+        raise NothingToPost("нет новых публикаций по профилю аудитории, которых не было в канале")
     if post.kind == "digest":
         return await compose_digest(session, channel, articles, settings, spec, client)
     return await compose_news(session, channel, articles[0], settings, spec, client)
@@ -435,7 +435,7 @@ def _failed_send(
     if exc.is_rate_limited and attempts < MAX_ATTEMPTS:
         post.status = QUEUED
         post.not_before = now + timedelta(seconds=(exc.retry_after or 30) + 1)
-        post.error = "Telegram попросил подождать"
+        post.error = "Превышен лимит запросов в Telegram, ожидаем"
         return QUEUED
     if exc.is_temporary:
         return _retry_later(post, f"Telegram: {exc.description}", now, attempts)
@@ -443,6 +443,6 @@ def _failed_send(
     if exc.lost_access:
         # Nothing will reach this chat until the owner fixes the bot's rights.
         channel.status = "error"
-        channel.last_error = f"Бот не может писать в канал: {exc.description}"[:500]
+        channel.last_error = f"Бот не может публиковать сообщения в канал: {exc.description}"[:500]
     log.warning("post_failed", post_id=str(post.id), code=exc.code, error=exc.description[:200])
     return FAILED

@@ -44,8 +44,8 @@ export function ChannelsPage() {
       )}
       {isMock && (
         <p className="mb-6 rounded-2xl bg-secondary-container px-4 py-3 text-sm text-on-secondary-container">
-          Тестовый режим. Посты не уходят в Telegram, их видно на тестовой странице стенда (порт
-          8089). Подойдёт любой токен вида 123456789:AA… и любой @канал.
+          Стенд подключён к тестовому эмулятору Telegram, подойдёт любой токен вида 123456789:AA… и
+          любой @канал. Публикации видны на порту 8089.
         </p>
       )}
 

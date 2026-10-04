@@ -133,7 +133,7 @@ async def fail_stale(session: AsyncSession, older_than: datetime) -> int:
         )
         .values(
             status=STATUS_FAILED,
-            error="Сборка не завершилась за отведённое время.",
+            error="Время сборки выпуска истекло.",
             finished_at=datetime.now(UTC),
         )
         .returning(Digest.id)

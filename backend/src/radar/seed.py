@@ -18,7 +18,8 @@ from radar.text import content_hash
 # Every feed here answered with parseable entries on 2026-09-30. Full-text
 # fetching is on only where the feed carries a one-line teaser. The BDU feeds
 # and the PT page were added on 2026-10-02, with the national CA trusted for
-# their hosts (radar.ingest.net).
+# their hosts (radar.ingest.net). The last 19 rows (therecord to tg-rosseti)
+# were checked on 2026-10-04.
 DEFAULT_SOURCES: tuple[tuple[str, str, str, str, str, str, bool], ...] = (
     ("habr-infosec", "Хабр: Информационная безопасность", "https://habr.com/ru/rss/hubs/infosecurity/articles/all/?fl=ru", "https://habr.com/ru/hubs/infosecurity/", "security", "ru", False),
     ("securitylab", "SecurityLab.ru", "https://www.securitylab.ru/_services/export/rss/", "https://www.securitylab.ru", "security", "ru", True),
@@ -118,6 +119,27 @@ DEFAULT_SOURCES: tuple[tuple[str, str, str, str, str, str, bool], ...] = (
     ("cybernews", "Cybernews", "https://cybernews.com/security/", "https://cybernews.com", "security", "en", False),
     ("bdu-asutp", "БДУ ФСТЭК: АСУ ТП", "https://bduasutp.fstec.ru/#/news", "https://bduasutp.fstec.ru", "ics", "ru", False),
     ("broadcom-bulletins", "Symantec: Protection Bulletins", "https://www.broadcom.com/api/nocache/mblogs?locale=en-us&limit=20", "https://www.broadcom.com/support/security-center/protection-bulletin", "security", "en", False),
+    # Added on 2026-10-04, each read the way the service reads it (ingest/feeds.py,
+    # telegram.py, pages.py): parsed, the newest entry no older than 30 days.
+    ("therecord", "The Record (Recorded Future News)", "https://therecord.media/feed", "https://therecord.media", "security", "en", False),
+    ("helpnetsecurity", "Help Net Security", "https://www.helpnetsecurity.com/feed/", "https://www.helpnetsecurity.com", "security", "en", False),
+    ("infosecurity-magazine", "Infosecurity Magazine", "https://www.infosecurity-magazine.com/rss/news/", "https://www.infosecurity-magazine.com", "security", "en", False),
+    ("securityaffairs", "Security Affairs", "https://securityaffairs.com/feed", "https://securityaffairs.com", "security", "en", False),
+    ("cyberscoop", "CyberScoop", "https://cyberscoop.com/feed/", "https://cyberscoop.com", "security", "en", False),
+    ("talos", "Cisco Talos", "https://blog.talosintelligence.com/rss/", "https://blog.talosintelligence.com", "security", "en", False),
+    ("welivesecurity", "WeLiveSecurity (ESET)", "https://www.welivesecurity.com/en/rss/feed/", "https://www.welivesecurity.com", "security", "en", False),
+    ("rapid7", "Rapid7: блог об угрозах", "https://www.rapid7.com/blog/rss/", "https://www.rapid7.com/blog/", "security", "en", False),
+    ("sophos-x-ops", "Sophos: исследования угроз", "https://news.sophos.com/en-us/category/threat-research/feed/", "https://www.sophos.com/en-us/category/threat-research", "security", "en", False),
+    ("ncsc-uk", "NCSC (Великобритания)", "https://www.ncsc.gov.uk/api/1/services/v1/all-rss-feed.xml", "https://www.ncsc.gov.uk", "regulator", "en", False),
+    ("cisa-alerts", "CISA: оповещения и каталог KEV", "https://www.cisa.gov/cybersecurity-advisories/alerts.xml", "https://www.cisa.gov/news-events/alerts", "regulator", "en", False),
+    ("nozomi-blog", "Nozomi Networks: блог по OT-безопасности", "https://www.nozominetworks.com/blog", "https://www.nozominetworks.com/blog", "ics", "en", False),
+    ("bigpowernews", "BigpowerNews", "https://www.bigpowernews.ru/rss.php", "https://www.bigpowernews.ru", "energy", "ru", False),
+    ("eprussia", "Энергетика и промышленность России", "https://www.eprussia.ru/news/", "https://www.eprussia.ru", "energy", "ru", False),
+    ("powermag", "POWER Magazine", "https://www.powermag.com/feed/", "https://www.powermag.com", "energy", "en", False),
+    ("bizone-news", "BI.ZONE: новости", "https://bi.zone/news/", "https://bi.zone", "security", "ru", False),
+    ("tg-avleonov", "Vulnerability Management and more (Леонов)", "https://t.me/s/avleonovcom", "https://t.me/avleonovcom", "security", "ru", False),
+    ("tg-f6", "F6: Центр кибербезопасности", "https://t.me/s/f6_cybersecurity", "https://t.me/f6_cybersecurity", "security", "ru", False),
+    ("tg-rosseti", "Россети (Telegram)", "https://t.me/s/Rosseti_official", "https://t.me/Rosseti_official", "energy", "ru", False),
 )  # fmt: skip
 
 # Sources that are not feeds; the rest are RSS or Atom.
@@ -138,6 +160,9 @@ SOURCE_KINDS = {
             "securitymedia",
             "cybernews",
             "bdu-asutp",
+            "nozomi-blog",
+            "eprussia",
+            "bizone-news",
         ),
         "page",
     ),

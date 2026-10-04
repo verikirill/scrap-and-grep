@@ -54,8 +54,8 @@ export function AddChannelDialog() {
           <DialogHeader>
             <DialogTitle>Новый канал</DialogTitle>
             <DialogDescription>
-              Добавьте бота в канал администратором с правом публиковать сообщения, затем укажите
-              канал здесь.
+              Добавьте бота в канал администратором с правом публикации сообщений и укажите канал
+              здесь.
             </DialogDescription>
           </DialogHeader>
           <form
@@ -94,7 +94,7 @@ export function AddChannelDialog() {
                 autoFocus
               />
             </Field>
-            <Field label="Аудитория" hint="по чьему профилю отбирать новости">
+            <Field label="Аудитория" hint="профиль для отбора публикаций">
               <SelectField
                 label="Аудитория"
                 value={profile}

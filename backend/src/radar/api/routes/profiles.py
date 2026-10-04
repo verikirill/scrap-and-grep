@@ -210,7 +210,7 @@ async def unshare_profile(
     return profile_out(profile)
 
 
-_LINK_GONE = "Ссылка больше не работает: владелец закрыл доступ или удалил профиль."
+_LINK_GONE = "Ссылка недействительна: владелец закрыл доступ или удалил профиль."
 
 
 async def _shared(session: SessionDep, token: str) -> tuple[Profile, ProfileSpec]:

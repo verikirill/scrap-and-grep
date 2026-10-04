@@ -20,9 +20,9 @@ function announcement(video: Video | null): string {
   if (!video) return ''
   if (video.status === 'queued') return 'Видео в очереди'
   if (video.status === 'running') {
-    return STEPS.find((step) => step.stage === video.stage)?.doing ?? 'Видео собирается'
+    return STEPS.find((step) => step.stage === video.stage)?.doing ?? 'Готовим видео'
   }
-  return video.status === 'done' ? 'Видео готово' : 'Видео собрать не удалось'
+  return video.status === 'done' ? 'Видео готово' : 'Не удалось собрать видео'
 }
 
 function Progress({ video }: { video: Video }) {
@@ -229,7 +229,7 @@ export function ShortPanel({ digestId }: { digestId: string }) {
             isBusy={create.isPending}
             onClick={() => create.mutate(voices.length > 0 ? voice : null)}
           >
-            {state === 'none' ? 'Сделать видео' : 'Переснять'}
+            {state === 'none' ? 'Создать видео' : 'Смонтировать заново'}
           </Button>
         )}
       </div>
@@ -255,7 +255,7 @@ export function ShortPanel({ digestId }: { digestId: string }) {
             {video.status === 'done' && <Player video={video} voices={voices} />}
             {video.status === 'failed' && (
               <p className="rounded-lg bg-error-container px-3 py-2 text-sm text-destructive">
-                {video.error ?? 'Видео собрать не удалось.'}
+                {video.error ?? 'Не удалось собрать видео.'}
               </p>
             )}
           </motion.div>

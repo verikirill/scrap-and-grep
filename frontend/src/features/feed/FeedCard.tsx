@@ -100,7 +100,7 @@ export function FeedCard({ item, index, isQuiet, placement, onReact }: FeedCardP
               aria-expanded={isWhyOpen}
               className="inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-xs font-medium text-primary hover:bg-primary/10"
             >
-              Почему здесь
+              Причины подбора
               <motion.span animate={{ rotate: isWhyOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
                 <ChevronDown size={13} />
               </motion.span>

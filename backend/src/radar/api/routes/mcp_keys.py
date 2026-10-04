@@ -58,7 +58,9 @@ async def create_key(payload: KeyIn, session: SessionDep, user: CurrentUser) -> 
     except keys.TooManyKeys:
         raise HTTPException(
             status.HTTP_409_CONFLICT,
-            detail=f"Ключей уже {keys.MAX_KEYS}: отзовите ненужный, чтобы сделать новый.",
+            detail=(
+                f"В аккаунте уже {keys.MAX_KEYS} ключей. Отзовите ненужный, чтобы создать новый."
+            ),
         ) from None
     await session.commit()
     return NewKeyOut(**_out(key).model_dump(), token=token)

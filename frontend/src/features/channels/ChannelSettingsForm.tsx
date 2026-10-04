@@ -125,7 +125,7 @@ export function ChannelSettingsForm({
               className={TEXTAREA_CLASS}
             />
           </Field>
-          <Field label="Для кого пишем" hint="если пусто, берётся роль из профиля">
+          <Field label="Целевая аудитория" hint="по умолчанию — роль из профиля">
             <input
               value={style.audience}
               maxLength={600}
@@ -165,14 +165,14 @@ export function ChannelSettingsForm({
             />
           </Field>
           <div className="divide-y divide-outline-variant">
-            <Row label="Списки, когда в новости перечисление">
+            <Row label="Оформлять перечисления списками">
               <Toggle
                 checked={style.bullets}
                 onChange={(bullets) => set('style', { bullets })}
                 label="Списки"
               />
             </Row>
-            <Row label="Живая реплика в конце">
+            <Row label="Итоговый комментарий в конце">
               <Toggle
                 checked={style.ending}
                 onChange={(ending) => set('style', { ending })}
@@ -204,12 +204,11 @@ export function ChannelSettingsForm({
             />
           </Field>
           <p className="px-1 text-xs text-muted-foreground">
-            «Словом» — в конце поста «Подробности — здесь», «Карточкой» — превью статьи с её
-            картинкой, «Без ссылки» — только текст. Каналы могут подавать одну и ту же новость
-            по-разному.
+            «Словом» — ссылка в конце текста, «Карточкой» — превью статьи с изображением, «Без
+            ссылки» — только текст.
           </p>
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Слово-ссылка">
+            <Field label="Текст ссылки">
               <input
                 value={links.inline_text}
                 maxLength={40}
@@ -249,9 +248,8 @@ export function ChannelSettingsForm({
             />
           </Field>
           <p className="px-1 text-xs text-muted-foreground">
-            Rich-пост — формат нового редактора Telegram (июль 2026): заголовки, списки, цитаты,
-            слайдшоу картинок, до 32 768 знаков. Обычный пост — картинка с подписью до 1024 знаков
-            или текст до 4096.
+            Rich-пост: заголовки, списки, цитаты, медиагалереи и до 32 768 знаков. Обычный пост:
+            изображение с подписью до 1024 знаков или текст до 4096 знаков.
           </p>
           <div className="divide-y divide-outline-variant">
             <Row label="Картинка статьи, если есть">
@@ -268,7 +266,7 @@ export function ChannelSettingsForm({
                 label="Подпись над картинкой"
               />
             </Row>
-            <Row label="Без звука у подписчиков">
+            <Row label="Отправлять без звука">
               <Toggle
                 checked={format.silent}
                 onChange={(silent) => set('format', { silent })}
@@ -408,7 +406,7 @@ export function ChannelSettingsForm({
             </div>
           </Field>
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Постов в день, не больше" hint={String(schedule.max_per_day)}>
+            <Field label="Максимум постов в день" hint={String(schedule.max_per_day)}>
               <Range
                 label="Постов в день"
                 min={1}
@@ -428,7 +426,7 @@ export function ChannelSettingsForm({
               />
             </Field>
           </div>
-          <Field label="Готовить пост заранее" hint={`за ${schedule.prepare_minutes} мин`}>
+          <Field label="Формировать пост заранее" hint={`за ${schedule.prepare_minutes} мин`}>
             <Range
               label="Заранее"
               min={5}
@@ -439,7 +437,7 @@ export function ChannelSettingsForm({
             />
           </Field>
           <div className="rounded-2xl bg-surface-container p-4">
-            <Row label="Перед публикацией показывать мне">
+            <Row label="Публиковать только после проверки">
               <Toggle
                 checked={settings.approval === 'manual'}
                 onChange={(manual) =>
@@ -452,7 +450,7 @@ export function ChannelSettingsForm({
               />
             </Row>
             <p className="text-xs text-muted-foreground">
-              Посты будут ждать в черновиках, пока вы их не одобрите.
+              Посты будут сохраняться в черновиках до вашего одобрения.
             </p>
           </div>
         </TabsContent>
@@ -483,13 +481,13 @@ export function ChannelSettingsForm({
               value={selection.network}
               onChange={(network) => set('selection', { network })}
               options={[
-                { value: 'share', label: 'Можно, другими словами' },
-                { value: 'spread', label: 'Разносить по времени' },
+                { value: 'share', label: 'Разрешено, с рерайтом' },
+                { value: 'spread', label: 'С интервалом по времени' },
               ]}
             />
           </Field>
           {selection.network === 'spread' && (
-            <Field label="Пауза между каналами" hint={`${selection.network_hours} ч`}>
+            <Field label="Интервал между каналами" hint={`${selection.network_hours} ч`}>
               <Range
                 label="Пауза"
                 min={1}
@@ -512,7 +510,9 @@ export function ChannelSettingsForm({
           Сохранить настройки
         </Button>
         {!timesValid && (
-          <span className="self-center text-xs text-destructive">Время в формате 09:30</span>
+          <span className="self-center text-xs text-destructive">
+            Укажите время в формате ЧЧ:ММ (например, 09:30)
+          </span>
         )}
       </div>
     </div>

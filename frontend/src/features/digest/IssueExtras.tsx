@@ -10,6 +10,7 @@ import {
   TrendingDown,
   TrendingUp,
 } from '../../components/icons'
+import { Collapsible } from '../../components/Collapsible'
 import { EASE, rowMotion } from '../../components/tokens'
 import { Card, Chip } from '../../components/ui'
 import type { Digest, PlanEntry, TagCount, VulnerabilityChange } from '../../lib/api'
@@ -108,16 +109,23 @@ function PlanRow({ entry, index }: { entry: PlanEntry; index: number }) {
 function ShiftPlan({ entries }: { entries: PlanEntry[] }) {
   return (
     <Card className="p-6">
-      <SectionHead
-        icon={<ListOrdered size={18} />}
-        title="План на смену"
-        note="Срочное из выпуска, эксплуатируемые уязвимости первыми. Шаги взяты из карточек"
-      />
-      <ol className="mt-3 divide-y divide-outline-variant">
-        {entries.map((entry, index) => (
-          <PlanRow key={entry.url} entry={entry} index={index} />
-        ))}
-      </ol>
+      <Collapsible
+        storageKey="digest-plan"
+        title="план на смену"
+        head={
+          <SectionHead
+            icon={<ListOrdered size={18} />}
+            title="План на смену"
+            note="Срочное из выпуска, эксплуатируемые уязвимости первыми. Шаги взяты из карточек"
+          />
+        }
+      >
+        <ol className="mt-3 divide-y divide-outline-variant">
+          {entries.map((entry, index) => (
+            <PlanRow key={entry.url} entry={entry} index={index} />
+          ))}
+        </ol>
+      </Collapsible>
     </Card>
   )
 }
@@ -125,31 +133,38 @@ function ShiftPlan({ entries }: { entries: PlanEntry[] }) {
 function Changes({ changes }: { changes: VulnerabilityChange[] }) {
   return (
     <Card className="p-6">
-      <SectionHead
-        icon={<EventRepeat size={18} />}
-        title="Что изменилось с прошлых выпусков"
-        note="Уязвимости, которые уже были в выпусках этого профиля за 30 дней"
-      />
-      <ul className="mt-3 divide-y divide-outline-variant">
-        {changes.map((change, index) => (
-          <motion.li key={change.id} {...rowMotion(index)} className="py-3 text-sm">
-            <div className="flex flex-wrap items-center gap-2">
-              <Chip tone="accent">{change.id}</Chip>
-              <a
-                href={externalHref(change.url)}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="font-medium text-foreground decoration-primary/40 underline-offset-4 hover:underline"
-              >
-                {change.headline}
-              </a>
-            </div>
-            <p className="mt-1 text-muted-foreground">
-              {change.what.join('; ')}. В выпуске от {formatDate(change.since)} этого не было.
-            </p>
-          </motion.li>
-        ))}
-      </ul>
+      <Collapsible
+        storageKey="digest-changes"
+        title="что изменилось с прошлых выпусков"
+        head={
+          <SectionHead
+            icon={<EventRepeat size={18} />}
+            title="Что изменилось с прошлых выпусков"
+            note="Уязвимости, которые уже были в выпусках этого профиля за 30 дней"
+          />
+        }
+      >
+        <ul className="mt-3 divide-y divide-outline-variant">
+          {changes.map((change, index) => (
+            <motion.li key={change.id} {...rowMotion(index)} className="py-3 text-sm">
+              <div className="flex flex-wrap items-center gap-2">
+                <Chip tone="accent">{change.id}</Chip>
+                <a
+                  href={externalHref(change.url)}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="font-medium text-foreground decoration-primary/40 underline-offset-4 hover:underline"
+                >
+                  {change.headline}
+                </a>
+              </div>
+              <p className="mt-1 text-muted-foreground">
+                {change.what.join('; ')}. В выпуске от {formatDate(change.since)} этого не было.
+              </p>
+            </motion.li>
+          ))}
+        </ul>
+      </Collapsible>
     </Card>
   )
 }
@@ -172,35 +187,42 @@ function Numbers({ rows, title }: { rows: TagCount[]; title: string }) {
   const max = Math.max(...rows.map((row) => Math.max(row.count, row.before ?? 0)), 1)
   return (
     <Card className="p-6">
-      <SectionHead
-        icon={<Analytics size={18} />}
-        title={title}
-        note="Записи выпуска по признакам датасета"
-      />
-      <ul className="mt-4 space-y-3">
-        {rows.map((row, index) => (
-          <li
-            key={row.tag}
-            title={`${row.label}: ${row.count}${row.before !== null && row.before !== undefined ? `, в прошлом выпуске ${row.before}` : ''}`}
-          >
-            <div className="flex items-baseline justify-between gap-3 text-sm">
-              <span>{row.label}</span>
-              <span className="flex items-baseline gap-3">
-                <Delta row={row} />
-                <span className="tabular font-semibold">{row.count}</span>
-              </span>
-            </div>
-            <div className="mt-1 h-2 overflow-hidden rounded-full bg-surface-container">
-              <motion.div
-                className="h-full origin-left rounded-full bg-primary"
-                initial={{ scaleX: 0 }}
-                animate={{ scaleX: row.count / max }}
-                transition={{ duration: 0.6, ease: EASE, delay: 0.04 * index }}
-              />
-            </div>
-          </li>
-        ))}
-      </ul>
+      <Collapsible
+        storageKey="digest-numbers"
+        title="период в цифрах"
+        head={
+          <SectionHead
+            icon={<Analytics size={18} />}
+            title={title}
+            note="Записи выпуска по ключевым категориям"
+          />
+        }
+      >
+        <ul className="mt-4 space-y-3">
+          {rows.map((row, index) => (
+            <li
+              key={row.tag}
+              title={`${row.label}: ${row.count}${row.before !== null && row.before !== undefined ? `, в прошлом выпуске: ${row.before}` : ''}`}
+            >
+              <div className="flex items-baseline justify-between gap-3 text-sm">
+                <span>{row.label}</span>
+                <span className="flex items-baseline gap-3">
+                  <Delta row={row} />
+                  <span className="tabular font-semibold">{row.count}</span>
+                </span>
+              </div>
+              <div className="mt-1 h-2 overflow-hidden rounded-full bg-surface-container">
+                <motion.div
+                  className="h-full origin-left rounded-full bg-primary"
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: row.count / max }}
+                  transition={{ duration: 0.6, ease: EASE, delay: 0.04 * index }}
+                />
+              </div>
+            </li>
+          ))}
+        </ul>
+      </Collapsible>
     </Card>
   )
 }

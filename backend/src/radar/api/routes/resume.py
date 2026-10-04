@@ -61,7 +61,7 @@ async def upload_resume(
     """
     limit = settings.resume_max_bytes
     data = await read_limited(
-        request, limit, f"Файл больше {limit // 1_000_000} МБ. Загрузите резюме поменьше."
+        request, limit, f"Размер файла превышает {limit // 1_000_000} МБ. Выберите файл поменьше."
     )
     try:
         file_format = detect_format(data, request.headers.get("x-file-name", "")[:200])
@@ -71,8 +71,10 @@ async def upload_resume(
     if file_format not in accepted:
         raise HTTPException(
             status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            detail=f"Формат {file_format.upper()} читает только docling, а он не подключён. "
-            "Загрузите PDF, DOCX или текстовый файл.",
+            detail=(
+                f"Для формата {file_format.upper()} требуется сервис Docling. "
+                "Загрузите файл в PDF, DOCX или TXT."
+            ),
         )
     row = await service.accept(session, user.id, data=data, file_format=file_format)
     # The worker must find the row, so commit before the task is queued.
@@ -81,7 +83,7 @@ async def upload_resume(
         await process_resume.kiq(str(user.id), row.created_at.isoformat())
     except Exception as exc:
         log.exception("resume_enqueue_failed", user_id=str(user.id))
-        await service.fail(user.id, row.created_at, "Очередь задач недоступна. Повторите позже.")
+        await service.fail(user.id, row.created_at, "Очередь задач недоступна. Попробуйте позже.")
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE, detail="Очередь задач недоступна."
         ) from exc

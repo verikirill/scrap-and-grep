@@ -278,9 +278,9 @@ export function BuildPanel({ profiles, initialProfileId, isBuilding = false, onC
             isBusy={createBoth.isPending}
             disabled={!selectedId || !chosen || isPending || isBuilding}
             onClick={submitBoth}
-            title="Один сбор и одна оценка, два выпуска: специалисту и руководству"
+            title="Одна оценка и два выпуска: специалисту и руководству"
           >
-            Обеим аудиториям
+            Собрать оба выпуска
           </Button>
           <Button
             variant="primary"

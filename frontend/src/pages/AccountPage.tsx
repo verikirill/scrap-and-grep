@@ -35,7 +35,7 @@ function ResumeSection() {
     <Card className="p-5 sm:p-6">
       <h2 className="text-base font-semibold">Резюме</h2>
       <p className="mt-1 mb-4 text-sm text-muted-foreground">
-        По резюме определяется специализация. Лента учитывает её наравне с интересами.
+        Резюме задаёт специализацию, и лента учитывает её наравне с интересами.
       </p>
 
       {isProcessing ? (
@@ -50,7 +50,7 @@ function ResumeSection() {
               <ResumeFactsView resume={current} facts={current.facts} skillsShown={14} />
               <div className="mt-4 flex flex-wrap gap-2">
                 <Link to="/welcome" className={buttonClass('secondary', 'sm')}>
-                  Собрать профиль из резюме
+                  Создать профиль по резюме
                 </Link>
                 <Button
                   size="sm"
@@ -58,10 +58,10 @@ function ResumeSection() {
                   icon={<Trash2 size={14} />}
                   isBusy={remove.isPending}
                   onClick={() => {
-                    if (window.confirm('Стереть всё, что известно из резюме?')) remove.mutate()
+                    if (window.confirm('Удалить все данные из резюме?')) remove.mutate()
                   }}
                 >
-                  Стереть
+                  Удалить данные
                 </Button>
               </div>
             </div>
@@ -88,7 +88,7 @@ function ResumeSection() {
           <ErrorNote error={upload.error ?? remove.error ?? resume.error} />
           <p className="flex items-start gap-2 text-xs text-muted-foreground">
             <ShieldCheck size={15} className="mt-px shrink-0 text-success" />
-            Файл удаляется сразу после разбора. Имя и контакты вырезаются до анализа; хранятся
+            Файл удаляется сразу после разбора. Имя и контакты стираются до анализа. Сохраняются
             только должность, навыки и предложенные темы.
           </p>
         </div>
@@ -108,8 +108,8 @@ function DangerZone({ me }: { me: Me }) {
       <Card className="p-5">
         <h2 className="text-base font-semibold">Временный аккаунт</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Он удалится сам через сутки вместе со всем, что вы в нём сделали. Чтобы сохранить
-          настройки, заведите постоянный аккаунт.
+          Временный аккаунт и все данные удалятся через сутки. Чтобы сохранить настройки,
+          зарегистрируйтесь.
         </p>
         <ErrorNote error={deleteAccount.error} />
         <div className="mt-4 flex flex-wrap gap-2">
@@ -123,7 +123,7 @@ function DangerZone({ me }: { me: Me }) {
             isBusy={deleteAccount.isPending}
             onClick={() => deleteAccount.mutate('')}
           >
-            Удалить сейчас
+            Удалить аккаунт
           </Button>
         </div>
       </Card>
@@ -139,12 +139,11 @@ function DangerZone({ me }: { me: Me }) {
     <Card className="p-5">
       <h2 className="text-base font-semibold">Удаление аккаунта</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Вместе с аккаунтом удаляются профили, выпуски, данные резюме и все отметки. Восстановить их
-        будет нельзя.
+        Вместе с аккаунтом безвозвратно удалятся все профили, выпуски, данные резюме и отметки.
       </p>
       {isOpen ? (
         <form onSubmit={submit} className="mt-4 max-w-sm space-y-3">
-          <Field label="Пароль, чтобы подтвердить">
+          <Field label="Пароль для подтверждения">
             <input
               required
               type="password"
@@ -191,7 +190,7 @@ function Identity({ me }: { me: Me }) {
     if (!file) return
     // The server checks the content; this only saves a pointless upload.
     if (file.size > AVATAR_MAX_BYTES) {
-      toast.error('Картинка больше 5 МБ, выберите поменьше.')
+      toast.error('Размер файла превышает 5 МБ. Выберите изображение поменьше.')
       return
     }
     upload.mutate(file, { onSuccess: () => toast.success('Фото обновлено') })
@@ -249,12 +248,12 @@ function Identity({ me }: { me: Me }) {
             isBusy={remove.isPending}
             onClick={() => remove.mutate(undefined, { onSuccess: () => toast('Фото убрано') })}
           >
-            Убрать
+            Удалить фото
           </Button>
         )}
       </div>
       <p className="mt-1 text-xs text-outline">
-        JPEG, PNG, WebP или GIF до 5 МБ. Фото обрежем до квадрата и уберём данные о съёмке.
+        JPEG, PNG, WebP или GIF до 5 МБ. Фото кадрируем до квадрата и очистим от метаданных съёмки.
       </p>
       <div className="mt-2 w-full">
         <ErrorNote error={upload.error ?? remove.error} />
@@ -283,7 +282,7 @@ export function AccountPage() {
               const isSure =
                 !user.is_demo ||
                 window.confirm(
-                  'Во временный аккаунт нельзя войти снова, поэтому профили, выпуски и отметки станут недоступны. Выйти?',
+                  'Войти во временный аккаунт повторно нельзя, поэтому все профили, выпуски и отметки будут потеряны. Выйти?',
                 )
               if (isSure) logout.mutate()
             }}

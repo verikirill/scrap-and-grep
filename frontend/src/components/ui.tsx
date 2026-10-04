@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { Schedule } from './icons'
+import { Help, Schedule } from './icons'
 import { animate, motion, useMotionValue, useTransform } from 'motion/react'
 import { useEffect } from 'react'
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
@@ -115,28 +115,36 @@ const CHIP_STYLES: Record<ChipTone, string> = {
   alarm: 'bg-error text-on-error font-semibold',
 }
 
-/** Material 3 chip, not interactive: a label with a tone. */
+/**
+ * Material 3 chip, not interactive: a label with a tone. A chip with a hint
+ * carries a question mark, so the reader knows hovering it tells more.
+ */
 export function Chip({
   tone = 'neutral',
   className,
   children,
   title,
+  hint,
 }: {
   tone?: ChipTone
   className?: string
   children: ReactNode
   title?: string
+  /** What the chip means, shown on hover; the chip then carries a «?». */
+  hint?: string
 }) {
   return (
     <span
-      title={title}
+      title={hint ?? title}
       className={clsx(
         'inline-flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium tracking-[0.01em]',
         CHIP_STYLES[tone],
+        hint && 'cursor-help',
         className,
       )}
     >
       {children}
+      {hint && <Help size={14} aria-hidden className="-mr-1 opacity-70" />}
     </span>
   )
 }

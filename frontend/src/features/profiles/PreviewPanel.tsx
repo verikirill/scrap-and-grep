@@ -52,11 +52,11 @@ export function PreviewPanel({ draft, saved, isDirty }: Props) {
     <Card className="flex max-h-[calc(100dvh-4.5rem)] flex-col overflow-hidden">
       <div className="border-b border-outline-variant px-5 py-4">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold">Что попадёт в выпуск</h2>
+          <h2 className="text-sm font-semibold">Предпросмотр выпуска</h2>
           {current.isFetching && current.isValid && <Spinner className="size-3.5 text-primary" />}
         </div>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          За {periodWords(days)}, по текущим настройкам. Обновляется по мере правки, без языковой
+          За {periodWords(days)} по текущим настройкам. Обновляется при редактировании, без языковой
           модели.
         </p>
         {current.data && (
@@ -126,7 +126,8 @@ export function PreviewPanel({ draft, saved, isDirty }: Props) {
         )}
         {diff && diff.rows.length === 0 && (
           <p className="px-5 py-8 text-center text-sm text-muted-foreground">
-            Ничего не проходит порог. Добавьте ключевые слова или снизьте порог релевантности.
+            Ни одна публикация не проходит порог. Добавьте ключевые слова или снизьте порог
+            релевантности.
           </p>
         )}
         {diff && (
@@ -196,7 +197,8 @@ export function PreviewPanel({ draft, saved, isDirty }: Props) {
       {current.data && (
         <p className="border-t border-outline-variant px-5 py-2.5 text-[11px] text-outline">
           Поиск: {modelLabel(current.data.embedding_model)}
-          {current.data.lexical_only && ' · модель эмбеддингов недоступна, только полнотекстовый'}
+          {current.data.lexical_only &&
+            '· векторный поиск недоступен, работает только полнотекстовый'}
         </p>
       )}
     </Card>

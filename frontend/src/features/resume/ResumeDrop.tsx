@@ -45,11 +45,11 @@ export function ResumeDrop({ meta, isBusy, onFile, isCompact = false }: Props) {
     // The server decides by the content; this only saves a pointless upload.
     const extension = `.${file.name.split('.').pop()?.toLowerCase() ?? ''}`
     if (!accept.split(',').includes(extension)) {
-      setProblem(`Такой файл не подойдёт. Подходят: ${formatList}.`)
+      setProblem(`Неподдерживаемый формат файла. Подходят: ${formatList}.`)
       return
     }
     if (file.size > limit) {
-      setProblem(`Файл больше ${megabytes(limit)} МБ.`)
+      setProblem(`Размер файла превышает ${megabytes(limit)} МБ.`)
       return
     }
     setProblem(null)
@@ -131,7 +131,7 @@ export function ResumeDrop({ meta, isBusy, onFile, isCompact = false }: Props) {
           {hasOcr && (
             <span className="mt-2 inline-flex items-center gap-1.5 text-xs text-outline">
               <ScanText size={13} />
-              Сканы и фотографии страниц тоже подойдут, текст распознаем
+              Сканы и фото страниц тоже подойдут, сервис распознает текст
             </span>
           )}
         </button>

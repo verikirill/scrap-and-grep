@@ -139,7 +139,7 @@ function Preview({
 
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <Button variant="ghost" onClick={onDecline} disabled={isAdding}>
-          {shared.own_id ? 'Закрыть' : 'Не нужно'}
+          {shared.own_id ? 'Закрыть' : 'Отклонить'}
         </Button>
         {shared.own_id ? (
           <Button variant="primary" onClick={() => onOpen(shared.own_id as string)}>

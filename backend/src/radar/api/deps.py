@@ -40,7 +40,7 @@ def rate_limit(
         if await cache.hit_rate_limit(f"{bucket}:{client_id(request)}", per_minute(settings)):
             raise HTTPException(
                 status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Слишком много запросов, повторите через минуту.",
+                detail="Слишком много запросов. Попробуйте через минуту.",
                 headers={"Retry-After": "60"},
             )
 
@@ -69,7 +69,9 @@ CurrentUser = Annotated[AuthUser, Depends(current_user)]
 async def admin_user(user: CurrentUser) -> AuthUser:
     # A guest is never an administrator, whatever its row says.
     if not user.is_admin or user.is_demo:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Это может только администратор.")
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, detail="Действие доступно только администратору."
+        )
     return user
 
 
@@ -85,7 +87,9 @@ async def catalog_writer(user: CurrentUser, settings: SettingsDep) -> AuthUser:
     """Who may add a source: an administrator, or anyone in an open catalogue."""
     if settings.open_catalog or is_admin(user):
         return user
-    raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Источники добавляет администратор.")
+    raise HTTPException(
+        status.HTTP_403_FORBIDDEN, detail="Добавлять источники может только администратор."
+    )
 
 
 CatalogWriter = Annotated[AuthUser, Depends(catalog_writer)]
@@ -104,7 +108,7 @@ def user_rate_limit(
         if await cache.hit_rate_limit(f"{bucket}:u:{user.id}", per_minute(settings)):
             raise HTTPException(
                 status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Слишком много запросов, повторите через минуту.",
+                detail="Слишком много запросов. Попробуйте через минуту.",
                 headers={"Retry-After": "60"},
             )
 

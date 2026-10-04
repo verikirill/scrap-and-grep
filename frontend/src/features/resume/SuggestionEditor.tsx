@@ -97,7 +97,7 @@ export function SuggestionEditor({ spec, kept, onSpecChange, onKeptChange }: Pro
           />
         </Field>
       </div>
-      <Field label="Кто читатель" hint="по этому тексту модель пишет «почему важно»">
+      <Field label="Роль читателя" hint="по этому описанию модель формулирует «почему важно»">
         <textarea
           className={TEXTAREA_CLASS}
           value={spec.role}

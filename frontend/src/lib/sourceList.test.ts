@@ -106,6 +106,7 @@ describe('readVia', () => {
 
     expect(readVia(cybernews)).toEqual({
       label: 'Отпечаток Chrome, через прокси',
+      hint: 'Запрос повторяет сетевой отпечаток Chrome, чтобы пройти защиту от ботов. Запросы к сайту идут через прокси.',
       note: '403, заглушка Cloudflare на шаге «обычный запрос»',
     })
     expect(isProtected(cybernews)).toBe(true)
