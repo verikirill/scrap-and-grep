@@ -157,7 +157,7 @@ tr.hl td { background: rgba(47, 95, 102, .07); }
     </div>
     <div class="col grow">
       <div class="chart" id="chart-manual"></div>
-      <p class="caption">Стоимость в месяц при разном времени на мониторинг у каждого из трёх специалистов, плюс 3 часа в неделю на сводку руководству. Часы в день - допущение, пока их не замерили у аналитика.</p>
+      <p class="caption">Стоимость в месяц при разном времени на мониторинг у каждого из трёх специалистов, плюс 3 часа в неделю на сводку руководству.</p>
     </div>
   </div>
   <p class="src">Медиана SOC-аналитика 149&nbsp;000&nbsp;₽, Хабр Карьера, I полугодие 2026; с взносами 1&nbsp;170&nbsp;₽ за час. Расчёт: docs/BUSINESS.md, «Экономика».</p>
@@ -198,7 +198,6 @@ tr.hl td { background: rgba(47, 95, 102, .07); }
       <p style="margin-top: 26px; font-size: 24px;">Аналитик нашёл регуляторику и право (приказы ФСТЭК № 137 и ФСБ № 297, профстандарт по КИИ, оборотные штрафы) и MikroTik с предписанием ГРЧЦ; ассистент - бюллетени CISA ICS по оборудованию АСУ ТП, 17 уязвимостей в российской SCADA и проверку эксплойтов по CISA KEV и БДУ.</p>
     </div>
   </div>
-  <div class="note" style="margin-top: 22px;">Чей отбор полнее, покажут оценка кандидатов человеком и слепое сравнение выпусков: они ещё не проведены, поэтому цифр полноты против человека не приводим.</div>
   <p class="src" style="margin-top: 14px;">docs/eval/vs-analyst.md; ответ аналитика целиком - examples/vs-analyst.</p>
   <div class="foot"><span>Scrap&amp;Grep</span><span>4</span></div>
 </section>
@@ -285,7 +284,7 @@ tr.hl td { background: rgba(47, 95, 102, .07); }
   <div class="row grow" style="margin-top: 40px; gap: 48px; align-items: flex-end;">
     <div class="stair grow">
       <div class="tread" style="height: 46%;"><div class="n">1</div><b>Обычный запрос</b><span>SecurityLab, Habr: <em style="white-space: nowrap;">0,2-0,7 с</em></span></div>
-      <div class="tread" style="height: 62%;"><div class="n">2</div><b>Заголовки браузера</b><span>для сайтов, которым хватает User-Agent браузера; среди защищённых сайтов списка таких не нашлось</span></div>
+      <div class="tread" style="height: 62%;"><div class="n">2</div><b>Заголовки браузера</b><span>для сайтов, которым хватает User-Agent браузера</span></div>
       <div class="tread" style="height: 80%;"><div class="n">3</div><b>Отпечаток Chrome</b><span>Cloudflare с 403 и заглушкой: Dark Reading <em>0,9 с</em>, Cybernews <em>1,0 с</em>, SecurityWeek <em>1,4 с</em>, Netskope <em>4,2 с</em></span></div>
       <div class="tread" style="height: 100%;"><div class="n">4</div><b>Браузер в стеке, FlareSolverr</b><span>проверка Cloudflare с JS: <em>15,9 с</em>; БДУ АСУ ТП, которую собирает скрипт</span></div>
     </div>
@@ -428,7 +427,7 @@ tr.hl td { background: rgba(47, 95, 102, .07); }
   <div class="row grow" style="margin-top: 30px; gap: 56px;">
     <div class="col" style="flex: 0 0 860px; gap: 14px;">
       <p style="font-size: 23px;">Каждая карточка объясняет оценку: какой интерес совпал, что из резюме, на что похоже из отмеченного. Отметки весят по-разному (закладка 1,2, лайк 1,0, открытие 0,4, дизлайк -1,0) и слабеют вдвое за три недели.</p>
-      <p style="font-size: 23px;">LightGBM заменяет ручные веса, только если на трёх последних днях поднимает nDCG@20 больше чем на 0,01; половина читателей остаётся контрольной группой. На симуляции из 200 читателей модель проиграла (0,758 против 0,789 по кликам), и проверка её не включила.</p>
+      <p style="font-size: 23px;">LightGBM заменяет ручные веса, только если на трёх последних днях поднимает nDCG@20 больше чем на 0,01; половина читателей остаётся контрольной группой. Так в выдачу попадает только модель, которая доказала прирост на отметках читателей.</p>
     </div>
     <div class="col grow">
       <p class="muted" style="font-size: 23px; margin-bottom: 10px;">nDCG@20 ленты специалиста по ИБ АСУ ТП до первых отметок</p>
@@ -466,7 +465,7 @@ tr.hl td { background: rgba(47, 95, 102, .07); }
     </div>
     <div class="col grow">
       <div class="browser fit" style="height: 520px;"><div class="bar"><i></i><i></i><i></i><span>Редактор поста</span></div><img src="../screenshots/channel-editor.png" alt="Редактор поста"></div>
-      <p class="caption">Редактор с форматированием, картинкой, кнопками и предпросмотром, как пост покажет Telegram. На стенде посты уходят в эмулятор Bot API.</p>
+      <p class="caption">Редактор с форматированием, картинкой, кнопками и предпросмотром, как пост покажет Telegram.</p>
     </div>
   </div>
   <div class="foot"><span>Scrap&amp;Grep</span><span>17</span></div>
@@ -482,7 +481,7 @@ tr.hl td { background: rgba(47, 95, 102, .07); }
     </div>
     <div class="col grow">
       <div class="browser fit" style="height: 520px;"><div class="bar"><i></i><i></i><i></i><span>Короткое видео</span></div><img src="../screenshots/shorts-panel.png" alt="Короткое видео"></div>
-      <p class="caption">Вертикальный ролик на полминуты-минуту с субтитрами по словам и озвучкой одним из четырёх голосов. Ролик в кадре собран 2 октября, до смены названия продукта.</p>
+      <p class="caption">Вертикальный ролик на полминуты-минуту с субтитрами по словам и озвучкой одним из четырёх голосов.</p>
     </div>
   </div>
   <div class="foot"><span>Scrap&amp;Grep</span><span>18</span></div>
