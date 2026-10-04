@@ -1005,6 +1005,11 @@ export const api = {
   briefing: (digestId: string) => request<BriefingState>(`/digests/${digestId}/briefing`),
   createBriefing: (digestId: string, voice: string | null) =>
     request<Briefing>(`/digests/${digestId}/briefing`, json('POST', { voice })),
+  /** Whether a digest can be sent by email here, and to whom by default. */
+  mailState: (digestId: string) => request<MailState>(`/digests/${digestId}/mail`),
+  /** `null` sends it to the reader's own address. */
+  mailDigest: (digestId: string, to: string | null) =>
+    request<{ to: string }>(`/digests/${digestId}/mail`, json('POST', { to })),
 }
 
 /** The spoken brief of a management digest, about two minutes long. */
@@ -1032,4 +1037,14 @@ export interface BriefingState {
   /** Voices to pick from; empty when the service offers no choice. */
   voices: VoiceOption[]
   briefing: Briefing | null
+}
+
+/** Delivery of a digest by email. */
+export interface MailState {
+  /** False when the server has no mail server set: no button then. */
+  available: boolean
+  /** The reader's own address; null for a guest. */
+  default_to: string | null
+  /** Domains the company allows; empty allows any. */
+  domains: string[]
 }

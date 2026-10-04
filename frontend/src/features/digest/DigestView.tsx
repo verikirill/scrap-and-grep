@@ -29,6 +29,7 @@ import { OriginalLink } from '../reader/OriginalLink'
 import { articlePath } from '../reader/paths'
 import { BriefingPlayer } from './BriefingPlayer'
 import { EntryDetails, PriorityChip } from './EntryCard'
+import { MailButton } from './MailButton'
 import { IssueExtras, ManualWork } from './IssueExtras'
 import { ShortPanel } from './ShortPanel'
 
@@ -342,6 +343,7 @@ export function DigestView({ digest, previousId }: { digest: Digest; previousId?
               DOCX
             </a>
             <BriefingPlayer digest={digest} />
+            <MailButton digest={digest} />
           </div>
         </div>
 

@@ -7,7 +7,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from importlib import resources
 from pathlib import Path
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 import typer
 from alembic import command
@@ -26,6 +26,9 @@ from radar.console import (
     targets,
 )
 from radar.logging import configure_logging, get_logger
+
+if TYPE_CHECKING:
+    from radar.views import DigestView
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
 log = get_logger("radar.cli")
@@ -301,7 +304,7 @@ def _write(out: Path, stem: str, markdown: str, docx: bytes) -> Path:
     return md_path
 
 
-async def _build(target: Target, email: str | None, out: Path) -> Path:
+async def _build(target: Target, email: str | None, out: Path, mail_to: str | None = None) -> Path:
     from radar.db import session_scope
     from radar.pipeline.runner import report_failure, run_digest
     from radar.render.docx import render_docx
@@ -332,7 +335,24 @@ async def _build(target: Target, email: str | None, out: Path) -> Path:
         f"Готово: {stats.get('selected', 0)} записей из {stats.get('window_total', 0)} "
         f"публикаций, модель {stats.get('llm')}, {stats.get('duration_seconds', 0):.0f} с"
     )
+    if mail_to:
+        await _mail(view, mail_to)
     return markdown
+
+
+async def _mail(view: DigestView, to: str) -> None:
+    from radar import mail
+
+    settings = get_settings()
+    if not settings.smtp_host:
+        raise typer.BadParameter(
+            "почта не настроена: задайте RADAR_SMTP_HOST", param_hint="--mail-to"
+        )
+    try:
+        await mail.send(mail.letter(view, to, settings), settings)
+    except mail.MailError as exc:
+        raise typer.BadParameter(str(exc), param_hint="--mail-to") from exc
+    typer.echo(f"Отправлен на {to}")
 
 
 @app.command()
@@ -366,6 +386,10 @@ def digest(
         ),
     ] = None,
     out: Annotated[Path, typer.Option(help="Directory for the .md and .docx files.")] = Path("."),
+    mail_to: Annotated[
+        str | None,
+        typer.Option(help="Also send each digest to this address (RADAR_SMTP_HOST must be set)."),
+    ] = None,
 ) -> None:
     """Build digests in this process and write them as Markdown and DOCX.
 
@@ -384,7 +408,7 @@ def digest(
             typer.echo("Опрашиваем источники...")
             sources, new_articles, _ = await _ingest_now()
             typer.echo(f"{sources} источников, новых публикаций: {new_articles}")
-        return [await _build(target, email, out) for target in wanted]
+        return [await _build(target, email, out, mail_to) for target in wanted]
 
     for path in aio.run(run()):
         typer.echo(f"Markdown: {path}  DOCX: {path.parent / (path.stem + '.docx')}")

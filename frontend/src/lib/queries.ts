@@ -977,3 +977,14 @@ export function useCreateBriefing(digestId: string) {
     onSettled: () => client.invalidateQueries({ queryKey: key }),
   })
 }
+
+export const useMailState = (digestId: string, isEnabled: boolean) =>
+  useQuery({
+    queryKey: ['mail', digestId] as const,
+    queryFn: () => api.mailState(digestId),
+    enabled: isEnabled,
+    staleTime: 60_000,
+  })
+
+export const useMailDigest = (digestId: string) =>
+  useMutation({ mutationFn: (to: string | null) => api.mailDigest(digestId, to) })
