@@ -948,3 +948,32 @@ export function useSchedule() {
     }),
   }
 }
+
+const BRIEFING_POLL_MS = 3_000
+type BriefingStateData = Awaited<ReturnType<typeof api.briefing>>
+const briefingKey = (digestId: string) => ['briefing', digestId] as const
+
+/** Polled while the brief is being voiced. */
+export const useBriefing = (digestId: string, isEnabled: boolean) =>
+  useQuery({
+    queryKey: briefingKey(digestId),
+    queryFn: () => api.briefing(digestId),
+    enabled: isEnabled,
+    refetchInterval: (query) =>
+      query.state.status !== 'error' && isBuilding(query.state.data?.briefing ?? undefined)
+        ? BRIEFING_POLL_MS
+        : false,
+  })
+
+export function useCreateBriefing(digestId: string) {
+  const client = useQueryClient()
+  const key = briefingKey(digestId)
+  return useMutation({
+    mutationFn: (voice: string | null) => api.createBriefing(digestId, voice),
+    // A poll that started before the order would bring back the old brief.
+    onMutate: () => client.cancelQueries({ queryKey: key }),
+    onSuccess: (briefing) =>
+      client.setQueryData<BriefingStateData>(key, (state) => state && { ...state, briefing }),
+    onSettled: () => client.invalidateQueries({ queryKey: key }),
+  })
+}

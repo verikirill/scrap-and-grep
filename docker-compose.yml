@@ -69,6 +69,9 @@ x-backend: &backend
     RADAR_SHORTS_URL: ${RADAR_SHORTS_URL:-}
     RADAR_TTS_URL: ${RADAR_TTS_URL:-}
     RADAR_TTS_VOICE: ${RADAR_TTS_VOICE:-}
+    # One request to the voice: a few lines on a GPU take seconds, on a CPU
+    # minutes, so a stand without a GPU raises it.
+    RADAR_TTS_TIMEOUT_SECONDS: ${RADAR_TTS_TIMEOUT_SECONDS:-300}
     RADAR_MEDIA_DIR: /data/media
     # Publishing to Telegram channels. Bot tokens are stored encrypted with a
     # key derived from RADAR_SECRET_KEY; without it no bot can be added. With
@@ -276,9 +279,11 @@ services:
 
   # Short videos: writes the script, asks for the voice and the render, and
   # stores the MP4. One video at a time: the renderer takes every core it has.
+  # Short videos, and spoken briefs of management digests, which need the
+  # voice profile alone.
   worker-media:
     <<: *backend
-    profiles: ["video"]
+    profiles: ["video", "voice"]
     command: ["taskiq", "worker", "radar.worker.brokers:media_broker", "radar.worker.tasks", "--ack-type", "when_executed", "--max-async-tasks", "1", "--workers", "1"]
     volumes:
       - media:/data/media
