@@ -189,7 +189,10 @@ async def test_a_feed_that_refuses_the_bot_remembers_how_it_was_read(
     assert second.status == "ok"
     assert source is not None
     assert source.fetch_method == "browser_headers"
-    assert source.fetch_note == "Шаг «обычный запрос» не сработал (403), сработал «заголовки браузера»."
+    assert (
+        source.fetch_note
+        == "Шаг «обычный запрос» не сработал (403), сработал «заголовки браузера»."
+    )
     # The next run starts on the step that worked.
     assert ["Chrome/" in agent for agent in agents] == [False, True, True]
 

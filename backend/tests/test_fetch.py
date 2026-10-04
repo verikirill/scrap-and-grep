@@ -120,7 +120,10 @@ async def test_a_site_that_refuses_the_bot_is_read_with_a_browsers_headers(
     assert [CHROME in agent for agent in agents] == [False, True, True]
     assert ladder.first is not None
     assert ladder.first.step == "browser_headers"
-    assert ladder.first.note == "Шаг «обычный запрос» не сработал (403), сработал «заголовки браузера»."
+    assert (
+        ladder.first.note
+        == "Шаг «обычный запрос» не сработал (403), сработал «заголовки браузера»."
+    )
 
 
 async def test_a_source_starts_on_the_step_remembered_for_it(offline: None) -> None:
@@ -258,7 +261,9 @@ async def test_a_site_that_checks_the_fingerprint_is_read_by_curl_pinned_to_the_
     assert "Уязвимость в SCADA" in response.text
     assert ladder.first is not None
     assert ladder.first.step == "impersonate"
-    assert ladder.first.note == "Шаг «обычный запрос» не сработал (403), сработал «отпечаток Chrome»."
+    assert (
+        ladder.first.note == "Шаг «обычный запрос» не сработал (403), сработал «отпечаток Chrome»."
+    )
     # Every step went to the checked address under the site's own name.
     assert [host for _, host, _ in _Site.seen] == [f"site.test:{local_site}"] * 3
 
