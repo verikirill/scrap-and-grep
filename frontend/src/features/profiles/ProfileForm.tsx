@@ -301,6 +301,20 @@ export function ProfileForm({
           />
         </Field>
 
+        <Field
+          isGroup
+          label="Наши системы"
+          hint="производители и продукты, например Cisco ASA, Siemens S7-1500, 1С"
+        >
+          <ChipsInput
+            label="Наши системы"
+            values={spec.systems ?? []}
+            onChange={(systems) => onChange({ ...spec, systems })}
+            placeholder="Cisco ASA, Siemens S7-1500"
+            max={40}
+          />
+        </Field>
+
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label="Порог релевантности" hint={spec.min_score.toFixed(2)}>
             <input

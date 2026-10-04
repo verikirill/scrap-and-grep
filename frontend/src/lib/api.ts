@@ -24,6 +24,8 @@ export interface ProfileSpec {
   languages: string[]
   categories: SourceCategory[]
   audience: Audience
+  /** Products the company runs: an entry naming one goes first in its topic. */
+  systems?: string[]
 }
 
 export interface Profile {
@@ -368,6 +370,8 @@ export interface DigestItem {
   links: string[]
   /** What the check against the article's text took out. */
   unsupported: string[]
+  /** The reader's own systems the entry names. */
+  ours?: string[]
 }
 
 export type RecordKind = 'attack' | 'vulnerability' | 'news'

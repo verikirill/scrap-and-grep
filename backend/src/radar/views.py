@@ -20,6 +20,7 @@ from radar.domain import (
     VulnerabilityReference,
 )
 from radar.reading import reading_minutes
+from radar.systems import affected_systems, entry_text
 
 
 class DuplicateView(BaseModel):
@@ -42,6 +43,8 @@ class ItemView(BaseModel):
     source_category: str
     # How the source gets past a site that refuses a bot; empty for a plain read.
     source_read_via: str = ""
+    # The reader's own systems the entry names.
+    ours: list[str] = []
     language: str
     published_at: datetime
     score: float
@@ -160,6 +163,12 @@ def _item_view(item: DigestItem, profile: ProfileSpec) -> ItemView:
         source_name=article.source.name,
         source_category=article.source.category,
         source_read_via=read_via(article.source.fetch_method, article.source.fetch_via_proxy),
+        ours=list(
+            affected_systems(
+                profile.systems,
+                entry_text(item.headline or article.title, article.title, item.summary, card),
+            )
+        ),
         language=article.language,
         published_at=article.published_at,
         score=round(item.score, 3),
@@ -219,6 +228,10 @@ def digest_view(digest: Digest) -> DigestView:
             by_topic.setdefault(item.topic_id, []).append(view)
         else:
             rejected.append(view)
+    for views in by_topic.values():
+        # What names the reader's own systems first; the sort keeps the order
+        # within both groups.
+        views.sort(key=lambda view: not view.ours)
     return DigestView(
         **digest_summary(digest).model_dump(),
         profile=profile,
