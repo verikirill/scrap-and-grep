@@ -128,7 +128,7 @@ def test_the_brief_tells_the_title_what_it_means_the_highlights_and_the_entries(
     lines = build_script(view).lines
 
     assert lines[0] == (
-        "Брифинг Tail and Grep для руководства, 26 сентября - 3 октября. "
+        "Брифинг Scrap and Grep для руководства, 26 сентября - 3 октября. "
         "Массовые уязвимости в промышленном ПО."
     )
     assert lines[1] == f"Что это значит для нас. {IMPLICATIONS[0]}"
@@ -421,7 +421,7 @@ async def test_a_brief_is_voiced_for_the_owner_of_a_management_digest_only(
         briefing = (await owner.get(f"/digests/{digest_id}/briefing")).json()["briefing"]
         assert briefing["status"] == "done"
         assert briefing["voice"] == "qwen3-tts:anchor"
-        assert briefing["lines"][0].startswith("Брифинг Tail and Grep для руководства")
+        assert briefing["lines"][0].startswith("Брифинг Scrap and Grep для руководства")
         assert briefing["lines"][1].startswith("Что это значит для нас. Риск: взлом")
         # The entries say "CVSS 9.8"; the brief does not.
         assert not any("CVSS" in line for line in briefing["lines"])

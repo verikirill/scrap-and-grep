@@ -261,7 +261,7 @@ function ThemeButton({ dark, onToggle }: { dark: boolean; onToggle: () => void }
 
 function Brand() {
   return (
-    <Link to="/" aria-label="Tail&Grep, главная" className="rounded-2xl">
+    <Link to="/" aria-label="Scrap&Grep, главная" className="rounded-2xl">
       <LogoMark size={48} />
     </Link>
   )

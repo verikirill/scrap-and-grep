@@ -28,11 +28,11 @@ MS_PER_SYLLABLE = 190
 MAX_LINE = 380
 MAX_ENTRIES = 5
 
-INTRO = "Брифинг Tail and Grep для руководства"
+INTRO = "Брифинг Scrap and Grep для руководства"
 IMPLICATIONS_LABEL = "Что это значит для нас."
 HIGHLIGHTS_LABEL = "Главное."
 ENTRIES_LABEL = "Подробнее о главных событиях."
-OUTRO = "Полный выпуск со ссылками ждёт в Tail and Grep."
+OUTRO = "Полный выпуск со ссылками ждёт в Scrap and Grep."
 NO_ENTRIES = "В выпуске нет записей, брифингу не о чем рассказать."
 
 # How much of the digest is told, from the fullest brief down: what it means

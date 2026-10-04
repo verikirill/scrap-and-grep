@@ -59,7 +59,7 @@ def specialist_block(result: dict[str, Any]) -> list[str]:
         return [*lines, f"Не прочитано: {reason}.", ""]
     ours_kind = KIND_WORDS[result["kind"]]
     lines += [
-        "| | Датасет | Tail&Grep |",
+        "| | Датасет | Scrap&Grep |",
         "|---|---|---|",
         f"| Группа | {example['grouping']} | {ours_kind} |",
         (
@@ -74,7 +74,7 @@ def specialist_block(result: dict[str, Any]) -> list[str]:
             for line in example["wanted"].splitlines()
         ],
         "",
-        f"**Tail&Grep:** {result['headline']}",
+        f"**Scrap&Grep:** {result['headline']}",
         "",
         result["summary"],
         "",
@@ -114,7 +114,7 @@ def management_block(result: dict[str, Any]) -> list[str]:
             for line in example["wanted"].splitlines()
         ],
         "",
-        f"**Tail&Grep:** {result['headline']}",
+        f"**Scrap&Grep:** {result['headline']}",
         "",
         result["summary"],
         "",
@@ -190,7 +190,7 @@ def main() -> None:
         ),
         (
             "- Специалисты, посты Telegram: датасет кладёт их в группу «Инфо» по источнику, "
-            "Tail&Grep определяет тип по содержанию, поэтому пост об уязвимости получает "
+            "Scrap&Grep определяет тип по содержанию, поэтому пост об уязвимости получает "
             "карточку уязвимости и ссылки из поста, как в желаемом выводе."
         ),
         (
@@ -199,7 +199,7 @@ def main() -> None:
         ),
         "",
         (
-            "Где Tail&Grep расходится с датасетом и почему, видно в разборе ниже. Два "
+            "Где Scrap&Grep расходится с датасетом и почему, видно в разборе ниже. Два "
             "расхождения - ошибки самого датасета, а не модели: у specialist-4 (Axios) в "
             "датасете указан CVE-2025-59287, это уязвимость WSUS из specialist-7; у specialist-3 "
             "страной жертвы назван РФ при атаке на Европу и Юго-Восточную Азию. У specialist-7 "
