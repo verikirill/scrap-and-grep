@@ -120,11 +120,18 @@ tr.hl td { background: rgba(47, 95, 102, .07); }
 .card p { font-size: 22px; line-height: 1.45; color: var(--muted); }
 .big { font-family: var(--serif); font-weight: 650; font-size: 104px; line-height: 1; color: var(--accent); }
 .cmd { font-family: var(--mono); font-size: 23px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; margin-top: 12px; white-space: nowrap; }
+
+/* The stack: four lanes of services, drawn as boxes. */
+.arch { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; margin-top: 36px; }
+.lane { background: var(--tint); border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.lane-h { font-size: 20px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--primary); }
+.node { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font-size: 22px; font-weight: 650; }
+.node span { display: block; font-size: 18px; font-weight: 400; color: var(--muted); line-height: 1.35; margin-top: 4px; }
+.node.soft { background: #fbfaf7; }
 </style>
 </head>
 <body>
 
-<!-- 1. Cover -->
 <section class="slide cover">
   <div class="brand">Scrap&amp;Grep</div>
   <h1>Выпуск новостей ИБ под каждого читателя собирается за одну-четыре минуты</h1>
@@ -136,7 +143,6 @@ tr.hl td { background: rgba(47, 95, 102, .07); }
   <div class="meta">Хакатон «ИИ-ассистенты для энергетики», полуфинал · команда misis-mojarung · октябрь 2026</div>
 </section>
 
-<!-- 2. Problem -->
 <section class="slide">
   <div class="kicker">Задача заказчика</div>
   <h2>Ручной мониторинг новостей ИБ стоит команде из трёх специалистов около 89&nbsp;000&nbsp;₽ в месяц</h2>
@@ -158,7 +164,6 @@ tr.hl td { background: rgba(47, 95, 102, .07); }
   <div class="foot"><span>Scrap&amp;Grep</span><span>2</span></div>
 </section>
 
-<!-- 3. Answer -->
 <section class="slide">
   <div class="kicker">Решение</div>
   <h2>Scrap&amp;Grep делает каждый шаг работы аналитика сам и показывает, почему</h2>
@@ -168,11 +173,36 @@ tr.hl td { background: rgba(47, 95, 102, .07); }
     <div class="step"><div class="n">3</div><h3>Приоритет</h3><p>Правило заказчика: атака на энергетику и промышленность РФ выше остальных, уязвимость с эксплойтом выше. Эксплойт сверяется с CISA KEV и БДУ ФСТЭК.</p></div>
     <div class="step"><div class="n">4</div><h3>Выпуск</h3><p>Специалисту за сутки с планом на смену, руководству за неделю с выводами и брифингом голосом. Markdown и DOCX, из браузера или консоли.</p></div>
   </div>
-  <div class="note">Чего пока нет: сравнения с живым аналитиком на одной неделе. Задание, разметка и скрипт метрик готовы (docs/eval/human), разметки человеком ещё нет, поэтому цифр сравнения не приводим.</div>
+  <div class="note">Аналитик ИБ собрал те же два выпуска за ту же неделю вручную: сравнение на следующем слайде.</div>
   <div class="foot"><span>Scrap&amp;Grep</span><span>3</span></div>
 </section>
 
-<!-- 4. Criterion 1: sources -->
+<section class="slide">
+  <div class="kicker">Гипотеза жюри · Ассистент и аналитик</div>
+  <h2>Аналитик собрал те же два выпуска вручную за 205 минут, ассистент за 85 секунд</h2>
+  <div class="row grow" style="margin-top: 40px; gap: 60px;">
+    <div class="col" style="flex: 0 0 760px; gap: 18px;">
+      <p class="muted" style="font-size: 23px;">Время на два выпуска, минут</p>
+      <div class="chart" id="chart-analyst"></div>
+      <p class="caption">Время аналитика - его собственный журнал: 75 минут на просмотр источников, по 65 минут на каждый выпуск. Ассистент: 70,5 с выпуск специалисту и 14,7 с руководству.</p>
+    </div>
+    <div class="col grow">
+      <table>
+        <tr><th></th><th class="r">Ассистент</th><th class="r">Аналитик</th></tr>
+        <tr><td>Записей специалисту</td><td class="r">20</td><td class="r">14</td></tr>
+        <tr><td>Записей руководству</td><td class="r">15</td><td class="r">9</td></tr>
+        <tr><td>Общих сюжетов у специалиста</td><td class="r" colspan="2">1 из 14: 0-day в Citrix NetScaler</td></tr>
+        <tr><td>Общих сюжетов у руководства</td><td class="r" colspan="2">0 из 9</td></tr>
+        <tr><td>Ссылок на источники недели</td><td class="r">все</td><td class="r">8 из 36</td></tr>
+      </table>
+      <p style="margin-top: 26px; font-size: 24px;">Аналитик нашёл регуляторику и право (приказы ФСТЭК № 137 и ФСБ № 297, профстандарт по КИИ, оборотные штрафы) и MikroTik с предписанием ГРЧЦ; ассистент - бюллетени CISA ICS по оборудованию АСУ ТП, 17 уязвимостей в российской SCADA и проверку эксплойтов по CISA KEV и БДУ.</p>
+    </div>
+  </div>
+  <div class="note" style="margin-top: 22px;">Чей отбор полнее, покажут оценка кандидатов человеком и слепое сравнение выпусков: они ещё не проведены, поэтому цифр полноты против человека не приводим.</div>
+  <p class="src" style="margin-top: 14px;">docs/eval/vs-analyst.md; ответ аналитика целиком - examples/vs-analyst.</p>
+  <div class="foot"><span>Scrap&amp;Grep</span><span>4</span></div>
+</section>
+
 <section class="slide">
   <div class="kicker">Критерий 1 · Репрезентативность материалов</div>
   <h2>Каталог покрывает все 62 источника из списков организаторов и ещё 45 сверх них</h2>
@@ -187,10 +217,9 @@ tr.hl td { background: rgba(47, 95, 102, .07); }
       <p class="caption">Каждый источник опрашивается раз в 15 минут; здоровье за сутки и способ чтения видны в каталоге.</p>
     </div>
   </div>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>4</span></div>
+  <div class="foot"><span>Scrap&amp;Grep</span><span>5</span></div>
 </section>
 
-<!-- 5. Criterion 1: dataset -->
 <section class="slide">
   <div class="kicker">Критерий 1 · Репрезентативность материалов</div>
   <h2>На 21 примере организаторов тип записи совпал в 6 случаях из 6, приоритет в 4 из 6</h2>
@@ -204,10 +233,52 @@ tr.hl td { background: rgba(47, 95, 102, .07); }
   </table>
   <p style="margin-top: 34px; font-size: 25px;">Ещё в репозитории: выпуски для четырёх профилей в Markdown и DOCX и три сценария смены интересов с разбором, что пришло и что ушло.</p>
   <p class="src" style="margin-top: auto;">examples/dataset/README.md; examples/README.md</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>5</span></div>
+  <div class="foot"><span>Scrap&amp;Grep</span><span>6</span></div>
 </section>
 
-<!-- 6. Criterion 2: ladder -->
+<section class="slide">
+  <div class="kicker">Критерий 2 · Техническая реализация</div>
+  <h2>Стек поднимается одной командой: один образ бэкенда в шести ролях и граф сборки с чекпоинтами</h2>
+  <div class="arch">
+    <div class="lane">
+      <div class="lane-h">Сбор</div>
+      <div class="node">worker-ingest<span>RSS, t.me/s, страницы, лестница чтения, эмбеддинги новых статей</span></div>
+      <div class="node soft">browser, FlareSolverr<span>для сайтов, которые не пускают бота</span></div>
+    </div>
+    <div class="lane">
+      <div class="lane-h">Хранение</div>
+      <div class="node">PostgreSQL 18<span>статьи, pgvector и полнотекстовый поиск, чекпоинты графа</span></div>
+      <div class="node">Valkey<span>очереди задач, кеш ответов модели, прогресс</span></div>
+      <div class="node">ClickHouse<span>события показов и отметок</span></div>
+    </div>
+    <div class="lane">
+      <div class="lane-h">Сборка и модель</div>
+      <div class="node">worker-digest<span>граф LangGraph, до 4 запросов к модели параллельно</span></div>
+      <div class="node">Ollama или OpenAI-совместимый API<span>оценки и тексты; эмбеддинги embeddinggemma локально</span></div>
+      <div class="node soft">worker-profile, worker-media<span>резюме и вкус читателя; брифинг и короткие видео</span></div>
+    </div>
+    <div class="lane">
+      <div class="lane-h">Доступ</div>
+      <div class="node">web (Caddy) и api (FastAPI)<span>интерфейс, REST, прогресс по SSE, MCP</span></div>
+      <div class="node soft">cli<span>выпуск в Markdown и DOCX одной командой</span></div>
+      <div class="node soft">scheduler<span>опрос раз в 15 минут, выпуски по расписанию</span></div>
+    </div>
+  </div>
+  <p class="muted" style="font-size: 23px; margin-top: 30px;">Граф сборки выпуска</p>
+  <div class="flow" style="margin-top: 12px;">
+    <div class="box"><b>prepare</b><span>профиль и период</span></div><div class="arrow">›</div>
+    <div class="box"><b>retrieve</b><span>поиск по смыслу и словам</span></div><div class="arrow">›</div>
+    <div class="box key"><b>grade</b><span>веер: задача на кандидата</span></div><div class="arrow">›</div>
+    <div class="box"><b>select</b><span>порог, лимит, исключения</span></div><div class="arrow">›</div>
+    <div class="box"><b>cluster</b><span>склейка повторов, темы</span></div><div class="arrow">›</div>
+    <div class="box key"><b>summarize</b><span>веер: задача на статью</span></div><div class="arrow">›</div>
+    <div class="box"><b>compose</b><span>разделы, «Главное»</span></div><div class="arrow">›</div>
+    <div class="box"><b>persist</b><span>запись выпуска</span></div>
+  </div>
+  <p class="src" style="margin-top: 18px;">Упавший воркер продолжает с прерванного шага: чекпоинты в PostgreSQL. docs/ARCHITECTURE.md, «Компоненты» и «Граф сборки».</p>
+  <div class="foot"><span>Scrap&amp;Grep</span><span>7</span></div>
+</section>
+
 <section class="slide">
   <div class="kicker">Критерий 2 · Техническая реализация</div>
   <h2>Сайт, который не пускает бота, читается следующей ступенью лестницы</h2>
@@ -225,10 +296,9 @@ tr.hl td { background: rgba(47, 95, 102, .07); }
     </div>
   </div>
   <p class="src" style="margin-top: 24px;">Замеры 2 октября 2026 года, без прокси. docs/DECISIONS.md, «Сбор: лестница способов чтения».</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>6</span></div>
+  <div class="foot"><span>Scrap&amp;Grep</span><span>8</span></div>
 </section>
 
-<!-- 7. Criterion 2: pipeline -->
 <section class="slide">
   <div class="kicker">Критерий 2 · Техническая реализация</div>
   <h2>Каждая запись сверяется с текстом статьи и с базами уязвимостей</h2>
@@ -250,10 +320,9 @@ tr.hl td { background: rgba(47, 95, 102, .07); }
       <div class="browser fit" style="height: 440px;"><div class="bar"><i></i><i></i><i></i><span>Карточка уязвимости</span></div><img src="../screenshots/digest-topics.png" alt="Карточка уязвимости"></div>
     </div>
   </div>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>7</span></div>
+  <div class="foot"><span>Scrap&amp;Grep</span><span>9</span></div>
 </section>
 
-<!-- 8. Criterion 2: audiences -->
 <section class="slide">
   <div class="kicker">Критерий 2 · Техническая реализация</div>
   <h2>Специалист получает план на смену каждый день, руководство выводы раз в неделю</h2>
@@ -267,10 +336,9 @@ tr.hl td { background: rgba(47, 95, 102, .07); }
       <p class="caption">«Что это значит для нас», период в цифрах против прошлого выпуска, записи в одно-два предложения без номеров CVE и брифинг голосом на две минуты.</p>
     </div>
   </div>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>8</span></div>
+  <div class="foot"><span>Scrap&amp;Grep</span><span>10</span></div>
 </section>
 
-<!-- 9. Criterion 2: change of interests -->
 <section class="slide">
   <div class="kicker">Критерий 2 · Техническая реализация</div>
   <h2>Правка интересов сразу меняет подборку, и это видно ещё до сборки</h2>
@@ -287,10 +355,9 @@ tr.hl td { background: rgba(47, 95, 102, .07); }
     </div>
   </div>
   <p class="src">examples/change</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>9</span></div>
+  <div class="foot"><span>Scrap&amp;Grep</span><span>11</span></div>
 </section>
 
-<!-- 10. Criterion 2: models -->
 <section class="slide">
   <div class="kicker">Критерий 2 · Техническая реализация</div>
   <h2>Модель меняется одной строкой в .env, сценарий выпуска держится на всех</h2>
@@ -306,10 +373,9 @@ tr.hl td { background: rgba(47, 95, 102, .07); }
     </div>
   </div>
   <p class="src">Выпуск специалисту по ИБ АСУ ТП за неделю примеров: 60 кандидатов, 20 записей. examples/models/README.md</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>10</span></div>
+  <div class="foot"><span>Scrap&amp;Grep</span><span>12</span></div>
 </section>
 
-<!-- 11. Closed perimeter -->
 <section class="slide">
   <div class="kicker">Критерий 2 · Техническая реализация</div>
   <h2>Стек работает в закрытом контуре, наружу ходит только загрузчик источников</h2>
@@ -319,21 +385,141 @@ tr.hl td { background: rgba(47, 95, 102, .07); }
       <p><code>offline_bundle.sh save</code>: 7 образов ядра 4,7 ГБ и модели 1,6 ГБ за 4 мин 21 с. <code>load</code> в пустой каталог за 3 мин 29 с, копия поднялась без сети и прошла проверочный сценарий.</p>
     </div>
     <div class="col grow">
-      <p class="muted" style="font-size: 23px; margin-bottom: 12px;">Железо: только свои замеры</p>
+      <p class="muted" style="font-size: 23px; margin-bottom: 12px;">Своя видеокарта для gpt-oss-120b: опубликованные замеры при 1-4 запросах и расчёт выпуска</p>
       <table>
-        <tr><th>Конфигурация</th><th class="r">Сборка</th><th class="r">Выпусков в час</th></tr>
-        <tr><td>Без языковой модели</td><td class="r">0,5 с</td><td class="r">тысячи</td></tr>
-        <tr><td>qwen3.5:9b, RTX 5070 12 ГБ</td><td class="r">81-102 с</td><td class="r">35-44</td></tr>
-        <tr><td>qwen3.5:0.8b, процессор ноутбука</td><td class="r">731,5 с</td><td class="r">4-5</td></tr>
-        <tr><td>Qwen3.6 35B-A3B, gpt-oss-120b локально</td><td class="r" colspan="2">ждут замера на карте NVIDIA</td></tr>
+        <tr><th>Карта и движок</th><th class="r" style="white-space: nowrap;">Генерация, ток/с</th><th class="r" style="white-space: nowrap;">Выпуск</th><th class="r" style="white-space: nowrap;">Выпусков в час</th></tr>
+        <tr><td>H100 80 ГБ, vLLM</td><td class="r">233 / 511</td><td class="r">≈45 с</td><td class="r">≈80</td></tr>
+        <tr><td>RTX PRO 6000 96 ГБ, vLLM</td><td class="r">181 / 361</td><td class="r">≈56 с</td><td class="r">≈64</td></tr>
+        <tr><td>A100 80 ГБ, vLLM 0.11</td><td class="r">- / 326</td><td class="r">≈70 с</td><td class="r">≈50</td></tr>
+        <tr><td>DGX Spark 128 ГБ, SGLang</td><td class="r">51 / 92</td><td class="r" style="white-space: nowrap;">≈4,3 мин</td><td class="r">≈14</td></tr>
       </table>
+      <p style="font-size: 20px; margin-top: 14px; color: var(--muted);">Генерация: один запрос / четыре сразу. Выпуск специалисту - 110 обращений, 166&nbsp;511 токенов на вход и 16&nbsp;127 на выход; время = вход / обработка запроса + выход / генерация при четырёх. Модель в MXFP4 помещается на одну карту 80 ГБ; аренда H100 - $4,29 в час, A100 - $1,99 (Lambda, 04.10.2026).</p>
     </div>
   </div>
-  <p class="src">README, «Закрытый контур» и «Требования к железу».</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>11</span></div>
+  <p class="src">README, «Закрытый контур» и «Требования к железу»; millstoneai.com/inference-benchmark, 02.2026 (H100, RTX PRO 6000); docs.gpustack.ai, performance-lab (A100); lmsys.org, 10.2025 (DGX Spark); arxiv 2508.10925.</p>
+  <div class="foot"><span>Scrap&amp;Grep</span><span>13</span></div>
 </section>
 
-<!-- 12. Criterion 3: economics -->
+<section class="slide">
+  <div class="kicker">Критерий 2 · Персонализация</div>
+  <h2>Резюме задаёт профиль с первой минуты, и лента сразу подбирается под специалиста</h2>
+  <div class="row grow" style="margin-top: 40px; gap: 48px;">
+    <div class="col grow">
+      <div class="browser fit" style="height: 520px;"><div class="bar"><i></i><i></i><i></i><span>Загрузка резюме</span></div><img src="../screenshots/resume.png" alt="Резюме"></div>
+      <p class="caption">Должность, навыки и предложенные темы. Имя и контакты вырезаются до анализа, файл удаляется сразу после разбора; сканы читает docling.</p>
+    </div>
+    <div class="col grow">
+      <div class="browser fit" style="height: 520px;"><div class="bar"><i></i><i></i><i></i><span>Для вас</span></div><img src="../screenshots/feed.png" alt="Лента"></div>
+      <p class="caption">У каждой статьи видно, почему она здесь: интерес, опыт из резюме, похожее на то, что читатель отметил; «Причины подбора» раскладывают оценку на части.</p>
+    </div>
+  </div>
+  <div class="foot"><span>Scrap&amp;Grep</span><span>14</span></div>
+</section>
+
+<section class="slide">
+  <div class="kicker">Критерий 2 · Рекомендательная система</div>
+  <h2>Своя рекомендательная модель строит ленту по вкусу читателя и учится на его отметках</h2>
+  <div class="arch" style="margin-top: 30px; gap: 18px;">
+    <div class="node">1. Кандидаты<span>один SQL-запрос: близость статей за две недели к каждой грани вкуса по эмбеддингам pgvector и ключевым словам</span></div>
+    <div class="node">2. Оценка<span>грани с доверием: интерес 0,45, резюме 0,10, выученная по лайкам до 0,35, избегаемая вычитается; плюс свежесть, источник, «нравится коллегам»</span></div>
+    <div class="node">3. Перестановка<span>копии одной истории выбрасываются, серии одного источника разбиваются, каждое седьмое место - «Что-то новое»</span></div>
+    <div class="node">4. Обучение<span>ночью LightGBM LambdaRank на показах и отметках из ClickHouse с поправкой на место в списке</span></div>
+  </div>
+  <div class="row grow" style="margin-top: 30px; gap: 56px;">
+    <div class="col" style="flex: 0 0 860px; gap: 14px;">
+      <p style="font-size: 23px;">Каждая карточка объясняет оценку: какой интерес совпал, что из резюме, на что похоже из отмеченного. Отметки весят по-разному (закладка 1,2, лайк 1,0, открытие 0,4, дизлайк -1,0) и слабеют вдвое за три недели.</p>
+      <p style="font-size: 23px;">LightGBM заменяет ручные веса, только если на трёх последних днях поднимает nDCG@20 больше чем на 0,01; половина читателей остаётся контрольной группой. На симуляции из 200 читателей модель проиграла (0,758 против 0,789 по кликам), и проверка её не включила.</p>
+    </div>
+    <div class="col grow">
+      <p class="muted" style="font-size: 23px; margin-bottom: 10px;">nDCG@20 ленты специалиста по ИБ АСУ ТП до первых отметок</p>
+      <div class="chart" id="chart-recsys"></div>
+      <p class="caption">Интересы дают главный прирост, резюме помогает, пока интересов нет. Неделя из 871 статьи.</p>
+    </div>
+  </div>
+  <p class="src">docs/ARCHITECTURE.md, «Персональная лента» и «Обучаемое ранжирование»; DECISIONS.md, «Обучаемое ранжирование»; docs/eval/recsys.md, docs/eval/ranker.md.</p>
+  <div class="foot"><span>Scrap&amp;Grep</span><span>15</span></div>
+</section>
+
+<section class="slide">
+  <div class="kicker">Критерий 2 · Персонализация</div>
+  <h2>Профиль учится на отметках читателя и передаётся коллеге по ссылке</h2>
+  <div class="row grow" style="margin-top: 40px; gap: 48px;">
+    <div class="col grow">
+      <div class="browser fit" style="height: 520px;"><div class="bar"><i></i><i></i><i></i><span>Интересы · Подстраивается под вас</span></div><img src="../screenshots/adapt-panel.png" alt="Подстройка профиля"></div>
+      <p class="caption">Вес интереса растёт от «больше такого» и падает от «меньше такого», не больше чем на 10%; новая тема предлагается по статьям, которые профиль сам не нашёл. Сохранённый профиль при этом не меняется.</p>
+    </div>
+    <div class="col grow">
+      <div class="browser fit" style="height: 520px;"><div class="bar"><i></i><i></i><i></i><span>Профиль по ссылке</span></div><img src="../screenshots/share-accept.png" alt="Профиль по ссылке"></div>
+      <p class="caption">Коллега открывает ссылку и добавляет копию профиля себе. Выпуски, отметки и резюме владельца по ссылке не видны.</p>
+    </div>
+  </div>
+  <div class="foot"><span>Scrap&amp;Grep</span><span>16</span></div>
+</section>
+
+<section class="slide">
+  <div class="kicker">Критерий 3 · Бизнес-ориентированность</div>
+  <h2>Боты публикуют новости в Telegram-каналы компании под аудиторию каждого канала</h2>
+  <div class="row grow" style="margin-top: 40px; gap: 48px;">
+    <div class="col grow">
+      <div class="browser fit" style="height: 520px;"><div class="bar"><i></i><i></i><i></i><span>Каналы</span></div><img src="../screenshots/channels.png" alt="Каналы"></div>
+      <p class="caption">У каждого канала свой профиль отбора, тон, подача ссылок и расписание; пост можно опубликовать сразу или отправить черновиком на проверку.</p>
+    </div>
+    <div class="col grow">
+      <div class="browser fit" style="height: 520px;"><div class="bar"><i></i><i></i><i></i><span>Редактор поста</span></div><img src="../screenshots/channel-editor.png" alt="Редактор поста"></div>
+      <p class="caption">Редактор с форматированием, картинкой, кнопками и предпросмотром, как пост покажет Telegram. На стенде посты уходят в эмулятор Bot API.</p>
+    </div>
+  </div>
+  <div class="foot"><span>Scrap&amp;Grep</span><span>17</span></div>
+</section>
+
+<section class="slide">
+  <div class="kicker">Критерий 3 · Бизнес-ориентированность</div>
+  <h2>Руководитель слушает выпуск за две минуты, а из выпуска собирается короткое видео</h2>
+  <div class="row grow" style="margin-top: 40px; gap: 48px;">
+    <div class="col grow">
+      <div class="browser fit" style="height: 520px;"><div class="bar"><i></i><i></i><i></i><span>Выпуск руководству</span></div><img src="img/management-briefing.png" alt="Брифинг голосом" style="object-position: left bottom;"></div>
+      <p class="caption">«Слушать брифинг» пересказывает выпуск голосом примерно за две минуты: что период значит для компании и главные записи, без номеров уязвимостей и адресов.</p>
+    </div>
+    <div class="col grow">
+      <div class="browser fit" style="height: 520px;"><div class="bar"><i></i><i></i><i></i><span>Короткое видео</span></div><img src="../screenshots/shorts-panel.png" alt="Короткое видео"></div>
+      <p class="caption">Вертикальный ролик на полминуты-минуту с субтитрами по словам и озвучкой одним из четырёх голосов. Ролик в кадре собран 2 октября, до смены названия продукта.</p>
+    </div>
+  </div>
+  <div class="foot"><span>Scrap&amp;Grep</span><span>18</span></div>
+</section>
+
+<section class="slide">
+  <div class="kicker">Критерий 3 · Бизнес-ориентированность</div>
+  <h2>Аналитика показывает, что сотрудники видят, открывают и отмечают</h2>
+  <div class="row grow" style="margin-top: 40px; gap: 48px;">
+    <div class="col grow">
+      <div class="browser fit" style="height: 520px;"><div class="bar"><i></i><i></i><i></i><span>Аналитика</span></div><img src="../screenshots/analytics.png" alt="Аналитика"></div>
+      <p class="caption">Читатели, доли открытий и отметок, воронка от показа к отметке и дни. Только числа, без текстов и адресов; раздел видит администратор.</p>
+    </div>
+    <div class="col grow">
+      <div class="browser fit" style="height: 520px;"><div class="bar"><i></i><i></i><i></i><span>Аналитика · ранжирование</span></div><img src="../screenshots/analytics-ranker.png" alt="Ранжирование"></div>
+      <p class="caption">Доли по местам в ленте с доверительным интервалом и ночные обучения модели. Те же события - метрики пилота: время до обзора, открытия, отметки.</p>
+    </div>
+  </div>
+  <div class="foot"><span>Scrap&amp;Grep</span><span>19</span></div>
+</section>
+
+<section class="slide">
+  <div class="kicker">Критерий 3 · Бизнес-ориентированность</div>
+  <h2>Выпуск приходит по расписанию, а ИИ-ассистент сотрудника читает его новости по личному ключу</h2>
+  <div class="row grow" style="margin-top: 40px; gap: 48px;">
+    <div class="col grow">
+      <div class="browser fit" style="height: 520px;"><div class="bar"><i></i><i></i><i></i><span>Расписание выпуска</span></div><img src="../screenshots/schedule.png" alt="Расписание"></div>
+      <p class="caption">Каждый день, по будням или раз в неделю, в местное время читателя. Специалисту по умолчанию сутки, руководству неделя.</p>
+    </div>
+    <div class="col grow">
+      <div class="browser fit" style="height: 520px;"><div class="bar"><i></i><i></i><i></i><span>Доступ для ИИ-ассистентов</span></div><img src="../screenshots/mcp-keys.png" alt="Ключ MCP"></div>
+      <p class="caption">MCP-сервер отдаёт Claude, Cursor и другим клиентам ленту, сохранённое, выпуски и интересы только этого читателя. Ключ показывается один раз.</p>
+    </div>
+  </div>
+  <div class="foot"><span>Scrap&amp;Grep</span><span>20</span></div>
+</section>
+
 <section class="slide">
   <div class="kicker">Критерий 3 · Бизнес-ориентированность</div>
   <h2>С ассистентом мониторинг обходится команде в 28&nbsp;700&nbsp;₽ вместо 89&nbsp;000&nbsp;₽ в месяц</h2>
@@ -346,30 +532,9 @@ tr.hl td { background: rgba(47, 95, 102, .07); }
     </div>
   </div>
   <p class="src">Хабр Карьера; тарифы Ollama на 03.10.2026; курс ЦБ 83,48 ₽; Selectel. docs/BUSINESS.md, «Экономика».</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>12</span></div>
+  <div class="foot"><span>Scrap&amp;Grep</span><span>21</span></div>
 </section>
 
-<!-- 13. Criterion 3: modules -->
-<section class="slide">
-  <div class="kicker">Критерий 3 · Бизнес-ориентированность</div>
-  <h2>Кроме выпуска сотрудник получает новости в ленте, в Telegram, голосом и через ИИ-ассистента</h2>
-  <div class="row grow" style="margin-top: 40px; gap: 56px;">
-    <div class="cards grow" style="grid-template-columns: repeat(2, 1fr); align-content: start;">
-      <div class="card"><h3>Лента «Для вас»</h3><p>Учитывает интересы, резюме и отметки читателя и объясняет, почему статья в ней.</p></div>
-      <div class="card"><h3>Профиль по резюме</h3><p>Должность и навыки из резюме дают профиль с первой минуты; имя и контакты вырезаются до анализа.</p></div>
-      <div class="card"><h3>Каналы в Telegram</h3><p>Боты публикуют новости по расписанию под аудиторию каждого канала, с черновиками на проверку.</p></div>
-      <div class="card"><h3>Брифинг голосом</h3><p>Выпуск руководству пересказывается примерно за две минуты, без номеров уязвимостей.</p></div>
-      <div class="card"><h3>MCP для ИИ-ассистентов</h3><p>Claude, Cursor и другие клиенты видят по личному ключу только ленту и выпуски этого читателя.</p></div>
-      <div class="card"><h3>Аналитика и ранжирование</h3><p>Показы и отметки пишутся в ClickHouse; модель ранжирования включается, только если обгоняет ручные веса.</p></div>
-    </div>
-    <div class="col" style="flex: 0 0 330px; align-items: center;">
-      <div class="phone"><img src="img/phone-digest.png" alt="Выпуск на телефоне"></div>
-    </div>
-  </div>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>13</span></div>
-</section>
-
-<!-- 14. Pilot -->
 <section class="slide">
   <div class="kicker">Внедрение</div>
   <h2>Пилот на 4 недели проверит главное число: полноту выпуска против аналитика</h2>
@@ -389,7 +554,7 @@ tr.hl td { background: rgba(47, 95, 102, .07); }
     </div>
   </div>
   <p class="src">docs/BUSINESS.md, «Пилот»; README, «Быстрый запуск».</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>14</span></div>
+  <div class="foot"><span>Scrap&amp;Grep</span><span>22</span></div>
 </section>
 
 <script>
@@ -464,6 +629,19 @@ hbars('chart-models', [
   { label: 'gpt-oss:20b', value: 12, text: '12 из 20', extra: '237 с' },
   { label: 'nemotron-3-nano:30b', value: 9, text: '9 из 20', extra: '95 с' },
 ], { width: 1080, label: 320, row: 92, max: 20, highlight: 0 })
+
+
+hbars('chart-analyst', [
+  { label: 'Аналитик', value: 205, text: '205 мин', soft: true },
+  { label: 'Ассистент', value: 1.4, text: '85 с' },
+], { width: 760, label: 190, row: 96, highlight: 1 })
+
+hbars('chart-recsys', [
+  { label: 'Только свежесть', value: 0.120, text: '0,12', soft: true },
+  { label: 'Только резюме', value: 0.277, text: '0,28' },
+  { label: 'Только интересы', value: 0.547, text: '0,55' },
+  { label: 'Интересы и резюме', value: 0.546, text: '0,55' },
+], { width: 760, label: 260, row: 64, max: 0.6, highlight: 2 })
 
 // The closed perimeter as a picture: the stack inside, one proxy out.
 document.getElementById('chart-airgap').innerHTML = svg(760, 300, `
