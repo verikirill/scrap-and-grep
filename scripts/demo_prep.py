@@ -52,6 +52,9 @@ def options() -> argparse.Namespace:
         "--exclusion", help="the edit made on stage; by default the vendor most present"
     )
     parser.add_argument("--fresh", action="store_true", help="delete the account's digests first")
+    parser.add_argument(
+        "--days", type=int, help="the specialist's period, chosen on stage; by default a day"
+    )
     return parser.parse_args()
 
 
@@ -105,11 +108,17 @@ def save(client: httpx.Client, api: str, profile_id: str, spec: dict[str, Any]) 
     client.put(f"{api}/profiles/{profile_id}", json=spec).raise_for_status()
 
 
-def build(client: httpx.Client, api: str, profile_id: str, label: str) -> dict[str, Any]:
+def build(
+    client: httpx.Client, api: str, profile_id: str, label: str, days: int | None = None
+) -> dict[str, Any]:
     started = time.monotonic()
     # No period: the profile's audience gives it, as the build panel does on
-    # stage (a day for the specialist, a week for management).
-    body = {"profile_id": profile_id}
+    # stage (a day for the specialist, a week for management). A day can be
+    # thin, on a Sunday say: then the specialist's period is chosen on stage
+    # and given here as days.
+    body: dict[str, Any] = {"profile_id": profile_id}
+    if days is not None:
+        body["period_days"] = days
     created = limited(client, "POST", f"{api}/digests", json=body)
     deadline = started + BUILD_TIMEOUT_SECONDS
     while time.monotonic() < deadline:
@@ -173,7 +182,7 @@ def main() -> None:
         save(client, api, ics["id"], spec)
 
         build(client, api, profiles[MANAGEMENT]["id"], "management")
-        before = build(client, api, ics["id"], "ICS as it is")
+        before = build(client, api, ics["id"], "ICS as it is", args.days)
         vendor = vendor_of(before)
         exclusion = args.exclusion or (f"{EXCLUSION_PREFIX}{vendor}" if vendor else None)
         if exclusion is None:
@@ -182,7 +191,9 @@ def main() -> None:
         save(client, api, ics["id"], {**spec, "exclusions": [*kept, exclusion]})
         after = None
         try:
-            after = build(client, api, ics["id"], "ICS with the exclusion (for the cache)")
+            after = build(
+                client, api, ics["id"], "ICS with the exclusion (for the cache)", args.days
+            )
             change = (
                 client.get(
                     f"{api}/digests/compare", params={"base": before["id"], "other": after["id"]}
