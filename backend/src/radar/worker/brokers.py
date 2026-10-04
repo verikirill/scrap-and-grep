@@ -33,7 +33,9 @@ from radar.logging import configure_logging
 # slow task would be handed to a second worker while the first still runs.
 _settings = get_settings()
 
-INGEST_IDLE_TIMEOUT_MS = 5 * 60 * 1000
+# A poll through the browser with forty full texts runs for minutes; sources
+# are polled every 15 minutes, so a poll that went quiet that long is dead.
+INGEST_IDLE_TIMEOUT_MS = 15 * 60 * 1000
 PROFILE_IDLE_TIMEOUT_MS = 6 * 60 * 1000
 # Script, voice and render of one video, each with its own timeout, in a row.
 MEDIA_IDLE_TIMEOUT_MS = (

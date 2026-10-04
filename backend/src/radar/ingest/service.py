@@ -31,7 +31,11 @@ from radar.text import content_hash
 
 log = get_logger(__name__)
 
-LOCK_TTL_SECONDS = 300
+# Outlives the longest poll the queue lets run (worker.tasks.INGEST_RUN_LIMIT)
+# and ends before the queue hands the message out again
+# (worker.brokers.INGEST_IDLE_TIMEOUT_MS): a second delivery of a slow poll
+# finds the lock still held instead of polling the source again.
+LOCK_TTL_SECONDS = 14 * 60
 FULLTEXT_PER_RUN = 40
 FULLTEXT_MAX_BYTES = 3_000_000
 EMBED_CHUNK = 256
