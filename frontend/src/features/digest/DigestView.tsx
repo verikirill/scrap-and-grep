@@ -5,7 +5,6 @@ import {
   FileText,
   GitCompareArrows,
   Info,
-  Layers,
 } from '../../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
@@ -15,7 +14,6 @@ import { AnimatedNumber, Card, Chip, ScoreBar, ReadingTime } from '../../compone
 import { api } from '../../lib/api'
 import type { Digest, DigestItem, Placement, ReactionKind, Topic } from '../../lib/api'
 import {
-  externalHref,
   formatDate,
   formatDateTime,
   modelLabel,
@@ -32,6 +30,7 @@ import { EntryDetails, PriorityChip } from './EntryCard'
 import { MailButton } from './MailButton'
 import { IssueExtras, ManualWork } from './IssueExtras'
 import { ShortPanel } from './ShortPanel'
+import { StoryStack } from './StoryStack'
 import { IndicatorsBlock, SocExport } from './ThreatIntel'
 
 function Funnel({ digest }: { digest: Digest }) {
@@ -148,24 +147,7 @@ function ItemCard({ item, index, placement, reactions, onReact }: ItemCardProps)
           {item.why}
         </p>
       )}
-      {item.duplicates.length > 0 && (
-        <p className="mt-2.5 flex flex-wrap items-center gap-1.5 text-xs text-muted">
-          <Layers size={13} />
-          Другие источники:
-          {item.duplicates.map((duplicate) => (
-            <a
-              key={duplicate.url}
-              href={externalHref(duplicate.url)}
-              target="_blank"
-              rel="noopener noreferrer"
-              title={duplicate.title}
-              className="rounded-md bg-surface-secondary px-1.5 py-0.5 hover:text-accent-soft-foreground"
-            >
-              {duplicate.source_name}
-            </a>
-          ))}
-        </p>
-      )}
+      <StoryStack main={item.source_name} duplicates={item.duplicates} />
     </motion.article>
   )
 }
