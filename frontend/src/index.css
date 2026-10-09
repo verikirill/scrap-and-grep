@@ -13,10 +13,19 @@
  */
 :root {
   color-scheme: light;
+  /* Fields carry a visible edge: on a poorly set screen a borderless white
+     field on a light grey card disappears. */
+  --field-border-width: 1px;
+  --field-border: oklch(86% 0.006 286);
+  --field-border-hover: oklch(78% 0.008 286);
 }
 
 .dark {
   color-scheme: dark;
+  --field-border: oklch(32% 0.008 286);
+  --field-border-hover: oklch(40% 0.01 286);
+  /* Secondary text a step lighter than HeroUI's: metadata on dark cards stays above 4.5:1. */
+  --muted: oklch(76% 0.012 286);
 }
 
 @theme inline {

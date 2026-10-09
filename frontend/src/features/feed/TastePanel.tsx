@@ -1,4 +1,5 @@
 import { motion } from 'motion/react'
+import { useState } from 'react'
 import { Link } from 'react-router'
 import { Collapsible } from '../../components/Collapsible'
 import { EASE } from '../../components/tokens'
@@ -31,6 +32,48 @@ function FacetRow({ facet }: { facet: TasteFacet }) {
         {facet.kind === 'learned' || isAvoid ? `«${facet.label}»` : facet.label}
       </span>
     </li>
+  )
+}
+
+// A long list of equal topics reads as one grey bar; the rest waits behind a button.
+const SHOWN = 8
+
+/** The reader's stated topics as chips, the learned ones as rows with their weight. */
+function FacetList({ facets, asChips }: { facets: TasteFacet[]; asChips: boolean }) {
+  const [isAll, setAll] = useState(false)
+  const shown = isAll ? facets : facets.slice(0, SHOWN)
+  const hidden = facets.length - shown.length
+  return (
+    <>
+      {asChips ? (
+        <ul className="mt-2 flex flex-wrap gap-1.5">
+          {shown.map((facet) => (
+            <li
+              key={`${facet.kind}-${facet.label}`}
+              title={facet.label}
+              className="max-w-full truncate rounded-full bg-default px-2.5 py-1 text-xs text-foreground"
+            >
+              {facet.label}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <ul className="mt-2 space-y-1.5">
+          {shown.map((facet) => (
+            <FacetRow key={`${facet.kind}-${facet.label}`} facet={facet} />
+          ))}
+        </ul>
+      )}
+      {(hidden > 0 || isAll) && facets.length > SHOWN && (
+        <button
+          type="button"
+          onClick={() => setAll((value) => !value)}
+          className="mt-2 text-xs font-medium text-accent hover:underline"
+        >
+          {isAll ? 'Свернуть' : `Показать ещё ${hidden}`}
+        </button>
+      )}
+    </>
   )
 }
 
@@ -85,11 +128,10 @@ export function TastePanel({ taste }: { taste: Taste }) {
                   {group.title}
                 </h3>
                 {facets.length > 0 ? (
-                  <ul className="mt-2 space-y-1.5">
-                    {facets.map((facet) => (
-                      <FacetRow key={`${facet.kind}-${facet.label}`} facet={facet} />
-                    ))}
-                  </ul>
+                  <FacetList
+                    facets={facets}
+                    asChips={group.kind === 'interest' || group.kind === 'resume'}
+                  />
                 ) : (
                   <p className="mt-1.5 text-[13px] text-muted">{group.empty}</p>
                 )}

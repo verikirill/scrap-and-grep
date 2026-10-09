@@ -3,7 +3,7 @@ import clsx from 'clsx'
 import { AnimatePresence, motion } from 'motion/react'
 import { Slider, SliderThumb, SliderTrack } from 'react-aria-components'
 import { createElement, useEffect, useEffectEvent, useRef, useState } from 'react'
-import { Check, Colorize, Palette } from '../../components/icons'
+import { Check, Colorize, Palette, X } from '../../components/icons'
 import { EASE } from '../../components/tokens'
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover'
 import { useRadioKeys } from '../../components/useRadioKeys'
@@ -271,8 +271,19 @@ export function ProfileLookPicker({ profile }: { profile: Profile }) {
         collisionPadding={12}
         // On a phone the tile sits low: the picker scrolls inside rather than
         // running off the top of the screen.
-        className="max-h-(--radix-popover-content-available-height) w-[296px] overflow-y-auto overscroll-contain rounded-3xl p-4"
+        className="relative max-h-[min(36rem,calc(100dvh-2rem))] w-[296px] overflow-y-auto overscroll-contain rounded-3xl p-4"
       >
+        <button
+          type="button"
+          aria-label="Закрыть"
+          onClick={() => {
+            flush()
+            setOpen(false)
+          }}
+          className="button button--ghost button--icon-only button--sm absolute top-2 right-2 text-muted"
+        >
+          <X size={16} />
+        </button>
         <p className="mb-2 text-xs font-medium text-muted">Значок</p>
         <div
           role="radiogroup"

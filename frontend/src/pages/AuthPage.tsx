@@ -91,12 +91,12 @@ export function AuthPage({ mode }: Props) {
         </div>
       </aside>
 
-      <main className="flex items-center justify-center px-5 py-10">
+      <main className="flex items-center justify-center px-5 py-10 lg:px-16">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: EASE }}
-          className="w-full max-w-sm"
+          className="w-full max-w-sm rounded-3xl lg:max-w-md lg:bg-surface lg:p-10 lg:shadow-surface"
         >
           <div className="mb-8 flex items-center gap-2.5 lg:hidden">
             <LogoMark size={36} />

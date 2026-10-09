@@ -236,8 +236,25 @@ const ORDERS = [
 
 const SHOWN = [
   { value: 'all', label: 'Все', short: 'Все' },
+  { value: 'failing', label: 'С ошибками', short: 'Ошибки' },
   { value: 'protected', label: 'Защищённые', short: 'Защищ.' },
 ] as const
+
+const LANGUAGE_FILTERS = [
+  { value: 'any', label: 'Любой язык', short: 'Все' },
+  { value: 'ru', label: 'RU', short: 'RU' },
+  { value: 'en', label: 'EN', short: 'EN' },
+] as const
+
+type Shown = (typeof SHOWN)[number]['value']
+type Language = (typeof LANGUAGE_FILTERS)[number]['value']
+
+/** Whether a source passes the quick filter: all, the ones whose last poll failed, or the protected ones. */
+function isShown(source: Source, shown: Shown): boolean {
+  if (shown === 'failing') return source.enabled && Boolean(source.last_error)
+  if (shown === 'protected') return isProtected(source)
+  return true
+}
 
 type Props = {
   sources: Source[]
@@ -275,9 +292,14 @@ export function SourcesTable({ sources, isAdmin, canAdd }: Props) {
   const query = params.get('q') ?? ''
   const isSearching = queryWords(query).length > 0
   // Sites that refuse a bot and are read a step up the ladder or through a proxy.
-  const shown = params.get('show') === 'protected' ? 'protected' : 'all'
+  const shown: Shown = SHOWN.find((item) => item.value === params.get('show'))?.value ?? 'all'
+  const language: Language =
+    LANGUAGE_FILTERS.find((item) => item.value === params.get('lang'))?.value ?? 'any'
   const found = sources.filter(
-    (source) => matchesSource(source, query) && (shown === 'all' || isProtected(source)),
+    (source) =>
+      matchesSource(source, query) &&
+      isShown(source, shown) &&
+      (language === 'any' || source.language === language),
   )
   const searchBox = useRef<HTMLInputElement>(null)
   const grouping: SourceGrouping = params.get('group') === 'kind' ? 'kind' : 'category'
@@ -384,6 +406,12 @@ export function SourcesTable({ sources, isAdmin, canAdd }: Props) {
             value={shown}
             options={SHOWN}
             onChange={(value) => setParam('show', value === 'all' ? '' : value)}
+          />
+          <Segmented
+            label="Язык"
+            value={language}
+            options={LANGUAGE_FILTERS}
+            onChange={(value) => setParam('lang', value === 'any' ? '' : value)}
           />
         </div>
         {/* Read out only while searching, and only the count. */}

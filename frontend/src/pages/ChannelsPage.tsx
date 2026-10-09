@@ -9,6 +9,13 @@ import { Segmented } from '../components/Segmented'
 import { useChannels, usePublishingDefaults } from '../lib/publishingQueries'
 import { useMe } from '../lib/queries'
 
+// How a channel gets connected, shown where the list of channels will be.
+const CHANNEL_STEPS = [
+  'Создайте бота у @BotFather и вставьте его токен слева',
+  'Добавьте бота администратором в свой канал',
+  'Нажмите «Добавить канал» и выберите тон и расписание',
+]
+
 export function ChannelsPage() {
   const { data: defaults } = usePublishingDefaults()
   const me = useMe()
@@ -56,7 +63,16 @@ export function ChannelsPage() {
           {channels?.length === 0 && (
             <Card variant="outlined">
               <EmptyState icon={<Send size={22} />} title="Каналов пока нет">
-                Подключите бота, добавьте его администратором в канал и нажмите «Добавить канал».
+                <ol className="mt-3 grid gap-2 text-left sm:grid-cols-3">
+                  {CHANNEL_STEPS.map((text, index) => (
+                    <li key={text} className="flex gap-2.5 rounded-xl bg-surface-secondary p-3">
+                      <span className="grid size-6 shrink-0 place-items-center rounded-full bg-accent-soft text-xs font-semibold text-accent-soft-foreground">
+                        {index + 1}
+                      </span>
+                      <span className="text-[13px] text-foreground">{text}</span>
+                    </li>
+                  ))}
+                </ol>
               </EmptyState>
             </Card>
           )}

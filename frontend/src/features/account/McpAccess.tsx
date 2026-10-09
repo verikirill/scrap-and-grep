@@ -48,6 +48,19 @@ function Snippet({ text, label }: { text: string; label: string }) {
 /** The fresh key, shown once, with ready settings for the common assistants. */
 function NewKey({ created, url }: { created: NewMcpKey; url: string }) {
   const claudeCode = `claude mcp add --transport http ${SERVER_NAME} ${url} \\\n  --header "Authorization: Bearer ${created.token}"`
+  // Claude Desktop reads only local servers from its config: mcp-remote bridges to ours.
+  const desktop = JSON.stringify(
+    {
+      mcpServers: {
+        [SERVER_NAME]: {
+          command: 'npx',
+          args: ['-y', 'mcp-remote', url, '--header', `Authorization: Bearer ${created.token}`],
+        },
+      },
+    },
+    null,
+    2,
+  )
   const json = JSON.stringify(
     {
       mcpServers: {
@@ -72,10 +85,17 @@ function NewKey({ created, url }: { created: NewMcpKey; url: string }) {
       <Tabs defaultValue="claude">
         <TabsList aria-label="Способ подключения">
           <TabsTrigger value="claude">Claude Code</TabsTrigger>
+          <TabsTrigger value="desktop">Claude Desktop</TabsTrigger>
           <TabsTrigger value="json">Cursor и другие</TabsTrigger>
         </TabsList>
         <TabsContent value="claude" className="pt-2">
           <Snippet text={claudeCode} label="Скопировать команду" />
+        </TabsContent>
+        <TabsContent value="desktop" className="space-y-1.5 pt-2">
+          <p className="text-xs">
+            Вставьте в claude_desktop_config.json и перезапустите Claude Desktop.
+          </p>
+          <Snippet text={desktop} label="Скопировать для claude_desktop_config.json" />
         </TabsContent>
         <TabsContent value="json" className="pt-2">
           <Snippet text={json} label="Скопировать настройки" />

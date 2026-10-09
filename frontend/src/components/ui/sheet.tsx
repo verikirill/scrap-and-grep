@@ -39,7 +39,15 @@ export function SheetContent({ side = 'right', className, children }: ContentPro
   return (
     <Drawer.Backdrop>
       <Drawer.Content placement={side}>
-        <Drawer.Dialog className={clsx('gap-4 overflow-y-auto', className)}>
+        <Drawer.Dialog
+          className={clsx(
+            'gap-4 overflow-y-auto',
+            // A fade at the bottom says the list goes on below.
+            side === 'bottom' &&
+              '[mask-image:linear-gradient(to_bottom,black_calc(100%-2.5rem),transparent)] pb-10',
+            className,
+          )}
+        >
           {side === 'bottom' && <Drawer.Handle />}
           <Drawer.CloseTrigger aria-label="Закрыть" />
           {children}

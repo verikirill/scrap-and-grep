@@ -95,13 +95,13 @@ function ItemCard({ item, index, placement, reactions, onReact }: ItemCardProps)
             // The middle button opens a tab; the right one only a menu.
             if (event.button === 1) markRead()
           }}
-          className="min-w-0 flex-1 font-serif text-[17px] leading-snug font-semibold text-foreground decoration-accent/40 underline-offset-4 hover:underline"
+          className="min-w-0 flex-1 font-serif text-[18px] leading-snug font-semibold text-foreground decoration-accent/40 sm:text-[19px] underline-offset-4 hover:underline"
         >
           {item.headline}
         </Link>
         <OriginalLink url={item.url} title={item.headline} onOpen={markRead} />
       </div>
-      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+      <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted">
         <span className="font-medium text-foreground">{item.source_name}</span>
         {item.source_read_via && (
           <Chip tone="spark" title="Сайт блокирует бота. Читаем страницу в обход защиты">
@@ -117,7 +117,7 @@ function ItemCard({ item, index, placement, reactions, onReact }: ItemCardProps)
         <ReadingTime minutes={item.reading_minutes} />
         <PriorityChip item={item} />
         <ScoreBar score={item.score} />
-        {item.interest_title && <Chip tone="accent">{item.interest_title}</Chip>}
+        {item.interest_title && <Chip tone="neutral">{item.interest_title}</Chip>}
         {personal !== 0 && (
           <Chip
             tone={personal > 0 ? 'ok' : 'neutral'}

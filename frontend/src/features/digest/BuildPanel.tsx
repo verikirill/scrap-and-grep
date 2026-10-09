@@ -261,14 +261,14 @@ export function BuildPanel({ profiles, initialProfileId, isBuilding = false, onC
         {/* The two ways to build stay together and wrap as one, to the right. */}
         <div className="ml-auto flex flex-wrap justify-end gap-2">
           <Button
-            variant="tonal"
+            variant="secondary"
             icon={<DynamicFeed size={18} />}
             isBusy={createBoth.isPending}
             disabled={!selectedId || !chosen || isPending || isBuilding}
             onClick={submitBoth}
             title="Одна оценка и два выпуска: специалисту и руководству"
           >
-            Собрать оба выпуска
+            Специалисту и руководству
           </Button>
           <Button
             variant="primary"

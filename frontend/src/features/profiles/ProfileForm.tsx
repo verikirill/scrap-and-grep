@@ -37,6 +37,8 @@ function InterestEditor({
   onRemove: () => void
   isRemovable: boolean
 }) {
+  // A new row is not red while the reader is about to type its name.
+  const isUntitled = interest.title.trim().length < 2 && (interest.title.length > 0 || !isOpen)
   return (
     <motion.div
       layout="position"
@@ -44,7 +46,10 @@ function InterestEditor({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.98 }}
       transition={{ duration: 0.25, ease: EASE }}
-      className="rounded-xl border border-separator bg-surface"
+      className={clsx(
+        'rounded-xl border bg-surface',
+        isUntitled ? 'border-danger' : 'border-separator',
+      )}
     >
       <button
         type="button"
@@ -58,6 +63,9 @@ function InterestEditor({
           <span className="line-clamp-2 text-sm font-medium break-words">
             {interest.title || 'Новый интерес'}
           </span>
+          {isUntitled && !isOpen && (
+            <span className="mt-0.5 block text-xs text-danger">Нужно название</span>
+          )}
           {!isOpen && (
             <span className="mt-0.5 block truncate text-xs text-muted">
               {interest.keywords.length > 0
@@ -91,8 +99,19 @@ function InterestEditor({
                   className={INPUT_CLASS}
                   value={interest.title}
                   maxLength={120}
+                  data-invalid={isUntitled || undefined}
+                  aria-invalid={isUntitled || undefined}
+                  aria-describedby={isUntitled ? `interest-title-error-${interest.id}` : undefined}
                   onChange={(event) => onChange({ ...interest, title: event.target.value })}
                 />
+                {isUntitled && (
+                  <span
+                    id={`interest-title-error-${interest.id}`}
+                    className="mt-1.5 block px-1 text-xs text-danger"
+                  >
+                    Назовите интерес: хотя бы два символа
+                  </span>
+                )}
               </Field>
               <Field
                 label="Что именно интересует"
@@ -176,6 +195,7 @@ export function ProfileForm({
   look?: ReactNode
 }) {
   const [openId, setOpenId] = useState<string | null>(null)
+  const isNameShort = spec.name.trim().length < 2
 
   const updateInterest = (next: Interest) =>
     onChange({
@@ -212,8 +232,15 @@ export function ProfileForm({
               className={INPUT_CLASS}
               value={spec.name}
               maxLength={120}
+              data-invalid={isNameShort || undefined}
+              aria-invalid={isNameShort || undefined}
               onChange={(event) => onChange({ ...spec, name: event.target.value })}
             />
+            {isNameShort && (
+              <span className="mt-1.5 block px-1 text-xs text-danger">
+                Дайте профилю название: хотя бы два символа
+              </span>
+            )}
           </Field>
         </div>
         <Field label="Роль читателя" hint="по этому описанию модель формулирует «почему важно»">

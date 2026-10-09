@@ -92,7 +92,7 @@ type ChipTone = 'neutral' | 'accent' | 'spark' | 'ok' | 'danger' | 'alarm'
 
 // HeroUI chips: soft tones, and solid red for what needs acting on first.
 const CHIP_STYLES: Record<ChipTone, string> = {
-  neutral: 'chip--default',
+  neutral: 'chip--default chip--soft text-muted',
   accent: 'chip--accent chip--soft',
   spark: 'chip--warning chip--soft',
   ok: 'chip--success chip--soft',
@@ -267,7 +267,7 @@ export function EmptyState({
         {icon}
       </motion.div>
       <h3 className="text-base font-medium">{title}</h3>
-      {children && <div className="mt-1.5 max-w-md text-sm text-muted">{children}</div>}
+      {children && <div className="mt-1.5 max-w-xl text-sm text-muted">{children}</div>}
     </div>
   )
 }
