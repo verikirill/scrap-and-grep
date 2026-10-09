@@ -1,7 +1,7 @@
 import clsx from 'clsx'
 import { ChevronDown, Download, FileText, GitCompareArrows, Info } from '../../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { buttonClass, EASE, rowMotion } from '../../components/tokens'
 import { AnimatedNumber, Card, Chip, ScoreBar, ReadingTime } from '../../components/ui'
@@ -9,7 +9,9 @@ import { api } from '../../lib/api'
 import type { Digest, DigestItem, Placement, ReactionKind, Topic } from '../../lib/api'
 import { formatDate, formatDateTime, modelLabel, plural, REJECT_LABELS } from '../../lib/format'
 import { useSeen } from '../../lib/impressions'
-import { useFeedback, useReactions } from '../../lib/queries'
+import { useFeedback, useMe, useReactions, useUpdateSettings } from '../../lib/queries'
+import { firstEntries, foldSummary, withFolded } from '../../lib/folding'
+import { REVEAL_EVENT } from '../../lib/entryNav'
 import { ReactionBar } from '../feed/ReactionBar'
 import { OriginalLink } from '../reader/OriginalLink'
 import { articlePath } from '../reader/paths'
@@ -165,40 +167,124 @@ function TopicSection({
   reactions,
   onReact,
 }: TopicSectionProps) {
+  const { data: me } = useMe()
+  const update = useUpdateSettings()
+  const folded = me?.folded_sections ?? []
+  const isKeptFolded = folded.includes(topic.title)
+  // Opened for a moment by a jump to one of its entries, not for good.
+  const [isRevealed, setRevealed] = useState(false)
+  const [isAll, setAll] = useState(false)
+  const [isNoteOpen, setNoteOpen] = useState(false)
+  const isFolded = isKeptFolded && !isRevealed
+  const lastPosition = firstPosition + topic.items.length - 1
+
+  useEffect(() => {
+    const onReveal = (event: Event) => {
+      const wanted = (event as CustomEvent<number>).detail
+      if (wanted < firstPosition || wanted > lastPosition) return
+      setRevealed(true)
+      setAll(true)
+    }
+    window.addEventListener(REVEAL_EVENT, onReveal)
+    return () => window.removeEventListener(REVEAL_EVENT, onReveal)
+  }, [firstPosition, lastPosition])
+
+  const toggle = () => {
+    setRevealed(false)
+    // Kept with the account: the same section stays folded in the next issue too.
+    update.mutate({ folded_sections: withFolded(folded, topic.title, !isFolded) })
+  }
+  const shown = firstEntries(topic.items, isAll)
+  const hidden = topic.items.length - shown.length
+  const summary = foldSummary(topic.items)
+
   return (
     <section>
       <div className="sticky top-14 z-10 -mx-1 bg-background/90 px-1 py-2 backdrop-blur md:top-0">
-        <h3 className="flex items-baseline gap-2.5 font-serif text-lg font-semibold tracking-tight md:text-xl">
-          <span className="tabular font-sans text-sm font-medium text-warning">
-            {String(number).padStart(2, '0')}
-          </span>
-          {/* Stuck over the text on a phone, a heading of three lines would hide it. */}
-          <span
-            title={topic.title}
-            className="min-w-0 truncate md:overflow-visible md:whitespace-normal"
+        <h3>
+          <button
+            type="button"
+            onClick={toggle}
+            aria-expanded={!isFolded}
+            title={
+              isFolded
+                ? 'Развернуть раздел'
+                : 'Свернуть раздел, он останется свёрнутым и в следующих выпусках'
+            }
+            className="group flex w-full items-center gap-2.5 rounded-xl px-1 py-0.5 text-left transition-colors hover:bg-default/50"
           >
-            {topic.title}
-          </span>
-          <span className="tabular font-sans text-xs font-normal text-muted">
-            {topic.items.length}
-          </span>
+            <span className="tabular font-sans text-sm font-medium text-warning">
+              {String(number).padStart(2, '0')}
+            </span>
+            {/* Stuck over the text on a phone, a heading of three lines would hide it. */}
+            <span
+              title={topic.title}
+              className="min-w-0 truncate font-serif text-lg font-semibold tracking-tight md:overflow-visible md:text-xl md:whitespace-normal"
+            >
+              {topic.title}
+            </span>
+            <span className="tabular font-sans text-xs text-muted">{topic.items.length}</span>
+            {isFolded && summary.high > 0 && <Chip tone="alarm">{summary.high} высокий</Chip>}
+            {isFolded && summary.ours > 0 && <Chip tone="ok">касается нас: {summary.ours}</Chip>}
+            <motion.span
+              animate={{ rotate: isFolded ? -90 : 0 }}
+              transition={{ duration: 0.2 }}
+              className="ml-auto text-muted opacity-60 transition-opacity group-hover:opacity-100"
+            >
+              <ChevronDown size={18} />
+            </motion.span>
+          </button>
         </h3>
       </div>
-      {topic.overview && <p className="mt-1 mb-2 px-4 text-sm text-muted">{topic.overview}</p>}
-      <div className="space-y-1">
-        {topic.items.map((item, index) => (
-          <ItemCard
-            key={item.article_id}
-            item={item}
-            index={index}
-            placement={{ listId: digestId, position: firstPosition + index, slot: 'digest' }}
-            reactions={reactions ? (reactions[item.article_id] ?? []) : undefined}
-            onReact={(kind, isActive) =>
-              onReact(item.article_id, kind, isActive, firstPosition + index)
-            }
-          />
-        ))}
-      </div>
+      <AnimatePresence initial={false}>
+        {!isFolded && (
+          <motion.div
+            key="body"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.28, ease: EASE }}
+            className="overflow-hidden"
+          >
+            {topic.overview && (
+              <button
+                type="button"
+                onClick={() => setNoteOpen((value) => !value)}
+                aria-expanded={isNoteOpen}
+                className={clsx(
+                  'mt-1 mb-2 w-full px-4 text-left text-sm text-muted hover:text-foreground',
+                  isNoteOpen ? 'block' : 'line-clamp-1',
+                )}
+              >
+                {topic.overview}
+              </button>
+            )}
+            <div className="space-y-1">
+              {shown.map((item, index) => (
+                <ItemCard
+                  key={item.article_id}
+                  item={item}
+                  index={index}
+                  placement={{ listId: digestId, position: firstPosition + index, slot: 'digest' }}
+                  reactions={reactions ? (reactions[item.article_id] ?? []) : undefined}
+                  onReact={(kind, isActive) =>
+                    onReact(item.article_id, kind, isActive, firstPosition + index)
+                  }
+                />
+              ))}
+            </div>
+            {hidden > 0 && (
+              <button
+                type="button"
+                onClick={() => setAll(true)}
+                className="mx-4 mt-2 mb-1 text-sm font-medium text-accent hover:underline"
+              >
+                Ещё {hidden} {plural(hidden, ['запись', 'записи', 'записей'])}
+              </button>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   )
 }
