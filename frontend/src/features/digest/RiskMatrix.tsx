@@ -1,5 +1,7 @@
 import clsx from 'clsx'
-import { motion } from 'motion/react'
+import { AnimatePresence, motion } from 'motion/react'
+import { useState } from 'react'
+import { ArrowRight } from '../../components/icons'
 import { EASE } from '../../components/tokens'
 import { Card } from '../../components/ui'
 import { showEntry } from '../../lib/entryNav'
@@ -31,6 +33,9 @@ const CELL_TONES = [
 export function RiskMatrix({ entries }: { entries: Placed[] }) {
   const cells = riskCells(entries)
   const count = cells.flat(2).length
+  // The entry under the pointer, named at once below the grid: a native
+  // title waits a second and a half, too long to learn the numbers open entries.
+  const [hovered, setHovered] = useState<Placed | null>(null)
   if (count === 0) return null
   let order = 0
   return (
@@ -76,22 +81,38 @@ export function RiskMatrix({ entries }: { entries: Placed[] }) {
                         key={position}
                         type="button"
                         onClick={() => showEntry(position)}
-                        title={item.headline}
-                        aria-label={`Запись ${position}: ${item.headline}`}
+                        onPointerEnter={() => setHovered({ position, item })}
+                        onPointerLeave={() => setHovered(null)}
+                        onFocus={() => setHovered({ position, item })}
+                        onBlur={() => setHovered(null)}
+                        aria-label={`Открыть запись ${position}: ${item.headline}`}
                         initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        whileHover={{ scale: 1.15 }}
+                        animate={{
+                          scale: 1,
+                          // One soft pulse after they land: these are things to press.
+                          boxShadow: [
+                            '0 0 0 0px rgb(0 111 238 / 0)',
+                            '0 0 0 6px rgb(0 111 238 / 0.35)',
+                            '0 0 0 0px rgb(0 111 238 / 0)',
+                          ],
+                        }}
+                        whileHover={{ scale: 1.18 }}
+                        whileTap={{ scale: 0.92 }}
                         transition={{
-                          type: 'spring',
-                          stiffness: 500,
-                          damping: 22,
-                          delay: 0.25 + order * 0.04,
+                          scale: {
+                            type: 'spring',
+                            stiffness: 500,
+                            damping: 22,
+                            delay: 0.25 + order * 0.04,
+                          },
+                          boxShadow: { duration: 0.9, delay: 0.7 + order * 0.04 },
                         }}
                         className={clsx(
-                          'grid size-7 place-items-center rounded-full text-xs font-semibold shadow-surface',
+                          'grid size-7 place-items-center rounded-full text-xs font-semibold ring-1 transition-colors',
+                          'hover:bg-accent hover:text-accent-foreground hover:ring-accent',
                           exposure + severity === 4
-                            ? 'bg-white text-danger'
-                            : 'bg-surface text-foreground',
+                            ? 'bg-white text-danger ring-white'
+                            : 'bg-surface text-foreground ring-border',
                         )}
                       >
                         {position}
@@ -113,6 +134,38 @@ export function RiskMatrix({ entries }: { entries: Placed[] }) {
             {label}
           </div>
         ))}
+      </div>
+      <div className="mt-3 flex min-h-9 items-center rounded-xl bg-surface-secondary px-3 text-[13px]">
+        <AnimatePresence mode="wait" initial={false}>
+          {hovered ? (
+            <motion.span
+              key={hovered.position}
+              initial={{ opacity: 0, y: 3 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.12 }}
+              className="flex min-w-0 items-center gap-2"
+            >
+              <span className="grid h-5 min-w-5 shrink-0 place-items-center rounded-md bg-accent px-1 text-[11px] font-semibold text-accent-foreground">
+                {hovered.position}
+              </span>
+              <span className="truncate font-medium text-foreground">{hovered.item.headline}</span>
+              <ArrowRight size={14} className="shrink-0 text-accent" />
+            </motion.span>
+          ) : (
+            <motion.span
+              key="hint"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.12 }}
+              className="text-muted"
+            >
+              Номер в клетке - запись выпуска: наведите, чтобы увидеть заголовок, нажмите, чтобы
+              перейти
+            </motion.span>
+          )}
+        </AnimatePresence>
       </div>
       <p className="mt-3 text-xs text-muted">
         По вертикали близость к вам, по горизонтали опасность уязвимости. {SEVERITY_HINT}{' '}
