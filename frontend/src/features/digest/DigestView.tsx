@@ -130,12 +130,14 @@ function ItemCard({ item, index, placement, reactions, onReact }: ItemCardProps)
         />
       </div>
       {translated && <p className="mt-1.5 text-xs text-muted">Оригинал: {item.title}</p>}
-      {item.summary && <p className="mt-2.5 text-sm text-foreground/90">{item.summary}</p>}
+      {item.summary && (
+        <p className="mt-2.5 text-sm leading-relaxed text-foreground/90">{item.summary}</p>
+      )}
       <EntryDetails item={item} />
       <CveTimeline item={item} />
       <IndicatorsBlock attack={item.attack} />
       {item.why && (
-        <p className="mt-2.5 border-l-2 border-warning pl-3 text-sm text-muted">
+        <p className="mt-2.5 border-l-2 border-warning pl-3 text-sm leading-relaxed text-muted">
           <span className="font-medium text-foreground">Почему это важно. </span>
           {item.why}
         </p>
