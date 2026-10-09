@@ -310,9 +310,10 @@ export function ProfileLookPicker({ profile }: { profile: Profile }) {
               >
                 {isChosen && (
                   <motion.span
-                    layoutId="look-icon"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
                     className="absolute inset-0 rounded-xl bg-accent"
-                    transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                    transition={{ duration: 0.15 }}
                   />
                 )}
                 <Icon size={22} filled={isChosen} className="relative" />

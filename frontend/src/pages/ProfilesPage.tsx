@@ -161,9 +161,10 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
           >
             {profile.id === activeId && (
               <motion.span
-                layoutId="profile-tab"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
                 className="absolute inset-0 -z-10 rounded-full bg-surface shadow-surface ring-1 ring-border"
-                transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                transition={{ duration: 0.15 }}
               />
             )}
             <ProfileAvatar profile={profile} size={28} />
