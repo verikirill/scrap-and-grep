@@ -3,7 +3,7 @@
 import asyncio
 import time
 import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 from urllib.parse import quote
@@ -23,6 +23,7 @@ from radar.logging import get_logger
 from radar.pipeline.runner import events_channel
 from radar.render.docx import render_docx
 from radar.render.markdown import render_markdown
+from radar.render.threat_intel import render_csv, render_misp, render_stix
 from radar.store import digests as digest_store
 from radar.views import DigestSummaryView, DigestView, digest_summary, digest_view
 from radar.worker.tasks import build_digest, purge_short_files
@@ -257,7 +258,7 @@ async def delete_digest(
 ) -> Response:
     await session.delete(await _load(session, user, digest_id))
     await session.commit()
-    await cache.delete(f"export:{digest_id}:md", f"export:{digest_id}:docx")
+    await cache.delete(*(f"export:{digest_id}:{kind}" for kind in EXPORT_KINDS))
     # The video row went with the digest; its file is removed by the media
     # worker, the only one that may write to the media volume.
     if settings.shorts_url:
@@ -299,6 +300,52 @@ async def export_docx(
         body = await asyncio.to_thread(render_docx, view)
         await cache.set_bytes(key, body, EXPORT_TTL_SECONDS)
     return Response(body, media_type=DOCX_MEDIA_TYPE, headers=_attachment(view, "docx"))
+
+
+# Threat intelligence for a SOC's platform: the extension, media type and renderer.
+THREAT_INTEL_EXPORTS: dict[str, tuple[str, Callable[[DigestView], str]]] = {
+    "stix.json": ("application/stix+json; charset=utf-8", render_stix),
+    "misp.json": ("application/json; charset=utf-8", render_misp),
+    "csv": ("text/csv; charset=utf-8", render_csv),
+}
+EXPORT_KINDS = ("md", "docx", *THREAT_INTEL_EXPORTS)
+
+
+async def _threat_intel(
+    digest_id: uuid.UUID, kind: str, session: SessionDep, cache: CacheDep, user: CurrentUser
+) -> Response:
+    view = await _load_done(session, user, digest_id)
+    media_type, render = THREAT_INTEL_EXPORTS[kind]
+    key = f"export:{digest_id}:{kind}"
+    body = await cache.get_bytes(key)
+    if body is None:
+        body = (await asyncio.to_thread(render, view)).encode("utf-8")
+        await cache.set_bytes(key, body, EXPORT_TTL_SECONDS)
+    return Response(body, media_type=media_type, headers=_attachment(view, kind))
+
+
+@router.get("/digests/{digest_id}/export.stix.json")
+async def export_stix(
+    digest_id: uuid.UUID, session: SessionDep, cache: CacheDep, user: CurrentUser
+) -> Response:
+    """The digest's indicators, vulnerabilities and ATT&CK techniques as a STIX 2.1 bundle."""
+    return await _threat_intel(digest_id, "stix.json", session, cache, user)
+
+
+@router.get("/digests/{digest_id}/export.misp.json")
+async def export_misp(
+    digest_id: uuid.UUID, session: SessionDep, cache: CacheDep, user: CurrentUser
+) -> Response:
+    """The same as a MISP event, ready for its JSON import."""
+    return await _threat_intel(digest_id, "misp.json", session, cache, user)
+
+
+@router.get("/digests/{digest_id}/export.csv")
+async def export_indicators_csv(
+    digest_id: uuid.UUID, session: SessionDep, cache: CacheDep, user: CurrentUser
+) -> Response:
+    """The same, one row per value, for a spreadsheet or a firewall's import."""
+    return await _threat_intel(digest_id, "csv", session, cache, user)
 
 
 async def _status_event(digest_id: uuid.UUID, user_id: uuid.UUID) -> dict[str, Any] | None:
