@@ -45,7 +45,7 @@ function CopyButton({ text, label }: { text: string; label: string }) {
       onClick={copy}
       aria-label={label}
       title={label}
-      className="button button--ghost button--icon-only button--sm shrink-0 text-muted"
+      className="button button--ghost button--icon-only button--sm size-7 shrink-0 text-muted"
     >
       <AnimatePresence mode="wait" initial={false}>
         <motion.span
@@ -132,7 +132,7 @@ export function IndicatorsBlock({ attack }: { attack: AttackData | null | undefi
                         initial={{ opacity: 0, x: -6 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.2, delay: Math.min(index, 12) * 0.03 }}
-                        className="flex items-center gap-2.5 py-1 pr-1 pl-2.5"
+                        className="flex items-center gap-2.5 py-0.5 pr-1 pl-2.5"
                       >
                         <span className="w-16 shrink-0 text-[11px] font-semibold tracking-wide text-muted uppercase">
                           {indicatorKind(value)}
