@@ -53,13 +53,14 @@ export function History({ digests, activeId, onSelect, onDelete }: Props) {
                     isActive ? 'text-foreground' : 'hover:bg-default/60',
                   )}
                 >
-                  {/* One highlight for the list: it flows to the row that opens. */}
+                  {/* The open row lights up in place. */}
                   {isActive && (
                     <motion.span
-                      layoutId="history-highlight"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
                       className="absolute inset-0 -z-10 bg-surface shadow-surface ring-1 ring-border"
                       style={{ borderRadius: 16 }}
-                      transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+                      transition={{ duration: 0.15 }}
                     />
                   )}
                   {isActive ? (

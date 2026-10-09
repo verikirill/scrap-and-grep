@@ -65,6 +65,15 @@
     outline-offset: 2px;
   }
 
+  /* Tailwind 4 gives buttons the arrow; everything pressable shows the hand. */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  [role='radio']:not([aria-disabled='true']),
+  [role='tab'],
+  summary {
+    cursor: pointer;
+  }
+
   /* Edge adds its own eye to a password field, next to the form's toggle. */
   input::-ms-reveal,
   input::-ms-clear {

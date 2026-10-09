@@ -202,7 +202,7 @@ function Identity({ me }: { me: Me }) {
         aria-label={me.avatar_url ? 'Сменить фото' : 'Загрузить фото'}
         className="group relative rounded-full focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent disabled:opacity-70"
       >
-        <UserAvatar me={me} size={96} className="bg-accent-soft text-accent-soft-foreground" />
+        <UserAvatar me={me} size={96} />
         <span className="absolute right-0 bottom-0 grid size-8 place-items-center rounded-full bg-accent text-accent-foreground shadow-overlay transition-transform duration-300 group-hover:scale-110">
           <Camera size={16} />
         </span>

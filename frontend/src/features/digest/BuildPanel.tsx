@@ -1,7 +1,7 @@
 import clsx from 'clsx'
 import { format, subDays } from 'date-fns'
 import { ru } from 'date-fns/locale'
-import { AnimatePresence, LayoutGroup, motion } from 'motion/react'
+import { AnimatePresence, motion } from 'motion/react'
 import { Suspense, lazy, useState } from 'react'
 import type { DateRange } from '../../components/ui/calendar'
 import { Link } from 'react-router'
@@ -135,73 +135,71 @@ export function BuildPanel({ profiles, initialProfileId, isBuilding = false, onC
           Настроить интересы
         </Link>
       </div>
-
-      <LayoutGroup id="build-profiles">
-        <div
-          className="grid grid-cols-[minmax(0,1fr)] gap-2.5 sm:grid-cols-2 xl:grid-cols-3"
-          role="radiogroup"
-          aria-label="Профиль читателя"
-          onKeyDown={profileKeys.onKeyDown}
-        >
-          {profiles.map((profile, index) => {
-            const isActive = profile.id === selectedId
-            const count = profile.spec.interests.length
-            const schedule = scheduleOf(profile.id)
-            return (
-              <button
-                key={profile.id}
-                type="button"
-                role="radio"
-                {...profileKeys.itemProps(index)}
-                onClick={() => setProfileId(profile.id)}
-                aria-checked={isActive}
-                className={clsx(
-                  'group relative isolate flex items-start gap-3 rounded-2xl p-3.5 text-left transition-colors duration-300',
-                  isActive
-                    ? 'text-foreground'
-                    : 'bg-surface text-foreground ring-1 ring-border ring-inset hover:bg-default/50',
+      <div
+        className="grid grid-cols-[minmax(0,1fr)] gap-2.5 sm:grid-cols-2 xl:grid-cols-3"
+        role="radiogroup"
+        aria-label="Профиль читателя"
+        onKeyDown={profileKeys.onKeyDown}
+      >
+        {profiles.map((profile, index) => {
+          const isActive = profile.id === selectedId
+          const count = profile.spec.interests.length
+          const schedule = scheduleOf(profile.id)
+          return (
+            <button
+              key={profile.id}
+              type="button"
+              role="radio"
+              {...profileKeys.itemProps(index)}
+              onClick={() => setProfileId(profile.id)}
+              aria-checked={isActive}
+              className={clsx(
+                'group relative isolate flex items-start gap-3 rounded-2xl p-3.5 text-left transition-colors duration-300',
+                isActive
+                  ? 'text-foreground'
+                  : 'bg-surface text-foreground ring-1 ring-border ring-inset hover:bg-default/50',
+              )}
+            >
+              {/* The chosen card lights up in place. */}
+              {isActive && (
+                <motion.span
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="absolute inset-0 -z-10 bg-accent-soft ring-2 ring-accent ring-inset"
+                  style={{ borderRadius: 16 }}
+                  transition={{ duration: 0.15 }}
+                />
+              )}
+              <ProfileAvatar profile={profile} />
+              <span className="min-w-0 flex-1">
+                <span className="line-clamp-2 text-sm font-medium">{profile.spec.name}</span>
+                <span className={clsx('mt-0.5 block text-xs', 'text-muted')}>
+                  {count} {plural(count, ['интерес', 'интереса', 'интересов'])} · до{' '}
+                  {profile.spec.max_items} публикаций
+                </span>
+                {schedule && (
+                  <span className={clsx('mt-1 flex items-center gap-1 text-xs', 'text-accent')}>
+                    <EventRepeat size={13} filled />
+                    <span className="truncate">{scheduleLabel(schedule)}</span>
+                  </span>
                 )}
-              >
-                {/* One highlight for the group: it flows from card to card. */}
+              </span>
+              <AnimatePresence initial={false}>
                 {isActive && (
                   <motion.span
-                    layoutId="profile-highlight"
-                    className="absolute inset-0 -z-10 bg-accent-soft ring-2 ring-accent ring-inset"
-                    style={{ borderRadius: 16 }}
+                    initial={{ scale: 0.4, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.4, opacity: 0 }}
                     transition={SPRING}
-                  />
+                  >
+                    <CircleCheck size={22} filled className="text-accent" />
+                  </motion.span>
                 )}
-                <ProfileAvatar profile={profile} />
-                <span className="min-w-0 flex-1">
-                  <span className="line-clamp-2 text-sm font-medium">{profile.spec.name}</span>
-                  <span className={clsx('mt-0.5 block text-xs', 'text-muted')}>
-                    {count} {plural(count, ['интерес', 'интереса', 'интересов'])} · до{' '}
-                    {profile.spec.max_items} публикаций
-                  </span>
-                  {schedule && (
-                    <span className={clsx('mt-1 flex items-center gap-1 text-xs', 'text-accent')}>
-                      <EventRepeat size={13} filled />
-                      <span className="truncate">{scheduleLabel(schedule)}</span>
-                    </span>
-                  )}
-                </span>
-                <AnimatePresence initial={false}>
-                  {isActive && (
-                    <motion.span
-                      initial={{ scale: 0.4, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0.4, opacity: 0 }}
-                      transition={SPRING}
-                    >
-                      <CircleCheck size={22} filled className="text-accent" />
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </button>
-            )
-          })}
-        </div>
-      </LayoutGroup>
+              </AnimatePresence>
+            </button>
+          )
+        })}
+      </div>
 
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <Segmented

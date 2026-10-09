@@ -426,10 +426,11 @@ export function DigestView({ digest, previousId }: { digest: Digest; previousId?
         </div>
       )}
 
+      <RejectedList items={digest.rejected} />
+      {/* Last, so that it stays docked at the bottom through the whole issue. */}
       {digest.topics.length > 0 && (
         <AskDigest digestId={digest.id} audience={digest.audience ?? 'specialist'} />
       )}
-      <RejectedList items={digest.rejected} />
     </div>
   )
 }

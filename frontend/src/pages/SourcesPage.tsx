@@ -44,9 +44,10 @@ export function SourcesPage() {
           >
             {tab === item.id && (
               <motion.span
-                layoutId="sources-tab"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
                 className="absolute inset-0 rounded-lg bg-surface shadow-surface"
-                transition={{ type: 'spring', stiffness: 480, damping: 38 }}
+                transition={{ duration: 0.15 }}
               />
             )}
             <span className="relative">{item.label}</span>

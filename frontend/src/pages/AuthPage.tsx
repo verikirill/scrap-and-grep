@@ -132,9 +132,10 @@ export function AuthPage({ mode }: Props) {
               >
                 {tab.mode === mode && (
                   <motion.span
-                    layoutId="auth-tab"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
                     className="absolute inset-0 rounded-lg bg-surface shadow-surface"
-                    transition={{ type: 'spring', stiffness: 480, damping: 38 }}
+                    transition={{ duration: 0.15 }}
                   />
                 )}
                 <span className="relative">{tab.label}</span>

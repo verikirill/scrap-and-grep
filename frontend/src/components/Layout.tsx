@@ -178,15 +178,17 @@ function SideItem({
       aria-current={active ? 'page' : undefined}
       className={clsx(
         'group relative flex h-10 w-full items-center gap-3 rounded-xl text-sm outline-none',
-        isNarrow ? 'justify-center px-0' : 'px-3',
+        // The same padding folded or not: the icon stays put while the panel narrows.
+        'pr-3 pl-[15px]',
         'focus-visible:ring-2 focus-visible:ring-focus',
         active ? 'font-semibold text-foreground' : 'font-medium text-muted hover:text-foreground',
       )}
     >
       {active && (
         <motion.span
-          layoutId="side-pill"
-          transition={{ type: 'spring', stiffness: 520, damping: 40 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.15 }}
           className="absolute inset-0 -z-10 rounded-xl bg-surface shadow-surface"
         />
       )}
@@ -194,7 +196,14 @@ function SideItem({
         <span className="absolute inset-0 -z-10 rounded-xl transition-colors group-hover:bg-default/60" />
       )}
       <Icon size={18} filled={active} className={clsx('shrink-0', active && 'text-accent')} />
-      {!isNarrow && <span className="truncate">{item.label}</span>}
+      <span
+        className={clsx(
+          'truncate whitespace-nowrap transition-opacity duration-200',
+          isNarrow && 'opacity-0',
+        )}
+      >
+        {item.label}
+      </span>
     </Link>
   )
 }
@@ -212,8 +221,9 @@ function BarItem({ item, active }: { item: NavItem; active: boolean }) {
       <span className="relative grid h-8 w-14 place-items-center">
         {active && (
           <motion.span
-            layoutId="bar-pill"
-            transition={{ type: 'spring', stiffness: 520, damping: 40 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.15 }}
             className="absolute inset-0 rounded-full bg-accent-soft"
           />
         )}
@@ -235,7 +245,7 @@ function BarItem({ item, active }: { item: NavItem; active: boolean }) {
   )
 }
 
-function AccountButton({ compact }: { compact?: boolean }) {
+function AccountButton() {
   const { data: me } = useMe()
   if (!me) return null
   return (
@@ -246,16 +256,16 @@ function AccountButton({ compact }: { compact?: boolean }) {
       title={me.is_demo ? 'Временный аккаунт' : me.email}
       className={({ isActive }) =>
         clsx(
-          'grid size-9 shrink-0 place-items-center rounded-full bg-accent-soft text-accent-soft-foreground transition-shadow',
+          'grid size-9 shrink-0 place-items-center rounded-full transition-shadow',
           // The picture keeps its colours; the ring says this is the open section.
           isActive
             ? 'ring-2 ring-accent ring-offset-2 ring-offset-background'
             : 'hover:ring-2 hover:ring-border',
-          compact && 'size-9',
         )
       }
     >
-      <UserAvatar me={me} size={compact ? 36 : 40} />
+      {/* The size of the button: a bigger picture pushed the letters off centre. */}
+      <UserAvatar me={me} size={36} />
     </NavLink>
   )
 }
@@ -292,11 +302,16 @@ function Brand({ isNarrow }: { isNarrow: boolean }) {
       aria-label="Scrap&Grep, главная"
       className={clsx(
         'flex items-center gap-2.5 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-focus',
-        isNarrow ? 'justify-center' : 'px-2',
+        'px-[7px]',
       )}
     >
       <LogoMark size={34} />
-      {!isNarrow && <Wordmark className="text-[17px]" />}
+      <Wordmark
+        className={clsx(
+          'text-[17px] whitespace-nowrap transition-opacity duration-200',
+          isNarrow && 'opacity-0',
+        )}
+      />
     </Link>
   )
 }
@@ -331,7 +346,9 @@ export function Layout({ children }: { children: ReactNode }) {
       <aside
         className={clsx(
           'fixed inset-y-0 left-0 z-30 hidden flex-col gap-6 border-r border-separator bg-background py-5 transition-[width] duration-300 ease-out md:flex',
-          isNarrow ? 'w-[72px] px-2.5' : 'w-60 px-3',
+          // Names fade inside the narrowing panel instead of leaving at once.
+          'overflow-hidden px-3',
+          isNarrow ? 'w-[72px]' : 'w-60',
         )}
       >
         <Brand isNarrow={isNarrow} />
@@ -340,14 +357,22 @@ export function Layout({ children }: { children: ReactNode }) {
             <SideItem key={item.to} item={item} active={item.to === active} isNarrow={isNarrow} />
           ))}
         </nav>
-        <div
+        <motion.div
+          layout
+          transition={{ duration: 0.3, ease: EASE }}
           className={clsx(
             'mt-auto flex items-center gap-2',
             isNarrow ? 'flex-col' : 'justify-between px-1',
           )}
         >
-          <AccountButton />
-          <div className={clsx('flex items-center gap-1', isNarrow && 'flex-col')}>
+          <motion.div layout transition={{ duration: 0.3, ease: EASE }}>
+            <AccountButton />
+          </motion.div>
+          <motion.div
+            layout
+            transition={{ duration: 0.3, ease: EASE }}
+            className={clsx('flex items-center gap-1', isNarrow && 'flex-col')}
+          >
             <ThemeButton dark={dark} onToggle={toggleDark} />
             <button
               type="button"
@@ -358,8 +383,8 @@ export function Layout({ children }: { children: ReactNode }) {
             >
               {isNarrow ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
             </button>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </aside>
 
       {/* Top app bar on phones. */}
@@ -394,7 +419,7 @@ export function Layout({ children }: { children: ReactNode }) {
           </NavLink>
         )}
         <ThemeButton dark={dark} onToggle={toggleDark} />
-        <AccountButton compact />
+        <AccountButton />
       </header>
 
       <div
