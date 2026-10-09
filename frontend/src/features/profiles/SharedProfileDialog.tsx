@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router'
-import { toast } from 'sonner'
+import { toast } from '../../lib/toast'
 import { CircleCheck, LibraryAdd, LinkOff } from '../../components/icons'
 import { Button, ErrorNote } from '../../components/ui'
 import {
@@ -23,14 +23,14 @@ function Loading() {
         Загружаем профиль, которым с вами поделились.
       </DialogDescription>
       <div className="flex items-center gap-3">
-        <div className="skeleton size-14 rounded-full" />
+        <div className="skeleton skeleton--shimmer size-14 rounded-full" />
         <div className="flex-1 space-y-2">
-          <div className="skeleton h-3 w-32" />
-          <div className="skeleton h-5 w-48" />
+          <div className="skeleton skeleton--shimmer rounded-xl h-3 w-32" />
+          <div className="skeleton skeleton--shimmer rounded-xl h-5 w-48" />
         </div>
       </div>
-      <div className="skeleton h-16" />
-      <div className="skeleton h-10" />
+      <div className="skeleton skeleton--shimmer rounded-xl h-16" />
+      <div className="skeleton skeleton--shimmer rounded-xl h-10" />
     </div>
   )
 }
@@ -39,7 +39,7 @@ function Gone({ error, onClose }: { error: unknown; onClose: () => void }) {
   return (
     <div className="space-y-4">
       <DialogHeader>
-        <span className="grid size-12 place-items-center rounded-full bg-error-container text-on-error-container">
+        <span className="grid size-12 place-items-center rounded-full bg-danger-soft text-danger-soft-foreground">
           <LinkOff size={24} />
         </span>
         <DialogTitle className="text-lg">Профиль не открылся</DialogTitle>
@@ -64,8 +64,8 @@ function Chips({ items, tone }: { items: readonly string[]; tone: 'interest' | '
           key={item}
           className={
             tone === 'interest'
-              ? 'rounded-lg bg-secondary-container px-2.5 py-1 text-xs font-medium text-on-secondary-container'
-              : 'rounded-lg border border-outline-variant px-2.5 py-1 text-xs text-on-surface-variant'
+              ? 'rounded-lg bg-default px-2.5 py-1 text-xs font-medium text-default-foreground'
+              : 'rounded-lg border border-separator px-2.5 py-1 text-xs text-muted'
           }
         >
           {item}
@@ -98,7 +98,7 @@ function Preview({
         <div className="flex items-center gap-3.5">
           <ProfileAvatar profile={shared} size={56} />
           <div className="min-w-0">
-            <p className="text-xs font-medium text-on-surface-variant">Вам прислали профиль</p>
+            <p className="text-xs font-medium text-muted">Вам прислали профиль</p>
             <DialogTitle className="mt-1 text-xl leading-tight break-words">
               {spec.name}
             </DialogTitle>
@@ -110,28 +110,26 @@ function Preview({
       </DialogHeader>
 
       <section className="space-y-2">
-        <h3 className="text-xs font-medium text-on-surface-variant">
-          Интересы, {spec.interests.length}
-        </h3>
+        <h3 className="text-xs font-medium text-muted">Интересы, {spec.interests.length}</h3>
         <Chips items={spec.interests.map((interest) => interest.title)} tone="interest" />
       </section>
       {spec.exclusions.length > 0 && (
         <section className="space-y-2">
-          <h3 className="text-xs font-medium text-on-surface-variant">Не показывать</h3>
+          <h3 className="text-xs font-medium text-muted">Не показывать</h3>
           <Chips items={spec.exclusions} tone="exclusion" />
         </section>
       )}
-      <p className="text-xs text-on-surface-variant">
+      <p className="text-xs text-muted">
         Языки: {languages}. До {spec.max_items} публикаций в выпуске.
       </p>
 
       {shared.own_id ? (
-        <p className="flex items-center gap-2 rounded-xl bg-surface-container px-3.5 py-2.5 text-sm">
-          <CircleCheck size={18} className="shrink-0 text-primary" filled />
+        <p className="flex items-center gap-2 rounded-xl bg-surface-secondary px-3.5 py-2.5 text-sm">
+          <CircleCheck size={18} className="shrink-0 text-accent" filled />
           Такой профиль уже есть у вас.
         </p>
       ) : (
-        <p className="text-sm text-on-surface-variant">
+        <p className="text-sm text-muted">
           Добавится ваша копия. Её можно менять как угодно, у отправителя ничего не изменится.
         </p>
       )}
@@ -177,7 +175,7 @@ export function SharedProfileDialog({ token }: { token: string }) {
     // While the copy is being made the dialog stays: its answer picks the new profile.
     <Dialog open onOpenChange={(open) => !open && !accept.isPending && leave()}>
       <DialogContent
-        className="max-h-[calc(100dvh-2rem)] overflow-x-hidden overflow-y-auto rounded-[28px] p-6 sm:max-w-md"
+        className="max-h-[calc(100dvh-2rem)] overflow-x-hidden overflow-y-auto p-6 sm:max-w-md"
         showCloseButton={false}
       >
         {shared.isPending ? (

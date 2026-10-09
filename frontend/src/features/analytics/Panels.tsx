@@ -20,7 +20,7 @@ export function Panel({
   return (
     <Card className={clsx('min-w-0 p-5 sm:p-6', className)}>
       <h2 className="text-base font-medium">{title}</h2>
-      {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+      {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
       <div className="mt-4">{children}</div>
     </Card>
   )
@@ -37,7 +37,7 @@ function Delta({ now, before, isRate }: { now: number; before: number; isRate: b
       ? `${change > 0 ? '+' : change < 0 ? '−' : ''}${formatPercent(Math.abs(change) / before)}`
       : 'было 0'
   return (
-    <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground tabular-nums">
+    <span className="inline-flex items-center gap-0.5 text-xs text-muted tabular-nums">
       <Icon size={13} />
       {text}
     </span>
@@ -59,7 +59,7 @@ function Figure({
 }) {
   return (
     <Card className="p-4 sm:p-5">
-      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="text-xs text-muted">{label}</p>
       <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
       {before !== undefined && <Delta now={now} before={before} isRate={isRate} />}
     </Card>
@@ -124,9 +124,9 @@ export function Activity({ totals }: { totals: AnalyticsTotals }) {
     <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 xl:grid-cols-5">
       {items.map(([label, value, unit]) => (
         <div key={label}>
-          <dt className="text-xs text-muted-foreground">{label}</dt>
+          <dt className="text-xs text-muted">{label}</dt>
           <dd className="text-base font-medium tabular-nums">
-            {value} {unit && <span className="text-xs font-normal text-outline">{unit}</span>}
+            {value} {unit && <span className="text-xs font-normal text-muted">{unit}</span>}
           </dd>
         </div>
       ))}
@@ -137,19 +137,19 @@ export function Activity({ totals }: { totals: AnalyticsTotals }) {
 /** Seen, then opened, then marked: each step as a share of the first. */
 export function Funnel({ totals }: { totals: Rates }) {
   const steps = [
-    { label: 'Показано', value: totals.seen, share: 1, tone: 'text-primary' },
-    { label: 'Открыто', value: totals.opened, share: totals.ctr, tone: 'text-primary' },
+    { label: 'Показано', value: totals.seen, share: 1, tone: 'text-accent' },
+    { label: 'Открыто', value: totals.opened, share: totals.ctr, tone: 'text-accent' },
     {
       label: '«Больше такого» и сохранения',
       value: totals.liked,
       share: totals.like_rate,
-      tone: 'text-spark',
+      tone: 'text-warning',
     },
     {
       label: '«Меньше такого» и скрытия',
       value: totals.rejected,
       share: totals.reject_rate,
-      tone: 'text-destructive',
+      tone: 'text-danger',
     },
   ]
   return (
@@ -164,7 +164,7 @@ export function Funnel({ totals }: { totals: Rates }) {
           <RateBar rate={step.share} scale={1} tone={step.tone} />
           <span className="text-right text-sm tabular-nums">
             {formatNumber(step.value)}
-            <span className="ml-1.5 text-xs text-outline">{formatPercent(step.share)}</span>
+            <span className="ml-1.5 text-xs text-muted">{formatPercent(step.share)}</span>
           </span>
         </li>
       ))}
@@ -183,12 +183,12 @@ export function Days({ daily }: { daily: Analytics['daily'] }) {
         series={[
           {
             label: 'открывают',
-            tone: 'text-primary',
+            tone: 'text-accent',
             values: daily.map((day) => (day.enough ? day.ctr : null)),
           },
           {
             label: '«больше такого» или сохранили',
-            tone: 'text-spark',
+            tone: 'text-warning',
             values: daily.map((day) => (day.enough ? day.like_rate : null)),
           },
         ]}
@@ -205,11 +205,11 @@ export function RateRows({
   rows: { key: string; label: ReactNode; detail?: string; rates: Rates }[]
   empty: string
 }) {
-  if (!rows.length) return <p className="text-sm text-muted-foreground">{empty}</p>
+  if (!rows.length) return <p className="text-sm text-muted">{empty}</p>
   const scale = Math.max(0.05, ...rows.map((row) => row.rates.ctr_high))
   return (
     <div className="space-y-3.5">
-      <div className="hidden grid-cols-[minmax(0,15rem)_5rem_minmax(0,1fr)_5rem_4.5rem] gap-3 text-[11px] text-outline sm:grid">
+      <div className="hidden grid-cols-[minmax(0,15rem)_5rem_minmax(0,1fr)_5rem_4.5rem] gap-3 text-[11px] text-muted sm:grid">
         <span />
         <span className="text-right">показы</span>
         <span>доля открытий</span>
@@ -223,11 +223,11 @@ export function RateRows({
         >
           <div className="min-w-0">
             <p className="truncate text-sm">{label}</p>
-            {detail && <p className="truncate text-xs text-outline">{detail}</p>}
+            {detail && <p className="truncate text-xs text-muted">{detail}</p>}
           </div>
-          <span className="text-right text-sm text-muted-foreground tabular-nums">
+          <span className="text-right text-sm text-muted tabular-nums">
             {/* A phone has no header row: each number carries its name. */}
-            <span className="mr-1 text-xs text-outline sm:hidden">показов</span>
+            <span className="mr-1 text-xs text-muted sm:hidden">показов</span>
             {formatNumber(rates.seen)}
           </span>
           <div className="col-span-2 sm:col-span-1">
@@ -236,20 +236,20 @@ export function RateRows({
               low={rates.ctr_low}
               high={rates.ctr_high}
               scale={scale}
-              tone={rates.enough ? 'text-primary' : 'text-outline'}
+              tone={rates.enough ? 'text-accent' : 'text-muted'}
             />
           </div>
           <span
             className={clsx(
               'tabular-nums whitespace-nowrap sm:text-right',
-              rates.enough ? 'text-sm' : 'text-xs text-outline',
+              rates.enough ? 'text-sm' : 'text-xs text-muted',
             )}
           >
-            {rates.enough && <span className="mr-1 text-xs text-outline sm:hidden">открыли</span>}
+            {rates.enough && <span className="mr-1 text-xs text-muted sm:hidden">открыли</span>}
             {rates.enough ? formatPercent(rates.ctr) : 'мало данных'}
           </span>
-          <span className="text-right text-sm text-muted-foreground tabular-nums">
-            {rates.enough && <span className="mr-1 text-xs text-outline sm:hidden">«больше»</span>}
+          <span className="text-right text-sm text-muted tabular-nums">
+            {rates.enough && <span className="mr-1 text-xs text-muted sm:hidden">«больше»</span>}
             {rates.enough ? formatPercent(rates.like_rate) : ''}
           </span>
         </div>
@@ -307,7 +307,7 @@ export function Sources({ data }: { data: Analytics }) {
                 <RateBar
                   rate={row.reject_rate}
                   scale={Math.max(...data.sources_rejected.map((item) => item.reject_rate))}
-                  tone="text-destructive"
+                  tone="text-danger"
                 />
                 <span className="text-right text-sm tabular-nums">
                   {formatPercent(row.reject_rate)}
@@ -316,7 +316,7 @@ export function Sources({ data }: { data: Analytics }) {
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-muted-foreground">Отклонённых статей пока нет.</p>
+          <p className="text-sm text-muted">Отклонённых статей пока нет.</p>
         )}
       </div>
     </div>
@@ -378,30 +378,30 @@ export function Ranker({ data }: { data: Analytics }) {
       {ranker && (
         <div>
           <h3 className="text-sm font-medium">Ночные обучения</h3>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="mt-1 text-xs text-muted">
             {ranker.active
               ? `Включена модель ${ranker.active}: её порядок выдачи получают ${formatPercent(ranker.share)} читателей.`
               : `Сейчас ранжирование идёт по ручным весам. Модель включится, только если превзойдёт их по качеству на последних днях, и охватит ${formatPercent(ranker.share)} читателей.`}
           </p>
           {ranker.runs.length ? (
-            <ul className="mt-3 divide-y divide-outline-variant">
+            <ul className="mt-3 divide-y divide-separator">
               {ranker.runs.map((run) => (
                 <li key={run.version} className="py-2.5 text-sm">
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                     <span className="tabular-nums">{formatDateTime(run.created_at)}</span>
                     <Chip tone={STATUS[run.status].tone}>{STATUS[run.status].label}</Chip>
                     {run.hand_ndcg !== null && run.model_ndcg !== null && (
-                      <span className="text-xs text-muted-foreground tabular-nums">
+                      <span className="text-xs text-muted tabular-nums">
                         nDCG@20 {run.hand_ndcg.toFixed(3)} → {run.model_ndcg.toFixed(3)}
                       </span>
                     )}
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">{run.note}</p>
+                  <p className="mt-1 text-xs text-muted">{run.note}</p>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="mt-3 text-sm text-muted-foreground">
+            <p className="mt-3 text-sm text-muted">
               Обучение ещё не запускалось, оно идёт каждую ночь.
             </p>
           )}

@@ -29,7 +29,11 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   if (me.isPending) {
     return (
       <Splash>
-        <div className="skeleton h-2 w-28" role="status" aria-label="Проверяем вход" />
+        <div
+          className="skeleton skeleton--shimmer rounded-xl h-2 w-28"
+          role="status"
+          aria-label="Проверяем вход"
+        />
       </Splash>
     )
   }

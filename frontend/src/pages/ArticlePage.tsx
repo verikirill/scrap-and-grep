@@ -71,7 +71,7 @@ function Article({ article }: { article: ArticleRead }) {
   return (
     <article lang={article.language}>
       <header>
-        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-muted">
           <span className="font-medium text-foreground">{article.source_name}</span>
           <span>{CATEGORY_LABELS[article.source_category] ?? article.source_category}</span>
           <time dateTime={article.published_at}>{formatDateTime(article.published_at)}</time>
@@ -84,11 +84,11 @@ function Article({ article }: { article: ArticleRead }) {
         >
           {article.title}
         </h1>
-        {article.author && <p className="mt-2.5 text-sm text-muted-foreground">{article.author}</p>}
+        {article.author && <p className="mt-2.5 text-sm text-muted">{article.author}</p>}
       </header>
 
       {!article.complete && (
-        <p className="mt-6 rounded-xl bg-surface-container px-4 py-3 text-sm text-muted-foreground">
+        <p className="mt-6 rounded-xl bg-surface-secondary px-4 py-3 text-sm text-muted">
           Сайт {host} не вернул страницу, поэтому показан только текст из ленты. Полная версия
           доступна в источнике.
         </p>
@@ -104,7 +104,7 @@ function Article({ article }: { article: ArticleRead }) {
         </EmptyState>
       )}
 
-      <footer className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-outline-variant pt-5 text-sm text-muted-foreground">
+      <footer className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-separator pt-5 text-sm text-muted">
         <p className="max-w-md">Текст и картинки со страницы {host}; права на них у источника.</p>
         <SourceLink
           article={article}

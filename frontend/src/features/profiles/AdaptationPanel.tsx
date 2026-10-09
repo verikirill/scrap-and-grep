@@ -1,8 +1,8 @@
 import clsx from 'clsx'
 import { AnimatePresence, motion } from 'motion/react'
-import { Switch as SwitchPrimitive } from 'radix-ui'
+import { Switch } from '@heroui/react'
 import { useRef, useState } from 'react'
-import { toast } from 'sonner'
+import { toast } from '../../lib/toast'
 import {
   Block,
   ChevronDown,
@@ -37,7 +37,7 @@ function amount(value: number): string {
   return (Math.round(value * 10) / 10).toLocaleString('ru-RU')
 }
 
-function M3Switch({
+function SettingSwitch({
   checked,
   onChange,
   labelledBy,
@@ -53,31 +53,29 @@ function M3Switch({
   return (
     // Never disabled: a disabled control drops the keyboard focus. A click
     // while the last one is on its way is ignored instead.
-    <SwitchPrimitive.Root
-      checked={checked}
-      onCheckedChange={(value) => !isBusy && onChange(value)}
+    <Switch
+      isSelected={checked}
+      onChange={(value) => !isBusy && onChange(value)}
       aria-labelledby={labelledBy}
       aria-describedby={describedBy}
       aria-busy={isBusy || undefined}
-      className="relative inline-flex h-8 w-[52px] shrink-0 items-center rounded-full border-2 border-outline bg-surface-container-highest transition-colors duration-200 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50 data-[state=checked]:border-primary data-[state=checked]:bg-primary"
     >
-      <SwitchPrimitive.Thumb className="block size-4 translate-x-1.5 rounded-full bg-outline transition-[translate,width,height,background-color] duration-200 ease-[cubic-bezier(0.2,0,0,1)] data-[state=checked]:size-6 data-[state=checked]:translate-x-[22px] data-[state=checked]:bg-primary-foreground" />
-    </SwitchPrimitive.Root>
+      <Switch.Control>
+        <Switch.Thumb />
+      </Switch.Control>
+    </Switch>
   )
 }
 
 function FactorBar({ factor }: { factor: number }) {
   const offset = Math.max(-1, Math.min(1, (factor - 1) / FACTOR_SPAN))
   return (
-    <span
-      aria-hidden
-      className="relative hidden h-1.5 w-20 rounded-full bg-surface-container-highest sm:block"
-    >
-      <span className="absolute inset-y-0 left-1/2 w-px bg-outline" />
+    <span aria-hidden className="relative hidden h-1.5 w-20 rounded-full bg-default sm:block">
+      <span className="absolute inset-y-0 left-1/2 w-px bg-border" />
       <motion.span
         className={clsx(
           'absolute inset-y-0 rounded-full',
-          offset >= 0 ? 'left-1/2 bg-primary' : 'right-1/2 bg-spark',
+          offset >= 0 ? 'left-1/2 bg-accent' : 'right-1/2 bg-warning',
         )}
         initial={{ width: 0 }}
         animate={{ width: `${Math.abs(offset) * 50}%` }}
@@ -102,7 +100,7 @@ function InterestRow({ item }: { item: InterestLearning }) {
       </span>
       <span className="flex items-center gap-2 text-xs tabular-nums">
         <FactorBar factor={item.factor} />
-        <span className={clsx(moved ? 'text-foreground' : 'text-muted-foreground')}>
+        <span className={clsx(moved ? 'text-foreground' : 'text-muted')}>
           {item.stated_weight.toFixed(2)}
           {moved && (
             <>
@@ -114,11 +112,11 @@ function InterestRow({ item }: { item: InterestLearning }) {
         {moved && (
           <Trend
             size={14}
-            className={item.weight >= item.stated_weight ? 'text-primary' : 'text-spark'}
+            className={item.weight >= item.stated_weight ? 'text-accent' : 'text-warning'}
           />
         )}
       </span>
-      <span className="col-span-2 text-xs text-muted-foreground">
+      <span className="col-span-2 text-xs text-muted">
         {marks.length > 0 ? marks.join(' · ') : 'отметок пока нет'}
         {item.drift >= 0.005 &&
           `· фокус сдвинут к понравившемуся на ${Math.round(item.drift * 100)}%`}
@@ -147,22 +145,20 @@ function SuggestionCard({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, height: 0, paddingTop: 0, paddingBottom: 0, pointerEvents: 'none' }}
       transition={{ duration: 0.3, ease: EASE }}
-      className="overflow-hidden rounded-2xl bg-surface-container px-4 py-3.5"
+      className="overflow-hidden rounded-2xl bg-surface-secondary px-4 py-3.5"
     >
-      <p className="flex items-center gap-1.5 text-xs font-medium text-on-surface-variant">
-        <Kind size={15} className={isExclusion ? 'text-spark' : 'text-primary'} />
+      <p className="flex items-center gap-1.5 text-xs font-medium text-muted">
+        <Kind size={15} className={isExclusion ? 'text-warning' : 'text-accent'} />
         {isExclusion ? 'Не показывать' : 'Новая тема'} · {SOURCE[suggestion.source]}
       </p>
       <p className="mt-1.5 font-semibold break-words">{suggestion.title}</p>
       {isExclusion ? (
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-1 text-sm text-muted">
           Публикации с этим словом не попадут в ленту и выпуски по этому профилю.
         </p>
       ) : (
         suggestion.description && (
-          <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-            {suggestion.description}
-          </p>
+          <p className="mt-1 line-clamp-2 text-sm text-muted">{suggestion.description}</p>
         )
       )}
       {!isExclusion && suggestion.keywords.length > 0 && (
@@ -170,7 +166,7 @@ function SuggestionCard({
           {suggestion.keywords.map((keyword) => (
             <li
               key={keyword}
-              className="rounded-lg bg-secondary-container px-2 py-0.5 text-xs break-words text-on-secondary-container"
+              className="rounded-lg bg-default px-2 py-0.5 text-xs break-words text-default-foreground"
             >
               {keyword}
             </li>
@@ -178,18 +174,18 @@ function SuggestionCard({
         </ul>
       )}
       {suggestion.articles.length > 0 && (
-        <ul className="mt-2.5 space-y-1 border-l-2 border-outline-variant pl-3">
+        <ul className="mt-2.5 space-y-1 border-l-2 border-separator pl-3">
           {suggestion.articles.map((article) => (
             <li key={article.id} className="text-xs">
               <a
                 href={externalHref(article.url)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="line-clamp-1 text-foreground hover:text-primary hover:underline"
+                className="line-clamp-1 text-foreground hover:text-accent hover:underline"
               >
                 {article.title}
               </a>
-              <span className="text-muted-foreground">{article.source_name}</span>
+              <span className="text-muted">{article.source_name}</span>
             </li>
           ))}
         </ul>
@@ -257,10 +253,10 @@ export function AdaptationPanel({
   return (
     <section
       aria-labelledby="adaptation-title"
-      className="rounded-3xl border border-outline-variant bg-surface-container-low p-4 sm:p-5"
+      className="rounded-3xl border border-separator bg-background p-4 sm:p-5"
     >
       <div className="flex items-start gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-primary-container text-on-primary-container">
+        <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-accent-soft text-accent-soft-foreground">
           <SlidersHorizontal size={22} filled={isOn} />
         </span>
         <div className="min-w-0 flex-1">
@@ -272,7 +268,7 @@ export function AdaptationPanel({
           >
             Подстройка по отметкам
           </h2>
-          <p id="adaptation-summary" className="mt-0.5 text-sm text-muted-foreground">
+          <p id="adaptation-summary" className="mt-0.5 text-sm text-muted">
             {!isOn
               ? 'Выключено. Лента и выпуски используют профиль без изменений.'
               : hasLearned && marks
@@ -280,7 +276,7 @@ export function AdaptationPanel({
                 : 'Отмечайте публикации в ленте и выпусках, и сервис подстроит веса интересов, а новые темы предложит здесь.'}
           </p>
         </div>
-        <M3Switch
+        <SettingSwitch
           checked={isOn}
           labelledBy="adaptation-title"
           describedBy="adaptation-summary"
@@ -332,7 +328,7 @@ export function AdaptationPanel({
             aria-expanded={isDetailsOpen}
             aria-controls="adaptation-details"
             onClick={() => setIsDetailsOpen((open) => !open)}
-            className="flex w-full items-center gap-1.5 rounded-lg py-1 text-sm font-medium text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="flex w-full items-center gap-1.5 rounded-lg py-1 text-sm font-medium text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
             Как подстроены интересы
             <ChevronDown
@@ -351,12 +347,12 @@ export function AdaptationPanel({
                 transition={{ duration: 0.3, ease: EASE }}
                 className="overflow-hidden"
               >
-                <ul className="divide-y divide-outline-variant">
+                <ul className="divide-y divide-separator">
                   {data.interests.map((item) => (
                     <InterestRow key={item.interest_id} item={item} />
                   ))}
                 </ul>
-                <p className="mt-2 text-xs text-muted-foreground">
+                <p className="mt-2 text-xs text-muted">
                   Вес интереса растёт от положительных отметок и снижается от отрицательных (не
                   больше чем на 10%). Фокус подстраивается под понравившиеся статьи, а сохранённый
                   профиль не меняется.

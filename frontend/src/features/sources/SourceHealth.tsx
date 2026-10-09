@@ -36,19 +36,16 @@ function Summary({ health }: { health: Health }) {
       ) : (
         <>
           {formatNumber(health.polls)} {plural(health.polls, ['опрос', 'опроса', 'опросов'])},{' '}
-          <span className={share !== null && share < 90 ? 'text-destructive' : 'text-success'}>
+          <span className={share !== null && share < 90 ? 'text-danger' : 'text-success'}>
             {shareOfGood(health.ok, health.polls)}% успешно
           </span>
         </>
       )}
       {health.failing.length > 0 && (
-        <span className="text-destructive"> · не читаются: {health.failing.length}</span>
+        <span className="text-danger"> · не читаются: {health.failing.length}</span>
       )}
       {health.silent.length > 0 && (
-        <span className="text-muted-foreground">
-          {' '}
-          · давно не публиковали: {health.silent.length}
-        </span>
+        <span className="text-muted"> · давно не публиковали: {health.silent.length}</span>
       )}
     </p>
   )
@@ -65,7 +62,7 @@ function ShortList<T>({ items, render }: { items: T[]; render: (item: T) => Reac
         <button
           type="button"
           onClick={() => setIsAll((value) => !value)}
-          className="mt-1.5 text-xs font-medium text-primary hover:underline"
+          className="mt-1.5 text-xs font-medium text-accent hover:underline"
         >
           {isAll ? 'Показать первые ' + SHOWN_AT_FIRST : `Показать все ${items.length}`}
         </button>
@@ -77,10 +74,8 @@ function ShortList<T>({ items, render }: { items: T[]; render: (item: T) => Reac
 function SectionTitle({ title, note }: { title: string; note: string }) {
   return (
     <div className="mb-1.5">
-      <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-        {title}
-      </h3>
-      <p className="text-xs text-outline">{note}</p>
+      <h3 className="text-xs font-semibold tracking-wide text-muted uppercase">{title}</h3>
+      <p className="text-xs text-muted">{note}</p>
     </div>
   )
 }
@@ -119,9 +114,7 @@ export function SourceHealth() {
             </section>
           )}
           {failing.length === 0 && silent.length === 0 && (
-            <p className="text-sm text-muted-foreground">
-              Все источники доступны и обновляются вовремя.
-            </p>
+            <p className="text-sm text-muted">Все источники доступны и обновляются вовремя.</p>
           )}
           {failing.length > 0 && (
             <section>
@@ -138,14 +131,14 @@ export function SourceHealth() {
                     className={item.error ? 'cursor-help' : undefined}
                   >
                     <span className="font-medium">{item.name}</span>
-                    <span className="text-muted-foreground">
+                    <span className="text-muted">
                       {' '}
                       — {kindOf(item.kind)}: {item.failures}{' '}
                       {plural(item.failures, ['опрос', 'опроса', 'опросов'])} подряд с ошибкой
                       {item.since && `, последний удачный ${formatRelative(item.since)}`}
                     </span>
                     {item.error && (
-                      <Help size={14} className="ml-1 inline align-[-2px] text-outline" />
+                      <Help size={14} className="ml-1 inline align-[-2px] text-muted" />
                     )}
                   </li>
                 )}
@@ -163,7 +156,7 @@ export function SourceHealth() {
                 render={(item) => (
                   <li key={item.source_id}>
                     <span className="font-medium">{item.name}</span>
-                    <span className="text-muted-foreground">
+                    <span className="text-muted">
                       {' '}
                       — последняя публикация {formatRelative(item.last_article)}, а за месяц пауза
                       не превышала{' '}

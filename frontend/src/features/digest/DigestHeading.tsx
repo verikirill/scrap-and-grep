@@ -27,7 +27,7 @@ export function MorphingTitle({ digestId, children }: { digestId: string; childr
  */
 export function DigestHeading({ summary }: { summary: DigestSummary }) {
   return (
-    <div className="rounded-[28px] bg-primary-container px-6 py-6 text-on-primary-container sm:px-8">
+    <div className="rounded-[28px] bg-accent-soft px-6 py-6 text-accent-soft-foreground sm:px-8">
       <p className="text-xs font-medium opacity-80">
         {summary.profile_name} · версия {summary.profile_version} ·{' '}
         {formatPeriod(summary.period_start, summary.period_end)}

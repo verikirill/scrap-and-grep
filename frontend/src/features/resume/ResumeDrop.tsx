@@ -81,17 +81,15 @@ export function ResumeDrop({ meta, isBusy, onFile, isCompact = false }: Props) {
           className={clsx(
             'flex w-full items-center gap-3 rounded-2xl border-2 border-dashed px-4 py-3 text-left',
             'transition-colors duration-200 disabled:pointer-events-none disabled:opacity-60',
-            isOver
-              ? 'border-primary bg-primary-container'
-              : 'border-outline-variant hover:border-outline',
+            isOver ? 'border-accent bg-accent-soft' : 'border-separator hover:border-border',
           )}
         >
-          <FileUp size={20} className="shrink-0 text-on-surface-variant" />
+          <FileUp size={20} className="shrink-0 text-muted" />
           <span className="min-w-0 text-sm">
             <span className="font-medium">Заменить резюме:</span>{' '}
-            <span className="text-muted-foreground">перетащите файл или нажмите</span>
+            <span className="text-muted">перетащите файл или нажмите</span>
           </span>
-          <span className="ml-auto hidden shrink-0 text-xs text-outline sm:inline">
+          <span className="ml-auto hidden shrink-0 text-xs text-muted sm:inline">
             {formatList} · до {megabytes(limit)} МБ
           </span>
         </button>
@@ -104,14 +102,14 @@ export function ResumeDrop({ meta, isBusy, onFile, isCompact = false }: Props) {
             'flex w-full flex-col items-center rounded-2xl border-2 border-dashed px-6 py-10 text-center',
             'transition-colors duration-200 disabled:pointer-events-none disabled:opacity-60',
             isOver
-              ? 'border-primary bg-primary-container'
-              : 'border-outline-variant bg-card hover:border-outline',
+              ? 'border-accent bg-accent-soft'
+              : 'border-separator bg-surface hover:border-border',
           )}
         >
           <motion.span
             animate={{ y: isOver ? -4 : 0 }}
             transition={{ type: 'spring', stiffness: 420, damping: 24 }}
-            className="mb-4 grid size-12 place-items-center rounded-2xl bg-surface-container text-on-primary-container"
+            className="mb-4 grid size-12 place-items-center rounded-2xl bg-surface-secondary text-accent-soft-foreground"
           >
             <FileUp size={22} />
           </motion.span>
@@ -122,14 +120,14 @@ export function ResumeDrop({ meta, isBusy, onFile, isCompact = false }: Props) {
           <span className="hidden text-base font-semibold pointer-coarse:inline">
             Выберите файл с резюме
           </span>
-          <span className="mt-1 text-sm text-muted-foreground pointer-coarse:hidden">
+          <span className="mt-1 text-sm text-muted pointer-coarse:hidden">
             или нажмите, чтобы выбрать файл
           </span>
-          <span className="mt-4 text-xs text-outline">
+          <span className="mt-4 text-xs text-muted">
             {formatList} · до {megabytes(limit)} МБ
           </span>
           {hasOcr && (
-            <span className="mt-2 inline-flex items-center gap-1.5 text-xs text-outline">
+            <span className="mt-2 inline-flex items-center gap-1.5 text-xs text-muted">
               <ScanText size={13} />
               Сканы и фото страниц тоже подойдут, сервис распознает текст
             </span>
@@ -149,7 +147,7 @@ export function ResumeDrop({ meta, isBusy, onFile, isCompact = false }: Props) {
         }}
       />
       {problem && (
-        <p role="alert" className="mt-2 text-sm text-destructive">
+        <p role="alert" className="mt-2 text-sm text-danger">
           {problem}
         </p>
       )}

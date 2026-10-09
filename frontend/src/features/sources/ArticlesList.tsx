@@ -41,7 +41,7 @@ function Timeline({ points }: { points: TimelinePoint[] }) {
           title={`${day.slice(8, 10)}.${day.slice(5, 7)}: ${formatNumber(count)}`}
         >
           <motion.div
-            className="h-full origin-bottom rounded-t bg-primary/70 transition-colors hover:bg-primary"
+            className="h-full origin-bottom rounded-t bg-accent/70 transition-colors hover:bg-accent"
             initial={{ scaleY: 0 }}
             animate={{ scaleY: Math.max(count / max, 0.03) }}
             transition={{ duration: 0.5, delay: index * 0.025, ease: EASE }}
@@ -82,17 +82,17 @@ export function ArticlesList() {
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div className="min-w-0 flex-1">
             <div className="relative">
-              <Search size={16} className="absolute top-1/2 left-3 -translate-y-1/2 text-outline" />
+              <Search size={16} className="absolute top-1/2 left-3 -translate-y-1/2 text-muted" />
               <input
                 type="search"
                 aria-label="Поиск по публикациям"
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
                 placeholder='Поиск по публикациям: уязвимость SCADA, "цифровая подстанция"'
-                className="w-full rounded-lg border border-outline-variant bg-card py-2.5 pr-10 pl-9 text-sm placeholder:text-outline hover:border-outline focus:border-primary focus:outline-none"
+                className="w-full rounded-lg border border-separator bg-surface py-2.5 pr-10 pl-9 text-sm placeholder:text-muted hover:border-border focus:border-accent focus:outline-none"
               />
               {articles.isFetching && (
-                <Spinner className="absolute top-1/2 right-3 size-3.5 -translate-y-1/2 text-primary" />
+                <Spinner className="absolute top-1/2 right-3 size-3.5 -translate-y-1/2 text-accent" />
               )}
             </div>
             <div className="mt-3 flex flex-wrap gap-1.5" role="group" aria-label="Категории">
@@ -107,8 +107,8 @@ export function ArticlesList() {
                     className={clsx(
                       'rounded-lg border px-2.5 py-1 text-[13px] transition-colors duration-150',
                       active
-                        ? 'border-primary bg-primary-container text-on-primary-container'
-                        : 'border-outline-variant text-muted-foreground hover:border-outline hover:text-foreground',
+                        ? 'border-accent bg-accent-soft text-accent-soft-foreground'
+                        : 'border-separator text-muted hover:border-border hover:text-foreground',
                     )}
                   >
                     {CATEGORY_LABELS[category]}
@@ -119,11 +119,11 @@ export function ArticlesList() {
           </div>
           {/* While searching, the results matter more than the chart: on a phone it steps aside. */}
           <div className={clsx('w-full sm:block sm:w-56', q && 'hidden')}>
-            <p className="mb-1.5 text-xs text-muted-foreground">Публикаций за 14 дней</p>
+            <p className="mb-1.5 text-xs text-muted">Публикаций за 14 дней</p>
             {timeline.data ? (
               <Timeline points={timeline.data} />
             ) : (
-              <div className="skeleton h-16" />
+              <div className="skeleton skeleton--shimmer rounded-xl h-16" />
             )}
           </div>
         </div>
@@ -132,7 +132,7 @@ export function ArticlesList() {
       <ErrorNote error={articles.error} />
 
       {total !== undefined && (
-        <p className="px-1 text-xs text-muted-foreground" aria-live="polite">
+        <p className="px-1 text-xs text-muted" aria-live="polite">
           {q ? 'Найдено' : 'Всего'}:{' '}
           <span className="tabular font-semibold text-foreground">{formatNumber(total)}</span>
         </p>
@@ -152,35 +152,33 @@ export function ArticlesList() {
         {!pages && articles.isLoading && (
           <div className="space-y-2 p-4">
             {Array.from({ length: 8 }, (_, index) => (
-              <div key={index} className="skeleton h-14" />
+              <div key={index} className="skeleton skeleton--shimmer rounded-xl h-14" />
             ))}
           </div>
         )}
-        <ul className="divide-y divide-outline-variant">
+        <ul className="divide-y divide-separator">
           {items.map((article, index) => (
             <motion.li key={article.id} {...rowMotion(index % PAGE_SIZE)} className="px-5 py-3">
               {/* Matches by meaning come after those with the words, under a line of their own. */}
               {article.match === 'meaning' && items[index - 1]?.match !== 'meaning' && (
-                <p className="-mx-5 -mt-3 mb-3 bg-surface-container px-5 py-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                <p className="-mx-5 -mt-3 mb-3 bg-surface-secondary px-5 py-1.5 text-xs font-semibold tracking-wide text-muted uppercase">
                   Похоже по смыслу
                 </p>
               )}
               <div className="group flex items-start gap-1">
                 <Link
                   to={articlePath(article.id)}
-                  className="min-w-0 flex-1 text-sm font-medium hover:text-on-primary-container"
+                  className="min-w-0 flex-1 text-sm font-medium hover:text-accent-soft-foreground"
                 >
                   {article.title}
                 </Link>
                 <OriginalLink url={article.url} title={article.title} />
               </div>
               {article.summary && (
-                <p className="mt-0.5 line-clamp-2 text-[13px] text-muted-foreground">
-                  {article.summary}
-                </p>
+                <p className="mt-0.5 line-clamp-2 text-[13px] text-muted">{article.summary}</p>
               )}
-              <p className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-outline">
-                <span className="font-medium text-muted-foreground">{article.source_name}</span>
+              <p className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-muted">
+                <span className="font-medium text-muted">{article.source_name}</span>
                 <span>{formatDateTime(article.published_at)}</span>
                 <Chip>{CATEGORY_LABELS[article.source_category]}</Chip>
                 {article.has_full_text && <Chip tone="ok">полный текст</Chip>}

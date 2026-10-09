@@ -24,7 +24,7 @@ function statusLine(digest: DigestSummary): string {
 
 export function History({ digests, activeId, onSelect, onDelete }: Props) {
   if (digests.length === 0) {
-    return <p className="px-1 text-sm text-muted-foreground">Здесь появятся собранные выпуски.</p>
+    return <p className="px-1 text-sm text-muted">Здесь появятся собранные выпуски.</p>
   }
   return (
     <LayoutGroup id="digest-history">
@@ -50,14 +50,14 @@ export function History({ digests, activeId, onSelect, onDelete }: Props) {
                   aria-current={isActive}
                   className={clsx(
                     'relative isolate w-full rounded-2xl px-3 py-2.5 pr-9 text-left transition-colors duration-300',
-                    isActive ? 'text-primary-foreground' : 'hover:bg-surface-container-high',
+                    isActive ? 'text-foreground' : 'hover:bg-default/60',
                   )}
                 >
                   {/* One highlight for the list: it flows to the row that opens. */}
                   {isActive && (
                     <motion.span
                       layoutId="history-highlight"
-                      className="absolute inset-0 -z-10 bg-primary shadow-elevation-1"
+                      className="absolute inset-0 -z-10 bg-surface shadow-surface ring-1 ring-border"
                       style={{ borderRadius: 16 }}
                       transition={{ type: 'spring', stiffness: 380, damping: 32 }}
                     />
@@ -79,23 +79,23 @@ export function History({ digests, activeId, onSelect, onDelete }: Props) {
                   <span
                     className={clsx(
                       'mt-1 flex items-center gap-1.5 text-xs',
-                      isActive ? 'opacity-85' : 'text-muted-foreground',
+                      isActive ? 'opacity-85' : 'text-muted',
                     )}
                   >
                     {isRunning && (
                       <Spinner
-                        className={clsx('size-3 border-[1.5px]', !isActive && 'text-primary')}
+                        className={clsx('size-3 border-[1.5px]', !isActive && 'text-accent')}
                       />
                     )}
                     {digest.status === 'failed' && (
-                      <CircleAlert size={12} className="text-destructive" />
+                      <CircleAlert size={12} className="text-danger" />
                     )}
                     <span className="truncate">{statusLine(digest)}</span>
                   </span>
                   <span
                     className={clsx(
                       'mt-0.5 flex items-center gap-1 truncate text-[11px]',
-                      isActive ? 'opacity-70' : 'text-outline',
+                      isActive ? 'opacity-70' : 'text-muted',
                     )}
                   >
                     {digest.origin === 'schedule' && (
@@ -123,8 +123,8 @@ export function History({ digests, activeId, onSelect, onDelete }: Props) {
                     // Always visible on touch screens, where there is no hover.
                     className={clsx(
                       'absolute top-2 right-2 grid size-6 place-items-center rounded-md transition-opacity',
-                      isActive ? 'text-primary-foreground' : 'text-outline',
-                      'hover:bg-error-container hover:text-destructive focus-visible:opacity-100 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100',
+                      'text-muted',
+                      'hover:bg-danger-soft hover:text-danger focus-visible:opacity-100 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100',
                     )}
                   >
                     <Trash2 size={13} />

@@ -30,9 +30,9 @@ export class ErrorBoundary extends Component<Props, State> {
     return (
       <Card variant="outlined" className="p-6">
         <div role="alert" className="flex flex-col items-start gap-3">
-          <TriangleAlert size={22} className="text-destructive" />
+          <TriangleAlert size={22} className="text-danger" />
           <p className="text-base font-medium">{this.props.title ?? 'Раздел не загрузился'}</p>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted">
             Возможно, сервис обновился. Перезагрузите страницу; если ошибка повторится, попробуйте
             позже.
           </p>

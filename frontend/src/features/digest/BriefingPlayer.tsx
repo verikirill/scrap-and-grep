@@ -45,14 +45,14 @@ function Progress({ briefing }: { briefing: Briefing }) {
         aria-valuemax={100}
         aria-valuenow={isQueued ? undefined : percent}
         aria-valuetext={isQueued ? 'В очереди' : `${percent}%`}
-        className="mt-3 h-1.5 overflow-hidden rounded-full bg-surface-container"
+        className="mt-3 h-1.5 overflow-hidden rounded-full bg-surface-secondary"
       >
         <div
-          className="h-full origin-left rounded-full bg-spark transition-transform duration-500"
+          className="h-full origin-left rounded-full bg-warning transition-transform duration-500"
           style={{ transform: `scaleX(${Math.max(percent, 3) / 100})` }}
         />
       </div>
-      <p className="mt-2 text-xs text-muted-foreground">
+      <p className="mt-2 text-xs text-muted">
         Озвучиваем выпуск по частям. Окно можно закрыть, брифинг соберётся в фоне.
       </p>
     </div>
@@ -81,11 +81,11 @@ function Player({ briefing, voices }: { briefing: Briefing; voices: VoiceOption[
         aria-describedby={transcriptId}
         className="w-full"
       />
-      <p className="text-xs text-muted-foreground">
+      <p className="text-xs text-muted">
         {details.join(' · ')}
         {briefing.finished_at && ` · готово ${formatDateTime(briefing.finished_at)}`}
       </p>
-      <details className="rounded-lg bg-surface-container px-3 py-2">
+      <details className="rounded-lg bg-surface-secondary px-3 py-2">
         <summary className="cursor-pointer text-sm font-medium">Текст брифинга</summary>
         <div
           id={transcriptId}
@@ -143,7 +143,7 @@ export function BriefingPlayer({ digest }: { digest: Digest }) {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg">
-              <Mic size={18} className="text-spark" aria-hidden />
+              <Mic size={18} className="text-warning" aria-hidden />
               Голосовой брифинг
             </DialogTitle>
             <DialogDescription>
@@ -160,22 +160,22 @@ export function BriefingPlayer({ digest }: { digest: Digest }) {
           <ErrorNote error={create.error ?? state.error} />
 
           {!briefing && create.isPending && (
-            <p className="text-sm text-muted-foreground">Заказываем брифинг…</p>
+            <p className="text-sm text-muted">Заказываем брифинг…</p>
           )}
           {briefing && busy && <Progress briefing={briefing} />}
           {briefing?.status === 'done' && <Player briefing={briefing} voices={voices} />}
           {briefing?.status === 'failed' && (
-            <p className="rounded-lg bg-error-container px-3 py-2 text-sm text-destructive">
+            <p className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">
               {briefing.error ?? 'Не удалось озвучить брифинг.'}
             </p>
           )}
 
           {briefing && !busy && (
-            <div className="flex flex-wrap items-end gap-3 border-t border-outline-variant pt-4">
+            <div className="flex flex-wrap items-end gap-3 border-t border-separator pt-4">
               {voices.length > 0 && (
                 <div className="min-w-48 flex-1 space-y-1.5">
                   {/* The select names itself for assistive tech; this is the visible label. */}
-                  <p aria-hidden className="text-xs text-muted-foreground">
+                  <p aria-hidden className="text-xs text-muted">
                     Голос
                   </p>
                   <SelectField

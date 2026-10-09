@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { toast } from 'sonner'
+import { toast } from '../../lib/toast'
 import { Send } from '../../components/icons'
 import { INPUT_CLASS } from '../../components/tokens'
 import { Button, ErrorNote, Field } from '../../components/ui'

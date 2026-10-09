@@ -48,7 +48,7 @@ function Queue({ data }: { data: Analytics }) {
       parts.push(`отложено нечитаемых ${formatNumber(data.queue.set_aside)}`)
   }
   return parts.length ? (
-    <p className="text-center text-xs text-outline">События: {parts.join(', ')}.</p>
+    <p className="text-center text-xs text-muted">События: {parts.join(', ')}.</p>
   ) : null
 }
 
@@ -67,7 +67,7 @@ function Overview({ data, days }: { data: Analytics; days: number }) {
   return (
     <div className="space-y-4">
       <Figures totals={totals} previous={data.previous} />
-      <p className="text-xs text-outline">Стрелки: изменение к предыдущим {days} дням.</p>
+      <p className="text-xs text-muted">Стрелки: изменение к предыдущим {days} дням.</p>
       <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
         <Panel
           title="От показа к отметке"
@@ -138,7 +138,7 @@ export function AnalyticsPage() {
         subtitle="Активность читателей: показы, открытия, отметки и собранные выпуски. Только обезличенные числовые данные."
         actions={
           <>
-            <label className="flex items-center gap-2.5 text-sm text-muted-foreground">
+            <label className="flex items-center gap-2.5 text-sm text-muted">
               <Toggle checked={withGuests} onChange={setWithGuests} label="Учитывать гостей" />
               <span aria-hidden>Гости</span>
             </label>

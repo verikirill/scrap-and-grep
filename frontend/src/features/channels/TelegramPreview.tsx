@@ -16,7 +16,12 @@ function Picture({ url }: { url: string }) {
     )
   }
   return (
-    <div className={clsx('relative', state === 'loading' && 'skeleton h-48 rounded-none')}>
+    <div
+      className={clsx(
+        'relative',
+        state === 'loading' && 'skeleton skeleton--shimmer rounded-xl h-48 rounded-none',
+      )}
+    >
       <img
         src={url}
         alt=""

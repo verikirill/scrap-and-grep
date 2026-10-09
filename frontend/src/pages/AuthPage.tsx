@@ -106,7 +106,7 @@ export function AuthPage({ mode }: Props) {
           <h1 className="text-2xl font-semibold tracking-tight">
             {isRegister ? 'Новый аккаунт' : 'Вход'}
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-sm text-muted">
             {isSharedProfile
               ? 'С вами поделились профилем интересов. Он откроется после входа или регистрации, и вы решите, добавлять ли его себе.'
               : isRegister
@@ -116,7 +116,7 @@ export function AuthPage({ mode }: Props) {
 
           <nav
             aria-label="Вход или регистрация"
-            className="mt-6 inline-flex gap-1 rounded-xl bg-surface-container p-1"
+            className="mt-6 inline-flex gap-1 rounded-xl bg-surface-secondary p-1"
           >
             {TABS.map((tab) => (
               <Link
@@ -127,15 +127,13 @@ export function AuthPage({ mode }: Props) {
                 aria-current={tab.mode === mode ? 'page' : undefined}
                 className={clsx(
                   'relative rounded-lg px-4 py-1.5 text-sm font-medium transition-colors',
-                  tab.mode === mode
-                    ? 'text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground',
+                  tab.mode === mode ? 'text-foreground' : 'text-muted hover:text-foreground',
                 )}
               >
                 {tab.mode === mode && (
                   <motion.span
                     layoutId="auth-tab"
-                    className="absolute inset-0 rounded-lg bg-primary shadow-elevation-1"
+                    className="absolute inset-0 rounded-lg bg-surface shadow-surface"
                     transition={{ type: 'spring', stiffness: 480, damping: 38 }}
                   />
                 )}
@@ -192,7 +190,7 @@ export function AuthPage({ mode }: Props) {
                 onClick={() => setIsPasswordShown((value) => !value)}
                 aria-label="Показать пароль"
                 aria-pressed={isPasswordShown}
-                className="absolute right-0 bottom-0 grid h-[38px] w-10 place-items-center rounded-lg text-outline hover:text-foreground"
+                className="absolute right-0 bottom-0 grid h-[38px] w-10 place-items-center rounded-lg text-muted hover:text-foreground"
               >
                 {isPasswordShown ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -213,7 +211,7 @@ export function AuthPage({ mode }: Props) {
           </form>
 
           {meta.data?.demo_login && (
-            <div className="mt-6 border-t border-outline-variant pt-5">
+            <div className="mt-6 border-t border-separator pt-5">
               <Button
                 className="w-full"
                 isBusy={demo.isPending}
@@ -222,7 +220,7 @@ export function AuthPage({ mode }: Props) {
               >
                 Войти без регистрации
               </Button>
-              <p className="mt-2 text-center text-xs text-outline">
+              <p className="mt-2 text-center text-xs text-muted">
                 Временный аккаунт с примерами профилей. Доступен только вам и удалится через 24
                 часа.
               </p>

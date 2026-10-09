@@ -30,7 +30,7 @@ export function ChannelsPage() {
 
       {defaults && !defaults.enabled && (
         <Card variant="filled" className="mb-6 flex items-start gap-3 p-5">
-          <KeyRound size={20} className="mt-0.5 shrink-0 text-spark" />
+          <KeyRound size={20} className="mt-0.5 shrink-0 text-warning" />
           {isAdmin ? (
             <p className="text-sm">
               Публикация выключена, потому что на сервере не задан ключ шифрования токенов ботов.
@@ -43,7 +43,7 @@ export function ChannelsPage() {
         </Card>
       )}
       {isMock && (
-        <p className="mb-6 rounded-2xl bg-secondary-container px-4 py-3 text-sm text-on-secondary-container">
+        <p className="mb-6 rounded-2xl bg-default px-4 py-3 text-sm text-default-foreground">
           Стенд подключён к тестовому эмулятору Telegram, подойдёт любой токен вида 123456789:AA… и
           любой @канал. Публикации видны на порту 8089.
         </p>
@@ -52,7 +52,7 @@ export function ChannelsPage() {
       <div className="grid gap-6 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
         <div className="space-y-4">
           <BotsPanel />
-          {isPending && <div className="skeleton h-56" />}
+          {isPending && <div className="skeleton skeleton--shimmer rounded-xl h-56" />}
           {channels?.length === 0 && (
             <Card variant="outlined">
               <EmptyState icon={<Send size={22} />} title="Каналов пока нет">

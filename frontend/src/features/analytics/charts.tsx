@@ -30,7 +30,7 @@ function DayAxis({ days }: { days: string[] }) {
   if (!days.length) return null
   const middle = days[Math.floor(days.length / 2)]
   return (
-    <div className="mt-1.5 flex justify-between text-[11px] text-outline tabular-nums">
+    <div className="mt-1.5 flex justify-between text-[11px] text-muted tabular-nums">
       <span>{formatDay(days[0])}</span>
       {days.length > 2 && <span>{formatDay(middle)}</span>}
       <span>{formatDay(days[days.length - 1])}</span>
@@ -52,17 +52,17 @@ export function DayBars({
   const step = WIDTH / Math.max(1, values.length)
   return (
     <figure>
-      <figcaption className="mb-2 flex items-baseline justify-between text-xs text-muted-foreground">
+      <figcaption className="mb-2 flex items-baseline justify-between text-xs text-muted">
         <span>{label}</span>
         <span className="tabular-nums">до {formatNumber(peak)}</span>
       </figcaption>
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         preserveAspectRatio="none"
-        className="h-36 w-full text-primary"
+        className="h-36 w-full text-accent"
         aria-hidden
       >
-        <line x1={0} x2={WIDTH} y1={HEIGHT} y2={HEIGHT} className="stroke-outline-variant" />
+        <line x1={0} x2={WIDTH} y1={HEIGHT} y2={HEIGHT} className="stroke-separator" />
         {values.map((value, index) => {
           const height = (value / peak) * (HEIGHT - 4)
           return (
@@ -128,7 +128,7 @@ export function RateLines({
   const y = (value: number) => HEIGHT - (value / top) * HEIGHT
   return (
     <figure>
-      <figcaption className="mb-2 flex items-baseline justify-between text-xs text-muted-foreground">
+      <figcaption className="mb-2 flex items-baseline justify-between text-xs text-muted">
         <span>{label}</span>
         <span className="tabular-nums">до {formatPercent(top)}</span>
       </figcaption>
@@ -138,13 +138,13 @@ export function RateLines({
         className="h-36 w-full"
         aria-hidden
       >
-        <line x1={0} x2={WIDTH} y1={HEIGHT} y2={HEIGHT} className="stroke-outline-variant" />
+        <line x1={0} x2={WIDTH} y1={HEIGHT} y2={HEIGHT} className="stroke-separator" />
         <line
           x1={0}
           x2={WIDTH}
           y1={HEIGHT / 2}
           y2={HEIGHT / 2}
-          className="stroke-outline-variant"
+          className="stroke-separator"
           strokeDasharray="4 6"
         />
         {series.map((line) => {
@@ -203,7 +203,7 @@ export function RateLines({
           return (
             <li key={line.label} className="flex items-center gap-1.5">
               <span className={clsx('h-0.5 w-4 rounded-full bg-current', line.tone)} />
-              <span className="text-muted-foreground">{line.label}</span>
+              <span className="text-muted">{line.label}</span>
               {last != null && (
                 <span className="font-medium tabular-nums">{formatPercent(last)}</span>
               )}
@@ -254,7 +254,7 @@ export function RateBar({
   low,
   high,
   scale,
-  tone = 'text-primary',
+  tone = 'text-accent',
 }: {
   rate: number
   low?: number
@@ -265,7 +265,7 @@ export function RateBar({
 }) {
   const share = (value: number) => `${Math.min(100, (value / Math.max(scale, 1e-9)) * 100)}%`
   return (
-    <div className={clsx('relative h-2.5 w-full rounded-full bg-surface-container-highest', tone)}>
+    <div className={clsx('relative h-2.5 w-full rounded-full bg-default', tone)}>
       <motion.div
         className="h-full rounded-full bg-current"
         initial={{ width: 0 }}
@@ -274,7 +274,7 @@ export function RateBar({
       />
       {low !== undefined && high !== undefined && (
         <div
-          className="absolute top-1/2 h-0.5 -translate-y-1/2 rounded-full bg-on-surface/55"
+          className="absolute top-1/2 h-0.5 -translate-y-1/2 rounded-full bg-foreground/55"
           style={{ left: share(low), width: `calc(${share(high)} - ${share(low)})` }}
           title={`от ${formatPercent(low)} до ${formatPercent(high)}`}
         />

@@ -15,13 +15,6 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(import.meta.dirname, './src'),
-      // Single modules of Material's colour utilities. The package exports
-      // only its index, which drags every colour scheme into the bundle
-      // (20 KB gzipped instead of 9).
-      'material-color': path.resolve(
-        import.meta.dirname,
-        './node_modules/@material/material-color-utilities',
-      ),
     },
   },
   server: {

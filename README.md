@@ -291,7 +291,7 @@ docker compose -f docker-compose.yml -f docker-compose.airgap.yml logs -f egress
 - события в ClickHouse: показы с местом в списке, открытия, отметки и их снятие, выпуски, предложения, вызовы MCP; запись через поток Valkey без потерь и без дублей, удаление вместе с аккаунтом;
 - аналитика для администратора: доли открытий и отметок по дням, местам в ленте, источникам и категориям, с разбросом и сравнением с прошлым периодом;
 - обучаемое ранжирование ленты: LightGBM LambdaRank с поправкой на место каждую ночь, включение только по проверке на днях, которых модель не видела, постоянные группы читателей для сравнения с ручными весами;
-- интерфейс в духе Material 3 на shadcn: единая палитра для сайта и видео, иконки Material Symbols, светлая и тёмная тема, ленивая загрузка страниц, выделение, которое перетекает к выбранному пункту, заголовок выпуска, который вырастает из строки истории, свой диапазон дат для выпуска;
+- интерфейс на HeroUI v3: тема и компоненты на React Aria и Tailwind 4, иконки Gravity UI, светлая и тёмная тема, ленивая загрузка страниц, выделение, которое переезжает к выбранному пункту, заголовок выпуска, который вырастает из строки истории, свой диапазон дат для выпуска;
 - перевод заголовков и выжимок англоязычных источников, строка «почему важно» под роль, прозрачность отбора, работа без модели, возобновление сборки после сбоя.
 
 ## Два режима
@@ -342,7 +342,7 @@ flowchart LR
     ai([ИИ-ассистент]) -- MCP + ключ --> web
 ```
 
-Бэкенд: Python 3.14, FastAPI, SQLAlchemy 2.1, LangGraph 1.2, LangChain, taskiq, pwdlib (Argon2). Разбор документов: docling 2.131 на Python 3.13 в отдельном контейнере. Видео: Remotion 4.0.531 на Node 24, голос Qwen3-TTS 12Hz 0.6B Base (`qwen-tts` 0.1.1, PyTorch 2.14 с CUDA 13) и проверка строк faster-whisper 1.2.1 на Python 3.13, QR-коды `qrcode` 1.5.4, иконки `lucide-react` 1.49. Хранилище: PostgreSQL 18 с pgvector 0.8.6 за PgBouncer, Valkey 9.1. События: ClickHouse 26.9.8 и `clickhouse-connect` 1.9.0, ранжирование LightGBM 4.7.0. Публикация: cryptography 50.0.2 (Fernet), копии картинок в S3 через SDK MinIO 7.2.20 и SeaweedFS 4.48. Фронтенд: Vite 8, React 19, TypeScript 6, Tailwind CSS 4, Motion 13, компоненты shadcn 4.21 на Radix, палитра и тона своего цвета профиля из `@material/material-color-utilities` 0.4.0, редактор постов TipTap 3.31, иконки Material Symbols через unplugin-icons 24, календарь react-day-picker 10. MCP-сервер: официальный SDK `mcp` 2.2.0. Версии библиотек - последние на 30 сентября 2026 года, они зафиксированы в `backend/uv.lock`, `docparser/uv.lock`, `tts/uv.lock`, `shorts/package-lock.json` и `frontend/package-lock.json`.
+Бэкенд: Python 3.14, FastAPI, SQLAlchemy 2.1, LangGraph 1.2, LangChain, taskiq, pwdlib (Argon2). Разбор документов: docling 2.131 на Python 3.13 в отдельном контейнере. Видео: Remotion 4.0.531 на Node 24, голос Qwen3-TTS 12Hz 0.6B Base (`qwen-tts` 0.1.1, PyTorch 2.14 с CUDA 13) и проверка строк faster-whisper 1.2.1 на Python 3.13, QR-коды `qrcode` 1.5.4, иконки `lucide-react` 1.49. Хранилище: PostgreSQL 18 с pgvector 0.8.6 за PgBouncer, Valkey 9.1. События: ClickHouse 26.9.8 и `clickhouse-connect` 1.9.0, ранжирование LightGBM 4.7.0. Публикация: cryptography 50.0.2 (Fernet), копии картинок в S3 через SDK MinIO 7.2.20 и SeaweedFS 4.48. Фронтенд: Vite 8, React 19, TypeScript 6, Tailwind CSS 4, Motion 13, компоненты и тема HeroUI 3.2 на React Aria Components 1.22, редактор постов TipTap 3.31, иконки Gravity UI через unplugin-icons 24. MCP-сервер: официальный SDK `mcp` 2.2.0. Версии библиотек - последние на 30 сентября 2026 года (HeroUI - на 9 октября), они зафиксированы в `backend/uv.lock`, `docparser/uv.lock`, `tts/uv.lock`, `shorts/package-lock.json` и `frontend/package-lock.json`.
 
 Сборка выпуска идёт как граф LangGraph из девяти узлов с чекпоинтами в PostgreSQL. Оценка кандидатов и написание выжимок расходятся веером по одной задаче на статью, а каждый ответ модели кешируется, поэтому сборка, прерванная сбоем, продолжается с того же шага и не платит за уже полученные ответы.
 
@@ -364,7 +364,7 @@ docker compose up -d --scale api=4 --scale worker-ingest=2 --scale worker-digest
 |---|---|
 | Тесты бэкенда, `uv run pytest` | 660 тестов; 83 из них идут через HTTP на отдельной базе PostgreSQL, 7 требуют ClickHouse (своя база `radar_test`), ещё один требует Valkey; без них они пропускаются |
 | Линтер и типы бэкенда, `ruff` и `mypy --strict` | без замечаний |
-| Фронтенд: `tsc`, `oxlint`, `vitest` | без ошибок, 42 теста; семь предупреждений `only-export-components`: четыре в сгенерированных файлах shadcn, три в `features/analytics/charts.tsx` |
+| Фронтенд: `tsc`, `oxlint`, `vitest` | без ошибок, 46 тестов; три предупреждения `only-export-components` в `features/analytics/charts.tsx` |
 | Сервис рендера и сервис голоса | `tsc` и 20 тестов `node --test`; `ruff`, `mypy --strict` и 17 тестов `pytest` |
 | Защищённые сайты, лестница способов чтения (2 октября 2026 года) | SecurityLab, Habr, Kaspersky, PT, Security Vision, Broadcom, dbugs, CTFIOT, SecurityMedia отдают страницы обычному запросу. McAfee не отвечает боту, лента и блог прочитаны через curl_cffi за 21,4 с, из них 20 с - тайм-аут первой ступени; следующий опрос сразу с curl_cffi, 304 за 0,4 с. Cybernews, Netskope, SecurityWeek, Dark Reading: 403 с заглушкой Cloudflare, прочитаны через curl_cffi за 0,9-4,2 с. Тестовая страница Cloudflare Challenge пройдена только FlareSolverr, 15,9 с. 3 октября Akamai у McAfee стал отвечать 403 и браузеру в стеке; источник снова читается FlareSolverr, поэтому его стоит включать: `--profile solver` и `RADAR_FLARESOLVERR_URL` в `.env`. Таблица в DECISIONS.md, «Сбор: лестница способов чтения» |
 | Опрос каталога в стеке после пересборки | 67 источников за 18 с, ошибок 0; `robots.txt` семи сайтов запрещает ленту боту, это записано у источника, лента прочитана |
@@ -477,7 +477,7 @@ cd frontend
 npm ci
 npm run dev        # http://localhost:5173
 npm run lint && npm run typecheck && npm test
-npx tsx scripts/palette.mjs   # палитра Material 3 из одного цвета для сайта и видео
+node scripts/icons.mjs        # иконки Gravity UI для src/components/icons.tsx
 ```
 
 Сцены ролика правятся в Remotion Studio на примере из `shorts/src/sample.ts`, сервис голоса запускается на хосте с видеокартой:

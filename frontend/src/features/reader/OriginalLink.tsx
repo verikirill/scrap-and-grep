@@ -26,7 +26,7 @@ export function OriginalLink({ url, title, onOpen }: Props) {
       }}
       aria-label={`«${title}» на сайте источника`}
       title="Открыть на сайте источника"
-      className="state-layer relative -my-2 grid size-10 shrink-0 place-items-center overflow-hidden rounded-full text-outline transition-opacity hover:text-foreground focus-visible:opacity-100 pointer-fine:-my-1 pointer-fine:size-8 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100"
+      className="transition-colors hover:bg-default/70 relative -my-2 grid size-10 shrink-0 place-items-center overflow-hidden rounded-full text-muted transition-opacity hover:text-foreground focus-visible:opacity-100 pointer-fine:-my-1 pointer-fine:size-8 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100"
     >
       <ExternalLink size={15} />
     </a>

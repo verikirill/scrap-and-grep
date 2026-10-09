@@ -1,0 +1,63 @@
+/*
+ * Tag hues for profiles and sources: a tile, the icon on it and a picker dot.
+ * They sit next to HeroUI's semantic colours and change with the theme.
+ */
+:root {
+  --tag-blue: #dde1ff;
+  --on-tag-blue: #0038b7;
+  --swatch-blue: #5579ff;
+  --tag-violet: #e2dfff;
+  --on-tag-violet: #2e1dd4;
+  --swatch-violet: #7472ff;
+  --tag-teal: #8ff2f6;
+  --on-tag-teal: #004f52;
+  --swatch-teal: #1e9296;
+  --tag-green: #92f7bc;
+  --on-tag-green: #005231;
+  --swatch-green: #2c9563;
+  --tag-amber: #ffdcc2;
+  --on-tag-amber: #6d3900;
+  --swatch-amber: #c66d02;
+  --tag-orange: #ffdad2;
+  --on-tag-orange: #8a1c00;
+  --swatch-orange: #e25533;
+  --tag-red: #ffd9de;
+  --on-tag-red: #900037;
+  --swatch-red: #ef3e6f;
+  --tag-pink: #ffd8e7;
+  --on-tag-pink: #8b005c;
+  --swatch-pink: #ec33a3;
+  --tag-slate: #cfe5f9;
+  --on-tag-slate: #344959;
+  --swatch-slate: #718698;
+}
+
+.dark {
+  --tag-blue: #0038b7;
+  --on-tag-blue: #dde1ff;
+  --swatch-blue: #92a7ff;
+  --tag-violet: #2e1dd4;
+  --on-tag-violet: #e2dfff;
+  --swatch-violet: #a3a2ff;
+  --tag-teal: #004f52;
+  --on-tag-teal: #8ff2f6;
+  --swatch-teal: #54babe;
+  --tag-green: #005231;
+  --on-tag-green: #92f7bc;
+  --swatch-green: #5abe88;
+  --tag-amber: #6d3900;
+  --on-tag-amber: #ffdcc2;
+  --swatch-amber: #f69332;
+  --tag-orange: #8a1c00;
+  --on-tag-orange: #ffdad2;
+  --swatch-orange: #ff8b6e;
+  --tag-red: #900037;
+  --on-tag-red: #ffd9de;
+  --swatch-red: #ff869d;
+  --tag-pink: #8b005c;
+  --on-tag-pink: #ffd8e7;
+  --swatch-pink: #ff81c1;
+  --tag-slate: #344959;
+  --on-tag-slate: #cfe5f9;
+  --swatch-slate: #98aec1;
+}

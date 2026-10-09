@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { toast } from 'sonner'
+import { toast } from '../../lib/toast'
 import { Check, ContentCopy, Hub, KeyRound, Trash2 } from '../../components/icons'
 import { EASE, INPUT_CLASS } from '../../components/tokens'
 import { Button, Card, ErrorNote, Field } from '../../components/ui'
@@ -36,7 +36,7 @@ function CopyButton({ text, label }: { text: string; label: string }) {
 
 function Snippet({ text, label }: { text: string; label: string }) {
   return (
-    <div className="flex items-start gap-1 rounded-2xl bg-surface-container-high p-1 pl-4">
+    <div className="flex items-start gap-1 rounded-2xl bg-surface-tertiary p-1 pl-4">
       <pre className="min-w-0 flex-1 overflow-x-auto py-2.5 font-mono text-[12.5px] leading-5 whitespace-pre">
         {text}
       </pre>
@@ -63,20 +63,16 @@ function NewKey({ created, url }: { created: NewMcpKey; url: string }) {
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.35, ease: EASE }}
-      className="flex flex-col gap-3 rounded-3xl bg-primary-container p-5 text-on-primary-container"
+      className="flex flex-col gap-3 rounded-3xl bg-accent-soft p-5 text-accent-soft-foreground"
     >
       <p className="text-sm font-medium">
         Ключ «{created.name}» создан. Скопируйте его сейчас, посмотреть его снова будет нельзя.
       </p>
       <Snippet text={created.token} label="Скопировать ключ" />
       <Tabs defaultValue="claude">
-        <TabsList variant="line" className="w-full justify-start">
-          <TabsTrigger value="claude" className="flex-none px-3">
-            Claude Code
-          </TabsTrigger>
-          <TabsTrigger value="json" className="flex-none px-3">
-            Cursor и другие
-          </TabsTrigger>
+        <TabsList aria-label="Способ подключения">
+          <TabsTrigger value="claude">Claude Code</TabsTrigger>
+          <TabsTrigger value="json">Cursor и другие</TabsTrigger>
         </TabsList>
         <TabsContent value="claude" className="pt-2">
           <Snippet text={claudeCode} label="Скопировать команду" />
@@ -114,12 +110,12 @@ export function McpAccess() {
   return (
     <Card className="flex flex-col gap-5 p-6">
       <div className="flex items-start gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-secondary-container text-on-secondary-container">
+        <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-default text-default-foreground">
           <Hub size={22} />
         </span>
         <div>
           <h2 className="text-base font-medium">Доступ для ИИ-ассистентов</h2>
-          <p className="mt-1 text-sm text-on-surface-variant">
+          <p className="mt-1 text-sm text-muted">
             MCP-сервер открывает ассистенту доступ к вашей ленте, сохранённым статьям, выпускам и
             интересам. Ключ действует только для ваших данных.
           </p>
@@ -156,7 +152,7 @@ export function McpAccess() {
       </AnimatePresence>
 
       {keys.data && keys.data.length > 0 && (
-        <ul className="flex flex-col divide-y divide-outline-variant">
+        <ul className="flex flex-col divide-y divide-separator">
           <AnimatePresence initial={false}>
             {keys.data.map((key) => (
               <motion.li
@@ -168,10 +164,10 @@ export function McpAccess() {
                 transition={{ duration: 0.3, ease: EASE }}
                 className="flex items-center gap-3 overflow-hidden py-3"
               >
-                <KeyRound size={20} className="shrink-0 text-on-surface-variant" />
+                <KeyRound size={20} className="shrink-0 text-muted" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{key.name}</p>
-                  <p className="truncate text-xs text-on-surface-variant">
+                  <p className="truncate text-xs text-muted">
                     <span className="font-mono">{key.prefix}…</span> · создан{' '}
                     {formatDateTime(key.created_at)} ·{' '}
                     {key.last_used_at

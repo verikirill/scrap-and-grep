@@ -60,7 +60,7 @@ export function PostCard({ item, index, isQuiet, placement, onReact }: FeedCardP
           className="size-10 text-sm"
         />
       </span>
-      <div className="min-w-0 flex-1 overflow-hidden rounded-2xl rounded-bl-md bg-surface-container-lowest shadow-[0_1px_2px_rgb(0_0_0/0.13)] dark:bg-surface-container-high">
+      <div className="min-w-0 flex-1 overflow-hidden rounded-2xl rounded-bl-md bg-background shadow-[0_1px_2px_rgb(0_0_0/0.13)] dark:bg-surface-tertiary">
         {hasPicture && (
           // The headline below is the link a screen reader and the keyboard use.
           <Link
@@ -69,7 +69,7 @@ export function PostCard({ item, index, isQuiet, placement, onReact }: FeedCardP
             onAuxClick={markReadOnAux}
             tabIndex={-1}
             aria-hidden
-            className="block bg-surface-container"
+            className="block bg-surface-secondary"
           >
             <img
               src={api.articlePictureUrl(item.article_id)}
@@ -86,14 +86,14 @@ export function PostCard({ item, index, isQuiet, placement, onReact }: FeedCardP
           <div className="flex items-center gap-2 text-[13px]">
             <span
               className="min-w-0 truncate font-semibold"
-              style={{ color: `var(--md-on-tag-${tint})` }}
+              style={{ color: `var(--on-tag-${tint})` }}
             >
               {item.source_name}
             </span>
-            <span className="shrink-0 text-muted-foreground">
+            <span className="shrink-0 text-muted">
               {CATEGORY_LABELS[item.source_category] ?? item.source_category}
             </span>
-            <span className="ml-auto flex shrink-0 items-center text-muted-foreground">
+            <span className="ml-auto flex shrink-0 items-center text-muted">
               <OriginalLink url={item.url} title={item.title} onOpen={markRead} />
             </span>
           </div>
@@ -103,8 +103,8 @@ export function PostCard({ item, index, isQuiet, placement, onReact }: FeedCardP
             onClick={markRead}
             onAuxClick={markReadOnAux}
             className={clsx(
-              'mt-1 block text-[16px] leading-snug font-semibold decoration-primary/40 underline-offset-4 hover:underline',
-              isRead ? 'text-muted-foreground' : 'text-foreground',
+              'mt-1 block text-[16px] leading-snug font-semibold decoration-accent/40 underline-offset-4 hover:underline',
+              isRead ? 'text-muted' : 'text-foreground',
             )}
           >
             {item.title}
@@ -118,12 +118,12 @@ export function PostCard({ item, index, isQuiet, placement, onReact }: FeedCardP
               type="button"
               onClick={() => setIsWhyOpen((value) => !value)}
               aria-expanded={isWhyOpen}
-              className="mt-2 flex max-w-full items-center gap-1.5 rounded-md text-left text-xs text-muted-foreground hover:text-foreground"
+              className="mt-2 flex max-w-full items-center gap-1.5 rounded-md text-left text-xs text-muted hover:text-foreground"
             >
               <ReasonIcon size={13} className="shrink-0" />
               <span className="truncate">{reason.text}</span>
               {otherReasons.length > 0 && (
-                <span className="shrink-0 text-outline">и ещё {otherReasons.length}</span>
+                <span className="shrink-0 text-muted">и ещё {otherReasons.length}</span>
               )}
               <motion.span
                 animate={{ rotate: isWhyOpen ? 180 : 0 }}
@@ -139,7 +139,7 @@ export function PostCard({ item, index, isQuiet, placement, onReact }: FeedCardP
             // Nothing more to show: the reason is text, whole on hover when cut.
             <p
               title={reason.text}
-              className="mt-2 flex max-w-full items-center gap-1.5 text-xs text-muted-foreground"
+              className="mt-2 flex max-w-full items-center gap-1.5 text-xs text-muted"
             >
               <ReasonIcon size={13} className="shrink-0" />
               <span className="truncate">{reason.text}</span>
@@ -167,7 +167,7 @@ export function PostCard({ item, index, isQuiet, placement, onReact }: FeedCardP
               onReact={onReact}
               look="pills"
             />
-            <span className="ml-auto flex shrink-0 items-center gap-2 pb-0.5 text-[12px] text-muted-foreground">
+            <span className="ml-auto flex shrink-0 items-center gap-2 pb-0.5 text-[12px] text-muted">
               <ReadingTime minutes={item.reading_minutes} />
               {isRead && <Eye size={13} aria-label="Прочитано" />}
               <time dateTime={item.published_at}>{formatPostTime(item.published_at)}</time>

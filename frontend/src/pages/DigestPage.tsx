@@ -123,7 +123,7 @@ export function DigestPage() {
           {digest.isError && (
             <Card className="p-6">
               <h2 className="text-base font-semibold">Не удалось открыть выпуск</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-1 text-sm text-muted">
                 {digest.error instanceof Error ? digest.error.message : 'Неизвестная ошибка.'}
               </p>
               <Button className="mt-4" onClick={() => navigate('/')}>
@@ -140,8 +140,8 @@ export function DigestPage() {
           <AnimatePresence mode="wait">
             {digest.isLoading && activeId && (
               <motion.div key="loading" exit={{ opacity: 0 }} className="space-y-3">
-                <div className="skeleton h-40" />
-                <div className="skeleton h-24" />
+                <div className="skeleton skeleton--shimmer rounded-xl h-40" />
+                <div className="skeleton skeleton--shimmer rounded-xl h-24" />
               </motion.div>
             )}
 
@@ -168,7 +168,7 @@ export function DigestPage() {
               >
                 <Card className="p-6">
                   <h2 className="text-base font-semibold">Не удалось собрать выпуск</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
+                  <p className="mt-1 text-sm text-muted">
                     {current.error ?? 'Причина неизвестна.'}
                   </p>
                   {current.profile_id && (
@@ -216,7 +216,7 @@ export function DigestPage() {
           layoutScroll
           className="xl:sticky xl:top-9 xl:max-h-[calc(100dvh-4.5rem)] xl:self-start xl:overflow-y-auto"
         >
-          <h2 className="mb-2.5 px-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+          <h2 className="mb-2.5 px-1 text-xs font-semibold tracking-wide text-muted uppercase">
             История
           </h2>
           {digests.data ? (
@@ -228,8 +228,8 @@ export function DigestPage() {
             />
           ) : (
             <div className="space-y-2">
-              <div className="skeleton h-16" />
-              <div className="skeleton h-16" />
+              <div className="skeleton skeleton--shimmer rounded-xl h-16" />
+              <div className="skeleton skeleton--shimmer rounded-xl h-16" />
             </div>
           )}
         </motion.aside>

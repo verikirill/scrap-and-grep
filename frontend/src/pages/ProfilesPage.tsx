@@ -155,14 +155,14 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
               // Never wider than the row: a long name used to push the whole page sideways on a phone.
               'relative isolate flex max-w-full min-w-0 items-center gap-2 rounded-full py-1 pr-3.5 pl-1 text-sm font-medium transition-colors duration-300',
               profile.id === activeId
-                ? 'text-primary-foreground'
-                : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface',
+                ? 'text-foreground'
+                : 'text-muted hover:bg-default/60 hover:text-foreground',
             )}
           >
             {profile.id === activeId && (
               <motion.span
                 layoutId="profile-tab"
-                className="absolute inset-0 -z-10 rounded-full bg-primary shadow-elevation-1"
+                className="absolute inset-0 -z-10 rounded-full bg-surface shadow-surface ring-1 ring-border"
                 transition={{ type: 'spring', stiffness: 420, damping: 32 }}
               />
             )}
@@ -205,7 +205,7 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
 
       <div className="mb-4 space-y-2">
         <ErrorNote error={save.error ?? remove.error} />
-        {dirty && problem && <p className="text-sm text-spark">{problem}</p>}
+        {dirty && problem && <p className="text-sm text-warning">{problem}</p>}
       </div>
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
@@ -234,7 +234,7 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 16 }}
             transition={{ duration: 0.2, ease: EASE }}
-            className="fixed inset-x-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-20 mx-auto flex max-w-xl flex-wrap items-center gap-x-2 gap-y-1 rounded-2xl bg-inverse-surface py-2 pr-2 pl-4 text-sm text-inverse-on-surface shadow-elevation-3 md:bottom-6"
+            className="fixed inset-x-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-20 mx-auto flex max-w-xl flex-wrap items-center gap-x-2 gap-y-1 rounded-2xl bg-background-inverse py-2 pr-2 pl-4 text-sm text-background shadow-overlay md:bottom-6"
           >
             {/* On a phone the buttons go under the text rather than squeeze it into a column. */}
             <span className="min-w-44 flex-1 py-1">{problem ?? 'Правки не сохранены'}</span>
@@ -243,7 +243,7 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
                 <button
                   type="button"
                   onClick={() => setDraft(saved)}
-                  className="shrink-0 rounded-full px-3 py-2 font-medium hover:bg-inverse-on-surface/10"
+                  className="shrink-0 rounded-full px-3 py-2 font-medium hover:bg-background/10"
                 >
                   Отменить
                 </button>
@@ -276,8 +276,8 @@ export function ProfilesPage() {
         <PageHeader title="Интересы" />
         <ErrorNote error={profiles.error} />
         <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-2">
-          <div className="skeleton h-96" />
-          <div className="skeleton h-96" />
+          <div className="skeleton skeleton--shimmer rounded-xl h-96" />
+          <div className="skeleton skeleton--shimmer rounded-xl h-96" />
         </div>
       </>
     )

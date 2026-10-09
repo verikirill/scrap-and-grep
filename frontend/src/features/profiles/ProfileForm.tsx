@@ -44,7 +44,7 @@ function InterestEditor({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.98 }}
       transition={{ duration: 0.25, ease: EASE }}
-      className="rounded-xl border border-outline-variant bg-card"
+      className="rounded-xl border border-separator bg-surface"
     >
       <button
         type="button"
@@ -59,7 +59,7 @@ function InterestEditor({
             {interest.title || 'Новый интерес'}
           </span>
           {!isOpen && (
-            <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+            <span className="mt-0.5 block truncate text-xs text-muted">
               {interest.keywords.length > 0
                 ? interest.keywords.slice(0, 6).join(', ')
                 : 'ключевые слова не заданы'}
@@ -72,7 +72,7 @@ function InterestEditor({
           </Chip>
         )}
         <motion.span animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
-          <ChevronDown size={17} className="text-muted-foreground" />
+          <ChevronDown size={17} className="text-muted" />
         </motion.span>
       </button>
       <AnimatePresence initial={false}>
@@ -85,7 +85,7 @@ function InterestEditor({
             className="overflow-hidden"
             id={`interest-panel-${interest.id}`}
           >
-            <div className="space-y-3.5 border-t border-outline-variant px-4 py-4">
+            <div className="space-y-3.5 border-t border-separator px-4 py-4">
               <Field label="Название">
                 <input
                   className={INPUT_CLASS}
@@ -238,15 +238,15 @@ export function ProfileForm({
                   className={clsx(
                     'rounded-xl border px-3.5 py-2.5 text-left transition-colors duration-150',
                     active
-                      ? 'border-primary bg-primary-container text-on-primary-container'
-                      : 'border-outline-variant hover:border-outline',
+                      ? 'border-accent bg-accent-soft text-accent-soft-foreground'
+                      : 'border-separator hover:border-border',
                   )}
                 >
                   <span className="block text-sm font-medium">{option.title}</span>
                   <span
                     className={clsx(
                       'mt-0.5 block text-xs',
-                      active ? 'text-on-primary-container/80' : 'text-muted-foreground',
+                      active ? 'text-accent-soft-foreground/80' : 'text-muted',
                     )}
                   >
                     {option.description}
@@ -348,7 +348,7 @@ export function ProfileForm({
         <div>
           <p className="mb-2 flex items-baseline justify-between text-[13px] font-medium">
             Источники
-            <span className="text-xs font-normal text-outline">
+            <span className="text-xs font-normal text-muted">
               {spec.categories.length === 0 ? 'все категории' : 'только выбранные'}
             </span>
           </p>
@@ -364,8 +364,8 @@ export function ProfileForm({
                   className={clsx(
                     'rounded-lg border px-2.5 py-1 text-[13px] transition-colors duration-150',
                     active
-                      ? 'border-primary bg-primary-container text-on-primary-container'
-                      : 'border-outline-variant text-muted-foreground hover:border-outline hover:text-foreground',
+                      ? 'border-accent bg-accent-soft text-accent-soft-foreground'
+                      : 'border-separator text-muted hover:border-border hover:text-foreground',
                   )}
                 >
                   {CATEGORY_LABELS[category]}

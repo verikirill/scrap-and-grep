@@ -44,7 +44,7 @@ export function ScrollTopButton() {
           onClick={() => window.scrollTo({ top: 0, behavior: reducedMotion ? 'auto' : 'smooth' })}
           aria-label="Наверх"
           title="Наверх"
-          className="state-layer fixed right-4 bottom-[calc(6rem+env(safe-area-inset-bottom))] z-20 grid size-12 place-items-center overflow-hidden rounded-2xl bg-primary-container text-on-primary-container shadow-elevation-2 md:right-8 md:bottom-8"
+          className="fixed right-4 transition-colors hover:bg-accent-soft-hover bottom-[calc(6rem+env(safe-area-inset-bottom))] z-20 grid size-12 place-items-center overflow-hidden rounded-2xl bg-accent-soft text-accent-soft-foreground shadow-overlay md:right-8 md:bottom-8"
         >
           <ArrowUp size={22} />
         </motion.button>

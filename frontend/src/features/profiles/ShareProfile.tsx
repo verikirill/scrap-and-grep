@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { toast } from 'sonner'
+import { toast } from '../../lib/toast'
 import { Check, ContentCopy, Link2, LinkOff, Share } from '../../components/icons'
 import { INPUT_CLASS } from '../../components/tokens'
 import { Button, ErrorNote } from '../../components/ui'
@@ -69,7 +69,7 @@ export function ShareProfileButton({ profile }: { profile: Profile }) {
           setOpen(next)
         }}
       >
-        <DialogContent className="max-h-[calc(100dvh-2rem)] gap-5 overflow-x-hidden overflow-y-auto rounded-[28px] sm:max-w-md">
+        <DialogContent className="max-h-[calc(100dvh-2rem)] gap-5 overflow-x-hidden overflow-y-auto sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-lg">Поделиться профилем</DialogTitle>
             <DialogDescription>
@@ -79,7 +79,7 @@ export function ShareProfileButton({ profile }: { profile: Profile }) {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex items-center gap-3 rounded-2xl bg-surface-container p-3">
+          <div className="flex items-center gap-3 rounded-2xl bg-surface-secondary p-3">
             <ProfileAvatar profile={profile} size={40} />
             <p className="min-w-0 flex-1 truncate font-medium">{profile.spec.name}</p>
           </div>
@@ -104,7 +104,7 @@ export function ShareProfileButton({ profile }: { profile: Profile }) {
                   {isCopied ? 'Скопировано' : 'Копировать'}
                 </Button>
               </div>
-              <p className="text-xs text-on-surface-variant">
+              <p className="text-xs text-muted">
                 Ссылка показывает профиль в актуальном виде на момент открытия. Добавленные копии
                 останутся у получателей, даже если вы закроете доступ.
               </p>

@@ -1,7 +1,7 @@
 import { Bot as BotIcon, KeyRound, Trash2 } from '../../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
-import { toast } from 'sonner'
+import { toast } from '../../lib/toast'
 import { Button, Card, Chip, ErrorNote } from '../../components/ui'
 import { INPUT_CLASS, rowMotion } from '../../components/tokens'
 import { useAddBot, useBots, useDeleteBot } from '../../lib/publishingQueries'
@@ -24,29 +24,29 @@ export function BotsPanel() {
   return (
     <Card className="p-5">
       <h2 className="flex items-center gap-2 text-base font-medium">
-        <BotIcon size={18} className="text-primary" /> Боты
+        <BotIcon size={18} className="text-accent" /> Боты
       </h2>
-      <p className="mt-1 text-sm text-muted-foreground">
+      <p className="mt-1 text-sm text-muted">
         Создайте бота через @BotFather и вставьте его токен. Токен хранится в зашифрованном виде и
         больше не показывается.
       </p>
 
       <ul className="mt-4 space-y-2">
-        {isPending && <li className="skeleton h-14" />}
+        {isPending && <li className="skeleton skeleton--shimmer rounded-xl h-14" />}
         <AnimatePresence initial={false}>
           {bots?.map((bot, index) => (
             <motion.li
               key={bot.id}
               {...rowMotion(index)}
               exit={{ opacity: 0, height: 0 }}
-              className="flex items-center gap-3 rounded-2xl bg-surface-container px-3 py-2.5"
+              className="flex items-center gap-3 rounded-2xl bg-surface-secondary px-3 py-2.5"
             >
-              <span className="grid size-10 shrink-0 place-items-center rounded-full bg-tertiary-container text-on-tertiary-container">
+              <span className="grid size-10 shrink-0 place-items-center rounded-full bg-accent-soft text-accent-soft-foreground">
                 <BotIcon size={18} />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium">@{bot.username}</span>
-                <span className="block truncate text-xs text-outline">
+                <span className="block truncate text-xs text-muted">
                   {bot.token_hint} · каналов: {bot.channels}
                 </span>
               </span>

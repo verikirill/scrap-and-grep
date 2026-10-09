@@ -43,7 +43,7 @@ export function Collapsible({
           aria-controls={bodyId}
           aria-label={`${isOpen ? 'Свернуть' : 'Развернуть'}: ${title}`}
           title={isOpen ? 'Свернуть' : 'Развернуть'}
-          className="-my-1 -mr-1.5 grid size-9 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+          className="-my-1 -mr-1.5 grid size-9 shrink-0 place-items-center rounded-full text-muted transition-colors hover:bg-accent/10 hover:text-accent"
         >
           <motion.span
             className="grid"

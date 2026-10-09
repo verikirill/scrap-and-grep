@@ -1,6 +1,4 @@
-import { Hct } from 'material-color/hct/hct.js'
-import { TonalPalette } from 'material-color/palettes/tonal_palette.js'
-import { argbFromHex, hexFromArgb } from 'material-color/utils/string_utils.js'
+import { hexToOklch, oklchToHex } from './oklch'
 import {
   Analytics,
   BriefcaseBusiness,
@@ -54,7 +52,7 @@ export const PROFILE_ICONS: { key: string; label: string; icon: IconComponent }[
   { key: 'work', label: 'Работа', icon: BriefcaseBusiness },
 ]
 
-/** Colours from the palette (tag-* roles in styles/palette.css). */
+/** Tag colours (styles/tags.css). */
 export const PROFILE_COLORS = [
   { key: 'blue', label: 'Синий' },
   { key: 'violet', label: 'Фиолетовый' },
@@ -84,43 +82,51 @@ export function isCustomColor(value: string | null | undefined): value is HexCol
 }
 
 /*
- * Tones of the palette colours (scripts/palette.mjs), light theme then dark:
- * the tile, the icon on it and the picker dot. A colour of one's own gets the
- * same tones of its own hue, so it is as legible as the built-in ones.
+ * Tones of a colour of one's own, light theme then dark, at fixed OKLCH
+ * lightness: the tile, the icon on it and the picker dot. The chroma keeps the
+ * colour's own up to a cap per tone, so a loud colour still gives a calm tile.
  */
-const TILE = [90, 30] as const
-const ICON = [30, 90] as const
-const DOT = [55, 70] as const
+type Tone = { l: number; maxC: number }
+const TILE: readonly [Tone, Tone] = [
+  { l: 0.93, maxC: 0.06 },
+  { l: 0.33, maxC: 0.09 },
+]
+const ICON: readonly [Tone, Tone] = [
+  { l: 0.42, maxC: 0.16 },
+  { l: 0.9, maxC: 0.07 },
+]
+const DOT: readonly [Tone, Tone] = [
+  { l: 0.62, maxC: 0.2 },
+  { l: 0.74, maxC: 0.16 },
+]
 
-// A slider passes through many colours; only the last few are worth keeping.
-const PALETTES_KEPT = 64
-const palettes = new Map<string, TonalPalette>()
+/** The picker's colourfulness scale: 0-80 across the chroma a screen shows well. */
+const CHROMA_SCALE = 400
 
-function themed(hex: string, [light, dark]: readonly [number, number]): string {
-  let palette = palettes.get(hex)
-  if (!palette) {
-    if (palettes.size >= PALETTES_KEPT) palettes.clear()
-    palette = TonalPalette.fromInt(argbFromHex(hex))
-    palettes.set(hex, palette)
-  }
-  // light-dark() follows color-scheme, which the theme switch sets on the root.
-  return `light-dark(${hexFromArgb(palette.tone(light))}, ${hexFromArgb(palette.tone(dark))})`
+function tone(hex: string, { l, maxC }: Tone): string {
+  const { c, h } = hexToOklch(hex)
+  return oklchToHex({ l, c: Math.min(c, maxC), h })
 }
 
-/** Hue (0-360) and colourfulness of a colour, as the custom picker shows them. */
+function themed(hex: string, [light, dark]: readonly [Tone, Tone]): string {
+  // light-dark() follows color-scheme, which the theme switch sets on the root.
+  return `light-dark(${tone(hex, light)}, ${tone(hex, dark)})`
+}
+
+/** Hue (0-360) and colourfulness (0-80) of a colour, as the custom picker shows them. */
 export function hueAndChroma(hex: string): { hue: number; chroma: number } {
-  const hct = Hct.fromInt(argbFromHex(hex))
-  return { hue: Math.round(hct.hue), chroma: Math.round(hct.chroma) }
+  const { c, h } = hexToOklch(hex)
+  return { hue: Math.round(h) % 360, chroma: Math.round(c * CHROMA_SCALE) }
 }
 
 /** The colour of a hue and colourfulness, at the middle tone. */
 export function colorOf(hue: number, chroma: number): string {
-  return hexFromArgb(Hct.from(hue, chroma, 50).toInt())
+  return oklchToHex({ l: 0.62, c: chroma / CHROMA_SCALE, h: hue })
 }
 
 /** The colour as a picker dot. */
 export function swatchColor(key: string): string {
-  return isCustomColor(key) ? themed(key, DOT) : `var(--md-swatch-${key})`
+  return isCustomColor(key) ? themed(key, DOT) : `var(--swatch-${key})`
 }
 
 /**
@@ -133,5 +139,5 @@ export function profileColors(key: string | null | undefined): {
 } {
   if (isCustomColor(key)) return { background: themed(key, TILE), color: themed(key, ICON) }
   const known = PROFILE_COLORS.some((item) => item.key === key) ? key : DEFAULT_COLOR
-  return { background: `var(--md-tag-${known})`, color: `var(--md-on-tag-${known})` }
+  return { background: `var(--tag-${known})`, color: `var(--on-tag-${known})` }
 }

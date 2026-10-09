@@ -40,14 +40,14 @@ export function FeedCard({ item, index, isQuiet, placement, onReact }: FeedCardP
     <motion.article
       ref={seenRef}
       {...rowMotion(index, isQuiet)}
-      className="group rounded-2xl border border-outline-variant bg-card px-5 py-4 shadow-card transition-colors duration-200 hover:border-outline"
+      className="group rounded-2xl border border-separator bg-surface px-5 py-4 shadow-surface transition-colors duration-200 hover:border-border"
     >
-      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted">
         <span className="font-medium text-foreground">{item.source_name}</span>
         <span>{CATEGORY_LABELS[item.source_category] ?? item.source_category}</span>
         <span>{formatRelative(item.published_at)}</span>
         <ReadingTime minutes={item.reading_minutes} />
-        {isRead && <span className="text-outline">прочитано</span>}
+        {isRead && <span className="text-muted">прочитано</span>}
       </div>
       <div className="mt-1.5 flex items-start gap-1">
         <Link
@@ -59,8 +59,8 @@ export function FeedCard({ item, index, isQuiet, placement, onReact }: FeedCardP
             if (event.button === 1) markRead()
           }}
           className={clsx(
-            'min-w-0 flex-1 font-serif text-[18px] leading-snug font-semibold decoration-primary/40 underline-offset-4 hover:underline',
-            isRead ? 'text-muted-foreground' : 'text-foreground',
+            'min-w-0 flex-1 font-serif text-[18px] leading-snug font-semibold decoration-accent/40 underline-offset-4 hover:underline',
+            isRead ? 'text-muted' : 'text-foreground',
           )}
         >
           {item.title}
@@ -98,7 +98,7 @@ export function FeedCard({ item, index, isQuiet, placement, onReact }: FeedCardP
               type="button"
               onClick={() => setIsWhyOpen((value) => !value)}
               aria-expanded={isWhyOpen}
-              className="inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-xs font-medium text-primary hover:bg-primary/10"
+              className="inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-xs font-medium text-accent hover:bg-accent/10"
             >
               Причины подбора
               <motion.span animate={{ rotate: isWhyOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
