@@ -187,6 +187,8 @@ class Settings(BaseSettings):
     # Builds queued or running at once. More would only deepen the model queue.
     max_active_digests: int = 6
     digest_rate_limit_per_minute: int = 10
+    # Questions to a finished digest: each is one request to the model.
+    ask_rate_limit_per_minute: int = 10
     seed_on_start: bool = True
 
     # Accounts. The session cookie is marked Secure only when the stack is

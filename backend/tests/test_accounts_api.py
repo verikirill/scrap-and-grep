@@ -274,6 +274,7 @@ async def test_a_reader_cannot_reach_another_readers_profiles_or_digests(api: st
             await other.get(f"/digests/{digest_id}/export.stix.json"),
             await other.get(f"/digests/{digest_id}/export.misp.json"),
             await other.get(f"/digests/{digest_id}/export.csv"),
+            await other.post(f"/digests/{digest_id}/ask", json={"question": "Что нового?"}),
             await other.get("/digests/compare", params={"base": digest_id, "other": digest_id}),
             await other.delete(f"/digests/{digest_id}"),
         ]

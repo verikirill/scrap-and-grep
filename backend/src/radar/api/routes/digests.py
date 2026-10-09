@@ -1,6 +1,7 @@
 """Digests: creation, progress stream, exports and comparison."""
 
 import asyncio
+import hashlib
 import time
 import uuid
 from collections.abc import AsyncIterator, Callable
@@ -12,9 +13,19 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.sse import EventSourceResponse, ServerSentEvent
 from sqlalchemy import select
 
+from radar.ai.factory import get_breaker, get_chat
 from radar.api.deps import CacheDep, CurrentUser, SessionDep, SettingsDep, user_rate_limit
 from radar.api.reading import measure_soon
-from radar.api.schemas import CompareOut, DigestCreate, InterestChange, ScoreChange
+from radar.api.schemas import (
+    AskCitation,
+    AskIn,
+    AskOut,
+    CompareOut,
+    DigestCreate,
+    InterestChange,
+    ScoreChange,
+)
+from radar.ask import answer as answer_question
 from radar.db import session_scope
 from radar.db.models import Digest, Profile
 from radar.domain import AUDIENCE_PERIOD_DAYS, ProfileSpec
@@ -346,6 +357,54 @@ async def export_indicators_csv(
 ) -> Response:
     """The same, one row per value, for a spreadsheet or a firewall's import."""
     return await _threat_intel(digest_id, "csv", session, cache, user)
+
+
+_ask_limit = Depends(user_rate_limit("ask", lambda settings: settings.ask_rate_limit_per_minute))
+ASK_TTL_SECONDS = 24 * 3600
+
+
+@router.post("/digests/{digest_id}/ask", dependencies=[_ask_limit])
+async def ask_digest(
+    digest_id: uuid.UUID, body: AskIn, session: SessionDep, cache: CacheDep, user: CurrentUser
+) -> AskOut:
+    """Answers a question from the digest's entries, with the entries it used."""
+    view = await _load_done(session, user, digest_id)
+    question = " ".join(body.question.split())
+    key = f"ask:{digest_id}:{hashlib.sha256(question.casefold().encode()).hexdigest()[:24]}"
+    cached = await cache.get_json(key)
+    if cached is not None:
+        return AskOut.model_validate(cached)
+    chat = get_chat()
+    breaker = get_breaker()
+    if chat is None:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            detail="Вопросы к выпуску работают с языковой моделью, а стенд запущен без неё.",
+        )
+    if not breaker.allow():
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Модель сейчас не отвечает. Попробуйте через минуту.",
+        )
+    try:
+        got = await answer_question(view, question, chat)
+    except Exception as exc:
+        breaker.record_failure()
+        log.warning("ask_failed", error=f"{type(exc).__name__}: {exc}"[:200])
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Модель не смогла ответить. Попробуйте ещё раз.",
+        ) from exc
+    breaker.record_success()
+    out = AskOut(
+        answer=got.text,
+        citations=[
+            AskCitation(number=c.number, headline=c.headline, url=c.url) for c in got.citations
+        ],
+        is_in_digest=got.is_in_digest,
+    )
+    await cache.set_json(key, out.model_dump(), ASK_TTL_SECONDS)
+    return out
 
 
 async def _status_event(digest_id: uuid.UUID, user_id: uuid.UUID) -> dict[str, Any] | None:
