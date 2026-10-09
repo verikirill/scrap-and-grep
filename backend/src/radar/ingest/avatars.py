@@ -49,6 +49,8 @@ MAX_IMAGE_BYTES = 1_000_000
 # chased sooner: avatars change rarely.
 RECHECK_AFTER = timedelta(days=30)
 PER_RUN = 25
+# The whole catalogue and then some, for the first run of a fresh stack.
+AT_START = 500
 CONCURRENCY = 4
 GOOGLE_FAVICONS = "https://www.google.com/s2/favicons?sz=128&domain={host}"
 # Habr's company blogs: the company's own site has its logo.

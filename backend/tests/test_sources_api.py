@@ -46,6 +46,7 @@ async def test_an_administrator_adds_a_channel_by_its_address(
 
     monkeypatch.setattr(telegram, "channel_title", title)
     monkeypatch.setattr(tasks.ingest_source_task, "kiq", AsyncMock())
+    monkeypatch.setattr(tasks.refresh_source_avatars, "kiq", AsyncMock())
     channel = {"kind": "telegram", "category": "security", "fetch_full_text": True}
 
     async with administrator(api) as admin:
@@ -62,6 +63,8 @@ async def test_an_administrator_adds_a_channel_by_its_address(
     assert source["feed_url"] == "https://t.me/s/radar_ib"
     assert source["site_url"] == "https://t.me/radar_ib"
     tasks.ingest_source_task.kiq.assert_awaited_once_with(source["id"])
+    # Its picture is asked for at once, not at the next six-hourly round.
+    tasks.refresh_source_avatars.kiq.assert_awaited_once()
     # Names differ only in case in Telegram.
     assert again.status_code == 409
     assert closed.status_code == 422
@@ -205,6 +208,7 @@ async def test_a_source_gets_its_own_proxy_and_its_password_is_not_shown(
     from radar.worker import tasks
 
     monkeypatch.setattr(tasks.ingest_source_task, "kiq", AsyncMock())
+    monkeypatch.setattr(tasks.refresh_source_avatars, "kiq", AsyncMock())
     feed = {
         "kind": "rss",
         "name": "Сайт с гео-блокировкой",

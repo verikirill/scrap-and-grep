@@ -47,7 +47,12 @@ from radar.ingest.pages import MarkupChanged
 from radar.logging import get_logger
 from radar.store.articles import ArticleFilter, Meaning, find_articles
 from radar.text import stable_hash
-from radar.worker.tasks import detect_source_task, ingest_all, ingest_source_task
+from radar.worker.tasks import (
+    detect_source_task,
+    ingest_all,
+    ingest_source_task,
+    refresh_source_avatars,
+)
 
 # The catalogue is shared by every reader: anyone signed in may read it. An
 # administrator changes it; in an open catalogue (RADAR_OPEN_CATALOG) every
@@ -223,6 +228,9 @@ async def create_source(
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Источник уже добавлен.") from exc
     await session.commit()
     await ingest_source_task.kiq(source.id)
+    # A new source has no picture yet and comes first in that queue: its
+    # avatar arrives in a minute, not at the next six-hourly round.
+    await refresh_source_avatars.kiq()
     return await _source_out(session, source, can_edit=True)
 
 
