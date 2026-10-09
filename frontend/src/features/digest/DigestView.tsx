@@ -1,11 +1,5 @@
 import clsx from 'clsx'
-import {
-  ChevronDown,
-  Download,
-  FileText,
-  GitCompareArrows,
-  Info,
-} from '../../components/icons'
+import { ChevronDown, Download, FileText, GitCompareArrows, Info } from '../../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { Link } from 'react-router'
@@ -13,18 +7,13 @@ import { buttonClass, EASE, rowMotion } from '../../components/tokens'
 import { AnimatedNumber, Card, Chip, ScoreBar, ReadingTime } from '../../components/ui'
 import { api } from '../../lib/api'
 import type { Digest, DigestItem, Placement, ReactionKind, Topic } from '../../lib/api'
-import {
-  formatDate,
-  formatDateTime,
-  modelLabel,
-  plural,
-  REJECT_LABELS,
-} from '../../lib/format'
+import { formatDate, formatDateTime, modelLabel, plural, REJECT_LABELS } from '../../lib/format'
 import { useSeen } from '../../lib/impressions'
 import { useFeedback, useReactions } from '../../lib/queries'
 import { ReactionBar } from '../feed/ReactionBar'
 import { OriginalLink } from '../reader/OriginalLink'
 import { articlePath } from '../reader/paths'
+import { AskDigest } from './AskDigest'
 import { BriefingPlayer } from './BriefingPlayer'
 import { EntryDetails, PriorityChip } from './EntryCard'
 import { MailButton } from './MailButton'
@@ -83,8 +72,9 @@ function ItemCard({ item, index, placement, reactions, onReact }: ItemCardProps)
   return (
     <motion.article
       ref={seenRef}
+      id={`entry-${placement.position}`}
       {...rowMotion(index)}
-      className="group rounded-xl border border-transparent px-4 py-4 transition-colors duration-200 hover:border-separator hover:bg-surface"
+      className="group scroll-mt-24 rounded-xl border border-transparent px-4 py-4 transition-colors duration-200 hover:border-separator hover:bg-surface"
     >
       <div className="flex items-start gap-1">
         <Link
@@ -420,6 +410,9 @@ export function DigestView({ digest, previousId }: { digest: Digest; previousId?
         </div>
       )}
 
+      {digest.topics.length > 0 && (
+        <AskDigest digestId={digest.id} audience={digest.audience ?? 'specialist'} />
+      )}
       <RejectedList items={digest.rejected} />
     </div>
   )
