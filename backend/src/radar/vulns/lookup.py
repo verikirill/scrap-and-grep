@@ -11,6 +11,7 @@ copies the ingest worker keeps fresh: nothing is asked outside here.
 
 import re
 from collections.abc import Sequence
+from datetime import date
 
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -85,12 +86,17 @@ async def lookup(session: AsyncSession, values: Sequence[str]) -> list[Vulnerabi
         for row in await session.scalars(select(EpssScore).where(EpssScore.cve_id.in_(cves)))
     }
     exploits: dict[str, list[str]] = {}
+    first_exploit: dict[str, date] = {}
     for row in await session.scalars(
         select(PublicExploit)
         .where(PublicExploit.cve_id.in_(cves))
         .order_by(PublicExploit.verified.desc(), PublicExploit.edb_id.desc())
     ):
         exploits.setdefault(row.cve_id, []).append(f"EDB-{row.edb_id}")
+        if row.published and (
+            row.cve_id not in first_exploit or row.published < first_exploit[row.cve_id]
+        ):
+            first_exploit[row.cve_id] = row.published
     # A BDU entry names its CVEs in its text; a BDU id is in its address.
     wanted = [Article.content.contains(value) for value in cves] + [
         Article.url.contains(value.removeprefix("BDU:"))
@@ -133,6 +139,8 @@ async def lookup(session: AsyncSession, values: Sequence[str]) -> list[Vulnerabi
                     "nvd_exploitation": record.exploitation if record else "",
                     "nvd_exploit_links": tuple(record.exploit_links) if record else (),
                     "nvd_patch": bool(record and record.patch_links),
+                    "nvd_published": record.published if record else None,
+                    "exploit_published": first_exploit.get(value),
                     "epss": score.score if score else None,
                     "epss_percentile": score.percentile if score else None,
                     "exploits": tuple(exploits.get(value, ())[:3]),

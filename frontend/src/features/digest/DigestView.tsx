@@ -14,6 +14,8 @@ import { ReactionBar } from '../feed/ReactionBar'
 import { OriginalLink } from '../reader/OriginalLink'
 import { articlePath } from '../reader/paths'
 import { AskDigest } from './AskDigest'
+import { CveTimeline } from './CveTimeline'
+import { RiskMatrix } from './RiskMatrix'
 import { BriefingPlayer } from './BriefingPlayer'
 import { EntryDetails, PriorityChip } from './EntryCard'
 import { MailButton } from './MailButton'
@@ -128,11 +130,14 @@ function ItemCard({ item, index, placement, reactions, onReact }: ItemCardProps)
         />
       </div>
       {translated && <p className="mt-1.5 text-xs text-muted">Оригинал: {item.title}</p>}
-      {item.summary && <p className="mt-2.5 text-sm text-foreground/90">{item.summary}</p>}
+      {item.summary && (
+        <p className="mt-2.5 text-sm leading-relaxed text-foreground/90">{item.summary}</p>
+      )}
       <EntryDetails item={item} />
+      <CveTimeline item={item} />
       <IndicatorsBlock attack={item.attack} />
       {item.why && (
-        <p className="mt-2.5 border-l-2 border-warning pl-3 text-sm text-muted">
+        <p className="mt-2.5 border-l-2 border-warning pl-3 text-sm leading-relaxed text-muted">
           <span className="font-medium text-foreground">Почему это важно. </span>
           {item.why}
         </p>
@@ -386,6 +391,17 @@ export function DigestView({ digest, previousId }: { digest: Digest; previousId?
       </Card>
 
       <IssueExtras digest={digest} />
+
+      {digest.audience !== 'management' && (
+        <RiskMatrix
+          entries={digest.topics.flatMap((topic, topicIndex) =>
+            topic.items.map((item, index) => ({
+              position: firstPositions[topicIndex] + index,
+              item,
+            })),
+          )}
+        />
+      )}
 
       {/* Keyed by the digest: a voice picked for one must not carry over to the next. */}
       {digest.topics.length > 0 && <ShortPanel key={digest.id} digestId={digest.id} />}

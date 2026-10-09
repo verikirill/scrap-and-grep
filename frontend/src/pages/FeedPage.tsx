@@ -401,11 +401,27 @@ export function FeedPage() {
           ) : items.length === 0 ? (
             <Card>
               {tab === 'saved' ? (
-                <EmptyState icon={<Bookmark size={22} />} title="Сохранённого пока нет">
+                <EmptyState
+                  icon={<Bookmark size={22} />}
+                  title="Сохранённого пока нет"
+                  action={
+                    <Button variant="tonal" onClick={() => selectTab('new')}>
+                      Открыть новое
+                    </Button>
+                  }
+                >
                   Здесь будут публикации, отложенные кнопкой «Сохранить».
                 </EmptyState>
               ) : (
-                <EmptyState icon={<Search size={22} />} title="Подходящих публикаций не нашлось">
+                <EmptyState
+                  icon={<Search size={22} />}
+                  title="Подходящих публикаций не нашлось"
+                  action={
+                    <Link to="/profiles" className={buttonClass('tonal')}>
+                      Настроить интересы
+                    </Link>
+                  }
+                >
                   За две недели публикаций по вашим интересам не нашлось.
                 </EmptyState>
               )}

@@ -297,6 +297,10 @@ class VulnerabilityReference(BaseModel):
     nvd_exploitation: str = ""
     nvd_exploit_links: tuple[str, ...] = ()
     nvd_patch: bool = False
+    # The day NVD published the CVE, and the day its first exploit appeared in
+    # Exploit-DB: with the KEV dates they make the vulnerability's timeline.
+    nvd_published: date | None = None
+    exploit_published: date | None = None
     # FIRST's EPSS: the probability of exploitation in 30 days and its percentile.
     epss: float | None = None
     epss_percentile: float | None = None

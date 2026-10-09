@@ -251,10 +251,13 @@ export function EmptyState({
   icon,
   title,
   children,
+  action,
 }: {
   icon: ReactNode
   title: string
   children?: ReactNode
+  /** The step that fills the empty place, as a button under the text. */
+  action?: ReactNode
 }) {
   return (
     <div className="flex flex-col items-center px-6 py-14 text-center">
@@ -268,6 +271,7 @@ export function EmptyState({
       </motion.div>
       <h3 className="text-base font-medium">{title}</h3>
       {children && <div className="mt-1.5 max-w-xl text-sm text-muted">{children}</div>}
+      {action && <div className="mt-4">{action}</div>}
     </div>
   )
 }

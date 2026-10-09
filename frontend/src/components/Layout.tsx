@@ -2,6 +2,8 @@ import clsx from 'clsx'
 import { useIsFetching, useIsMutating } from '@tanstack/react-query'
 import {
   Analytics,
+  ChevronLeft,
+  ChevronRight,
   CompareArrows,
   DynamicFeed,
   Moon,
@@ -20,6 +22,7 @@ import { Link, NavLink, useLocation } from 'react-router'
 import { formatNumber, modelLabel } from '../lib/format'
 import { useMe, useMeta } from '../lib/queries'
 import { prefetchRoute } from '../routes'
+import { readOpen, writeOpen } from '../lib/remembered'
 import { UserAvatar } from './UserAvatar'
 import { LogoMark, Wordmark } from './Logo'
 import { DURATION, EASE } from './tokens'
@@ -154,16 +157,28 @@ function activeSection(pathname: string): string | null {
 }
 
 /** A section in the sidebar: icon and name in a row; the open one sits on a soft pill. */
-function SideItem({ item, active }: { item: NavItem; active: boolean }) {
+function SideItem({
+  item,
+  active,
+  isNarrow,
+}: {
+  item: NavItem
+  active: boolean
+  isNarrow: boolean
+}) {
   const Icon = item.icon
   return (
     <Link
       to={item.to}
+      // Folded, the name is the hint: the icon alone is all the row shows.
+      title={isNarrow ? item.label : undefined}
+      aria-label={isNarrow ? item.label : undefined}
       onPointerEnter={() => prefetchRoute(item.to)}
       onFocus={() => prefetchRoute(item.to)}
       aria-current={active ? 'page' : undefined}
       className={clsx(
-        'group relative flex h-10 w-full items-center gap-3 rounded-xl px-3 text-sm outline-none',
+        'group relative flex h-10 w-full items-center gap-3 rounded-xl text-sm outline-none',
+        isNarrow ? 'justify-center px-0' : 'px-3',
         'focus-visible:ring-2 focus-visible:ring-focus',
         active ? 'font-semibold text-foreground' : 'font-medium text-muted hover:text-foreground',
       )}
@@ -178,8 +193,8 @@ function SideItem({ item, active }: { item: NavItem; active: boolean }) {
       {!active && (
         <span className="absolute inset-0 -z-10 rounded-xl transition-colors group-hover:bg-default/60" />
       )}
-      <Icon size={18} filled={active} className={clsx(active && 'text-accent')} />
-      <span className="truncate">{item.label}</span>
+      <Icon size={18} filled={active} className={clsx('shrink-0', active && 'text-accent')} />
+      {!isNarrow && <span className="truncate">{item.label}</span>}
     </Link>
   )
 }
@@ -270,21 +285,38 @@ function ThemeButton({ dark, onToggle }: { dark: boolean; onToggle: (from: HTMLE
   )
 }
 
-function Brand() {
+function Brand({ isNarrow }: { isNarrow: boolean }) {
   return (
     <Link
       to="/"
       aria-label="Scrap&Grep, главная"
-      className="flex items-center gap-2.5 rounded-xl px-2 outline-none focus-visible:ring-2 focus-visible:ring-focus"
+      className={clsx(
+        'flex items-center gap-2.5 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-focus',
+        isNarrow ? 'justify-center' : 'px-2',
+      )}
     >
       <LogoMark size={34} />
-      <Wordmark className="text-[17px]" />
+      {!isNarrow && <Wordmark className="text-[17px]" />}
     </Link>
   )
 }
 
+const RAIL_KEY = 'sidebar'
+
+/** The sidebar folded to icons or open with names; the choice is kept per browser. */
+function useNarrowSidebar(): [boolean, () => void] {
+  const [isNarrow, setNarrow] = useState(() => !readOpen(RAIL_KEY, true))
+  const toggle = () =>
+    setNarrow((value) => {
+      writeOpen(RAIL_KEY, value)
+      return !value
+    })
+  return [isNarrow, toggle]
+}
+
 export function Layout({ children }: { children: ReactNode }) {
   const [dark, toggleDark] = useDarkMode()
+  const [isNarrow, toggleNarrow] = useNarrowSidebar()
   const me = useMe()
   const isAdmin = Boolean(me.data?.is_admin && !me.data.is_demo)
   const sections = NAV.filter((item) => isAdmin || !item.isAdminOnly)
@@ -296,16 +328,37 @@ export function Layout({ children }: { children: ReactNode }) {
       <ActivityBar />
 
       {/* Sidebar, from tablet width up. */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col gap-6 border-r border-separator bg-background px-3 py-5 md:flex">
-        <Brand />
+      <aside
+        className={clsx(
+          'fixed inset-y-0 left-0 z-30 hidden flex-col gap-6 border-r border-separator bg-background py-5 transition-[width] duration-300 ease-out md:flex',
+          isNarrow ? 'w-[72px] px-2.5' : 'w-60 px-3',
+        )}
+      >
+        <Brand isNarrow={isNarrow} />
         <nav aria-label="Разделы" className="isolate flex flex-col gap-0.5">
           {sections.map((item) => (
-            <SideItem key={item.to} item={item} active={item.to === active} />
+            <SideItem key={item.to} item={item} active={item.to === active} isNarrow={isNarrow} />
           ))}
         </nav>
-        <div className="mt-auto flex items-center justify-between gap-2 px-1">
+        <div
+          className={clsx(
+            'mt-auto flex items-center gap-2',
+            isNarrow ? 'flex-col' : 'justify-between px-1',
+          )}
+        >
           <AccountButton />
-          <ThemeButton dark={dark} onToggle={toggleDark} />
+          <div className={clsx('flex items-center gap-1', isNarrow && 'flex-col')}>
+            <ThemeButton dark={dark} onToggle={toggleDark} />
+            <button
+              type="button"
+              onClick={toggleNarrow}
+              aria-label={isNarrow ? 'Развернуть меню' : 'Свернуть меню'}
+              title={isNarrow ? 'Развернуть меню' : 'Свернуть меню'}
+              className="button button--ghost button--icon-only button--md shrink-0 text-muted"
+            >
+              {isNarrow ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+            </button>
+          </div>
         </div>
       </aside>
 
@@ -344,7 +397,12 @@ export function Layout({ children }: { children: ReactNode }) {
         <AccountButton compact />
       </header>
 
-      <div className="md:pl-60">
+      <div
+        className={clsx(
+          'transition-[padding] duration-300 ease-out',
+          isNarrow ? 'md:pl-[72px]' : 'md:pl-60',
+        )}
+      >
         <div className="mx-auto flex max-w-[1320px] gap-8 px-4 pt-6 pb-28 md:px-10 md:pt-9 md:pb-12">
           <main className="min-w-0 flex-1">
             {/* A soft fade between sections. Entrance only: an exit
