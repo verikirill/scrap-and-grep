@@ -74,7 +74,7 @@ describe('the timeline', () => {
         }),
       ],
     })
-    expect(timelineOf(item).map((event) => event.date)).toEqual([
+    expect(timelineOf(item)?.events.map((event) => event.date)).toEqual([
       '2018-04-30',
       '2018-07-19',
       '2021-11-03',
@@ -83,7 +83,21 @@ describe('the timeline', () => {
     ])
   })
 
+  it('takes the best-dated vulnerability of an entry that names several', () => {
+    const item = entry({
+      references: [
+        reference({ id: 'CVE-2026-8065', nvd_published: '2026-09-29' }),
+        reference({
+          id: 'CVE-2014-9195',
+          nvd_published: '2015-06-01',
+          exploit_published: '2015-06-03',
+        }),
+      ],
+    })
+    expect(timelineOf(item)?.id).toBe('CVE-2014-9195')
+  })
+
   it('draws nothing from the news date alone', () => {
-    expect(timelineOf(entry({ references: [reference()] }))).toEqual([])
+    expect(timelineOf(entry({ references: [reference()] }))).toBeNull()
   })
 })

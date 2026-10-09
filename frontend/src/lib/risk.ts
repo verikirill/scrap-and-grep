@@ -1,4 +1,4 @@
-import type { DigestItem } from './api'
+import type { DigestItem, VulnerabilityReference } from './api'
 
 /** 0, 1 or 2: low to high on one axis of the risk matrix. */
 export type Band = 0 | 1 | 2
@@ -77,16 +77,27 @@ export type TimelineEvent = {
   tone: 'neutral' | 'warning' | 'danger' | 'accent'
 }
 
+const datesOf = (reference: VulnerabilityReference) =>
+  [
+    reference.nvd_published,
+    reference.exploit_published,
+    reference.kev_added,
+    reference.kev_due,
+  ].filter(Boolean).length
+
+export type Timeline = { id: string; events: TimelineEvent[] }
+
 /**
- * The vulnerability's life as the bases date it, oldest first: published in
- * NVD, a public exploit, entered into CISA KEV, CISA's deadline, and the news.
- * Nothing before two dated events: one point is not a line.
+ * The life of the entry's best-dated vulnerability as the bases date it,
+ * oldest first: published in NVD, a public exploit, entered into CISA KEV,
+ * CISA's deadline, and the news. Null before two dated events: one point is
+ * not a line.
  */
-export function timelineOf(item: DigestItem): TimelineEvent[] {
-  const reference = (item.references ?? []).find(
-    (candidate) => candidate.nvd_published || candidate.exploit_published || candidate.kev_added,
-  )
-  if (!reference) return []
+export function timelineOf(item: DigestItem): Timeline | null {
+  const reference = [...(item.references ?? [])]
+    .filter((candidate) => datesOf(candidate) > 0)
+    .sort((a, b) => datesOf(b) - datesOf(a))[0]
+  if (!reference) return null
   const events: (TimelineEvent | null)[] = [
     reference.nvd_published
       ? { date: reference.nvd_published, label: 'Опубликована в NVD', tone: 'neutral' }
@@ -101,6 +112,6 @@ export function timelineOf(item: DigestItem): TimelineEvent[] {
     { date: item.published_at.slice(0, 10), label: 'Новость в выпуске', tone: 'accent' },
   ]
   const dated = events.filter((event): event is TimelineEvent => event !== null)
-  if (dated.length < 2) return []
-  return dated.sort((a, b) => a.date.localeCompare(b.date))
+  if (dated.length < 2) return null
+  return { id: reference.id, events: dated.sort((x, y) => x.date.localeCompare(y.date)) }
 }

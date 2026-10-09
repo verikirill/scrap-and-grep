@@ -26,14 +26,18 @@ const DOT_TONES: Record<TimelineEvent['tone'], string> = {
  * draws itself, then the steps light up in order.
  */
 export function CveTimeline({ item }: { item: DigestItem }) {
-  const events = timelineOf(item)
-  if (events.length === 0) return null
+  const timeline = timelineOf(item)
+  if (!timeline) return null
+  const { id, events } = timeline
   return (
-    <div className="mt-2.5 overflow-x-auto rounded-xl bg-surface-secondary px-3 pt-3 pb-2.5">
-      <ol className="relative flex min-w-max gap-0">
+    <div className="mt-2.5 flex items-start gap-3 overflow-x-auto rounded-xl bg-surface-secondary px-3 pt-3 pb-2.5">
+      <span className="shrink-0 pt-[18px] font-mono text-[11px] font-semibold text-muted">
+        {id}
+      </span>
+      <ol className="relative inline-flex min-w-max">
         <motion.span
           aria-hidden
-          className="absolute top-[5px] right-6 left-6 h-0.5 origin-left rounded-full bg-separator"
+          className="absolute top-[5px] right-16 left-16 h-0.5 origin-left rounded-full bg-separator"
           initial={{ scaleX: 0 }}
           animate={{ scaleX: 1 }}
           transition={{ duration: 0.6, ease: EASE }}
