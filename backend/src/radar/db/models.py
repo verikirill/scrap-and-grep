@@ -299,6 +299,11 @@ class User(Base):
     feed_view: Mapped[str] = mapped_column(String(16), default="cards", server_default="cards")
     # Which order the feed opens in: "new" (relevant, newest first) or "top".
     feed_order: Mapped[str] = mapped_column(String(8), default="new", server_default="new")
+    # Digest sections the reader keeps folded, by title: «Атаки», «Уязвимости»
+    # and topics named after interests come back in every issue.
+    folded_sections: Mapped[list[str]] = mapped_column(
+        ARRAY(String(120)), default=list, server_default="{}"
+    )
 
 
 class ApiKey(Base):

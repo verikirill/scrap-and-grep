@@ -891,7 +891,14 @@ export function useUpdateSettings() {
       const before = context?.previous
       if (before) {
         client.setQueryData<Me | null>(keys.me, (me) =>
-          me ? { ...me, feed_view: before.feed_view, feed_order: before.feed_order } : me,
+          me
+            ? {
+                ...me,
+                feed_view: before.feed_view,
+                feed_order: before.feed_order,
+                folded_sections: before.folded_sections,
+              }
+            : me,
         )
       }
     },

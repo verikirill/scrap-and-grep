@@ -612,6 +612,8 @@ export interface Me extends User {
   avatar_url: string | null
   feed_view: FeedView
   feed_order: FeedOrder
+  /** Digest sections the reader keeps folded, by title. */
+  folded_sections?: string[]
 }
 
 /** How the feed looks: cards with the reasons in full, or posts as in a Telegram channel. */
@@ -623,6 +625,7 @@ export type FeedOrder = 'new' | 'top'
 export interface Settings {
   feed_view: FeedView
   feed_order: FeedOrder
+  folded_sections: string[]
 }
 
 /** Articles that arrived after the feed on screen was ranked and pass the reader's interests. */
