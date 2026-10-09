@@ -245,7 +245,7 @@ function BarItem({ item, active }: { item: NavItem; active: boolean }) {
   )
 }
 
-function AccountButton({ compact }: { compact?: boolean }) {
+function AccountButton() {
   const { data: me } = useMe()
   if (!me) return null
   return (
@@ -256,16 +256,16 @@ function AccountButton({ compact }: { compact?: boolean }) {
       title={me.is_demo ? 'Временный аккаунт' : me.email}
       className={({ isActive }) =>
         clsx(
-          'grid size-9 shrink-0 place-items-center rounded-full bg-accent-soft text-accent-soft-foreground transition-shadow',
+          'grid size-9 shrink-0 place-items-center rounded-full transition-shadow',
           // The picture keeps its colours; the ring says this is the open section.
           isActive
             ? 'ring-2 ring-accent ring-offset-2 ring-offset-background'
             : 'hover:ring-2 hover:ring-border',
-          compact && 'size-9',
         )
       }
     >
-      <UserAvatar me={me} size={compact ? 36 : 40} />
+      {/* The size of the button: a bigger picture pushed the letters off centre. */}
+      <UserAvatar me={me} size={36} />
     </NavLink>
   )
 }
@@ -419,7 +419,7 @@ export function Layout({ children }: { children: ReactNode }) {
           </NavLink>
         )}
         <ThemeButton dark={dark} onToggle={toggleDark} />
-        <AccountButton compact />
+        <AccountButton />
       </header>
 
       <div
