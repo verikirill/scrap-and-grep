@@ -8,6 +8,7 @@ import { BuildPanel } from '../features/digest/BuildPanel'
 import { DigestView } from '../features/digest/DigestView'
 import { History } from '../features/digest/History'
 import { DigestHeading } from '../features/digest/DigestHeading'
+import { twinOf } from '../lib/digestPairs'
 import { ProgressCard } from '../features/digest/ProgressCard'
 import type { DigestSummary } from '../lib/api'
 import {
@@ -135,7 +136,14 @@ export function DigestPage() {
           {/* Outside the presence below and keyed by the digest: the old
               header leaves and the new one comes in the same render, which is
               what lets their titles morph into the history rows and back. */}
-          {summary && <DigestHeading key={summary.id} summary={summary} />}
+          {summary && (
+            <DigestHeading
+              key={summary.id}
+              summary={summary}
+              twin={twinOf(summary, digests.data ?? [])}
+              onOpen={(id) => navigate(`/digests/${id}`)}
+            />
+          )}
 
           <AnimatePresence mode="wait">
             {digest.isLoading && activeId && (

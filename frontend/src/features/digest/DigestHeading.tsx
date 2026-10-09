@@ -1,6 +1,7 @@
 import { AnimateView } from 'motion/react-animate-view'
 import type { ReactNode } from 'react'
-import type { DigestSummary } from '../../lib/api'
+import { Segmented } from '../../components/Segmented'
+import type { Audience, DigestSummary } from '../../lib/api'
 import { formatPeriod } from '../../lib/format'
 
 // The name a digest's title carries while it moves between the history list
@@ -25,9 +26,21 @@ export function MorphingTitle({ digestId, children }: { digestId: string; childr
  * loaded: it is there in the very render that opens the digest, so its title
  * grows out of the list row while the rest of the digest is still loading.
  */
-export function DigestHeading({ summary }: { summary: DigestSummary }) {
+const READINGS = [
+  { value: 'specialist', label: 'Инженер', short: 'Инженер' },
+  { value: 'management', label: 'Руководитель', short: 'Руководитель' },
+] as const satisfies readonly { value: Audience; label: string; short: string }[]
+
+type HeadingProps = {
+  summary: DigestSummary
+  /** The other audience's issue of the same build, when there is one. */
+  twin?: DigestSummary | null
+  onOpen?: (id: string) => void
+}
+
+export function DigestHeading({ summary, twin, onOpen }: HeadingProps) {
   return (
-    <div className="rounded-[28px] bg-accent-soft px-6 py-6 text-accent-soft-foreground sm:px-8">
+    <div className="rounded-3xl bg-accent-soft px-6 py-6 text-accent-soft-foreground sm:px-8">
       <p className="text-xs font-medium opacity-80">
         {summary.profile_name} · версия {summary.profile_version} ·{' '}
         {formatPeriod(summary.period_start, summary.period_end)}
@@ -37,6 +50,20 @@ export function DigestHeading({ summary }: { summary: DigestSummary }) {
           {summary.title ?? summary.profile_name}
         </h1>
       </MorphingTitle>
+      {twin && onOpen && (
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <Segmented
+            label="Для кого читать выпуск"
+            value={summary.audience ?? 'specialist'}
+            options={READINGS}
+            onChange={(audience) => {
+              if (audience !== (summary.audience ?? 'specialist')) onOpen(twin.id)
+            }}
+            className="bg-surface/70"
+          />
+          <span className="text-xs opacity-80">те же новости, другой язык</span>
+        </div>
+      )}
     </div>
   )
 }
