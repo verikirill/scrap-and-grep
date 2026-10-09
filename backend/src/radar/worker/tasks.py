@@ -424,6 +424,16 @@ async def refresh_source_avatars() -> int:
         return await avatars.refresh_avatars(session, client, get_image_store())
 
 
+async def _all_avatars() -> int:
+    """At start, pictures for the whole catalogue at once: in rounds of
+    twenty-five every six hours a fresh stack of a hundred sources showed the
+    initials of its last ones for a day."""
+    async with build_client() as client, session_scope() as session:
+        return await avatars.refresh_avatars(
+            session, client, get_image_store(), limit=avatars.AT_START
+        )
+
+
 @ingest_broker.on_event(TaskiqEvents.WORKER_STARTUP)
 async def _kev_at_start(state: TaskiqState) -> None:
     # A fresh stack looks vulnerabilities up before the first hourly round,
@@ -439,7 +449,7 @@ async def _kev_at_start(state: TaskiqState) -> None:
         (refresh_kev, "kev_not_refreshed"),
         *([(refresh_epss, "epss_not_refreshed")] if empty[EpssScore] else []),
         *([(refresh_exploitdb, "exploitdb_not_refreshed")] if empty[PublicExploit] else []),
-        (refresh_source_avatars, "avatars_not_refreshed"),
+        (_all_avatars, "avatars_not_refreshed"),
     ):
         try:
             await task()

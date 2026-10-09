@@ -15,7 +15,7 @@ import {
 } from './icons'
 import type { IconComponent } from './icons'
 import { AnimatePresence, motion } from 'motion/react'
-import { useLayoutEffect, useState } from 'react'
+import { useLayoutEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { flushSync } from 'react-dom'
 import { Link, NavLink, useLocation } from 'react-router'
@@ -26,6 +26,7 @@ import { readOpen, writeOpen } from '../lib/remembered'
 import { UserAvatar } from './UserAvatar'
 import { LogoMark, Wordmark } from './Logo'
 import { DURATION, EASE } from './tokens'
+import { EntranceContext, newEntrance } from './entrance'
 
 type NavItem = {
   to: string
@@ -186,9 +187,8 @@ function SideItem({
     >
       {active && (
         <motion.span
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.15 }}
+          layoutId="side-pill"
+          transition={{ type: 'spring', stiffness: 500, damping: 40 }}
           className="absolute inset-0 -z-10 rounded-xl bg-surface shadow-surface"
         />
       )}
@@ -221,9 +221,8 @@ function BarItem({ item, active }: { item: NavItem; active: boolean }) {
       <span className="relative grid h-8 w-14 place-items-center">
         {active && (
           <motion.span
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.15 }}
+            layoutId="bar-pill"
+            transition={{ type: 'spring', stiffness: 500, damping: 40 }}
             className="absolute inset-0 rounded-full bg-accent-soft"
           />
         )}
@@ -338,6 +337,12 @@ export function Layout({ children }: { children: ReactNode }) {
   const location = useLocation()
   const section = location.pathname.split('/')[1] ?? ''
   const active = activeSection(location.pathname)
+  const pageKey = section === 'digests' ? '' : section
+  // A new line of card entrances for each section the reader opens.
+  const entrance = useMemo(() => {
+    void pageKey
+    return newEntrance()
+  }, [pageKey])
   return (
     <div className="min-h-dvh bg-background">
       <ActivityBar />
@@ -434,12 +439,12 @@ export function Layout({ children }: { children: ReactNode }) {
                 would keep the old wrapper alive while <Routes> inside it already
                 renders the new page. Switching digests keeps the page mounted. */}
             <motion.div
-              key={section === 'digests' ? '' : section}
-              initial={{ opacity: 0, scale: 0.985, y: 6 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
+              key={pageKey}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: DURATION.medium, ease: EASE }}
             >
-              {children}
+              <EntranceContext value={entrance}>{children}</EntranceContext>
             </motion.div>
           </main>
         </div>

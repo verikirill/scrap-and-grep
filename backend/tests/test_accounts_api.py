@@ -323,6 +323,7 @@ def open_catalog(api: str, monkeypatch: pytest.MonkeyPatch) -> Iterator[AsyncMoc
     monkeypatch.setenv("RADAR_OPEN_CATALOG", "true")
     get_settings.cache_clear()
     monkeypatch.setattr(tasks.ingest_source_task, "kiq", AsyncMock())
+    monkeypatch.setattr(tasks.refresh_source_avatars, "kiq", AsyncMock())
     detect = AsyncMock()
     monkeypatch.setattr(tasks.detect_source_task, "kiq", detect)
     monkeypatch.setattr(catalog, "ensure_public_url", AsyncMock())
