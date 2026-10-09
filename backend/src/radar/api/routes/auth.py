@@ -192,7 +192,9 @@ async def me(user: OptionalUser, session: SessionDep) -> MeOut | None:
         select(UserAvatar.updated_at).where(UserAvatar.user_id == user.id)
     )
     looks = (
-        await session.execute(select(User.feed_view, User.feed_order).where(User.id == user.id))
+        await session.execute(
+            select(User.feed_view, User.feed_order, User.folded_sections).where(User.id == user.id)
+        )
     ).one_or_none()
     return MeOut(
         id=user.id,
@@ -205,6 +207,7 @@ async def me(user: OptionalUser, session: SessionDep) -> MeOut | None:
         avatar_url=_avatar_url(avatar_at),
         feed_view=_feed_view(looks.feed_view if looks else None),
         feed_order=_feed_order(looks.feed_order if looks else None),
+        folded_sections=list(looks.folded_sections or []) if looks else [],
     )
 
 
@@ -225,10 +228,14 @@ async def update_settings(
     if changes:
         await session.execute(update(User).where(User.id == user.id).values(**changes))
     stored = (
-        await session.execute(select(User.feed_view, User.feed_order).where(User.id == user.id))
+        await session.execute(
+            select(User.feed_view, User.feed_order, User.folded_sections).where(User.id == user.id)
+        )
     ).one()
     return SettingsOut(
-        feed_view=_feed_view(stored.feed_view), feed_order=_feed_order(stored.feed_order)
+        feed_view=_feed_view(stored.feed_view),
+        feed_order=_feed_order(stored.feed_order),
+        folded_sections=list(stored.folded_sections or []),
     )
 
 

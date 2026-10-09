@@ -67,6 +67,11 @@ class MeOut(UserOut):
     avatar_url: str | None = None
     feed_view: FeedView = "cards"
     feed_order: FeedOrder = "new"
+    folded_sections: list[str] = []
+
+
+# A section's title as the digest shows it; a few dozen titles at most.
+FoldedSection = Annotated[str, Field(min_length=1, max_length=120)]
 
 
 class SettingsIn(BaseModel):
@@ -74,11 +79,20 @@ class SettingsIn(BaseModel):
 
     feed_view: FeedView | None = None
     feed_order: FeedOrder | None = None
+    folded_sections: list[FoldedSection] | None = Field(default=None, max_length=60)
+
+    @field_validator("folded_sections")
+    @classmethod
+    def _distinct(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return None
+        return list(dict.fromkeys(title.strip() for title in value if title.strip()))
 
 
 class SettingsOut(BaseModel):
     feed_view: FeedView
     feed_order: FeedOrder
+    folded_sections: list[str]
 
 
 class AvatarOut(BaseModel):
