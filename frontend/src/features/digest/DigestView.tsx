@@ -32,6 +32,7 @@ import { EntryDetails, PriorityChip } from './EntryCard'
 import { MailButton } from './MailButton'
 import { IssueExtras, ManualWork } from './IssueExtras'
 import { ShortPanel } from './ShortPanel'
+import { IndicatorsBlock, SocExport } from './ThreatIntel'
 
 function Funnel({ digest }: { digest: Digest }) {
   const stats = digest.stats
@@ -140,6 +141,7 @@ function ItemCard({ item, index, placement, reactions, onReact }: ItemCardProps)
       {translated && <p className="mt-1.5 text-xs text-muted">Оригинал: {item.title}</p>}
       {item.summary && <p className="mt-2.5 text-sm text-foreground/90">{item.summary}</p>}
       <EntryDetails item={item} />
+      <IndicatorsBlock attack={item.attack} />
       {item.why && (
         <p className="mt-2.5 border-l-2 border-warning pl-3 text-sm text-muted">
           <span className="font-medium text-foreground">Почему это важно. </span>
@@ -340,6 +342,7 @@ export function DigestView({ digest, previousId }: { digest: Digest; previousId?
               <Download size={15} />
               DOCX
             </a>
+            {digest.audience !== 'management' && <SocExport digestId={digest.id} />}
             <BriefingPlayer digest={digest} />
             <MailButton digest={digest} />
           </div>

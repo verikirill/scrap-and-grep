@@ -126,7 +126,11 @@ export function useUpdatePost() {
 
 export function usePublishPost() {
   const refresh = useRefresh('posts', 'channels')
-  return useMutation({ mutationFn: publishingApi.publishPost, onSuccess: refresh, onError: sayWhy })
+  return useMutation({
+    mutationFn: publishingApi.publishPost,
+    onSuccess: refresh,
+    onError: sayWhy,
+  })
 }
 
 export function useDeletePost() {

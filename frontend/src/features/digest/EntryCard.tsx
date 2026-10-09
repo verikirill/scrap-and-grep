@@ -37,8 +37,14 @@ function defang(url: string): string {
  * and what the check against the article took out.
  */
 export function EntryDetails({ item }: { item: DigestItem }) {
-  const filled = item.fields.filter((field) => field.value !== NO_DATA)
-  const missing = item.fields.filter((field) => field.value === NO_DATA)
+  // Indicators and techniques have their own block (ThreatIntel): not twice.
+  const ownBlock = new Set([
+    ...(item.attack?.indicators.length ? ['Индикаторы компрометации'] : []),
+    ...(item.attack?.techniques.length ? ['Техники ATT&CK'] : []),
+  ])
+  const fields = item.fields.filter((field) => !ownBlock.has(field.label))
+  const filled = fields.filter((field) => field.value !== NO_DATA)
+  const missing = fields.filter((field) => field.value === NO_DATA)
   return (
     <>
       {filled.length > 0 && (
