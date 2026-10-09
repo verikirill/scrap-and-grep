@@ -1,7 +1,7 @@
 import clsx from 'clsx'
 import { Newspaper, Plus, RotateCcw, Save, Trash2 } from '../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { EASE } from '../components/tokens'
 import { Button, ErrorNote, PageHeader } from '../components/ui'
@@ -12,6 +12,7 @@ import { ProfileAvatar, ProfileLookPicker } from '../features/profiles/ProfileLo
 import { ShareProfileButton } from '../features/profiles/ShareProfile'
 import type { Profile, ProfileSpec } from '../lib/api'
 import { useDeleteProfile, useProfiles, useSaveProfile } from '../lib/queries'
+import { SlidingPill } from '../components/SlidingPill'
 import { useConfirmLeave } from '../lib/useConfirmLeave'
 
 const NEW = 'new'
@@ -49,6 +50,7 @@ type EditorProps = {
  * section, the focus and anything typed while the request was in flight stay.
  */
 function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
+  const tabs = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
   const save = useSaveProfile()
   const remove = useDeleteProfile()
@@ -144,13 +146,20 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
         }
       />
 
-      <div className="mb-5 flex flex-wrap items-center gap-1.5">
+      <div ref={tabs} className="relative isolate mb-5 flex flex-wrap items-center gap-1.5">
+        <SlidingPill
+          container={tabs}
+          activeKey={activeId}
+          rememberAs="profile-tabs"
+          className="rounded-full bg-surface shadow-surface ring-1 ring-border"
+        />
         {profiles.map((profile) => (
           <button
             key={profile.id}
             type="button"
             onClick={() => leaveTo(profile.id)}
             aria-current={profile.id === activeId ? 'true' : undefined}
+            data-active={profile.id === activeId}
             className={clsx(
               // Never wider than the row: a long name used to push the whole page sideways on a phone.
               'relative isolate flex max-w-full min-w-0 items-center gap-2 rounded-full py-1 pr-3.5 pl-1 text-sm font-medium transition-colors duration-300',
@@ -159,13 +168,6 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
                 : 'text-muted hover:bg-default/60 hover:text-foreground',
             )}
           >
-            {profile.id === activeId && (
-              <motion.span
-                layoutId="profile-tab"
-                className="absolute inset-0 -z-10 rounded-full bg-surface shadow-surface ring-1 ring-border"
-                transition={{ type: 'spring', stiffness: 500, damping: 40 }}
-              />
-            )}
             <ProfileAvatar profile={profile} size={28} />
             <span className="relative min-w-0 truncate sm:max-w-80" title={profile.spec.name}>
               {profile.spec.name}

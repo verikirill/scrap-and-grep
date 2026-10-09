@@ -1,6 +1,6 @@
 import clsx from 'clsx'
-import { motion } from 'motion/react'
-import { useId } from 'react'
+import { useRef } from 'react'
+import { SlidingPill } from './SlidingPill'
 import { useRadioKeys } from './useRadioKeys'
 
 /**
@@ -27,13 +27,13 @@ export function Segmented<T extends string>({
   isScrollable?: boolean
   className?: string
 }) {
-  // One id per control: two switches on a page must not trade their pills.
-  const pill = useId()
+  const group = useRef<HTMLDivElement>(null)
   const found = options.findIndex((option) => option.value === value)
   const keys = useRadioKeys(options.length, found, (index) => onChange(options[index].value))
 
   return (
     <div
+      ref={group}
       role="radiogroup"
       aria-label={label}
       onKeyDown={keys.onKeyDown}
@@ -45,6 +45,11 @@ export function Segmented<T extends string>({
         className,
       )}
     >
+      <SlidingPill
+        container={group}
+        activeKey={found >= 0 ? String(value) : null}
+        className="rounded-full bg-surface shadow-surface"
+      />
       {options.map((option, index) => {
         const isChosen = index === found
         return (
@@ -53,6 +58,7 @@ export function Segmented<T extends string>({
             type="button"
             role="radio"
             aria-checked={isChosen}
+            data-active={isChosen}
             {...keys.itemProps(index)}
             onClick={() => onChange(option.value)}
             className={clsx(
@@ -62,13 +68,6 @@ export function Segmented<T extends string>({
               isChosen ? 'text-foreground' : 'text-muted hover:text-foreground',
             )}
           >
-            {isChosen && (
-              <motion.span
-                layoutId={pill}
-                transition={{ type: 'spring', stiffness: 500, damping: 40 }}
-                className="absolute inset-0 -z-10 rounded-full bg-surface shadow-surface"
-              />
-            )}
             {option.short ? (
               <>
                 <span className="block whitespace-nowrap sm:hidden">{option.short}</span>

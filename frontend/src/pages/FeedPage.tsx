@@ -12,7 +12,7 @@ import {
 } from '../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Fragment, useState } from 'react'
+import { Fragment, useRef, useState } from 'react'
 import { toast } from '../lib/toast'
 import { Link, useSearchParams } from 'react-router'
 import { EASE, buttonClass } from '../components/tokens'
@@ -41,6 +41,7 @@ import {
   useUpdateSettings,
 } from '../lib/queries'
 import { useMediaQuery } from '../lib/useMediaQuery'
+import { SlidingPill } from '../components/SlidingPill'
 
 // Two orders of one list, and what the reader put aside. The last order
 // chosen is kept with the account and opens next time.
@@ -130,6 +131,7 @@ function uniqueItems(items: FeedItem[]): FeedItem[] {
 }
 
 export function FeedPage() {
+  const tabRow = useRef<HTMLDivElement>(null)
   const [search, setSearch] = useSearchParams()
   const me = useMe().data
   const settings = useUpdateSettings()
@@ -256,15 +258,22 @@ export function FeedPage() {
 
       <div className="mb-5 flex items-center gap-2">
         <div
-          className="inline-flex gap-1 rounded-xl bg-surface-secondary p-1"
+          ref={tabRow}
+          className="relative isolate inline-flex gap-1 rounded-xl bg-surface-secondary p-1"
           role="group"
           aria-label="Раздел"
         >
+          <SlidingPill
+            container={tabRow}
+            activeKey={tab}
+            className="rounded-lg bg-surface shadow-surface"
+          />
           {TABS.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
               type="button"
               aria-pressed={tab === id}
+              data-active={tab === id}
               // On a phone the third tab is its icon: three words and two buttons do not fit.
               aria-label={id === 'saved' ? label : undefined}
               title={id === 'saved' ? label : undefined}
@@ -274,13 +283,6 @@ export function FeedPage() {
                 tab === id ? 'text-foreground' : 'text-muted hover:text-foreground',
               )}
             >
-              {tab === id && (
-                <motion.span
-                  layoutId="feed-tab"
-                  className="absolute inset-0 rounded-lg bg-surface shadow-surface"
-                  transition={{ type: 'spring', stiffness: 500, damping: 40 }}
-                />
-              )}
               <Icon size={15} className={clsx('relative', id !== 'saved' && 'hidden sm:block')} />
               <span className={clsx('relative', id === 'saved' && 'hidden sm:inline')}>
                 {label}

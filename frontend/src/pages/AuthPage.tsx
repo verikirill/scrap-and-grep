@@ -3,7 +3,7 @@ import clsx from 'clsx'
 import { Eye, EyeOff, LogIn, UserPlus } from '../components/icons'
 import { LogoMark, Wordmark } from '../components/Logo'
 import { motion } from 'motion/react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, Navigate, useLocation } from 'react-router'
 import type { AuthRedirect } from '../components/RequireAuth'
@@ -11,6 +11,7 @@ import { EASE, INPUT_CLASS } from '../components/tokens'
 import { Button, ErrorNote, Field } from '../components/ui'
 import { TailVisual } from '../features/auth/TailVisual'
 import { useMe, useMeta, useSignIn } from '../lib/queries'
+import { SlidingPill } from '../components/SlidingPill'
 import { useMediaQuery } from '../lib/useMediaQuery'
 
 const PASSWORD_MIN = 10
@@ -39,6 +40,7 @@ function safeTarget(state: unknown): string {
 }
 
 export function AuthPage({ mode }: Props) {
+  const tabRow = useRef<HTMLElement>(null)
   const me = useMe()
   const meta = useMeta()
   const location = useLocation()
@@ -115,9 +117,15 @@ export function AuthPage({ mode }: Props) {
           </p>
 
           <nav
+            ref={tabRow}
             aria-label="Вход или регистрация"
-            className="mt-6 inline-flex gap-1 rounded-xl bg-surface-secondary p-1"
+            className="relative isolate mt-6 inline-flex gap-1 rounded-xl bg-surface-secondary p-1"
           >
+            <SlidingPill
+              container={tabRow}
+              activeKey={mode}
+              className="rounded-lg bg-surface shadow-surface"
+            />
             {TABS.map((tab) => (
               <Link
                 key={tab.mode}
@@ -125,18 +133,12 @@ export function AuthPage({ mode }: Props) {
                 state={location.state}
                 replace
                 aria-current={tab.mode === mode ? 'page' : undefined}
+                data-active={tab.mode === mode}
                 className={clsx(
                   'relative rounded-lg px-4 py-1.5 text-sm font-medium transition-colors',
                   tab.mode === mode ? 'text-foreground' : 'text-muted hover:text-foreground',
                 )}
               >
-                {tab.mode === mode && (
-                  <motion.span
-                    layoutId="auth-tab"
-                    className="absolute inset-0 rounded-lg bg-surface shadow-surface"
-                    transition={{ type: 'spring', stiffness: 500, damping: 40 }}
-                  />
-                )}
                 <span className="relative">{tab.label}</span>
               </Link>
             ))}

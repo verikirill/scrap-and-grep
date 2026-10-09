@@ -1,10 +1,11 @@
 import clsx from 'clsx'
-import { motion } from 'motion/react'
+import { useRef } from 'react'
 import { useSearchParams } from 'react-router'
 import { ErrorNote, PageHeader } from '../components/ui'
 import { ArticlesList } from '../features/sources/ArticlesList'
 import { SourceHealth } from '../features/sources/SourceHealth'
 import { SourcesTable } from '../features/sources/SourcesTable'
+import { SlidingPill } from '../components/SlidingPill'
 import { useMe, useMeta, useSources } from '../lib/queries'
 
 const TABS = [
@@ -13,6 +14,7 @@ const TABS = [
 ] as const
 
 export function SourcesPage() {
+  const tabRow = useRef<HTMLDivElement>(null)
   const [search, setSearch] = useSearchParams()
   const tab = search.get('tab') === 'articles' ? 'articles' : 'sources'
   const sources = useSources()
@@ -27,28 +29,28 @@ export function SourcesPage() {
         subtitle="Каталог RSS-лент, сайтов и Telegram-каналов, а также собранные публикации с возможностью проверки первоисточника."
       />
       <div
-        className="mb-5 inline-flex gap-1 rounded-xl bg-surface-secondary p-1"
+        ref={tabRow}
+        className="relative isolate mb-5 inline-flex gap-1 rounded-xl bg-surface-secondary p-1"
         role="group"
         aria-label="Раздел"
       >
+        <SlidingPill
+          container={tabRow}
+          activeKey={tab}
+          className="rounded-lg bg-surface shadow-surface"
+        />
         {TABS.map((item) => (
           <button
             key={item.id}
             type="button"
             aria-current={tab === item.id ? 'page' : undefined}
+            data-active={tab === item.id}
             onClick={() => setSearch(item.id === 'sources' ? {} : { tab: item.id })}
             className={clsx(
               'relative rounded-lg px-4 py-1.5 text-sm font-medium transition-colors',
               tab === item.id ? 'text-foreground' : 'text-muted hover:text-foreground',
             )}
           >
-            {tab === item.id && (
-              <motion.span
-                layoutId="sources-tab"
-                className="absolute inset-0 rounded-lg bg-surface shadow-surface"
-                transition={{ type: 'spring', stiffness: 500, damping: 40 }}
-              />
-            )}
             <span className="relative">{item.label}</span>
           </button>
         ))}
