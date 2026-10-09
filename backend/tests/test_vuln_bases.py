@@ -279,6 +279,10 @@ async def test_the_lookup_answers_from_the_three_copies(api: str) -> None:
     assert drupal.epss == pytest.approx(0.94431)
     # The verified exploit first.
     assert drupal.exploits == ("EDB-44542", "EDB-44557")
+    # The dates of the timeline: NVD's publication and the first public exploit.
+    assert drupal.nvd_published == date(2018, 7, 19)
+    assert drupal.exploit_published == date(2018, 4, 30)
+    assert appliance.exploit_published is None
     assert appliance.nvd_exploitation == "poc"
     assert appliance.exploits == ()
     assert unknown.found is False
