@@ -1,5 +1,6 @@
 import clsx from 'clsx'
 import { motion } from 'motion/react'
+import { useId } from 'react'
 import { useRadioKeys } from './useRadioKeys'
 
 /**
@@ -26,6 +27,8 @@ export function Segmented<T extends string>({
   isScrollable?: boolean
   className?: string
 }) {
+  // One id per control: two switches on a page must not trade their pills.
+  const pill = useId()
   const found = options.findIndex((option) => option.value === value)
   const keys = useRadioKeys(options.length, found, (index) => onChange(options[index].value))
 
@@ -61,9 +64,8 @@ export function Segmented<T extends string>({
           >
             {isChosen && (
               <motion.span
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.15 }}
+                layoutId={pill}
+                transition={{ type: 'spring', stiffness: 500, damping: 40 }}
                 className="absolute inset-0 -z-10 rounded-full bg-surface shadow-surface"
               />
             )}

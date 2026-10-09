@@ -4,6 +4,7 @@ import { animate, motion, useMotionValue, useTransform } from 'motion/react'
 import { useEffect } from 'react'
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { formatNumber } from '../lib/format'
+import { useEntranceDelay } from './entrance'
 import { DURATION, EASE, buttonClass } from './tokens'
 import type { ButtonVariant } from './tokens'
 
@@ -85,7 +86,18 @@ export function Card({
   children: ReactNode
   variant?: CardVariant
 }) {
-  return <div className={clsx('rounded-3xl', CARD_STYLES[variant], className)}>{children}</div>
+  // On a fresh page cards rise one after another, as the comparison shows its blocks.
+  const delay = useEntranceDelay()
+  return (
+    <motion.div
+      initial={delay === null ? false : { opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: EASE, delay: delay ?? 0 }}
+      className={clsx('rounded-3xl', CARD_STYLES[variant], className)}
+    >
+      {children}
+    </motion.div>
+  )
 }
 
 type ChipTone = 'neutral' | 'accent' | 'spark' | 'ok' | 'danger' | 'alarm'

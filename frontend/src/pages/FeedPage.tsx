@@ -276,10 +276,9 @@ export function FeedPage() {
             >
               {tab === id && (
                 <motion.span
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
+                  layoutId="feed-tab"
                   className="absolute inset-0 rounded-lg bg-surface shadow-surface"
-                  transition={{ duration: 0.15 }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 40 }}
                 />
               )}
               <Icon size={15} className={clsx('relative', id !== 'saved' && 'hidden sm:block')} />
