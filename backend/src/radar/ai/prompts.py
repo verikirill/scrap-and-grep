@@ -381,6 +381,12 @@ def _quoted(text: str) -> str:
     return _inert(json.dumps(without_commands(text), ensure_ascii=False))
 
 
+def as_data(text: str) -> str:
+    """Outside text for a prompt as one inert JSON string: what a question to a
+    digest hands the model, under the same guard as a publication."""
+    return _quoted(text)
+
+
 def _publication_block(title: str, source: str, body: str) -> str:
     fields = (
         f'{{"источник": {_quoted(source)}, "заголовок": {_quoted(title)}, '

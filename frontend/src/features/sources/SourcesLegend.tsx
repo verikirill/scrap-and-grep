@@ -14,9 +14,9 @@ import {
 // The colours of the dot before a source's name, as StatusDot gives them.
 const DOTS = [
   ['bg-success', 'опрошен без ошибок'],
-  ['bg-destructive', 'последний опрос с ошибкой'],
-  ['bg-outline', 'ещё не опрашивался'],
-  ['bg-outline-variant', 'выключен'],
+  ['bg-danger', 'последний опрос с ошибкой'],
+  ['bg-border', 'ещё не опрашивался'],
+  ['bg-separator', 'выключен'],
 ] as const
 
 // One row per word: two kinds share «Страница».
@@ -35,7 +35,7 @@ function Row({ chip, text }: { chip: React.ReactNode; text: string }) {
   return (
     <li className="flex items-start gap-2.5">
       <span className="shrink-0">{chip}</span>
-      <span className="pt-1.5 text-xs text-muted-foreground">{text}</span>
+      <span className="pt-1.5 text-xs text-muted">{text}</span>
     </li>
   )
 }
@@ -46,22 +46,19 @@ function Row({ chip, text }: { chip: React.ReactNode; text: string }) {
  */
 export function SourcesLegend() {
   return (
-    <div className="border-b border-outline-variant px-5 py-3">
+    <div className="border-b border-separator px-5 py-3">
       <Collapsible
         storageKey="sources-legend"
         title="обозначения"
         head={
           <p className="text-sm">
             <span className="font-medium">Обозначения</span>
-            <span className="text-muted-foreground">
-              {' '}
-              · у чипа со знаком «?» есть подсказка при наведении
-            </span>
+            <span className="text-muted"> · у чипа со знаком «?» есть подсказка при наведении</span>
           </p>
         }
       >
         <div className="mt-3 space-y-4">
-          <ul className="flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-muted-foreground">
+          <ul className="flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-muted">
             {DOTS.map(([color, text]) => (
               <li key={color} className="flex items-center gap-2">
                 <span className={clsx('size-2 rounded-full', color)} aria-hidden />
@@ -70,7 +67,7 @@ export function SourcesLegend() {
             ))}
           </ul>
           <section>
-            <h4 className="mb-2 text-xs font-semibold text-muted-foreground">
+            <h4 className="mb-2 text-xs font-semibold text-muted">
               Откуда берутся статьи, если у источника нет RSS-ленты
             </h4>
             <ul className="grid gap-2 lg:grid-cols-2">
@@ -80,7 +77,7 @@ export function SourcesLegend() {
             </ul>
           </section>
           <section>
-            <h4 className="mb-2 text-xs font-semibold text-muted-foreground">
+            <h4 className="mb-2 text-xs font-semibold text-muted">
               Как читается сайт, который не пускает простой запрос
             </h4>
             <ul className="grid gap-2 lg:grid-cols-2">
@@ -98,7 +95,7 @@ export function SourcesLegend() {
             <Row chip={<Chip>RU</Chip>} text="Язык публикаций источника." />
             <Row
               chip={
-                <span className="tabular inline-flex h-7 items-center text-xs text-muted-foreground">
+                <span className="tabular inline-flex h-7 items-center text-xs text-muted">
                   1 234<span className="ml-1.5 text-success">+12</span>
                 </span>
               }

@@ -1,130 +1,131 @@
-// Writes src/components/icons.tsx: the app's icons as Material Symbols Rounded.
+// Writes src/components/icons.tsx: the app's icons from Gravity UI, the set HeroUI is drawn with.
 //
 //   node scripts/icons.mjs
 //
-// Each name the code imports maps to a Material Symbols icon. The outlined
+// Each name the code imports maps to a Gravity UI icon. The outlined
 // form is the default; the filled form shows a chosen or active item, as
-// Material 3 does in navigation. A name missing from the set stops the script.
+// the navigation does. A name missing from the set stops the script.
 import { readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 const ICONS = {
-  ArrowDown: 'arrow-downward',
-  ArrowRight: 'arrow-forward',
-  ArrowUp: 'arrow-upward',
-  Bold: 'format-bold',
+  ArrowDown: 'arrow-down',
+  ArrowRight: 'arrow-right',
+  ArrowUp: 'arrow-up',
+  Bold: 'bold',
   Bookmark: 'bookmark',
-  Bot: 'smart-toy',
-  BriefcaseBusiness: 'work',
-  CalendarClock: 'calendar-clock',
-  Captions: 'closed-caption',
+  Bot: 'face-robot',
+  BriefcaseBusiness: 'briefcase',
+  CalendarClock: 'clock',
+  Captions: 'text',
   Check: 'check',
-  ChevronDown: 'keyboard-arrow-down',
+  ChevronDown: 'chevron-down',
   ChevronRight: 'chevron-right',
   ChevronLeft: 'chevron-left',
-  ChevronUp: 'keyboard-arrow-up',
-  CircleAlert: 'error',
-  CircleCheck: 'check-circle',
-  Clapperboard: 'movie',
+  ChevronUp: 'chevron-up',
+  CircleAlert: 'circle-exclamation',
+  CircleCheck: 'circle-check',
+  Clapperboard: 'filmstrip',
   Code: 'code',
-  Compass: 'explore',
-  Download: 'download',
-  ExternalLink: 'open-in-new',
-  Eye: 'visibility',
-  EyeOff: 'visibility-off',
-  FilePen: 'edit-document',
-  FileText: 'description',
-  Heading2: 'format-h2',
-  Heart: 'favorite',
-  ImageOff: 'hide-image',
-  Info: 'info',
-  Italic: 'format-italic',
+  Compass: 'compass',
+  Download: 'arrow-down-to-line',
+  ExternalLink: 'arrow-up-right-from-square',
+  Eye: 'eye',
+  EyeOff: 'eye-slash',
+  FilePen: 'pencil-to-square',
+  FileText: 'file-text',
+  Heading2: 'heading-2',
+  Heart: 'heart',
+  ImageOff: 'picture',
+  Info: 'circle-info',
+  Italic: 'italic',
   KeyRound: 'key',
   Layers: 'layers',
   Link2: 'link',
-  List: 'format-list-bulleted',
-  ListOrdered: 'format-list-numbered',
-  Loader2: 'progress-activity',
-  LogIn: 'login',
-  LogOut: 'logout',
-  Mic: 'mic',
-  Minus: 'remove',
-  Moon: 'dark-mode',
-  OctagonX: 'dangerous',
-  PenLine: 'edit',
-  Plus: 'add',
-  Quote: 'format-quote',
-  Radar: 'radar',
-  RefreshCw: 'refresh',
-  RotateCcw: 'replay',
-  RotateCw: 'refresh',
-  Rss: 'rss-feed',
-  Save: 'save',
-  ScanText: 'document-scanner',
-  Search: 'search',
-  Send: 'send',
-  Settings2: 'settings',
-  ShieldCheck: 'verified-user',
-  SlidersHorizontal: 'tune',
-  Sparkles: 'bolt',
-  Strikethrough: 'format-strikethrough',
-  Sun: 'light-mode',
+  List: 'list-ul',
+  ListOrdered: 'list-ol',
+  Loader2: 'arrows-rotate-right',
+  LogIn: 'arrow-right-to-square',
+  LogOut: 'arrow-right-from-square',
+  Mic: 'microphone',
+  Minus: 'minus',
+  Moon: 'moon',
+  OctagonX: 'octagon-xmark',
+  PenLine: 'pencil',
+  Plus: 'plus',
+  Quote: 'quote-open',
+  Radar: 'target-dart',
+  RefreshCw: 'arrows-rotate-right',
+  RotateCcw: 'arrow-rotate-left',
+  RotateCw: 'arrow-rotate-right',
+  Rss: 'broadcast-signal',
+  Save: 'floppy-disk',
+  ScanText: 'file-magnifier',
+  Search: 'magnifier',
+  Send: 'paper-plane',
+  Settings2: 'gear',
+  ShieldCheck: 'shield-check',
+  SlidersHorizontal: 'sliders',
+  Sparkles: 'sparkles',
+  Strikethrough: 'strikethrough',
+  Sun: 'sun',
   Target: 'target',
-  ThumbsDown: 'thumb-down',
-  ThumbsUp: 'thumb-up',
-  Trash2: 'delete',
-  TriangleAlert: 'warning',
-  Underline: 'format-underlined',
-  UserPlus: 'person-add',
-  Users: 'group',
-  X: 'close',
-  Newspaper: 'newspaper',
-  DynamicFeed: 'dynamic-feed',
-  CompareArrows: 'compare-arrows',
-  Schedule: 'schedule',
-  ContentCopy: 'content-copy',
-  Hub: 'hub',
-  CalendarMonth: 'calendar-month',
+  ThumbsDown: 'thumbs-down',
+  ThumbsUp: 'thumbs-up',
+  Trash2: 'trash-bin',
+  TriangleAlert: 'triangle-exclamation',
+  Underline: 'underline',
+  UserPlus: 'person-plus',
+  Users: 'persons',
+  X: 'xmark',
+  Newspaper: 'square-article',
+  DynamicFeed: 'layout-list',
+  CompareArrows: 'arrow-right-arrow-left',
+  Schedule: 'clock',
+  ContentCopy: 'copy',
+  Hub: 'nodes-down',
+  CalendarMonth: 'calendar',
   Terminal: 'terminal',
-  Account: 'account-circle',
-  GitCompareArrows: 'compare-arrows',
+  Account: 'person',
+  GitCompareArrows: 'code-compare',
   Shield: 'shield',
   Factory: 'factory',
-  ElectricBolt: 'electric-bolt',
-  Dns: 'dns',
+  ElectricBolt: 'thunderbolt',
+  Dns: 'server',
   Cloud: 'cloud',
-  Memory: 'memory',
-  Router: 'router',
+  Memory: 'cpu',
+  Router: 'antenna-signal',
   Database: 'database',
-  Policy: 'policy',
-  Gavel: 'gavel',
-  Analytics: 'analytics',
-  RocketLaunch: 'rocket-launch',
-  BugReport: 'bug-report',
+  Policy: 'shield-keyhole',
+  Gavel: 'scales-balanced',
+  Analytics: 'chart-column',
+  RocketLaunch: 'rocket',
+  BugReport: 'bug',
   Lock: 'lock',
-  Psychology: 'psychology',
-  School: 'school',
-  SatelliteAlt: 'satellite-alt',
-  Language: 'language',
+  Psychology: 'bulb',
+  School: 'graduation-cap',
+  SatelliteAlt: 'signal',
+  Language: 'globe',
   Palette: 'palette',
-  FileUp: 'upload-file',
-  Share: 'share',
-  LinkOff: 'link-off',
-  Colorize: 'colorize',
-  LibraryAdd: 'library-add',
-  AutoAwesome: 'auto-awesome',
-  TrendingUp: 'trending-up',
-  TrendingDown: 'trending-down',
-  Block: 'block',
-  Camera: 'photo-camera',
-  EventRepeat: 'event-repeat',
+  FileUp: 'file-arrow-up',
+  Share: 'arrow-shape-turn-up-right',
+  LinkOff: 'link-slash',
+  Colorize: 'droplet',
+  LibraryAdd: 'square-plus',
+  AutoAwesome: 'magic-wand',
+  TrendingUp: 'chart-line-arrow-up',
+  TrendingDown: 'arrow-down-right',
+  Block: 'ban',
+  Camera: 'camera',
+  EventRepeat: 'arrows-rotate-left',
+  Help: 'circle-question',
 }
 
 // The names shadcn components import.
 const SHADCN_ALIASES = ['Check', 'X', 'ChevronDown', 'ChevronLeft', 'ChevronRight', 'ChevronUp', 'Info', 'TriangleAlert', 'CircleCheck', 'OctagonX', 'Loader2', 'Bot']
 
 const root = new URL('..', import.meta.url)
-const set = JSON.parse(readFileSync(new URL('node_modules/@iconify-json/material-symbols/icons.json', root), 'utf8'))
+const set = JSON.parse(readFileSync(new URL('node_modules/@iconify-json/gravity-ui/icons.json', root), 'utf8'))
 const known = new Set([...Object.keys(set.icons), ...Object.keys(set.aliases ?? {})])
 const pick = (...names) => names.find((name) => known.has(name))
 
@@ -137,14 +138,14 @@ const component = (name) => {
 }
 
 const exported = Object.entries(ICONS).map(([name, base]) => {
-  const outline = pick(`${base}-outline-rounded`, `${base}-rounded`, base)
-  const filled = pick(`${base}-rounded`, base)
-  if (!outline) throw new Error(`Material Symbols has no "${base}" for ${name}`)
+  const outline = pick(base)
+  const filled = pick(`${base}-fill`, base)
+  if (!outline) throw new Error(`Gravity UI has no "${base}" for ${name}`)
   const args = filled && filled !== outline ? `${component(outline)}, ${component(filled)}` : component(outline)
   return `export const ${name} = /* @__PURE__ */ icon(${args})`
 })
 
-const source = `// Icons of the app: Material Symbols Rounded, the set Material 3 is drawn with.
+const source = `// Icons of the app: Gravity UI, the set HeroUI is drawn with.
 // They are compiled into components at build time (unplugin-icons), so only
 // the icons used here reach the bundle. Names follow the ones the code used
 // with lucide, so a file swaps its import path and nothing else.
@@ -152,7 +153,7 @@ const source = `// Icons of the app: Material Symbols Rounded, the set Material 
 // Every export is a component made by icon(), which the rule cannot see.
 /* oxlint-disable react/only-export-components */
 import type { ComponentType, SVGProps } from 'react'
-${[...imported].sort(([a], [b]) => a.localeCompare(b)).map(([name, id]) => `import ${id} from '~icons/material-symbols/${name}'`).join('\n')}
+${[...imported].sort(([a], [b]) => a.localeCompare(b)).map(([name, id]) => `import ${id} from '~icons/gravity-ui/${name}'`).join('\n')}
 
 type Svg = ComponentType<SVGProps<SVGSVGElement>>
 
@@ -160,7 +161,7 @@ export type IconProps = Omit<SVGProps<SVGSVGElement>, 'fill'> & {
   size?: number | string
   /** Kept for call sites written for stroke icons; these glyphs are filled shapes. */
   strokeWidth?: number | string
-  /** The filled form, as Material 3 shows an active or chosen item. */
+  /** The filled form, for an active or chosen item. */
   filled?: boolean
   /** "currentColor" asks for the filled form, as it did with stroke icons. */
   fill?: string

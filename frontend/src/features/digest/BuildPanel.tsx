@@ -3,7 +3,7 @@ import { format, subDays } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { AnimatePresence, LayoutGroup, motion } from 'motion/react'
 import { Suspense, lazy, useState } from 'react'
-import type { DateRange } from 'react-day-picker'
+import type { DateRange } from '../../components/ui/calendar'
 import { Link } from 'react-router'
 import {
   CalendarMonth,
@@ -35,7 +35,7 @@ type PeriodValue = (typeof PERIODS)[number]['value'] | 'custom'
 // The backend keeps publications for this long; older dates hold nothing.
 const MAX_DAYS_BACK = 90
 const SPRING = { type: 'spring', stiffness: 380, damping: 32 } as const
-// The date picker brings react-day-picker along: it loads when it is opened.
+// The date picker brings React Aria's calendar along: it loads when it is opened.
 const Calendar = lazy(() =>
   import('../../components/ui/calendar').then((module) => ({ default: module.Calendar })),
 )
@@ -158,15 +158,15 @@ export function BuildPanel({ profiles, initialProfileId, isBuilding = false, onC
                 className={clsx(
                   'group relative isolate flex items-start gap-3 rounded-2xl p-3.5 text-left transition-colors duration-300',
                   isActive
-                    ? 'text-primary-foreground'
-                    : 'bg-surface-container-low text-on-surface ring-1 ring-outline-variant ring-inset hover:bg-surface-container',
+                    ? 'text-foreground'
+                    : 'bg-surface text-foreground ring-1 ring-border ring-inset hover:bg-default/50',
                 )}
               >
                 {/* One highlight for the group: it flows from card to card. */}
                 {isActive && (
                   <motion.span
                     layoutId="profile-highlight"
-                    className="absolute inset-0 -z-10 bg-primary shadow-elevation-1"
+                    className="absolute inset-0 -z-10 bg-accent-soft ring-2 ring-accent ring-inset"
                     style={{ borderRadius: 16 }}
                     transition={SPRING}
                   />
@@ -174,22 +174,12 @@ export function BuildPanel({ profiles, initialProfileId, isBuilding = false, onC
                 <ProfileAvatar profile={profile} />
                 <span className="min-w-0 flex-1">
                   <span className="line-clamp-2 text-sm font-medium">{profile.spec.name}</span>
-                  <span
-                    className={clsx(
-                      'mt-0.5 block text-xs',
-                      isActive ? 'opacity-80' : 'text-on-surface-variant',
-                    )}
-                  >
+                  <span className={clsx('mt-0.5 block text-xs', 'text-muted')}>
                     {count} {plural(count, ['интерес', 'интереса', 'интересов'])} · до{' '}
                     {profile.spec.max_items} публикаций
                   </span>
                   {schedule && (
-                    <span
-                      className={clsx(
-                        'mt-1 flex items-center gap-1 text-xs',
-                        isActive ? 'opacity-80' : 'text-primary',
-                      )}
-                    >
+                    <span className={clsx('mt-1 flex items-center gap-1 text-xs', 'text-accent')}>
                       <EventRepeat size={13} filled />
                       <span className="truncate">{scheduleLabel(schedule)}</span>
                     </span>
@@ -203,7 +193,7 @@ export function BuildPanel({ profiles, initialProfileId, isBuilding = false, onC
                       exit={{ scale: 0.4, opacity: 0 }}
                       transition={SPRING}
                     >
-                      <CircleCheck size={22} filled />
+                      <CircleCheck size={22} filled className="text-accent" />
                     </motion.span>
                   )}
                 </AnimatePresence>
@@ -233,10 +223,10 @@ export function BuildPanel({ profiles, initialProfileId, isBuilding = false, onC
               type="button"
               aria-pressed={period === 'custom'}
               className={clsx(
-                'state-layer relative inline-flex h-11 items-center gap-2 overflow-hidden rounded-full border px-4 text-[13px] transition-colors duration-300',
+                'relative inline-flex h-10 items-center gap-2 overflow-hidden rounded-full px-4 text-[13px] transition-colors duration-200',
                 period === 'custom'
-                  ? 'border-transparent bg-primary font-semibold text-primary-foreground shadow-elevation-1'
-                  : 'border-outline-variant font-medium text-on-surface-variant hover:text-on-surface',
+                  ? 'bg-accent-soft font-semibold text-accent-soft-foreground'
+                  : 'bg-default font-medium text-muted hover:bg-default-hover hover:text-foreground',
               )}
             >
               <CalendarMonth size={18} filled={period === 'custom'} />
@@ -247,17 +237,15 @@ export function BuildPanel({ profiles, initialProfileId, isBuilding = false, onC
             <Suspense
               fallback={
                 <div className="grid h-72 w-64 place-items-center">
-                  <Spinner className="size-6 text-primary" label="Открываем календарь" />
+                  <Spinner className="size-6 text-accent" label="Открываем календарь" />
                 </div>
               }
             >
               <Calendar
-                mode="range"
-                locale={ru}
-                numberOfMonths={1}
                 selected={range}
                 defaultMonth={range?.from ?? today}
-                disabled={{ before: subDays(today, MAX_DAYS_BACK), after: today }}
+                min={subDays(today, MAX_DAYS_BACK)}
+                max={today}
                 onSelect={(next) => {
                   setRange(next)
                   if (next?.from) setPeriod('custom')
@@ -273,14 +261,14 @@ export function BuildPanel({ profiles, initialProfileId, isBuilding = false, onC
         {/* The two ways to build stay together and wrap as one, to the right. */}
         <div className="ml-auto flex flex-wrap justify-end gap-2">
           <Button
-            variant="tonal"
+            variant="secondary"
             icon={<DynamicFeed size={18} />}
             isBusy={createBoth.isPending}
             disabled={!selectedId || !chosen || isPending || isBuilding}
             onClick={submitBoth}
             title="Одна оценка и два выпуска: специалисту и руководству"
           >
-            Собрать оба выпуска
+            Специалисту и руководству
           </Button>
           <Button
             variant="primary"

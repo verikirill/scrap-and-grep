@@ -9,7 +9,7 @@ import {
 } from '../../components/icons'
 import { motion } from 'motion/react'
 import { useState } from 'react'
-import { toast } from 'sonner'
+import { toast } from '../../lib/toast'
 import { Button, Card, Chip, Toggle } from '../../components/ui'
 import { SelectField } from '../../components/SelectField'
 import { EASE } from '../../components/tokens'
@@ -75,7 +75,7 @@ export function ChannelCard({
       <Card
         className={clsx(
           'p-5 transition-[box-shadow,outline-color]',
-          isSelected ? 'outline-2 outline-primary' : 'hover:shadow-elevation-2',
+          isSelected ? 'outline-2 outline-accent' : 'hover:shadow-overlay',
         )}
       >
         <div className="flex items-start gap-3">
@@ -85,14 +85,14 @@ export function ChannelCard({
             onClick={onSelect}
             aria-pressed={isSelected}
             title={isSelected ? 'Показать посты всех каналов' : 'Показать посты этого канала'}
-            className="flex min-w-0 flex-1 items-start gap-3 rounded-2xl text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
+            className="flex min-w-0 flex-1 items-start gap-3 rounded-2xl text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
           >
-            <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-primary-container text-lg font-semibold text-on-primary-container">
+            <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-accent-soft text-lg font-semibold text-accent-soft-foreground">
               {channel.title.slice(0, 1).toUpperCase()}
             </span>
             <span className="min-w-0 flex-1">
               <span className="block truncate text-base font-medium">{channel.title}</span>
-              <span className="block truncate text-sm text-muted-foreground">
+              <span className="block truncate text-sm text-muted">
                 {channel.username ? `@${channel.username}` : `id ${channel.chat_id}`} · бот @
                 {channel.bot_username}
               </span>
@@ -106,7 +106,7 @@ export function ChannelCard({
         </div>
 
         {channel.status !== 'ok' && channel.last_error && (
-          <p className="mt-3 flex items-start gap-2 rounded-xl bg-error-container px-3 py-2 text-xs text-on-error-container">
+          <p className="mt-3 flex items-start gap-2 rounded-xl bg-danger-soft px-3 py-2 text-xs text-danger-soft-foreground">
             <TriangleAlert size={14} className="mt-0.5 shrink-0" /> {channel.last_error}
           </p>
         )}
@@ -126,7 +126,7 @@ export function ChannelCard({
           )}
         </div>
 
-        <p className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+        <p className="mt-3 flex items-center gap-2 text-xs text-muted">
           <CalendarClock size={14} />
           {channel.enabled && channel.next_slot
             ? `следующий пост ${formatDateTime(channel.next_slot)} · ${schedule}`

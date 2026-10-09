@@ -27,7 +27,7 @@ export function SourcesPage() {
         subtitle="Каталог RSS-лент, сайтов и Telegram-каналов, а также собранные публикации с возможностью проверки первоисточника."
       />
       <div
-        className="mb-5 inline-flex gap-1 rounded-xl bg-surface-container p-1"
+        className="mb-5 inline-flex gap-1 rounded-xl bg-surface-secondary p-1"
         role="group"
         aria-label="Раздел"
       >
@@ -39,15 +39,13 @@ export function SourcesPage() {
             onClick={() => setSearch(item.id === 'sources' ? {} : { tab: item.id })}
             className={clsx(
               'relative rounded-lg px-4 py-1.5 text-sm font-medium transition-colors',
-              tab === item.id
-                ? 'text-primary-foreground'
-                : 'text-muted-foreground hover:text-foreground',
+              tab === item.id ? 'text-foreground' : 'text-muted hover:text-foreground',
             )}
           >
             {tab === item.id && (
               <motion.span
                 layoutId="sources-tab"
-                className="absolute inset-0 rounded-lg bg-primary shadow-elevation-1"
+                className="absolute inset-0 rounded-lg bg-surface shadow-surface"
                 transition={{ type: 'spring', stiffness: 480, damping: 38 }}
               />
             )}
@@ -67,7 +65,7 @@ export function SourcesPage() {
               canAdd={isAdmin || Boolean(meta.data?.open_catalog)}
             />
           ) : (
-            <div className="skeleton h-96" />
+            <div className="skeleton skeleton--shimmer rounded-xl h-96" />
           )}
         </>
       ) : (

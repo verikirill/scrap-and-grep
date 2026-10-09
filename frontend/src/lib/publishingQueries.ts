@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
+import { toast } from './toast'
 import { publishingApi } from './publishing'
 import type { ChannelSettings, Post, PostContent } from './publishing'
 
@@ -126,7 +126,11 @@ export function useUpdatePost() {
 
 export function usePublishPost() {
   const refresh = useRefresh('posts', 'channels')
-  return useMutation({ mutationFn: publishingApi.publishPost, onSuccess: refresh, onError: sayWhy })
+  return useMutation({
+    mutationFn: publishingApi.publishPost,
+    onSuccess: refresh,
+    onError: sayWhy,
+  })
 }
 
 export function useDeletePost() {

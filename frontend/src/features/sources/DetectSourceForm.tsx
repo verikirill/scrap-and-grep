@@ -125,7 +125,7 @@ export function DetectSourceForm({ onDone, onAdded }: Props) {
           <button
             type="button"
             onClick={() => setIsSelectorShown(true)}
-            className="text-xs font-medium text-primary hover:underline"
+            className="text-xs font-medium text-accent hover:underline"
           >
             Указать селектор ссылок
           </button>
@@ -133,20 +133,20 @@ export function DetectSourceForm({ onDone, onAdded }: Props) {
       </form>
 
       {isChecking && (
-        <p className="text-sm text-muted-foreground" role="status">
+        <p className="text-sm text-muted" role="status">
           Ищем RSS-ленту, новости и статьи. Если сайт блокирует бота, откроем его в браузере, это
           займёт до минуты.
         </p>
       )}
       <ErrorNote error={start.error ?? result.error} />
       {answer?.error && (
-        <p className="text-sm text-destructive" role="alert">
+        <p className="text-sm text-danger" role="alert">
           {answer.error}
         </p>
       )}
 
       {found && (
-        <div className="space-y-3 rounded-xl bg-surface-container p-4">
+        <div className="space-y-3 rounded-xl bg-surface-secondary p-4">
           <div className="flex flex-wrap items-center gap-2">
             <Chip tone="accent">{FOUND_LABELS[found.kind]}</Chip>
             {via && (
@@ -154,7 +154,7 @@ export function DetectSourceForm({ onDone, onAdded }: Props) {
                 {via.label}
               </Chip>
             )}
-            <span className="min-w-0 truncate text-xs text-outline">{found.address}</span>
+            <span className="min-w-0 truncate text-xs text-muted">{found.address}</span>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Название">
@@ -180,12 +180,12 @@ export function DetectSourceForm({ onDone, onAdded }: Props) {
           </div>
           {found.samples.length > 0 && (
             <div>
-              <p className="mb-1 text-xs text-muted-foreground">Последние статьи</p>
+              <p className="mb-1 text-xs text-muted">Последние статьи</p>
               <ul className="space-y-1 text-sm">
                 {found.samples.map((sample) => (
                   <li key={sample.url} className="flex gap-2">
                     {sample.published_at && (
-                      <span className="tabular shrink-0 text-xs text-outline">
+                      <span className="tabular shrink-0 text-xs text-muted">
                         {formatDate(sample.published_at)}
                       </span>
                     )}
@@ -193,7 +193,7 @@ export function DetectSourceForm({ onDone, onAdded }: Props) {
                       href={externalHref(sample.url)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="min-w-0 truncate hover:text-on-primary-container"
+                      className="min-w-0 truncate hover:text-accent-soft-foreground"
                     >
                       {sample.title || sample.url}
                     </a>

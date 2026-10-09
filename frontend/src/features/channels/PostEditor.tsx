@@ -72,8 +72,8 @@ function Tool({ icon: Icon, label, active, onClick }: ToolProps) {
       onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
       className={clsx(
-        'state-layer relative grid size-9 place-items-center overflow-hidden rounded-full transition-colors',
-        active ? 'bg-secondary-container text-on-secondary-container' : 'text-on-surface-variant',
+        'transition-colors hover:bg-default/70 relative grid size-9 place-items-center overflow-hidden rounded-full transition-colors',
+        active ? 'bg-default text-default-foreground' : 'text-muted',
       )}
     >
       <Icon size={17} />
@@ -101,7 +101,7 @@ function useRichEditor(html: string, onChange: (html: string) => void) {
     editorProps: {
       attributes: {
         class:
-          'prose-post min-h-56 px-4 py-3 text-[15px] leading-relaxed outline-none [&_blockquote]:border-l-[3px] [&_blockquote]:border-primary [&_blockquote]:pl-3 [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:font-semibold [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_code]:rounded [&_code]:bg-surface-container-high [&_code]:px-1 [&_a]:text-primary [&_a]:underline [&_tg-spoiler]:rounded [&_tg-spoiler]:bg-outline/40',
+          'prose-post min-h-56 px-4 py-3 text-[15px] leading-relaxed outline-none [&_blockquote]:border-l-[3px] [&_blockquote]:border-accent [&_blockquote]:pl-3 [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:font-semibold [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_code]:rounded [&_code]:bg-surface-tertiary [&_code]:px-1 [&_a]:text-accent [&_a]:underline [&_tg-spoiler]:rounded [&_tg-spoiler]:bg-border/40',
       },
     },
   })
@@ -229,15 +229,15 @@ export function PostEditor({
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,460px)]">
       <div className="min-w-0 space-y-5">
-        <div className="overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest">
-          <div className="flex flex-wrap items-center gap-0.5 border-b border-outline-variant bg-surface-container-low px-2 py-1.5">
+        <div className="overflow-hidden rounded-2xl border border-separator bg-background">
+          <div className="flex flex-wrap items-center gap-0.5 border-b border-separator bg-background px-2 py-1.5">
             {tools.map((tool) => (
               <Tool key={tool.label} {...tool} />
             ))}
             <span
               className={clsx(
                 'tabular ml-auto pr-2 text-xs',
-                length > limit ? 'font-semibold text-destructive' : 'text-outline',
+                length > limit ? 'font-semibold text-danger' : 'text-muted',
               )}
             >
               {length} / {limit}
@@ -394,7 +394,7 @@ export function PostEditor({
       </div>
 
       <div className="lg:sticky lg:top-6 lg:self-start">
-        <p className="mb-2 px-1 text-xs font-medium tracking-wide text-outline uppercase">
+        <p className="mb-2 px-1 text-xs font-medium tracking-wide text-muted uppercase">
           Так увидят подписчики
         </p>
         <TelegramPreview content={cleaned(content)} channel={channel} />

@@ -1,4 +1,5 @@
 import { motion } from 'motion/react'
+import { useState } from 'react'
 import { Link } from 'react-router'
 import { Collapsible } from '../../components/Collapsible'
 import { EASE } from '../../components/tokens'
@@ -17,12 +18,10 @@ function FacetRow({ facet }: { facet: TasteFacet }) {
   const isAvoid = facet.kind === 'avoid'
   return (
     <li className="flex items-center gap-2.5">
-      <span className="h-1 w-8 shrink-0 overflow-hidden rounded-full bg-outline-variant">
+      <span className="h-1 w-8 shrink-0 overflow-hidden rounded-full bg-separator">
         <motion.span
           className={
-            isAvoid
-              ? 'block h-full origin-left bg-destructive'
-              : 'block h-full origin-left bg-primary'
+            isAvoid ? 'block h-full origin-left bg-danger' : 'block h-full origin-left bg-accent'
           }
           initial={{ scaleX: 0 }}
           animate={{ scaleX: Math.min(1, facet.weight / 1.5) }}
@@ -33,6 +32,48 @@ function FacetRow({ facet }: { facet: TasteFacet }) {
         {facet.kind === 'learned' || isAvoid ? `«${facet.label}»` : facet.label}
       </span>
     </li>
+  )
+}
+
+// A long list of equal topics reads as one grey bar; the rest waits behind a button.
+const SHOWN = 8
+
+/** The reader's stated topics as chips, the learned ones as rows with their weight. */
+function FacetList({ facets, asChips }: { facets: TasteFacet[]; asChips: boolean }) {
+  const [isAll, setAll] = useState(false)
+  const shown = isAll ? facets : facets.slice(0, SHOWN)
+  const hidden = facets.length - shown.length
+  return (
+    <>
+      {asChips ? (
+        <ul className="mt-2 flex flex-wrap gap-1.5">
+          {shown.map((facet) => (
+            <li
+              key={`${facet.kind}-${facet.label}`}
+              title={facet.label}
+              className="max-w-full truncate rounded-full bg-default px-2.5 py-1 text-xs text-foreground"
+            >
+              {facet.label}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <ul className="mt-2 space-y-1.5">
+          {shown.map((facet) => (
+            <FacetRow key={`${facet.kind}-${facet.label}`} facet={facet} />
+          ))}
+        </ul>
+      )}
+      {(hidden > 0 || isAll) && facets.length > SHOWN && (
+        <button
+          type="button"
+          onClick={() => setAll((value) => !value)}
+          className="mt-2 text-xs font-medium text-accent hover:underline"
+        >
+          {isAll ? 'Свернуть' : `Показать ещё ${hidden}`}
+        </button>
+      )}
+    </>
   )
 }
 
@@ -47,7 +88,7 @@ export function TastePanel({ taste }: { taste: Taste }) {
         head={
           <>
             <h2 className="text-sm font-semibold">Из чего собрана лента</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1 text-xs text-muted">
               {signals === 0
                 ? 'Отметок пока нет. Лента учитывает уже первую.'
                 : `${signals} ${plural(signals, ['отметка', 'отметки', 'отметок'])} за последнее время. Влияние давних отметок со временем снижается.`}
@@ -57,7 +98,7 @@ export function TastePanel({ taste }: { taste: Taste }) {
       >
         <div className="mt-3">
           <div className="flex items-baseline justify-between text-xs">
-            <span className="text-muted-foreground">Доверие к отметкам</span>
+            <span className="text-muted">Доверие к отметкам</span>
             <span className="tabular font-semibold">{Math.round(taste.confidence * 100)}%</span>
           </div>
           <div
@@ -66,10 +107,10 @@ export function TastePanel({ taste }: { taste: Taste }) {
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={Math.round(taste.confidence * 100)}
-            className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface-container"
+            className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface-secondary"
           >
             <motion.div
-              className="h-full origin-left rounded-full bg-spark"
+              className="h-full origin-left rounded-full bg-warning"
               initial={false}
               animate={{ scaleX: taste.confidence }}
               transition={{ type: 'spring', stiffness: 90, damping: 20 }}
@@ -83,17 +124,16 @@ export function TastePanel({ taste }: { taste: Taste }) {
             if (facets.length === 0 && !group.empty) return null
             return (
               <section key={group.kind}>
-                <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                <h3 className="text-xs font-semibold tracking-wide text-muted uppercase">
                   {group.title}
                 </h3>
                 {facets.length > 0 ? (
-                  <ul className="mt-2 space-y-1.5">
-                    {facets.map((facet) => (
-                      <FacetRow key={`${facet.kind}-${facet.label}`} facet={facet} />
-                    ))}
-                  </ul>
+                  <FacetList
+                    facets={facets}
+                    asChips={group.kind === 'interest' || group.kind === 'resume'}
+                  />
                 ) : (
-                  <p className="mt-1.5 text-[13px] text-outline">{group.empty}</p>
+                  <p className="mt-1.5 text-[13px] text-muted">{group.empty}</p>
                 )}
               </section>
             )
@@ -101,7 +141,7 @@ export function TastePanel({ taste }: { taste: Taste }) {
 
           {taste.sources.length > 0 && (
             <section>
-              <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+              <h3 className="text-xs font-semibold tracking-wide text-muted uppercase">
                 Источники
               </h3>
               <ul className="mt-2 space-y-1">
@@ -111,7 +151,7 @@ export function TastePanel({ taste }: { taste: Taste }) {
                     className="flex items-baseline justify-between gap-3 text-[13px]"
                   >
                     <span className="min-w-0 truncate">{source.name}</span>
-                    <span className={source.affinity < 0 ? 'text-destructive' : 'text-success'}>
+                    <span className={source.affinity < 0 ? 'text-danger' : 'text-success'}>
                       {source.affinity < 0 ? 'реже' : 'чаще'}
                     </span>
                   </li>
@@ -121,13 +161,13 @@ export function TastePanel({ taste }: { taste: Taste }) {
           )}
         </div>
 
-        <p className="mt-5 border-t border-outline-variant pt-3 text-xs text-muted-foreground">
+        <p className="mt-5 border-t border-separator pt-3 text-xs text-muted">
           Настроить интересы можно в разделе{' '}
-          <Link to="/profiles" className="text-on-primary-container hover:underline">
+          <Link to="/profiles" className="text-accent-soft-foreground hover:underline">
             «Интересы»
           </Link>
           , резюме — в{' '}
-          <Link to="/account" className="text-on-primary-container hover:underline">
+          <Link to="/account" className="text-accent-soft-foreground hover:underline">
             аккаунте
           </Link>
           .

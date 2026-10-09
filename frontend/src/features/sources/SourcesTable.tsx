@@ -48,9 +48,9 @@ function StatusDot({ source }: { source: Source }) {
       aria-label={source.enabled ? title : 'Источник отключён'}
       className={clsx(
         'size-2 shrink-0 rounded-full',
-        !source.enabled && 'bg-outline-variant',
-        source.enabled && failing && 'bg-destructive',
-        source.enabled && !failing && (never ? 'bg-outline' : 'bg-success'),
+        !source.enabled && 'bg-separator',
+        source.enabled && failing && 'bg-danger',
+        source.enabled && !failing && (never ? 'bg-border' : 'bg-success'),
       )}
     />
   )
@@ -139,7 +139,7 @@ function AddSourceForm({ onDone, onAdded }: { onDone: () => void; onAdded: () =>
   )
   if (mode === 'any') {
     return (
-      <div className="border-b border-outline-variant">
+      <div className="border-b border-separator">
         <div className="px-5 pt-5">{modes}</div>
         <DetectSourceForm onDone={onDone} onAdded={onAdded} />
       </div>
@@ -147,7 +147,7 @@ function AddSourceForm({ onDone, onAdded }: { onDone: () => void; onAdded: () =>
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4 border-b border-outline-variant p-5">
+    <form onSubmit={submit} className="space-y-4 border-b border-separator p-5">
       {modes}
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Название" hint={isChannel ? 'необязательно' : undefined}>
@@ -194,7 +194,7 @@ function AddSourceForm({ onDone, onAdded }: { onDone: () => void; onAdded: () =>
           />
         </Field>
       </div>
-      <label className="flex items-center gap-2.5 text-sm text-muted-foreground">
+      <label className="flex items-center gap-2.5 text-sm text-muted">
         <Toggle
           label="Загружать полный текст"
           checked={form.fetch_full_text}
@@ -205,7 +205,7 @@ function AddSourceForm({ onDone, onAdded }: { onDone: () => void; onAdded: () =>
           : 'Загружать полный текст статей (если в ленте только анонс)'}
       </label>
       {isChannel && (
-        <p id={termsId} className="max-w-2xl text-xs leading-relaxed text-outline">
+        <p id={termsId} className="max-w-2xl text-xs leading-relaxed text-muted">
           Канал читается через веб-страницу t.me/s/ без авторизации. Каналы с закрытым веб-превью
           прочитать нельзя.
         </p>
@@ -236,8 +236,25 @@ const ORDERS = [
 
 const SHOWN = [
   { value: 'all', label: 'Все', short: 'Все' },
+  { value: 'failing', label: 'С ошибками', short: 'Ошибки' },
   { value: 'protected', label: 'Защищённые', short: 'Защищ.' },
 ] as const
+
+const LANGUAGE_FILTERS = [
+  { value: 'any', label: 'Любой язык', short: 'Все' },
+  { value: 'ru', label: 'RU', short: 'RU' },
+  { value: 'en', label: 'EN', short: 'EN' },
+] as const
+
+type Shown = (typeof SHOWN)[number]['value']
+type Language = (typeof LANGUAGE_FILTERS)[number]['value']
+
+/** Whether a source passes the quick filter: all, the ones whose last poll failed, or the protected ones. */
+function isShown(source: Source, shown: Shown): boolean {
+  if (shown === 'failing') return source.enabled && Boolean(source.last_error)
+  if (shown === 'protected') return isProtected(source)
+  return true
+}
 
 type Props = {
   sources: Source[]
@@ -275,9 +292,14 @@ export function SourcesTable({ sources, isAdmin, canAdd }: Props) {
   const query = params.get('q') ?? ''
   const isSearching = queryWords(query).length > 0
   // Sites that refuse a bot and are read a step up the ladder or through a proxy.
-  const shown = params.get('show') === 'protected' ? 'protected' : 'all'
+  const shown: Shown = SHOWN.find((item) => item.value === params.get('show'))?.value ?? 'all'
+  const language: Language =
+    LANGUAGE_FILTERS.find((item) => item.value === params.get('lang'))?.value ?? 'any'
   const found = sources.filter(
-    (source) => matchesSource(source, query) && (shown === 'all' || isProtected(source)),
+    (source) =>
+      matchesSource(source, query) &&
+      isShown(source, shown) &&
+      (language === 'any' || source.language === language),
   )
   const searchBox = useRef<HTMLInputElement>(null)
   const grouping: SourceGrouping = params.get('group') === 'kind' ? 'kind' : 'category'
@@ -298,8 +320,8 @@ export function SourcesTable({ sources, isAdmin, canAdd }: Props) {
 
   return (
     <Card className="overflow-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant px-5 py-3.5">
-        <p className="text-sm text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-separator px-5 py-3.5">
+        <p className="text-sm text-muted">
           {isSearching ? (
             <>
               Найдено <span className="font-semibold text-foreground">{found.length}</span> из{' '}
@@ -314,7 +336,7 @@ export function SourcesTable({ sources, isAdmin, canAdd }: Props) {
             </>
           )}
           {!isAdmin && (
-            <span className="mt-0.5 block text-xs text-outline">
+            <span className="mt-0.5 block text-xs text-muted">
               {canAdd
                 ? 'Добавить можно любой сайт или канал. Добавленные вами источники вы отключаете и удаляете самостоятельно.'
                 : 'Включать и отключать источники может только администратор.'}
@@ -350,11 +372,11 @@ export function SourcesTable({ sources, isAdmin, canAdd }: Props) {
         </div>
       </div>
 
-      <div className="border-b border-outline-variant px-5 py-3">
+      <div className="border-b border-separator px-5 py-3">
         <div className="relative">
           <Search
             size={16}
-            className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-outline"
+            className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted"
           />
           <input
             type="search"
@@ -363,7 +385,7 @@ export function SourcesTable({ sources, isAdmin, canAdd }: Props) {
             onChange={(event) => setQuery(event.target.value)}
             ref={searchBox}
             placeholder="Название, адрес или @канал"
-            className="w-full rounded-lg border border-outline-variant bg-card py-2.5 pr-3 pl-9 text-sm placeholder:text-outline hover:border-outline focus:border-primary focus:outline-none"
+            className="w-full rounded-lg border border-separator bg-surface py-2.5 pr-3 pl-9 text-sm placeholder:text-muted hover:border-border focus:border-accent focus:outline-none"
           />
         </div>
         <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
@@ -384,6 +406,12 @@ export function SourcesTable({ sources, isAdmin, canAdd }: Props) {
             value={shown}
             options={SHOWN}
             onChange={(value) => setParam('show', value === 'all' ? '' : value)}
+          />
+          <Segmented
+            label="Язык"
+            value={language}
+            options={LANGUAGE_FILTERS}
+            onChange={(value) => setParam('lang', value === 'any' ? '' : value)}
           />
         </div>
         {/* Read out only while searching, and only the count. */}
@@ -412,7 +440,7 @@ export function SourcesTable({ sources, isAdmin, canAdd }: Props) {
       </AnimatePresence>
 
       {isSearching && found.length === 0 && (
-        <p className="px-5 py-10 text-center text-sm break-words text-muted-foreground">
+        <p className="px-5 py-10 text-center text-sm break-words text-muted">
           Нет источников по запросу «{query.trim()}».{' '}
           <button
             type="button"
@@ -421,7 +449,7 @@ export function SourcesTable({ sources, isAdmin, canAdd }: Props) {
               // The button goes away with the empty list; the search box keeps the focus.
               searchBox.current?.focus()
             }}
-            className="font-medium text-primary hover:underline"
+            className="font-medium text-accent hover:underline"
           >
             Сбросить поиск
           </button>
@@ -430,11 +458,11 @@ export function SourcesTable({ sources, isAdmin, canAdd }: Props) {
 
       {groups.map((group) => (
         <section key={group.key}>
-          <h3 className="flex justify-between bg-surface-container px-5 py-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+          <h3 className="flex justify-between bg-surface-secondary px-5 py-1.5 text-xs font-semibold tracking-wide text-muted uppercase">
             {group.label}
             <span className="tabular font-normal normal-case">{group.sources.length}</span>
           </h3>
-          <ul className="divide-y divide-outline-variant">
+          <ul className="divide-y divide-separator">
             {group.sources.map((source) => (
               <li
                 key={source.id}
@@ -449,7 +477,7 @@ export function SourcesTable({ sources, isAdmin, canAdd }: Props) {
                     href={externalHref(source.site_url ?? source.feed_url)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 text-sm font-medium hover:text-on-primary-container"
+                    className="flex items-center gap-1.5 text-sm font-medium hover:text-accent-soft-foreground"
                   >
                     <SourceAvatar
                       sourceId={source.id}
@@ -457,15 +485,11 @@ export function SourcesTable({ sources, isAdmin, canAdd }: Props) {
                       className="size-6 text-[10px]"
                     />
                     {source.kind === 'telegram' && (
-                      <Send
-                        size={14}
-                        aria-label="Telegram-канал"
-                        className="shrink-0 text-outline"
-                      />
+                      <Send size={14} aria-label="Telegram-канал" className="shrink-0 text-muted" />
                     )}
                     <span className="truncate">{source.name}</span>
                   </a>
-                  <p className="truncate text-xs text-outline">
+                  <p className="truncate text-xs text-muted">
                     {/* On a phone the count moves here, under the name. */}
                     <span className="tabular sm:hidden">
                       <ArticleCount source={source} />
@@ -483,7 +507,7 @@ export function SourcesTable({ sources, isAdmin, canAdd }: Props) {
                 <Chip title="Язык публикаций" className="max-sm:hidden">
                   {source.language.toUpperCase()}
                 </Chip>
-                <span className="tabular w-24 shrink-0 text-right text-xs text-muted-foreground max-sm:hidden">
+                <span className="tabular w-24 shrink-0 text-right text-xs text-muted max-sm:hidden">
                   <ArticleCount source={source} />
                 </span>
                 <div
@@ -497,7 +521,7 @@ export function SourcesTable({ sources, isAdmin, canAdd }: Props) {
                     type="button"
                     aria-label="Опросить источник"
                     onClick={() => refreshOne.mutate(source.id)}
-                    className="grid size-7 place-items-center rounded-md text-outline hover:bg-surface-container hover:text-foreground"
+                    className="grid size-7 place-items-center rounded-md text-muted hover:bg-surface-secondary hover:text-foreground"
                   >
                     <RefreshCw size={13} />
                   </button>
@@ -509,7 +533,7 @@ export function SourcesTable({ sources, isAdmin, canAdd }: Props) {
                         remove.mutate(source.id)
                       }
                     }}
-                    className="grid size-7 place-items-center rounded-md text-outline hover:bg-error-container hover:text-destructive"
+                    className="grid size-7 place-items-center rounded-md text-muted hover:bg-danger-soft hover:text-danger"
                   >
                     <Trash2 size={13} />
                   </button>
@@ -522,7 +546,7 @@ export function SourcesTable({ sources, isAdmin, canAdd }: Props) {
                   />
                 ) : (
                   // A switch that cannot be switched only puzzles: an off source says so in words.
-                  !source.enabled && <span className="shrink-0 text-xs text-outline">выключен</span>
+                  !source.enabled && <span className="shrink-0 text-xs text-muted">выключен</span>
                 )}
               </li>
             ))}

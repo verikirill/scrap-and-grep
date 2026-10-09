@@ -8,6 +8,7 @@ import { BuildPanel } from '../features/digest/BuildPanel'
 import { DigestView } from '../features/digest/DigestView'
 import { History } from '../features/digest/History'
 import { DigestHeading } from '../features/digest/DigestHeading'
+import { twinOf } from '../lib/digestPairs'
 import { ProgressCard } from '../features/digest/ProgressCard'
 import type { DigestSummary } from '../lib/api'
 import {
@@ -123,7 +124,7 @@ export function DigestPage() {
           {digest.isError && (
             <Card className="p-6">
               <h2 className="text-base font-semibold">Не удалось открыть выпуск</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-1 text-sm text-muted">
                 {digest.error instanceof Error ? digest.error.message : 'Неизвестная ошибка.'}
               </p>
               <Button className="mt-4" onClick={() => navigate('/')}>
@@ -135,13 +136,20 @@ export function DigestPage() {
           {/* Outside the presence below and keyed by the digest: the old
               header leaves and the new one comes in the same render, which is
               what lets their titles morph into the history rows and back. */}
-          {summary && <DigestHeading key={summary.id} summary={summary} />}
+          {summary && (
+            <DigestHeading
+              key={summary.id}
+              summary={summary}
+              twin={twinOf(summary, digests.data ?? [])}
+              onOpen={(id) => navigate(`/digests/${id}`)}
+            />
+          )}
 
           <AnimatePresence mode="wait">
             {digest.isLoading && activeId && (
               <motion.div key="loading" exit={{ opacity: 0 }} className="space-y-3">
-                <div className="skeleton h-40" />
-                <div className="skeleton h-24" />
+                <div className="skeleton skeleton--shimmer rounded-xl h-40" />
+                <div className="skeleton skeleton--shimmer rounded-xl h-24" />
               </motion.div>
             )}
 
@@ -168,7 +176,7 @@ export function DigestPage() {
               >
                 <Card className="p-6">
                   <h2 className="text-base font-semibold">Не удалось собрать выпуск</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
+                  <p className="mt-1 text-sm text-muted">
                     {current.error ?? 'Причина неизвестна.'}
                   </p>
                   {current.profile_id && (
@@ -216,7 +224,7 @@ export function DigestPage() {
           layoutScroll
           className="xl:sticky xl:top-9 xl:max-h-[calc(100dvh-4.5rem)] xl:self-start xl:overflow-y-auto"
         >
-          <h2 className="mb-2.5 px-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+          <h2 className="mb-2.5 px-1 text-xs font-semibold tracking-wide text-muted uppercase">
             История
           </h2>
           {digests.data ? (
@@ -228,8 +236,8 @@ export function DigestPage() {
             />
           ) : (
             <div className="space-y-2">
-              <div className="skeleton h-16" />
-              <div className="skeleton h-16" />
+              <div className="skeleton skeleton--shimmer rounded-xl h-16" />
+              <div className="skeleton skeleton--shimmer rounded-xl h-16" />
             </div>
           )}
         </motion.aside>

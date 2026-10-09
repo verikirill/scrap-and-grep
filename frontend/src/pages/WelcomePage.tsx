@@ -54,14 +54,14 @@ function Review({ resume, suggestion, onReplace }: ReviewProps) {
         <button
           type="button"
           onClick={onReplace}
-          className="mt-4 text-sm text-muted-foreground underline decoration-outline-variant underline-offset-4 hover:text-foreground"
+          className="mt-4 text-sm text-muted underline decoration-outline-variant underline-offset-4 hover:text-foreground"
         >
           Загрузить другой файл
         </button>
       </Card>
       <Card className="p-6">
         <h2 className="text-base font-semibold">Профиль интересов</h2>
-        <p className="mt-1 mb-5 text-sm text-muted-foreground">
+        <p className="mt-1 mb-5 text-sm text-muted">
           Выберите темы, нужные для работы. Ключевые слова, важность и исключения можно настроить
           позже в разделе «Интересы».
         </p>
@@ -115,7 +115,7 @@ export function WelcomePage() {
           ? `${me.data.display_name}, расскажите о своей работе`
           : 'Расскажите о своей работе'}
       </h1>
-      <p className="mt-2 mb-7 text-sm text-muted-foreground">
+      <p className="mt-2 mb-7 text-sm text-muted">
         Загрузите резюме, и сервис определит специализацию и предложит темы публикаций. Лента и
         выпуски сразу подстроятся под ваши задачи.
       </p>
@@ -145,22 +145,16 @@ export function WelcomePage() {
             />
             <ErrorNote error={upload.error ?? resume.error} />
             {isStuck && (
-              <p
-                role="alert"
-                className="rounded-lg bg-spark-container px-3 py-2 text-sm text-spark"
-              >
+              <p role="alert" className="rounded-lg bg-warning-soft px-3 py-2 text-sm text-warning">
                 Резюме разбирается дольше обычного. Попробуйте загрузить файл ещё раз.
               </p>
             )}
             {failure && (
-              <p
-                role="alert"
-                className="rounded-lg bg-error-container px-3 py-2 text-sm text-destructive"
-              >
+              <p role="alert" className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">
                 {failure}
               </p>
             )}
-            <p className="flex items-start gap-2 text-xs text-muted-foreground">
+            <p className="flex items-start gap-2 text-xs text-muted">
               <ShieldCheck size={15} className="mt-px shrink-0 text-success" />
               Файл удаляется сразу после обработки. Личные данные (имя, контакты, адрес) вырезаются
               до анализа. В системе остаются только должность, навыки и темы — их можно удалить в

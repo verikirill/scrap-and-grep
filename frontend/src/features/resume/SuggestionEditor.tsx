@@ -34,16 +34,14 @@ function InterestOption({
         className={clsx(
           'flex w-full items-start gap-3 rounded-xl border px-4 py-3 text-left transition-colors duration-150',
           isKept
-            ? 'border-primary/50 bg-primary-container/50'
-            : 'border-outline-variant bg-card hover:border-outline',
+            ? 'border-accent/50 bg-accent-soft/50'
+            : 'border-separator bg-surface hover:border-border',
         )}
       >
         <span
           className={clsx(
             'mt-0.5 grid size-5 shrink-0 place-items-center rounded-md border transition-colors duration-150',
-            isKept
-              ? 'border-primary bg-primary text-white dark:text-[#0b0f17]'
-              : 'border-outline-variant',
+            isKept ? 'border-accent bg-accent text-white dark:text-[#0b0f17]' : 'border-separator',
           )}
         >
           {isKept && <Check size={13} strokeWidth={3} />}
@@ -51,11 +49,9 @@ function InterestOption({
         <span className="min-w-0">
           <span className="block text-sm font-medium">{interest.title}</span>
           {interest.description && (
-            <span className="mt-0.5 block text-[13px] text-muted-foreground">
-              {interest.description}
-            </span>
+            <span className="mt-0.5 block text-[13px] text-muted">{interest.description}</span>
           )}
-          <span className="mt-1.5 block text-xs text-outline">
+          <span className="mt-1.5 block text-xs text-muted">
             {interest.keywords.slice(0, 8).join(' · ')}
           </span>
         </span>
@@ -108,7 +104,7 @@ export function SuggestionEditor({ spec, kept, onSpecChange, onKeptChange }: Pro
       <div role="group" aria-label="Темы новостей">
         <p className="mb-2 flex items-baseline justify-between">
           <span className="text-[13px] font-medium">Темы новостей</span>
-          <span className="text-xs text-outline">
+          <span className="text-xs text-muted">
             выбрано {kept.length} из {spec.interests.length}
           </span>
         </p>

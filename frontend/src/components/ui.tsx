@@ -4,7 +4,6 @@ import { animate, motion, useMotionValue, useTransform } from 'motion/react'
 import { useEffect } from 'react'
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { formatNumber } from '../lib/format'
-import { ripple } from './ripple'
 import { DURATION, EASE, buttonClass } from './tokens'
 import type { ButtonVariant } from './tokens'
 
@@ -23,7 +22,6 @@ export function Button({
   className,
   children,
   disabled,
-  onPointerDown,
   ...rest
 }: ButtonProps) {
   return (
@@ -31,11 +29,7 @@ export function Button({
       type="button"
       disabled={disabled || isBusy}
       aria-busy={isBusy || undefined}
-      className={clsx(buttonClass(variant, size), icon && children && 'pl-4', className)}
-      onPointerDown={(event) => {
-        ripple(event)
-        onPointerDown?.(event)
-      }}
+      className={clsx(buttonClass(variant, size), className)}
       {...rest}
     >
       {isBusy ? <Spinner /> : icon}
@@ -45,7 +39,7 @@ export function Button({
 }
 
 /**
- * Material circular progress, indeterminate. Decorative unless a label is
+ * Circular progress, indeterminate, in the current colour. Decorative unless a label is
  * given: a spinner inside a labelled button says nothing new.
  */
 export function Spinner({ className, label }: { className?: string; label?: string }) {
@@ -74,13 +68,14 @@ export function Spinner({ className, label }: { className?: string; label?: stri
 
 type CardVariant = 'elevated' | 'filled' | 'outlined'
 
+// HeroUI surfaces: a raised card, a filled block, or an outline where it sits on a card.
 const CARD_STYLES: Record<CardVariant, string> = {
-  elevated: 'bg-card shadow-elevation-1',
-  filled: 'bg-surface-container-highest',
-  outlined: 'border border-outline-variant bg-background',
+  elevated: 'bg-surface shadow-surface',
+  filled: 'bg-surface-secondary',
+  outlined: 'border border-border bg-transparent',
 }
 
-/** Material 3 card: elevated by default, filled or outlined where it sits on a card. */
+/** A card: raised by default, filled or outlined where it sits on another card. */
 export function Card({
   className,
   children,
@@ -90,33 +85,23 @@ export function Card({
   children: ReactNode
   variant?: CardVariant
 }) {
-  return (
-    <div
-      className={clsx(
-        'rounded-3xl transition-shadow duration-300',
-        CARD_STYLES[variant],
-        className,
-      )}
-    >
-      {children}
-    </div>
-  )
+  return <div className={clsx('rounded-3xl', CARD_STYLES[variant], className)}>{children}</div>
 }
 
 type ChipTone = 'neutral' | 'accent' | 'spark' | 'ok' | 'danger' | 'alarm'
 
+// HeroUI chips: soft tones, and solid red for what needs acting on first.
 const CHIP_STYLES: Record<ChipTone, string> = {
-  neutral: 'border border-outline-variant text-on-surface-variant',
-  accent: 'bg-secondary-container text-on-secondary-container',
-  spark: 'bg-spark-container text-on-spark-container',
-  ok: 'bg-success-container text-on-success-container',
-  danger: 'bg-error-container text-on-error-container',
-  // Solid red: what needs acting on first.
-  alarm: 'bg-error text-on-error font-semibold',
+  neutral: 'chip--default chip--soft text-muted',
+  accent: 'chip--accent chip--soft',
+  spark: 'chip--warning chip--soft',
+  ok: 'chip--success chip--soft',
+  danger: 'chip--danger chip--soft',
+  alarm: 'chip--danger chip--primary font-semibold',
 }
 
 /**
- * Material 3 chip, not interactive: a label with a tone. A chip with a hint
+ * A chip, not interactive: a label with a tone: a label with a tone. A chip with a hint
  * carries a question mark, so the reader knows hovering it tells more.
  */
 export function Chip({
@@ -137,7 +122,7 @@ export function Chip({
     <span
       title={hint ?? title}
       className={clsx(
-        'inline-flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium tracking-[0.01em]',
+        'chip gap-1 px-2.5 py-1',
         CHIP_STYLES[tone],
         hint && 'cursor-help',
         className,
@@ -153,10 +138,10 @@ export function Chip({
 export function ScoreBar({ score, className }: { score: number; className?: string }) {
   return (
     <span className={clsx('inline-flex items-center gap-2', className)} title="Релевантность">
-      <span className="relative h-1 w-14 overflow-hidden rounded-full bg-secondary-container">
+      <span className="relative h-1 w-14 overflow-hidden rounded-full bg-default">
         {/* scaleX, not width: a digest has dozens of these and width would relayout. */}
         <motion.span
-          className="absolute inset-0 origin-left rounded-full bg-primary"
+          className="absolute inset-0 origin-left rounded-full bg-accent"
           initial={{ scaleX: 0 }}
           animate={{ scaleX: score }}
           transition={{ duration: 0.6, ease: EASE }}
@@ -194,8 +179,8 @@ type FieldProps = {
 export function Field({ label, hint, children, className, isGroup = false }: FieldProps) {
   const caption = (
     <span className="mb-1.5 flex items-baseline justify-between gap-3 px-1">
-      <span className="text-[13px] font-medium text-on-surface-variant">{label}</span>
-      {hint && <span className="text-xs text-outline">{hint}</span>}
+      <span className="text-[13px] font-medium text-muted">{label}</span>
+      {hint && <span className="text-xs text-muted">{hint}</span>}
     </span>
   )
   if (isGroup) {
@@ -214,7 +199,7 @@ export function Field({ label, hint, children, className, isGroup = false }: Fie
   )
 }
 
-/** Material 3 switch: the thumb grows when on, the track takes the primary colour. */
+/** A switch in HeroUI's shape: a pill track, the thumb slides to the on side. */
 export function Toggle({
   checked,
   onChange,
@@ -235,19 +220,14 @@ export function Toggle({
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={clsx(
-        'relative flex h-8 w-[52px] shrink-0 items-center rounded-full border-2 transition-colors duration-200 disabled:opacity-40',
-        checked
-          ? 'justify-end border-primary bg-primary'
-          : 'justify-start border-outline bg-surface-container-highest',
+        'relative flex h-6 w-10 shrink-0 items-center rounded-full transition-colors duration-200 disabled:opacity-50',
+        checked ? 'justify-end bg-accent' : 'justify-start bg-default hover:bg-default-hover',
       )}
     >
       <motion.span
         layout
         transition={{ type: 'spring', stiffness: 700, damping: 38 }}
-        className={clsx(
-          'mx-1 rounded-full',
-          checked ? 'size-6 bg-primary-foreground' : 'size-4 bg-outline',
-        )}
+        className="mx-0.5 size-5 rounded-full bg-white shadow-sm"
       />
     </button>
   )
@@ -282,12 +262,12 @@ export function EmptyState({
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: DURATION.long, ease: EASE }}
-        className="mb-4 grid size-14 place-items-center rounded-2xl bg-secondary-container text-on-secondary-container"
+        className="mb-4 grid size-14 place-items-center rounded-2xl bg-accent-soft text-accent-soft-foreground"
       >
         {icon}
       </motion.div>
       <h3 className="text-base font-medium">{title}</h3>
-      {children && <div className="mt-1.5 max-w-md text-sm text-muted-foreground">{children}</div>}
+      {children && <div className="mt-1.5 max-w-xl text-sm text-muted">{children}</div>}
     </div>
   )
 }
@@ -300,7 +280,7 @@ export function ErrorNote({ error }: { error: unknown }) {
       initial={{ opacity: 0, y: -4 }}
       animate={{ opacity: 1, y: 0 }}
       role="alert"
-      className="rounded-xl bg-error-container px-4 py-2.5 text-sm text-on-error-container"
+      className="rounded-2xl bg-danger-soft px-4 py-2.5 text-sm text-danger-soft-foreground"
     >
       {message}
     </motion.p>
@@ -319,12 +299,12 @@ export function PageHeader({
   return (
     <header className="mb-5 flex flex-wrap items-end justify-between gap-4 sm:mb-7">
       <div className="min-w-0">
-        <h1 className="text-[28px] leading-9 font-normal tracking-tight text-on-surface">
+        <h1 className="text-[28px] leading-9 font-semibold tracking-tight text-foreground">
           {title}
         </h1>
         {/* Two lines on a phone: the page itself should start on the first screen. */}
         {subtitle && (
-          <p className="mt-1.5 line-clamp-2 max-w-2xl text-sm text-muted-foreground sm:line-clamp-none">
+          <p className="mt-1.5 line-clamp-2 max-w-2xl text-sm text-muted sm:line-clamp-none">
             {subtitle}
           </p>
         )}
@@ -336,5 +316,5 @@ export function PageHeader({
 
 /** Placeholder of a block while its data loads, in the shape of what comes. */
 export function SkeletonBlock({ className }: { className?: string }) {
-  return <div aria-hidden className={clsx('skeleton', className)} />
+  return <div aria-hidden className={clsx('skeleton skeleton--shimmer rounded-xl', className)} />
 }

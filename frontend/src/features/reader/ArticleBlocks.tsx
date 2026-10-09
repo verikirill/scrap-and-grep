@@ -15,7 +15,7 @@ function Spans({ spans }: { spans: Span[] }) {
     let node: ReactNode = span.text
     if (span.code) {
       node = (
-        <code className="rounded-md bg-surface-container px-1.5 py-0.5 font-mono text-[0.85em]">
+        <code className="rounded-md bg-surface-secondary px-1.5 py-0.5 font-mono text-[0.85em]">
           {node}
         </code>
       )
@@ -29,7 +29,7 @@ function Spans({ spans }: { spans: Span[] }) {
           href={href}
           target="_blank"
           rel="noopener noreferrer nofollow"
-          className="text-primary underline decoration-primary/40 underline-offset-[3px] hover:decoration-primary"
+          className="text-accent underline decoration-accent/40 underline-offset-[3px] hover:decoration-accent"
         >
           {node}
         </a>
@@ -67,10 +67,10 @@ function Picture({
           const { naturalWidth, naturalHeight } = event.currentTarget
           if (naturalWidth < MIN_PICTURE_SIDE && naturalHeight < MIN_PICTURE_SIDE) setIsHidden(true)
         }}
-        className="mx-auto max-h-[75vh] w-auto max-w-full rounded-2xl bg-surface-container object-contain"
+        className="mx-auto max-h-[75vh] w-auto max-w-full rounded-2xl bg-surface-secondary object-contain"
       />
       {caption && (
-        <figcaption className="mt-2.5 text-center font-sans text-[13px] leading-snug text-muted-foreground">
+        <figcaption className="mt-2.5 text-center font-sans text-[13px] leading-snug text-muted">
           {caption}
         </figcaption>
       )}
@@ -103,7 +103,7 @@ function BlockView({
       )
     case 'quote':
       return (
-        <blockquote className="my-6 border-l-[3px] border-primary/60 pl-5 whitespace-pre-line text-foreground/85 italic">
+        <blockquote className="my-6 border-l-[3px] border-accent/60 pl-5 whitespace-pre-line text-foreground/85 italic">
           <Spans spans={block.spans} />
         </blockquote>
       )
@@ -115,7 +115,7 @@ function BlockView({
       const Tag = block.ordered ? 'ol' : 'ul'
       return (
         <Tag
-          className={`my-4 space-y-1.5 pl-7 marker:text-muted-foreground ${block.ordered ? 'list-decimal' : 'list-disc'}`}
+          className={`my-4 space-y-1.5 pl-7 marker:text-muted ${block.ordered ? 'list-decimal' : 'list-disc'}`}
         >
           {block.items.map((spans, index) => (
             <li key={index} className="pl-1 whitespace-pre-line">
@@ -130,7 +130,7 @@ function BlockView({
         // Focusable: a long line scrolls from the keyboard too.
         <pre
           tabIndex={0}
-          className="my-5 overflow-x-auto rounded-xl bg-surface-container px-4 py-3 font-mono text-[13px] leading-relaxed"
+          className="my-5 overflow-x-auto rounded-xl bg-surface-secondary px-4 py-3 font-mono text-[13px] leading-relaxed"
         >
           <code>{block.text}</code>
         </pre>
@@ -143,11 +143,11 @@ function BlockView({
           role="region"
           aria-label="Таблица"
           tabIndex={0}
-          className="my-6 overflow-x-auto rounded-xl border border-outline-variant font-sans"
+          className="my-6 overflow-x-auto rounded-xl border border-separator font-sans"
         >
           <table className="w-full border-collapse text-sm">
             {block.head && (
-              <thead className="bg-surface-container">
+              <thead className="bg-surface-secondary">
                 <tr>
                   {block.head.map((cell, index) => (
                     <th
@@ -165,10 +165,7 @@ function BlockView({
               {block.rows.map((row, index) => (
                 <tr
                   key={index}
-                  className={clsx(
-                    'border-t border-outline-variant',
-                    !block.head && 'first:border-t-0',
-                  )}
+                  className={clsx('border-t border-separator', !block.head && 'first:border-t-0')}
                 >
                   {row.map((cell, column) => (
                     // Hashes and paths break anywhere; a column stays wide enough for a word.

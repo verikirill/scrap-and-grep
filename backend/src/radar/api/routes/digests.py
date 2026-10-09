@@ -1,9 +1,10 @@
 """Digests: creation, progress stream, exports and comparison."""
 
 import asyncio
+import hashlib
 import time
 import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 from urllib.parse import quote
@@ -12,9 +13,19 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.sse import EventSourceResponse, ServerSentEvent
 from sqlalchemy import select
 
+from radar.ai.factory import get_breaker, get_chat
 from radar.api.deps import CacheDep, CurrentUser, SessionDep, SettingsDep, user_rate_limit
 from radar.api.reading import measure_soon
-from radar.api.schemas import CompareOut, DigestCreate, InterestChange, ScoreChange
+from radar.api.schemas import (
+    AskCitation,
+    AskIn,
+    AskOut,
+    CompareOut,
+    DigestCreate,
+    InterestChange,
+    ScoreChange,
+)
+from radar.ask import answer as answer_question
 from radar.db import session_scope
 from radar.db.models import Digest, Profile
 from radar.domain import AUDIENCE_PERIOD_DAYS, ProfileSpec
@@ -23,6 +34,7 @@ from radar.logging import get_logger
 from radar.pipeline.runner import events_channel
 from radar.render.docx import render_docx
 from radar.render.markdown import render_markdown
+from radar.render.threat_intel import render_csv, render_misp, render_stix
 from radar.store import digests as digest_store
 from radar.views import DigestSummaryView, DigestView, digest_summary, digest_view
 from radar.worker.tasks import build_digest, purge_short_files
@@ -257,7 +269,7 @@ async def delete_digest(
 ) -> Response:
     await session.delete(await _load(session, user, digest_id))
     await session.commit()
-    await cache.delete(f"export:{digest_id}:md", f"export:{digest_id}:docx")
+    await cache.delete(*(f"export:{digest_id}:{kind}" for kind in EXPORT_KINDS))
     # The video row went with the digest; its file is removed by the media
     # worker, the only one that may write to the media volume.
     if settings.shorts_url:
@@ -299,6 +311,100 @@ async def export_docx(
         body = await asyncio.to_thread(render_docx, view)
         await cache.set_bytes(key, body, EXPORT_TTL_SECONDS)
     return Response(body, media_type=DOCX_MEDIA_TYPE, headers=_attachment(view, "docx"))
+
+
+# Threat intelligence for a SOC's platform: the extension, media type and renderer.
+THREAT_INTEL_EXPORTS: dict[str, tuple[str, Callable[[DigestView], str]]] = {
+    "stix.json": ("application/stix+json; charset=utf-8", render_stix),
+    "misp.json": ("application/json; charset=utf-8", render_misp),
+    "csv": ("text/csv; charset=utf-8", render_csv),
+}
+EXPORT_KINDS = ("md", "docx", *THREAT_INTEL_EXPORTS)
+
+
+async def _threat_intel(
+    digest_id: uuid.UUID, kind: str, session: SessionDep, cache: CacheDep, user: CurrentUser
+) -> Response:
+    view = await _load_done(session, user, digest_id)
+    media_type, render = THREAT_INTEL_EXPORTS[kind]
+    key = f"export:{digest_id}:{kind}"
+    body = await cache.get_bytes(key)
+    if body is None:
+        body = (await asyncio.to_thread(render, view)).encode("utf-8")
+        await cache.set_bytes(key, body, EXPORT_TTL_SECONDS)
+    return Response(body, media_type=media_type, headers=_attachment(view, kind))
+
+
+@router.get("/digests/{digest_id}/export.stix.json")
+async def export_stix(
+    digest_id: uuid.UUID, session: SessionDep, cache: CacheDep, user: CurrentUser
+) -> Response:
+    """The digest's indicators, vulnerabilities and ATT&CK techniques as a STIX 2.1 bundle."""
+    return await _threat_intel(digest_id, "stix.json", session, cache, user)
+
+
+@router.get("/digests/{digest_id}/export.misp.json")
+async def export_misp(
+    digest_id: uuid.UUID, session: SessionDep, cache: CacheDep, user: CurrentUser
+) -> Response:
+    """The same as a MISP event, ready for its JSON import."""
+    return await _threat_intel(digest_id, "misp.json", session, cache, user)
+
+
+@router.get("/digests/{digest_id}/export.csv")
+async def export_indicators_csv(
+    digest_id: uuid.UUID, session: SessionDep, cache: CacheDep, user: CurrentUser
+) -> Response:
+    """The same, one row per value, for a spreadsheet or a firewall's import."""
+    return await _threat_intel(digest_id, "csv", session, cache, user)
+
+
+_ask_limit = Depends(user_rate_limit("ask", lambda settings: settings.ask_rate_limit_per_minute))
+ASK_TTL_SECONDS = 24 * 3600
+
+
+@router.post("/digests/{digest_id}/ask", dependencies=[_ask_limit])
+async def ask_digest(
+    digest_id: uuid.UUID, body: AskIn, session: SessionDep, cache: CacheDep, user: CurrentUser
+) -> AskOut:
+    """Answers a question from the digest's entries, with the entries it used."""
+    view = await _load_done(session, user, digest_id)
+    question = " ".join(body.question.split())
+    key = f"ask:{digest_id}:{hashlib.sha256(question.casefold().encode()).hexdigest()[:24]}"
+    cached = await cache.get_json(key)
+    if cached is not None:
+        return AskOut.model_validate(cached)
+    chat = get_chat()
+    breaker = get_breaker()
+    if chat is None:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            detail="Вопросы к выпуску работают с языковой моделью, а стенд запущен без неё.",
+        )
+    if not breaker.allow():
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Модель сейчас не отвечает. Попробуйте через минуту.",
+        )
+    try:
+        got = await answer_question(view, question, chat)
+    except Exception as exc:
+        breaker.record_failure()
+        log.warning("ask_failed", error=f"{type(exc).__name__}: {exc}"[:200])
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Модель не смогла ответить. Попробуйте ещё раз.",
+        ) from exc
+    breaker.record_success()
+    out = AskOut(
+        answer=got.text,
+        citations=[
+            AskCitation(number=c.number, headline=c.headline, url=c.url) for c in got.citations
+        ],
+        is_in_digest=got.is_in_digest,
+    )
+    await cache.set_json(key, out.model_dump(), ASK_TTL_SECONDS)
+    return out
 
 
 async def _status_event(digest_id: uuid.UUID, user_id: uuid.UUID) -> dict[str, Any] | None:

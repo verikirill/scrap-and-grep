@@ -3,7 +3,7 @@ import { Check, ChevronDown, ExternalLink, PenLine, Send, Trash2 } from '../../c
 import { AnimatePresence, motion } from 'motion/react'
 import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { toast } from 'sonner'
+import { toast } from '../../lib/toast'
 import { ErrorBoundary } from '../../components/ErrorBoundary'
 import { Button, Card, Chip, EmptyState, Spinner } from '../../components/ui'
 import { DURATION, EASE, rowMotion } from '../../components/tokens'
@@ -71,7 +71,7 @@ function Folded({ children }: { children: ReactNode }) {
           type="button"
           onClick={() => setOpen((open) => !open)}
           aria-expanded={isOpen}
-          className="state-layer relative mt-1 inline-flex h-8 items-center gap-1 overflow-hidden rounded-full px-3 text-[13px] font-medium text-primary"
+          className="transition-colors hover:bg-default/70 relative mt-1 inline-flex h-8 items-center gap-1 overflow-hidden rounded-full px-3 text-[13px] font-medium text-accent"
         >
           <ChevronDown
             size={15}
@@ -110,7 +110,7 @@ function PostRow({
   return (
     <motion.li {...rowMotion(index)} exit={{ opacity: 0, x: -20 }} layout="position">
       <Card variant="outlined" className="overflow-hidden">
-        <div className="flex flex-wrap items-center gap-2 border-b border-outline-variant px-4 py-3">
+        <div className="flex flex-wrap items-center gap-2 border-b border-separator px-4 py-3">
           <Chip tone={TONE[post.status]}>
             {(post.status === 'composing' || post.status === 'sending') && (
               <Spinner className="size-3" />
@@ -118,7 +118,7 @@ function PostRow({
             {STATUS_LABEL[post.status]}
           </Chip>
           <span className="text-sm font-medium">{title}</span>
-          <span className="text-xs text-outline">· {when(post)}</span>
+          <span className="text-xs text-muted">· {when(post)}</span>
           {post.kind === 'digest' && <Chip tone="accent">обзор</Chip>}
           <span className="ml-auto flex flex-wrap gap-1">
             {post.message_url && (
@@ -126,7 +126,7 @@ function PostRow({
                 href={safeLink(post.message_url)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="state-layer relative inline-flex h-8 items-center gap-1.5 overflow-hidden rounded-full px-3 text-[13px] font-medium text-primary"
+                className="transition-colors hover:bg-default/70 relative inline-flex h-8 items-center gap-1.5 overflow-hidden rounded-full px-3 text-[13px] font-medium text-accent"
               >
                 <ExternalLink size={14} /> В Telegram
               </a>
@@ -191,7 +191,7 @@ function PostRow({
                 href={safeLink(article.url)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block line-clamp-2 text-on-surface-variant hover:text-primary"
+                className="block line-clamp-2 text-muted hover:text-accent"
               >
                 {article.source} · {article.title}
               </a>
@@ -201,23 +201,23 @@ function PostRow({
                 className={clsx(
                   'rounded-xl px-3 py-2 text-xs',
                   post.status === 'failed'
-                    ? 'bg-error-container text-on-error-container'
-                    : 'bg-surface-container text-on-surface-variant',
+                    ? 'bg-danger-soft text-danger-soft-foreground'
+                    : 'bg-surface-secondary text-muted',
                 )}
               >
                 {post.error}
               </p>
             )}
             {post.problems.map((problem) => (
-              <p key={problem} className="text-xs text-destructive">
+              <p key={problem} className="text-xs text-danger">
                 {problem}
               </p>
             ))}
             {post.status === 'composing' && (
               <div className="space-y-2 pt-1" aria-label="Генерируем текст поста">
-                <div className="skeleton h-4 w-3/4" />
-                <div className="skeleton h-4 w-full" />
-                <div className="skeleton h-4 w-2/3" />
+                <div className="skeleton skeleton--shimmer rounded-xl h-4 w-3/4" />
+                <div className="skeleton skeleton--shimmer rounded-xl h-4 w-full" />
+                <div className="skeleton skeleton--shimmer rounded-xl h-4 w-2/3" />
               </div>
             )}
           </div>
@@ -230,7 +230,7 @@ function PostRow({
       </Card>
 
       <Dialog open={editing} onOpenChange={setEditing}>
-        <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[28px] sm:max-w-6xl">
+        <DialogContent className="max-h-[92dvh] overflow-y-auto sm:max-w-6xl">
           <DialogHeader>
             <DialogTitle>Пост для «{title}»</DialogTitle>
             <DialogDescription>
@@ -242,7 +242,7 @@ function PostRow({
               <Suspense
                 fallback={
                   <div className="grid h-80 place-items-center">
-                    <Spinner className="size-8 text-primary" label="Открываем редактор" />
+                    <Spinner className="size-8 text-accent" label="Открываем редактор" />
                   </div>
                 }
               >
@@ -279,8 +279,8 @@ export function PostsPanel({ channelId, channels }: { channelId?: string; channe
   if (isPending) {
     return (
       <div className="space-y-3">
-        <div className="skeleton h-48" />
-        <div className="skeleton h-48" />
+        <div className="skeleton skeleton--shimmer rounded-xl h-48" />
+        <div className="skeleton skeleton--shimmer rounded-xl h-48" />
       </div>
     )
   }

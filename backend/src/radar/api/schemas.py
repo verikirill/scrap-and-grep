@@ -6,6 +6,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator, model_validator
 
+from radar.ask import QUESTION_MAX, QUESTION_MIN
 from radar.auth.passwords import PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH
 from radar.config import check_proxy_url
 from radar.domain import (
@@ -423,3 +424,22 @@ class MetaOut(BaseModel):
     shorts_voice: bool = False
     # Voices a reader can pick; empty when the voice service offers no choice.
     short_voices: list[VoiceOption] = []
+
+
+class AskIn(BaseModel):
+    """A reader's question to a finished digest."""
+
+    question: str = Field(min_length=QUESTION_MIN, max_length=QUESTION_MAX)
+
+
+class AskCitation(BaseModel):
+    number: int
+    headline: str
+    url: str
+
+
+class AskOut(BaseModel):
+    answer: str
+    citations: list[AskCitation]
+    # False when the digest's entries do not hold the answer.
+    is_in_digest: bool

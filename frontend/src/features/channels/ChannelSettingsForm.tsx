@@ -86,17 +86,10 @@ export function ChannelSettingsForm({
   return (
     <div className="flex h-full flex-col">
       <Tabs defaultValue="voice" className="min-h-0 flex-1">
-        {/* Material primary tabs: an underline in the primary colour, scrolled on a phone. */}
-        <TabsList
-          variant="line"
-          className="h-12! w-full justify-start overflow-x-auto border-b border-outline-variant p-0"
-        >
+        {/* HeroUI tabs, scrolled sideways on a phone. */}
+        <TabsList aria-label="Настройки канала" className="w-full">
           {SECTIONS.map(([value, label]) => (
-            <TabsTrigger
-              key={value}
-              value={value}
-              className="h-full flex-1 px-3 text-[14px] text-on-surface-variant after:bottom-0! after:rounded-t-full after:bg-primary data-active:text-primary"
-            >
+            <TabsTrigger key={value} value={value} className="flex-1 px-3">
               {label}
             </TabsTrigger>
           ))}
@@ -164,7 +157,7 @@ export function ChannelSettingsForm({
               ]}
             />
           </Field>
-          <div className="divide-y divide-outline-variant">
+          <div className="divide-y divide-separator">
             <Row label="Оформлять перечисления списками">
               <Toggle
                 checked={style.bullets}
@@ -203,7 +196,7 @@ export function ChannelSettingsForm({
               ]}
             />
           </Field>
-          <p className="px-1 text-xs text-muted-foreground">
+          <p className="px-1 text-xs text-muted">
             «Словом» — ссылка в конце текста, «Карточкой» — превью статьи с изображением, «Без
             ссылки» — только текст.
           </p>
@@ -247,11 +240,11 @@ export function ChannelSettingsForm({
               ]}
             />
           </Field>
-          <p className="px-1 text-xs text-muted-foreground">
+          <p className="px-1 text-xs text-muted">
             Rich-пост: заголовки, списки, цитаты, медиагалереи и до 32 768 знаков. Обычный пост:
             изображение с подписью до 1024 знаков или текст до 4096 знаков.
           </p>
-          <div className="divide-y divide-outline-variant">
+          <div className="divide-y divide-separator">
             <Row label="Картинка статьи, если есть">
               <Toggle
                 checked={format.media === 'auto'}
@@ -281,7 +274,7 @@ export function ChannelSettingsForm({
               />
             </Row>
           </div>
-          <div className="rounded-2xl bg-surface-container p-4">
+          <div className="rounded-2xl bg-surface-secondary p-4">
             <Row label="Еженедельный обзор rich-постом">
               <Toggle
                 checked={digest.enabled}
@@ -393,10 +386,10 @@ export function ChannelSettingsForm({
                       })
                     }
                     className={clsx(
-                      'state-layer relative h-9 w-11 overflow-hidden rounded-lg text-sm font-medium',
+                      'transition-colors hover:bg-default/70 relative h-9 w-11 overflow-hidden rounded-lg text-sm font-medium',
                       isOn
-                        ? 'bg-secondary-container text-on-secondary-container'
-                        : 'border border-outline-variant text-on-surface-variant',
+                        ? 'bg-default text-default-foreground'
+                        : 'border border-separator text-muted',
                     )}
                   >
                     {day}
@@ -436,7 +429,7 @@ export function ChannelSettingsForm({
               onChange={(prepare_minutes) => set('schedule', { prepare_minutes })}
             />
           </Field>
-          <div className="rounded-2xl bg-surface-container p-4">
+          <div className="rounded-2xl bg-surface-secondary p-4">
             <Row label="Публиковать только после проверки">
               <Toggle
                 checked={settings.approval === 'manual'}
@@ -449,7 +442,7 @@ export function ChannelSettingsForm({
                 label="Модерация"
               />
             </Row>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted">
               Посты будут сохраняться в черновиках до вашего одобрения.
             </p>
           </div>
@@ -500,7 +493,7 @@ export function ChannelSettingsForm({
         </TabsContent>
       </Tabs>
 
-      <div className="sticky bottom-0 flex gap-2 bg-popover pt-4 pb-1">
+      <div className="sticky bottom-0 flex gap-2 bg-overlay pt-4 pb-1">
         <Button
           variant="primary"
           isBusy={isBusy}
@@ -510,7 +503,7 @@ export function ChannelSettingsForm({
           Сохранить настройки
         </Button>
         {!timesValid && (
-          <span className="self-center text-xs text-destructive">
+          <span className="self-center text-xs text-danger">
             Укажите время в формате ЧЧ:ММ (например, 09:30)
           </span>
         )}

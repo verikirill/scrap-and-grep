@@ -10,7 +10,7 @@ export function LogoMark({ size = 40, className }: { size?: number; className?: 
   return (
     <span
       className={cn(
-        'grid shrink-0 place-items-center overflow-hidden bg-white shadow-elevation-1 ring-1 ring-black/5',
+        'grid shrink-0 place-items-center overflow-hidden bg-white shadow-surface ring-1 ring-black/5',
         className,
       )}
       style={{ width: size, height: size, borderRadius: Math.round(size * 0.3) }}
@@ -32,7 +32,7 @@ export function LogoMark({ size = 40, className }: { size?: number; className?: 
 export function Wordmark({ className }: { className?: string }) {
   return (
     <span className={cn('font-semibold tracking-tight', className)}>
-      Scrap<span className="text-primary">&amp;</span>Grep
+      Scrap<span className="text-accent">&amp;</span>Grep
     </span>
   )
 }

@@ -34,7 +34,7 @@ export function ChipsInput({ values, onChange, placeholder, label, max = 30 }: P
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-outline-variant bg-card px-2 py-1.5 transition-colors focus-within:border-primary hover:border-outline">
+    <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-separator bg-surface px-2 py-1.5 transition-colors focus-within:border-accent hover:border-border">
       <AnimatePresence initial={false}>
         {values.map((value) => (
           <motion.span
@@ -44,7 +44,7 @@ export function ChipsInput({ values, onChange, placeholder, label, max = 30 }: P
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.85 }}
             transition={{ duration: 0.15 }}
-            className="inline-flex items-center gap-1 rounded-md bg-surface-container py-0.5 pr-1 pl-2 text-[13px]"
+            className="inline-flex items-center gap-1 rounded-md bg-surface-secondary py-0.5 pr-1 pl-2 text-[13px]"
           >
             {value}
             <button
@@ -52,7 +52,7 @@ export function ChipsInput({ values, onChange, placeholder, label, max = 30 }: P
               aria-label={`Убрать «${value}»`}
               onClick={() => onChange(values.filter((item) => item !== value))}
               // Drawn small, pressed large: the hit area reaches past the cross.
-              className="relative grid size-4 place-items-center rounded text-outline after:absolute after:-inset-3 after:content-[''] hover:bg-outline-variant hover:text-foreground"
+              className="relative grid size-4 place-items-center rounded text-muted after:absolute after:-inset-3 after:content-[''] hover:bg-separator hover:text-foreground"
             >
               <X size={11} strokeWidth={2.5} />
             </button>
@@ -66,7 +66,7 @@ export function ChipsInput({ values, onChange, placeholder, label, max = 30 }: P
         onKeyDown={onKeyDown}
         onBlur={commit}
         placeholder={values.length === 0 ? placeholder : ''}
-        className="min-w-24 flex-1 bg-transparent py-0.5 text-sm placeholder:text-outline focus:outline-none"
+        className="min-w-24 flex-1 bg-transparent py-0.5 text-sm placeholder:text-muted focus:outline-none"
       />
     </div>
   )

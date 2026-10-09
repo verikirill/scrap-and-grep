@@ -13,8 +13,7 @@ import { Layout } from './components/Layout'
 import { RequireAuth } from './components/RequireAuth'
 import { ApiError } from './lib/api'
 import { keys } from './lib/queries'
-import { Toaster } from './components/ui/sonner'
-import { TooltipProvider } from './components/ui/tooltip'
+import { Toast } from '@heroui/react'
 import { AuthPage } from './pages/AuthPage'
 import { DigestPage } from './pages/DigestPage'
 import {
@@ -59,9 +58,9 @@ const queryClient: QueryClient = new QueryClient({
 
 const fallback = (
   <div className="space-y-4" aria-hidden>
-    <div className="skeleton h-9 w-64" />
-    <div className="skeleton h-40" />
-    <div className="skeleton h-64" />
+    <div className="skeleton skeleton--shimmer rounded-xl h-9 w-64" />
+    <div className="skeleton skeleton--shimmer rounded-xl h-40" />
+    <div className="skeleton skeleton--shimmer rounded-xl h-64" />
   </div>
 )
 
@@ -86,45 +85,43 @@ export default function App() {
   useEffect(prefetchAllRoutes, [])
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider delayDuration={300}>
-        {/* Honour the OS "reduce motion" setting for every animation at once. */}
-        <MotionConfig reducedMotion="user">
-          <BrowserRouter>
-            <Routes>
-              <Route path="/login" element={<AuthPage mode="login" />} />
-              <Route path="/register" element={<AuthPage mode="register" />} />
-              <Route
-                path="/welcome"
-                element={
-                  <RequireAuth>
-                    <ErrorBoundary>
-                      <Suspense fallback={fallback}>
-                        <WelcomePage />
-                      </Suspense>
-                    </ErrorBoundary>
-                  </RequireAuth>
-                }
-              />
-              <Route element={<Shell />}>
-                <Route path="/" element={<DigestPage />} />
-                <Route path="/digests/:digestId" element={<DigestPage />} />
-                <Route path="/feed" element={<FeedPage />} />
-                <Route path="/articles/:articleId" element={<ArticlePage />} />
-                <Route path="/profiles" element={<ProfilesPage />} />
-                <Route path="/sources" element={<SourcesPage />} />
-                <Route path="/compare" element={<ComparePage />} />
-                <Route path="/channels" element={<ChannelsPage />} />
-                <Route path="/account" element={<AccountPage />} />
-                <Route path="/analytics" element={<AnalyticsPage />} />
-                <Route path="/share/:token" element={<SharePage />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Route>
-            </Routes>
-          </BrowserRouter>
-        </MotionConfig>
-        {/* Above the phone's navigation bar and the bars that sit on it. */}
-        <Toaster position="bottom-center" mobileOffset={{ bottom: '9rem' }} />
-      </TooltipProvider>
+      {/* Honour the OS "reduce motion" setting for every animation at once. */}
+      <MotionConfig reducedMotion="user">
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<AuthPage mode="login" />} />
+            <Route path="/register" element={<AuthPage mode="register" />} />
+            <Route
+              path="/welcome"
+              element={
+                <RequireAuth>
+                  <ErrorBoundary>
+                    <Suspense fallback={fallback}>
+                      <WelcomePage />
+                    </Suspense>
+                  </ErrorBoundary>
+                </RequireAuth>
+              }
+            />
+            <Route element={<Shell />}>
+              <Route path="/" element={<DigestPage />} />
+              <Route path="/digests/:digestId" element={<DigestPage />} />
+              <Route path="/feed" element={<FeedPage />} />
+              <Route path="/articles/:articleId" element={<ArticlePage />} />
+              <Route path="/profiles" element={<ProfilesPage />} />
+              <Route path="/sources" element={<SourcesPage />} />
+              <Route path="/compare" element={<ComparePage />} />
+              <Route path="/channels" element={<ChannelsPage />} />
+              <Route path="/account" element={<AccountPage />} />
+              <Route path="/analytics" element={<AnalyticsPage />} />
+              <Route path="/share/:token" element={<SharePage />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </MotionConfig>
+      {/* Above the phone's navigation bar and the bars that sit on it. */}
+      <Toast.Provider placement="bottom" />
     </QueryClientProvider>
   )
 }

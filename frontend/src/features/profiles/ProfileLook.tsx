@@ -1,9 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query'
 import clsx from 'clsx'
 import { AnimatePresence, motion } from 'motion/react'
-import { Slider as SliderPrimitive } from 'radix-ui'
+import { Slider, SliderThumb, SliderTrack } from 'react-aria-components'
 import { createElement, useEffect, useEffectEvent, useRef, useState } from 'react'
-import { Check, Colorize, Palette } from '../../components/icons'
+import { Check, Colorize, Palette, X } from '../../components/icons'
 import { EASE } from '../../components/tokens'
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover'
 import { useRadioKeys } from '../../components/useRadioKeys'
@@ -70,7 +70,7 @@ const TAP_AREA = "relative after:absolute after:-inset-1.5 after:content-['']"
 function startingPoint(color: string | null): { hue: number; chroma: number } {
   if (isCustomColor(color)) return hueAndChroma(color)
   const dot = getComputedStyle(document.documentElement)
-    .getPropertyValue(`--md-swatch-${color ?? 'blue'}`)
+    .getPropertyValue(`--swatch-${color ?? 'blue'}`)
     .trim()
     .toLowerCase()
   return isCustomColor(dot) ? hueAndChroma(dot) : FALLBACK
@@ -95,26 +95,27 @@ function ColorSlider({
 }) {
   return (
     <div>
-      <p className="mb-1 text-xs text-on-surface-variant">{label}</p>
-      <SliderPrimitive.Root
-        value={[value]}
-        min={0}
-        max={max}
+      <p className="mb-1 text-xs text-muted">{label}</p>
+      <Slider
+        aria-label={label}
+        value={value}
+        minValue={0}
+        maxValue={max}
         step={1}
-        onValueChange={([next]) => onChange(next)}
-        onValueCommit={([next]) => onCommit(next)}
+        onChange={onChange}
+        onChangeEnd={onCommit}
         className="relative flex h-7 w-full touch-none items-center select-none"
       >
-        <SliderPrimitive.Track
-          className="relative h-3 grow rounded-full shadow-[inset_0_0_0_1px_rgb(0_0_0/0.08)]"
+        <SliderTrack
+          className="relative h-3 w-full rounded-full shadow-[inset_0_0_0_1px_rgb(0_0_0/0.08)]"
           style={{ background: track }}
-        />
-        <SliderPrimitive.Thumb
-          aria-label={label}
-          className="block size-6 rounded-full border-[3px] border-white shadow-elevation-2 ring-1 ring-black/15 transition-transform duration-150 outline-none hover:scale-110 focus-visible:ring-4 focus-visible:ring-primary/45 active:scale-110"
-          style={{ background: thumb }}
-        />
-      </SliderPrimitive.Root>
+        >
+          <SliderThumb
+            className="top-1/2 size-6 rounded-full border-[3px] border-white shadow-overlay ring-1 ring-black/15 transition-transform duration-150 outline-none hover:scale-110 data-dragging:scale-110 data-focus-visible:ring-4 data-focus-visible:ring-focus/45"
+            style={{ background: thumb }}
+          />
+        </SliderTrack>
+      </Slider>
     </div>
   )
 }
@@ -149,8 +150,8 @@ function CustomColor({ profile, onPick }: { profile: Profile; onPick: (color: st
         <ProfileAvatar profile={{ ...profile, color: draft.hex }} size={40} />
         <label
           className={clsx(
-            'flex h-10 flex-1 items-center gap-1 rounded-xl bg-surface-container-high px-3 font-mono text-sm focus-within:outline-2',
-            isValid ? 'focus-within:outline-primary' : 'outline-2 outline-destructive',
+            'flex h-10 flex-1 items-center gap-1 rounded-xl bg-surface-tertiary px-3 font-mono text-sm focus-within:outline-2',
+            isValid ? 'focus-within:outline-accent' : 'outline-2 outline-danger',
           )}
         >
           <span className="sr-only">Код цвета</span>
@@ -257,10 +258,10 @@ export function ProfileLookPicker({ profile }: { profile: Profile }) {
           type="button"
           aria-label="Значок и цвет профиля"
           title="Значок и цвет профиля"
-          className="group relative rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="group relative rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
           <ProfileAvatar profile={profile} size={48} />
-          <span className="absolute -right-1 -bottom-1 grid size-6 place-items-center rounded-full bg-surface-container-highest text-on-surface-variant shadow-elevation-1 transition-transform duration-300 group-hover:scale-110">
+          <span className="absolute -right-1 -bottom-1 grid size-6 place-items-center rounded-full bg-default text-muted shadow-surface transition-transform duration-300 group-hover:scale-110">
             <Palette size={14} />
           </span>
         </button>
@@ -270,9 +271,20 @@ export function ProfileLookPicker({ profile }: { profile: Profile }) {
         collisionPadding={12}
         // On a phone the tile sits low: the picker scrolls inside rather than
         // running off the top of the screen.
-        className="max-h-(--radix-popover-content-available-height) w-[296px] overflow-y-auto overscroll-contain rounded-3xl p-4"
+        className="relative max-h-[min(36rem,calc(100dvh-2rem))] w-[296px] overflow-y-auto overscroll-contain rounded-3xl p-4"
       >
-        <p className="mb-2 text-xs font-medium text-on-surface-variant">Значок</p>
+        <button
+          type="button"
+          aria-label="Закрыть"
+          onClick={() => {
+            flush()
+            setOpen(false)
+          }}
+          className="button button--ghost button--icon-only button--sm absolute top-2 right-2 text-muted"
+        >
+          <X size={16} />
+        </button>
+        <p className="mb-2 text-xs font-medium text-muted">Значок</p>
         <div
           role="radiogroup"
           aria-label="Значок профиля"
@@ -292,16 +304,14 @@ export function ProfileLookPicker({ profile }: { profile: Profile }) {
                 title={label}
                 onClick={() => pick({ icon: key })}
                 className={clsx(
-                  'relative grid size-10 place-items-center rounded-xl transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-primary',
-                  isChosen
-                    ? 'text-primary-foreground'
-                    : 'text-on-surface-variant hover:bg-surface-container-high',
+                  'relative grid size-10 place-items-center rounded-xl transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-accent',
+                  isChosen ? 'text-accent-foreground' : 'text-muted hover:bg-surface-tertiary',
                 )}
               >
                 {isChosen && (
                   <motion.span
                     layoutId="look-icon"
-                    className="absolute inset-0 rounded-xl bg-primary"
+                    className="absolute inset-0 rounded-xl bg-accent"
                     transition={{ type: 'spring', stiffness: 420, damping: 32 }}
                   />
                 )}
@@ -310,7 +320,7 @@ export function ProfileLookPicker({ profile }: { profile: Profile }) {
             )
           })}
         </div>
-        <p className="mt-4 mb-2 text-xs font-medium text-on-surface-variant">Цвет</p>
+        <p className="mt-4 mb-2 text-xs font-medium text-muted">Цвет</p>
         <div
           role="radiogroup"
           aria-label="Цвет профиля"
@@ -331,8 +341,8 @@ export function ProfileLookPicker({ profile }: { profile: Profile }) {
                 onClick={() => chooseColor(key)}
                 className={clsx(
                   TAP_AREA,
-                  'grid size-8 place-items-center rounded-full text-white ring-offset-2 ring-offset-popover transition-shadow duration-200 dark:text-black',
-                  isChosen ? 'ring-2 ring-primary' : 'hover:ring-2 hover:ring-outline-variant',
+                  'grid size-8 place-items-center rounded-full text-white ring-offset-2 ring-offset-overlay transition-shadow duration-200 dark:text-black',
+                  isChosen ? 'ring-2 ring-accent' : 'hover:ring-2 hover:ring-border',
                 )}
                 style={{ background: swatchColor(key) }}
               >
@@ -350,10 +360,8 @@ export function ProfileLookPicker({ profile }: { profile: Profile }) {
             onClick={() => chooseColor(CUSTOM)}
             className={clsx(
               TAP_AREA,
-              'grid size-8 place-items-center rounded-full text-white ring-offset-2 ring-offset-popover transition-shadow duration-200',
-              isCustom
-                ? 'ring-2 ring-primary dark:text-black'
-                : 'hover:ring-2 hover:ring-outline-variant',
+              'grid size-8 place-items-center rounded-full text-white ring-offset-2 ring-offset-overlay transition-shadow duration-200',
+              isCustom ? 'ring-2 ring-accent dark:text-black' : 'hover:ring-2 hover:ring-border',
             )}
             style={{
               background:

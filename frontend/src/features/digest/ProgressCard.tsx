@@ -47,20 +47,18 @@ export function ProgressCard({ digest, event }: Props) {
     <Card className="overflow-hidden p-6">
       <div className="flex items-baseline justify-between gap-4">
         <div>
-          <p className="text-xs font-medium tracking-wide text-on-primary-container uppercase">
+          <p className="text-xs font-medium tracking-wide text-accent-soft-foreground uppercase">
             Собираем выпуск
           </p>
           {/* Announce stage changes, not every counter tick. */}
           <h2 className="mt-1 text-lg font-semibold">
             <span aria-live="polite">{stageLabel}</span>
             {counter && (
-              <span className="tabular ml-2 text-sm font-normal text-muted-foreground">
-                {counter}
-              </span>
+              <span className="tabular ml-2 text-sm font-normal text-muted">{counter}</span>
             )}
           </h2>
         </div>
-        <span className="tabular text-2xl font-semibold text-muted-foreground" aria-hidden>
+        <span className="tabular text-2xl font-semibold text-muted" aria-hidden>
           {percent}%
         </span>
       </div>
@@ -71,10 +69,10 @@ export function ProgressCard({ digest, event }: Props) {
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={percent}
-        className="mt-5 h-1.5 overflow-hidden rounded-full bg-surface-container"
+        className="mt-5 h-1.5 overflow-hidden rounded-full bg-surface-secondary"
       >
         <motion.div
-          className="h-full origin-left rounded-full bg-primary"
+          className="h-full origin-left rounded-full bg-accent"
           initial={false}
           animate={{ scaleX: progress }}
           transition={{ type: 'spring', stiffness: 70, damping: 20 }}
@@ -94,14 +92,14 @@ export function ProgressCard({ digest, event }: Props) {
               <span
                 className={clsx(
                   'relative grid size-6 shrink-0 place-items-center rounded-full text-[11px] font-semibold transition-colors duration-300',
-                  isDone && 'bg-primary text-white dark:text-[#0b0f17]',
-                  isActive && 'bg-primary-container text-on-primary-container',
-                  !isDone && !isActive && 'bg-surface-container text-outline',
+                  isDone && 'bg-accent text-white dark:text-[#0b0f17]',
+                  isActive && 'bg-accent-soft text-accent-soft-foreground',
+                  !isDone && !isActive && 'bg-surface-secondary text-muted',
                 )}
               >
                 {isActive && (
                   <motion.span
-                    className="absolute inset-0 rounded-full border border-primary"
+                    className="absolute inset-0 rounded-full border border-accent"
                     animate={{ scale: [1, 1.5], opacity: [0.7, 0] }}
                     transition={{ duration: 1.4, repeat: Infinity, ease: 'easeOut' }}
                   />
@@ -111,7 +109,7 @@ export function ProgressCard({ digest, event }: Props) {
               <span
                 className={clsx(
                   'text-xs leading-tight transition-colors duration-300',
-                  isDone || isActive ? 'text-foreground' : 'text-outline',
+                  isDone || isActive ? 'text-foreground' : 'text-muted',
                 )}
               >
                 {STEP_NAMES[step]}

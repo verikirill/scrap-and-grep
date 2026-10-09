@@ -1,6 +1,6 @@
 import { Plus } from '../../components/icons'
 import { useState } from 'react'
-import { toast } from 'sonner'
+import { toast } from '../../lib/toast'
 import { Button, ErrorNote, Field } from '../../components/ui'
 import { SelectField } from '../../components/SelectField'
 import { INPUT_CLASS } from '../../components/tokens'
@@ -38,9 +38,7 @@ export function AddChannelDialog() {
           Добавить канал
         </Button>
         {/* A disabled button says why next to it, not in a tooltip a phone never shows. */}
-        {bots?.length === 0 && (
-          <span className="text-xs text-muted-foreground">Сначала подключите бота</span>
-        )}
+        {bots?.length === 0 && <span className="text-xs text-muted">Сначала подключите бота</span>}
       </div>
       <Dialog
         open={open}
@@ -50,7 +48,7 @@ export function AddChannelDialog() {
           setOpen(next)
         }}
       >
-        <DialogContent className="rounded-[28px] sm:max-w-md">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Новый канал</DialogTitle>
             <DialogDescription>

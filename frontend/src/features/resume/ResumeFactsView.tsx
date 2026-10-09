@@ -31,13 +31,13 @@ export function ResumeFactsView({ resume, facts, skillsShown }: Props) {
   const hidden = facts.skills.length - limit
   return (
     <div>
-      <p className="text-xs text-muted-foreground">
+      <p className="text-xs text-muted">
         {resume.file_format.toUpperCase()}
         {resume.parser && ` · ${PARSER_LABELS[resume.parser] ?? resume.parser}`} ·{' '}
         {facts.by_model ? 'разобрано языковой моделью' : 'разобрано по таблице направлений'}
       </p>
       <p className="mt-1.5 font-serif text-xl leading-snug font-semibold">{facts.headline}</p>
-      {level && <p className="mt-0.5 text-sm text-muted-foreground">{level}</p>}
+      {level && <p className="mt-0.5 text-sm text-muted">{level}</p>}
       {facts.summary && <p className="mt-3 text-sm text-foreground/90">{facts.summary}</p>}
       {facts.skills.length > 0 && (
         <div className="mt-4 flex flex-wrap gap-1.5">
@@ -48,7 +48,7 @@ export function ResumeFactsView({ resume, facts, skillsShown }: Props) {
             <button
               type="button"
               onClick={() => setIsAllShown(true)}
-              className="rounded-full px-2.5 py-0.5 text-xs font-medium text-primary hover:bg-primary-container focus-visible:outline-2 focus-visible:outline-primary"
+              className="rounded-full px-2.5 py-0.5 text-xs font-medium text-accent hover:bg-accent-soft focus-visible:outline-2 focus-visible:outline-accent"
             >
               ещё {hidden}
             </button>

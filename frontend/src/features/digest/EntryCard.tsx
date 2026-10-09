@@ -37,20 +37,26 @@ function defang(url: string): string {
  * and what the check against the article took out.
  */
 export function EntryDetails({ item }: { item: DigestItem }) {
-  const filled = item.fields.filter((field) => field.value !== NO_DATA)
-  const missing = item.fields.filter((field) => field.value === NO_DATA)
+  // Indicators and techniques have their own block (ThreatIntel): not twice.
+  const ownBlock = new Set([
+    ...(item.attack?.indicators.length ? ['Индикаторы компрометации'] : []),
+    ...(item.attack?.techniques.length ? ['Техники ATT&CK'] : []),
+  ])
+  const fields = item.fields.filter((field) => !ownBlock.has(field.label))
+  const filled = fields.filter((field) => field.value !== NO_DATA)
+  const missing = fields.filter((field) => field.value === NO_DATA)
   return (
     <>
       {filled.length > 0 && (
-        <dl className="mt-2.5 grid grid-cols-1 gap-x-3 gap-y-1 rounded-lg bg-surface-container px-3 py-2.5 text-[13px] sm:grid-cols-[auto_minmax(0,1fr)]">
+        <dl className="mt-2.5 grid grid-cols-1 gap-x-3 gap-y-1 rounded-lg bg-surface-secondary px-3 py-2.5 text-[13px] sm:grid-cols-[auto_minmax(0,1fr)]">
           {filled.map((field) => (
             <div key={field.label} className="contents">
-              <dt className="text-muted-foreground max-sm:mt-1.5 max-sm:text-xs">{field.label}</dt>
+              <dt className="text-muted max-sm:mt-1.5 max-sm:text-xs">{field.label}</dt>
               <dd className="break-words text-foreground">{field.value}</dd>
             </div>
           ))}
           {missing.length > 0 && (
-            <p className="text-xs text-outline sm:col-span-2 max-sm:mt-1.5">
+            <p className="text-xs text-muted sm:col-span-2 max-sm:mt-1.5">
               Нет в тексте: {missing.map((field) => inSentence(field.label)).join(', ')}
             </p>
           )}
@@ -64,7 +70,7 @@ export function EntryDetails({ item }: { item: DigestItem }) {
         </div>
       )}
       {item.links.length > 0 && (
-        <div className="mt-2.5 text-xs text-muted-foreground">
+        <div className="mt-2.5 text-xs text-muted">
           Ссылки из поста:
           <ul className="mt-1 space-y-0.5">
             {item.links.map((url) => (
@@ -77,7 +83,7 @@ export function EntryDetails({ item }: { item: DigestItem }) {
       )}
       {item.unsupported.length > 0 && (
         <p
-          className="mt-2 flex items-start gap-1.5 text-xs text-outline"
+          className="mt-2 flex items-start gap-1.5 text-xs text-muted"
           title="Число, идентификатор или название, которых нет в тексте статьи, в выпуск не попадают"
         >
           <ShieldCheck size={14} className="mt-px shrink-0" />

@@ -13,7 +13,7 @@ import {
 } from './icons'
 import type { IconComponent } from './icons'
 import { AnimatePresence, motion } from 'motion/react'
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useLayoutEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { flushSync } from 'react-dom'
 import { Link, NavLink, useLocation } from 'react-router'
@@ -22,7 +22,6 @@ import { useMe, useMeta } from '../lib/queries'
 import { prefetchRoute } from '../routes'
 import { UserAvatar } from './UserAvatar'
 import { LogoMark, Wordmark } from './Logo'
-import { LiquidIndicator } from './LiquidIndicator'
 import { DURATION, EASE } from './tokens'
 
 type NavItem = {
@@ -95,7 +94,7 @@ function useDarkMode(): [boolean, (from: HTMLElement) => void] {
 }
 
 /**
- * Material linear progress along the top while anything loads in the
+ * A thin progress bar along the top while anything loads in the
  * background. It waits a moment before showing, so quick answers do not blink.
  */
 function ActivityBar() {
@@ -121,23 +120,23 @@ function StatusLine() {
   const { data: meta, isError } = useMeta()
   if (isError) {
     return (
-      <p className="flex items-center gap-2 text-xs text-destructive">
-        <span className="size-1.5 rounded-full bg-destructive" />
+      <p className="flex items-center gap-2 text-xs text-danger">
+        <span className="size-1.5 rounded-full bg-danger" />
         API недоступен
       </p>
     )
   }
-  if (!meta) return <div className="skeleton h-9 w-full" />
+  if (!meta) return <div className="skeleton skeleton--shimmer rounded-xl h-9 w-full" />
   const offline = meta.llm_provider !== 'ollama'
   return (
-    <div className="space-y-1 text-xs text-muted-foreground">
+    <div className="space-y-1 text-xs text-muted">
       <p className="flex items-center gap-2">
-        <span className={clsx('size-1.5 rounded-full', offline ? 'bg-spark' : 'bg-success')} />
+        <span className={clsx('size-1.5 rounded-full', offline ? 'bg-warning' : 'bg-success')} />
         <span className="truncate" title={`Поиск: ${meta.embedding_model}`}>
           {offline ? 'Автономный режим' : modelLabel(meta.llm_model)}
         </span>
       </p>
-      <p className="tabular pl-3.5 text-outline">
+      <p className="tabular pl-3.5 text-muted">
         {formatNumber(meta.articles)} публикаций · +{formatNumber(meta.articles_last_day)} за сутки
       </p>
     </div>
@@ -154,10 +153,8 @@ function activeSection(pathname: string): string | null {
   return found?.to ?? null
 }
 
-type SlotRef = (node: HTMLSpanElement | null) => void
-
-/** Material navigation rail item: an icon over its label; the drop lies under the icon. */
-function RailItem({ item, active, slot }: { item: NavItem; active: boolean; slot: SlotRef }) {
+/** A section in the sidebar: icon and name in a row; the open one sits on a soft pill. */
+function SideItem({ item, active }: { item: NavItem; active: boolean }) {
   const Icon = item.icon
   return (
     <Link
@@ -165,83 +162,62 @@ function RailItem({ item, active, slot }: { item: NavItem; active: boolean; slot
       onPointerEnter={() => prefetchRoute(item.to)}
       onFocus={() => prefetchRoute(item.to)}
       aria-current={active ? 'page' : undefined}
-      className="group relative flex w-full flex-col items-center gap-1 py-1 outline-none"
+      className={clsx(
+        'group relative flex h-10 w-full items-center gap-3 rounded-xl px-3 text-sm outline-none',
+        'focus-visible:ring-2 focus-visible:ring-focus',
+        active ? 'font-semibold text-foreground' : 'font-medium text-muted hover:text-foreground',
+      )}
     >
-      <span
-        ref={slot}
-        className="state-layer relative grid h-8 w-14 place-items-center overflow-hidden rounded-full text-on-surface-variant group-focus-visible:outline group-focus-visible:outline-2 group-focus-visible:outline-primary"
-      >
-        <Icon
-          size={22}
-          filled={active}
-          className={clsx(
-            'relative transition-colors duration-300',
-            active && 'text-primary-foreground',
-          )}
+      {active && (
+        <motion.span
+          layoutId="side-pill"
+          transition={{ type: 'spring', stiffness: 520, damping: 40 }}
+          className="absolute inset-0 -z-10 rounded-xl bg-surface shadow-surface"
         />
-      </span>
-      <span
-        className={clsx(
-          'text-[12px] leading-4 tracking-[0.02em] transition-colors duration-300',
-          active ? 'font-semibold text-primary' : 'font-medium text-on-surface-variant',
-        )}
-      >
-        {item.label}
-      </span>
+      )}
+      {!active && (
+        <span className="absolute inset-0 -z-10 rounded-xl transition-colors group-hover:bg-default/60" />
+      )}
+      <Icon size={18} filled={active} className={clsx(active && 'text-accent')} />
+      <span className="truncate">{item.label}</span>
     </Link>
   )
 }
 
-/** Material navigation bar item for phones: the same drop, at the bottom. */
-function BarItem({ item, active, slot }: { item: NavItem; active: boolean; slot: SlotRef }) {
+/** A section in the phone's bottom bar: the icon over a short name. */
+function BarItem({ item, active }: { item: NavItem; active: boolean }) {
   const Icon = item.icon
   return (
     <Link
       to={item.to}
       aria-label={item.label}
       aria-current={active ? 'page' : undefined}
-      className="relative flex min-w-0 flex-1 flex-col items-center gap-1 pt-3 pb-4"
+      className="relative flex min-w-0 flex-1 flex-col items-center gap-1 pt-2.5 pb-3"
     >
-      <span ref={slot} className="relative grid h-8 w-14 place-items-center">
+      <span className="relative grid h-8 w-14 place-items-center">
+        {active && (
+          <motion.span
+            layoutId="bar-pill"
+            transition={{ type: 'spring', stiffness: 520, damping: 40 }}
+            className="absolute inset-0 rounded-full bg-accent-soft"
+          />
+        )}
         <Icon
-          size={22}
+          size={20}
           filled={active}
-          className={clsx(
-            'relative transition-colors duration-300',
-            active ? 'text-primary-foreground' : 'text-on-surface-variant',
-          )}
+          className={clsx('relative', active ? 'text-accent' : 'text-muted')}
         />
       </span>
       <span
         className={clsx(
-          'truncate text-[11px] leading-4 transition-colors duration-300',
-          active ? 'font-semibold text-primary' : 'text-on-surface-variant',
+          'truncate text-[11px] leading-4',
+          active ? 'font-semibold text-foreground' : 'text-muted',
         )}
       >
         {item.label}
       </span>
     </Link>
   )
-}
-
-/** Where each navigation item's icon sits, for the drop to find it. One ref
-callback per item for the page's life, so React does not detach and attach
-them again on every render. */
-function useSlots() {
-  const [slots] = useState(() => new Map<string, HTMLSpanElement>())
-  const [callbacks] = useState(() => new Map<string, SlotRef>())
-  const register = (key: string): SlotRef => {
-    let callback = callbacks.get(key)
-    if (!callback) {
-      callback = (node) => {
-        if (node) slots.set(key, node)
-        else slots.delete(key)
-      }
-      callbacks.set(key, callback)
-    }
-    return callback
-  }
-  return { slots, register }
 }
 
 function AccountButton({ compact }: { compact?: boolean }) {
@@ -255,11 +231,11 @@ function AccountButton({ compact }: { compact?: boolean }) {
       title={me.is_demo ? 'Временный аккаунт' : me.email}
       className={({ isActive }) =>
         clsx(
-          'grid size-10 place-items-center rounded-full transition-shadow',
+          'grid size-9 shrink-0 place-items-center rounded-full bg-accent-soft text-accent-soft-foreground transition-shadow',
           // The picture keeps its colours; the ring says this is the open section.
           isActive
-            ? 'bg-primary text-primary-foreground shadow-elevation-1 ring-2 ring-primary ring-offset-2 ring-offset-background'
-            : 'bg-tertiary-container text-on-tertiary-container hover:shadow-elevation-1',
+            ? 'ring-2 ring-accent ring-offset-2 ring-offset-background'
+            : 'hover:ring-2 hover:ring-border',
           compact && 'size-9',
         )
       }
@@ -277,7 +253,7 @@ function ThemeButton({ dark, onToggle }: { dark: boolean; onToggle: (from: HTMLE
       // The icon and the name both say where a press leads, not where one is.
       aria-label={dark ? 'Включить светлую тему' : 'Включить тёмную тему'}
       title={dark ? 'Включить светлую тему' : 'Включить тёмную тему'}
-      className="state-layer relative grid size-10 shrink-0 place-items-center overflow-hidden rounded-full text-on-surface-variant"
+      className="button button--ghost button--icon-only button--md shrink-0 text-muted"
     >
       <AnimatePresence mode="wait" initial={false}>
         <motion.span
@@ -296,8 +272,13 @@ function ThemeButton({ dark, onToggle }: { dark: boolean; onToggle: (from: HTMLE
 
 function Brand() {
   return (
-    <Link to="/" aria-label="Scrap&Grep, главная" className="rounded-2xl">
-      <LogoMark size={48} />
+    <Link
+      to="/"
+      aria-label="Scrap&Grep, главная"
+      className="flex items-center gap-2.5 rounded-xl px-2 outline-none focus-visible:ring-2 focus-visible:ring-focus"
+    >
+      <LogoMark size={34} />
+      <Wordmark className="text-[17px]" />
     </Link>
   )
 }
@@ -310,49 +291,27 @@ export function Layout({ children }: { children: ReactNode }) {
   const location = useLocation()
   const section = location.pathname.split('/')[1] ?? ''
   const active = activeSection(location.pathname)
-  const rail = useRef<HTMLElement>(null)
-  const bar = useRef<HTMLElement>(null)
-  const railSlots = useSlots()
-  const barSlots = useSlots()
-
   return (
     <div className="min-h-dvh bg-background">
       <ActivityBar />
 
-      {/* Navigation rail, from tablet width up. */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[92px] flex-col items-center gap-6 bg-surface-container-low py-5 md:flex">
+      {/* Sidebar, from tablet width up. */}
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col gap-6 border-r border-separator bg-background px-3 py-5 md:flex">
         <Brand />
-        <nav
-          ref={rail}
-          aria-label="Разделы"
-          className="relative flex w-full flex-col items-center gap-3"
-        >
+        <nav aria-label="Разделы" className="isolate flex flex-col gap-0.5">
           {sections.map((item) => (
-            <RailItem
-              key={item.to}
-              item={item}
-              active={item.to === active}
-              slot={railSlots.register(item.to)}
-            />
+            <SideItem key={item.to} item={item} active={item.to === active} />
           ))}
-          {/* Last, so the items have handed over their elements when it measures. */}
-          <LiquidIndicator
-            container={rail}
-            targetKey={active}
-            getTarget={() => (active ? railSlots.slots.get(active) : null)}
-            axis="y"
-            className="-z-10 bg-primary shadow-elevation-1"
-          />
         </nav>
-        <div className="mt-auto flex flex-col items-center gap-3">
-          <ThemeButton dark={dark} onToggle={toggleDark} />
+        <div className="mt-auto flex items-center justify-between gap-2 px-1">
           <AccountButton />
+          <ThemeButton dark={dark} onToggle={toggleDark} />
         </div>
       </aside>
 
       {/* Top app bar on phones. */}
-      <header className="sticky top-0 z-30 flex h-16 items-center gap-3 bg-surface-container/90 px-4 backdrop-blur md:hidden">
-        <LogoMark size={36} />
+      <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-separator bg-background/85 px-4 backdrop-blur md:hidden">
+        <LogoMark size={30} />
         <Wordmark className="flex-1 text-lg" />
         {/* The bottom bar holds five sections; the others live up here. */}
         <NavLink
@@ -360,10 +319,8 @@ export function Layout({ children }: { children: ReactNode }) {
           aria-label="Сравнение выпусков"
           className={({ isActive }) =>
             clsx(
-              'state-layer relative grid size-10 shrink-0 place-items-center overflow-hidden rounded-full',
-              isActive
-                ? 'bg-secondary-container text-on-secondary-container'
-                : 'text-on-surface-variant',
+              'button button--ghost button--icon-only button--md shrink-0',
+              isActive ? 'bg-default text-foreground' : 'text-muted',
             )
           }
         >
@@ -375,10 +332,8 @@ export function Layout({ children }: { children: ReactNode }) {
             aria-label="Аналитика"
             className={({ isActive }) =>
               clsx(
-                'state-layer relative grid size-10 shrink-0 place-items-center overflow-hidden rounded-full',
-                isActive
-                  ? 'bg-secondary-container text-on-secondary-container'
-                  : 'text-on-surface-variant',
+                'transition-colors hover:bg-default/70 relative grid size-10 shrink-0 place-items-center overflow-hidden rounded-full',
+                isActive ? 'bg-default text-default-foreground' : 'text-muted',
               )
             }
           >
@@ -389,10 +344,10 @@ export function Layout({ children }: { children: ReactNode }) {
         <AccountButton compact />
       </header>
 
-      <div className="md:pl-[92px]">
+      <div className="md:pl-60">
         <div className="mx-auto flex max-w-[1320px] gap-8 px-4 pt-6 pb-28 md:px-10 md:pt-9 md:pb-12">
           <main className="min-w-0 flex-1">
-            {/* Material fade through between sections. Entrance only: an exit
+            {/* A soft fade between sections. Entrance only: an exit
                 would keep the old wrapper alive while <Routes> inside it already
                 renders the new page. Switching digests keeps the page mounted. */}
             <motion.div
@@ -415,25 +370,12 @@ export function Layout({ children }: { children: ReactNode }) {
 
       {/* Navigation bar on phones. */}
       <nav
-        ref={bar}
         aria-label="Разделы"
-        className="fixed inset-x-0 bottom-0 z-30 isolate flex bg-surface-container pb-[env(safe-area-inset-bottom)] shadow-elevation-2 md:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 flex border-t border-separator bg-background/90 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
       >
         {NAV.slice(0, 5).map((item) => (
-          <BarItem
-            key={item.to}
-            item={item}
-            active={item.to === active}
-            slot={barSlots.register(item.to)}
-          />
+          <BarItem key={item.to} item={item} active={item.to === active} />
         ))}
-        <LiquidIndicator
-          container={bar}
-          targetKey={active}
-          getTarget={() => (active ? barSlots.slots.get(active) : null)}
-          axis="x"
-          className="-z-10 bg-primary shadow-elevation-1"
-        />
       </nav>
     </div>
   )

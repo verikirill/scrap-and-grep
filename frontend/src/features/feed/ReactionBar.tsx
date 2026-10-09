@@ -18,28 +18,28 @@ const ACTIONS: Action[] = [
     icon: ThumbsUp,
     label: 'Больше такого',
     activeLabel: 'Убрать отметку «больше такого»',
-    activeClass: 'bg-success-container text-success',
+    activeClass: 'bg-success-soft text-success',
   },
   {
     kind: 'dislike',
     icon: ThumbsDown,
     label: 'Меньше такого',
     activeLabel: 'Убрать отметку «меньше такого»',
-    activeClass: 'bg-error-container text-destructive',
+    activeClass: 'bg-danger-soft text-danger',
   },
   {
     kind: 'save',
     icon: Bookmark,
     label: 'Сохранить',
     activeLabel: 'Убрать из сохранённого',
-    activeClass: 'bg-spark-container text-spark',
+    activeClass: 'bg-warning-soft text-warning',
   },
   {
     kind: 'hide',
     icon: EyeOff,
     label: 'Скрыть',
     activeLabel: 'Вернуть в ленту',
-    activeClass: 'bg-surface-container text-foreground',
+    activeClass: 'bg-surface-secondary text-foreground',
   },
 ]
 
@@ -92,8 +92,8 @@ export function ReactionBar({
               isActive
                 ? activeClass
                 : look === 'pills'
-                  ? 'bg-primary/10 text-primary hover:bg-primary/15'
-                  : 'text-outline hover:bg-surface-container hover:text-foreground',
+                  ? 'bg-accent/10 text-accent hover:bg-accent/15'
+                  : 'text-muted hover:bg-surface-secondary hover:text-foreground',
             )}
           >
             <Icon size={16} fill={isActive && kind !== 'hide' ? 'currentColor' : 'none'} />

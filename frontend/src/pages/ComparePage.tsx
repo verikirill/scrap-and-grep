@@ -28,7 +28,7 @@ const CHANGE_LABELS: Record<InterestChange['change'], string> = {
 const CHANGE_TONES = { added: 'ok', removed: 'danger', changed: 'spark' } as const
 
 function optionLabel(digest: DigestSummary): string {
-  // The two issues of one «Собрать оба выпуска» build differ by audience alone.
+  // The two issues of one «Специалисту и руководству» build differ by audience alone.
   const audience = digest.audience === 'management' ? ' · руководству' : ''
   return `${formatDateTime(digest.created_at)} · ${digest.profile_name} v${digest.profile_version}${audience} · ${digest.stats.selected ?? 0} публ.`
 }
@@ -48,16 +48,13 @@ function Column({
 }) {
   return (
     <Card className="flex min-w-0 flex-col overflow-hidden">
-      <div className="flex items-center gap-2.5 border-b border-outline-variant px-4 py-3">
+      <div className="flex items-center gap-2.5 border-b border-separator px-4 py-3">
         <span className={clsx('grid size-6 place-items-center rounded-md', tone)}>{icon}</span>
         <h2 className="text-sm font-semibold">{title}</h2>
-        <AnimatedNumber
-          value={count}
-          className="ml-auto text-sm font-semibold text-muted-foreground"
-        />
+        <AnimatedNumber value={count} className="ml-auto text-sm font-semibold text-muted" />
       </div>
-      <ul className="divide-y divide-outline-variant">{children}</ul>
-      {count === 0 && <p className="px-4 py-6 text-center text-xs text-outline">Пусто</p>}
+      <ul className="divide-y divide-separator">{children}</ul>
+      {count === 0 && <p className="px-4 py-6 text-center text-xs text-muted">Пусто</p>}
     </Card>
   )
 }
@@ -70,17 +67,17 @@ function Row({ item, index, trailing }: { item: DigestItem; index: number; trail
           href={externalHref(item.url)}
           target="_blank"
           rel="noopener noreferrer"
-          className="line-clamp-2 text-[13px] leading-snug hover:text-on-primary-container"
+          className="line-clamp-2 text-[13px] leading-snug hover:text-accent-soft-foreground"
         >
           {item.headline}
         </a>
-        <p className="mt-0.5 truncate text-[11px] text-outline">
+        <p className="mt-0.5 truncate text-[11px] text-muted">
           {item.source_name}
           {item.interest_title && ` · ${item.interest_title}`}
         </p>
       </div>
       {trailing ?? (
-        <span className="tabular mt-0.5 text-xs font-semibold text-muted-foreground">
+        <span className="tabular mt-0.5 text-xs font-semibold text-muted">
           {item.score.toFixed(2)}
         </span>
       )}
@@ -90,13 +87,13 @@ function Row({ item, index, trailing }: { item: DigestItem; index: number; trail
 
 function Delta({ delta }: { delta: number }) {
   if (Math.abs(delta) < 0.005)
-    return <span className="tabular mt-0.5 text-xs text-outline">0.00</span>
+    return <span className="tabular mt-0.5 text-xs text-muted">0.00</span>
   const up = delta > 0
   return (
     <span
       className={clsx(
         'tabular mt-0.5 flex items-center gap-0.5 text-xs font-semibold',
-        up ? 'text-success' : 'text-spark',
+        up ? 'text-success' : 'text-warning',
       )}
     >
       {up ? <ArrowUp size={11} strokeWidth={3} /> : <ArrowDown size={11} strokeWidth={3} />}
@@ -160,7 +157,7 @@ export function ComparePage() {
                 disabled: digest.id === other,
               }))}
             />
-            <ArrowRight size={18} className="mx-auto hidden text-outline sm:block" />
+            <ArrowRight size={18} className="mx-auto hidden text-muted sm:block" />
             <SelectField
               label="Стало"
               value={other ?? ''}
@@ -175,9 +172,7 @@ export function ComparePage() {
 
           <ErrorNote error={comparison.error} />
           {base && base === other && (
-            <p className="text-sm text-muted-foreground">
-              Выбран один и тот же выпуск. Выберите два разных.
-            </p>
+            <p className="text-sm text-muted">Выбран один и тот же выпуск. Выберите два разных.</p>
           )}
 
           {comparison.data && (
@@ -191,7 +186,7 @@ export function ComparePage() {
               {(comparison.data.interest_changes.length > 0 ||
                 comparison.data.settings_changed.length > 0) && (
                 <Card className="p-4">
-                  <h2 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                  <h2 className="mb-2 text-xs font-semibold tracking-wide text-muted uppercase">
                     Что изменили в профиле
                   </h2>
                   <div className="flex flex-wrap gap-1.5">
@@ -214,7 +209,7 @@ export function ComparePage() {
                 <Column
                   title="Появилось"
                   count={comparison.data.added.length}
-                  tone="bg-success-container text-success"
+                  tone="bg-success-soft text-success"
                   icon={<Plus size={14} strokeWidth={3} />}
                 >
                   {comparison.data.added.map((item, index) => (
@@ -224,7 +219,7 @@ export function ComparePage() {
                 <Column
                   title="Ушло"
                   count={comparison.data.removed.length}
-                  tone="bg-error-container text-destructive"
+                  tone="bg-danger-soft text-danger"
                   icon={<Minus size={14} strokeWidth={3} />}
                 >
                   {comparison.data.removed.map((item, index) => (
@@ -234,7 +229,7 @@ export function ComparePage() {
                 <Column
                   title="Осталось"
                   count={comparison.data.kept.length}
-                  tone="bg-surface-container text-muted-foreground"
+                  tone="bg-surface-secondary text-muted"
                   icon={<ArrowRight size={14} strokeWidth={3} />}
                 >
                   {comparison.data.kept.map((change, index) => (
@@ -249,7 +244,7 @@ export function ComparePage() {
               </div>
             </motion.div>
           )}
-          {comparison.isLoading && <div className="skeleton h-72" />}
+          {comparison.isLoading && <div className="skeleton skeleton--shimmer rounded-xl h-72" />}
         </>
       )}
     </>

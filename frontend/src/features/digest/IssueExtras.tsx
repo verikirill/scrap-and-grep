@@ -21,14 +21,14 @@ export function ManualWork({ digest }: { digest: Digest }) {
   const work = digest.manual
   if (!work) return null
   return (
-    <p className="mt-3 flex items-start gap-2.5 rounded-lg bg-primary-container/60 px-3 py-2.5 text-sm">
-      <Schedule size={18} className="mt-0.5 shrink-0 text-primary" />
+    <p className="mt-3 flex items-start gap-2.5 rounded-lg bg-accent-soft/60 px-3 py-2.5 text-sm">
+      <Schedule size={18} className="mt-0.5 shrink-0 text-accent" />
       <span>
         <span className="font-semibold">
           Вместо ручной работы: около {durationWords(work.minutes)}
         </span>
         {work.seconds ? `, ассистенту хватило ${Math.round(work.seconds)} с` : ''}.{' '}
-        <span className="text-muted-foreground">
+        <span className="text-muted">
           Расчёт: {formatNumber(work.headlines)}{' '}
           {plural(work.headlines, ['заголовок', 'заголовка', 'заголовков'])} по 5 с и {work.entries}{' '}
           {plural(work.entries, ['запись', 'записи', 'записей'])} по 3 мин.
@@ -49,12 +49,12 @@ function SectionHead({
 }) {
   return (
     <div className="flex items-start gap-3">
-      <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-primary-container text-primary">
+      <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-accent-soft text-accent">
         {icon}
       </span>
       <div>
         <h3 className="text-base font-semibold">{title}</h3>
-        <p className="text-xs text-muted-foreground">{note}</p>
+        <p className="text-xs text-muted">{note}</p>
       </div>
     </div>
   )
@@ -70,7 +70,7 @@ function PlanRow({ entry, index }: { entry: PlanEntry; index: number }) {
         type="checkbox"
         checked={done}
         onChange={(event) => setDone(event.target.checked)}
-        className="mt-1 size-4 shrink-0 accent-primary"
+        className="mt-1 size-4 shrink-0 accent-accent"
         aria-label={`Сделано: ${entry.headline}`}
       />
       <div className={clsx('min-w-0 flex-1 transition-opacity', done && 'opacity-50')}>
@@ -79,14 +79,14 @@ function PlanRow({ entry, index }: { entry: PlanEntry; index: number }) {
           target="_blank"
           rel="noreferrer noopener"
           className={clsx(
-            'font-medium text-foreground decoration-primary/40 underline-offset-4 hover:underline',
+            'font-medium text-foreground decoration-accent/40 underline-offset-4 hover:underline',
             done && 'line-through',
           )}
         >
           {entry.headline}
         </a>
         {entry.steps.length > 0 && (
-          <ul className="mt-1 space-y-0.5 text-sm text-muted-foreground">
+          <ul className="mt-1 space-y-0.5 text-sm text-muted">
             {entry.steps.map((step) => (
               <li key={step}>{step}</li>
             ))}
@@ -120,7 +120,7 @@ function ShiftPlan({ entries }: { entries: PlanEntry[] }) {
           />
         }
       >
-        <ol className="mt-3 divide-y divide-outline-variant">
+        <ol className="mt-3 divide-y divide-separator">
           {entries.map((entry, index) => (
             <PlanRow key={entry.url} entry={entry} index={index} />
           ))}
@@ -144,7 +144,7 @@ function Changes({ changes }: { changes: VulnerabilityChange[] }) {
           />
         }
       >
-        <ul className="mt-3 divide-y divide-outline-variant">
+        <ul className="mt-3 divide-y divide-separator">
           {changes.map((change, index) => (
             <motion.li key={change.id} {...rowMotion(index)} className="py-3 text-sm">
               <div className="flex flex-wrap items-center gap-2">
@@ -153,12 +153,12 @@ function Changes({ changes }: { changes: VulnerabilityChange[] }) {
                   href={externalHref(change.url)}
                   target="_blank"
                   rel="noreferrer noopener"
-                  className="font-medium text-foreground decoration-primary/40 underline-offset-4 hover:underline"
+                  className="font-medium text-foreground decoration-accent/40 underline-offset-4 hover:underline"
                 >
                   {change.headline}
                 </a>
               </div>
-              <p className="mt-1 text-muted-foreground">
+              <p className="mt-1 text-muted">
                 {change.what.join('; ')}. В выпуске от {formatDate(change.since)} этого не было.
               </p>
             </motion.li>
@@ -176,7 +176,7 @@ function Delta({ row }: { row: TagCount }) {
   const words =
     delta === 0 ? 'как в прошлом выпуске' : `${delta > 0 ? '+' : '-'}${Math.abs(delta)} к прошлому`
   return (
-    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+    <span className="inline-flex items-center gap-1 text-xs text-muted">
       <Icon size={14} />
       {words}
     </span>
@@ -211,9 +211,9 @@ function Numbers({ rows, title }: { rows: TagCount[]; title: string }) {
                   <span className="tabular font-semibold">{row.count}</span>
                 </span>
               </div>
-              <div className="mt-1 h-2 overflow-hidden rounded-full bg-surface-container">
+              <div className="mt-1 h-2 overflow-hidden rounded-full bg-surface-secondary">
                 <motion.div
-                  className="h-full origin-left rounded-full bg-primary"
+                  className="h-full origin-left rounded-full bg-accent"
                   initial={{ scaleX: 0 }}
                   animate={{ scaleX: row.count / max }}
                   transition={{ duration: 0.6, ease: EASE, delay: 0.04 * index }}

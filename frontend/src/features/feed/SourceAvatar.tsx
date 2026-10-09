@@ -21,7 +21,7 @@ export function SourceAvatar({ sourceId, name, className }: Props) {
   )
   if (version && !isBroken) {
     return (
-      <span aria-hidden className={clsx(classes, 'bg-white ring-1 ring-outline-variant/60')}>
+      <span aria-hidden className={clsx(classes, 'bg-white ring-1 ring-border/60')}>
         <img
           src={`${API_BASE}/sources/${sourceId}/avatar?v=${version}`}
           alt=""
@@ -37,7 +37,7 @@ export function SourceAvatar({ sourceId, name, className }: Props) {
     <span
       aria-hidden
       className={classes}
-      style={{ background: `var(--md-tag-${tint})`, color: `var(--md-on-tag-${tint})` }}
+      style={{ background: `var(--tag-${tint})`, color: `var(--on-tag-${tint})` }}
     >
       {initials(name)}
     </span>

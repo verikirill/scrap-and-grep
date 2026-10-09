@@ -1,7 +1,7 @@
 import clsx from 'clsx'
 import { useState } from 'react'
 import { cn } from '../../lib/utils'
-import { toast } from 'sonner'
+import { toast } from '../../lib/toast'
 import { EventRepeat } from '../../components/icons'
 import { Segmented } from '../../components/Segmented'
 import { INPUT_CLASS } from '../../components/tokens'
@@ -64,10 +64,10 @@ function WeekdayPicker({ value, onChange }: { value: number; onChange: (day: num
           aria-label={`${day}, ${DAY_NAMES[index]}`}
           onClick={() => onChange(index)}
           className={clsx(
-            'h-9 rounded-full text-xs font-medium transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-primary',
+            'h-9 rounded-full text-xs font-medium transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-accent',
             value === index
-              ? 'bg-primary text-primary-foreground'
-              : 'text-on-surface-variant hover:bg-surface-container-high',
+              ? 'bg-accent text-accent-foreground'
+              : 'text-muted hover:bg-surface-tertiary',
           )}
         >
           {day}
@@ -131,23 +131,23 @@ export function ScheduleControl({
     )
 
   return (
-    <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl bg-surface-container px-4 py-2.5">
+    <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl bg-surface-secondary px-4 py-2.5">
       <EventRepeat
         size={20}
         filled={Boolean(schedule)}
-        className={schedule ? 'text-primary' : 'text-on-surface-variant'}
+        className={schedule ? 'text-accent' : 'text-muted'}
       />
       <p className="min-w-0 flex-1 text-sm">
         {schedule ? (
           <>
             <span className="font-medium">Собирается сам {scheduleLabel(schedule)}</span>
-            <span className="text-muted-foreground">
+            <span className="text-muted">
               {' '}
               · следующий {nextLabel(schedule.next_run_at, schedule.timezone)}
             </span>
           </>
         ) : (
-          <span className="text-muted-foreground">
+          <span className="text-muted">
             Выпуск по этому профилю может собираться автоматически по расписанию
           </span>
         )}
@@ -190,7 +190,7 @@ export function ScheduleControl({
               className={cn(INPUT_CLASS, 'w-32 tabular-nums')}
             />
           </label>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted">
             В каждый выпуск войдут публикации со времени прошлого сбора, поэтому при сборке по
             будням понедельничный выпуск захватит и выходные. Время по поясу {zone}.
           </p>

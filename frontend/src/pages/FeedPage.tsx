@@ -13,7 +13,7 @@ import {
 import { AnimatePresence, motion } from 'motion/react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Fragment, useState } from 'react'
-import { toast } from 'sonner'
+import { toast } from '../lib/toast'
 import { Link, useSearchParams } from 'react-router'
 import { EASE, buttonClass } from '../components/tokens'
 import { Button, Card, EmptyState, ErrorNote, PageHeader } from '../components/ui'
@@ -77,8 +77,8 @@ function Skeletons({ view }: { view: FeedView }) {
       <div className="space-y-3" role="status" aria-label="Собираем ленту">
         {[0, 1, 2].map((row) => (
           <div key={row} className="flex items-end gap-2.5">
-            <div className="skeleton size-10 shrink-0 rounded-full" />
-            <div className="skeleton h-72 flex-1 rounded-2xl rounded-bl-md" />
+            <div className="skeleton skeleton--shimmer size-10 shrink-0 rounded-full" />
+            <div className="skeleton skeleton--shimmer rounded-xl h-72 flex-1 rounded-2xl rounded-bl-md" />
           </div>
         ))}
       </div>
@@ -87,7 +87,7 @@ function Skeletons({ view }: { view: FeedView }) {
   return (
     <div className="space-y-3" role="status" aria-label="Собираем ленту">
       {[0, 1, 2, 3].map((row) => (
-        <div key={row} className="skeleton h-32" />
+        <div key={row} className="skeleton skeleton--shimmer rounded-xl h-32" />
       ))}
     </div>
   )
@@ -110,16 +110,16 @@ function SeenDivider({ view, isFirst }: { view: FeedView; isFirst: boolean }) {
     : 'Ниже — прочитанные публикации'
   if (view === 'telegram') {
     return (
-      <p className="mx-auto w-fit max-w-full rounded-full bg-on-surface/10 px-4 py-1.5 text-xs text-foreground/80 backdrop-blur">
+      <p className="mx-auto w-fit max-w-full rounded-full bg-foreground/10 px-4 py-1.5 text-xs text-foreground/80 backdrop-blur">
         {text}
       </p>
     )
   }
   return (
-    <p className="flex items-center gap-3 pt-2 text-xs font-medium text-muted-foreground">
-      <span aria-hidden className="h-px flex-1 bg-outline-variant" />
+    <p className="flex items-center gap-3 pt-2 text-xs font-medium text-muted">
+      <span aria-hidden className="h-px flex-1 bg-separator" />
       {text}
-      <span aria-hidden className="h-px flex-1 bg-outline-variant" />
+      <span aria-hidden className="h-px flex-1 bg-separator" />
     </p>
   )
 }
@@ -205,7 +205,7 @@ export function FeedPage() {
       ) : taste.data ? (
         <TastePanel taste={taste.data} />
       ) : (
-        <div className="skeleton h-72" />
+        <div className="skeleton skeleton--shimmer rounded-xl h-72" />
       )}
     </>
   )
@@ -256,7 +256,7 @@ export function FeedPage() {
 
       <div className="mb-5 flex items-center gap-2">
         <div
-          className="inline-flex gap-1 rounded-xl bg-surface-container p-1"
+          className="inline-flex gap-1 rounded-xl bg-surface-secondary p-1"
           role="group"
           aria-label="Раздел"
         >
@@ -271,15 +271,13 @@ export function FeedPage() {
               onClick={() => selectTab(id)}
               className={clsx(
                 'relative inline-flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors sm:px-4',
-                tab === id
-                  ? 'text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground',
+                tab === id ? 'text-foreground' : 'text-muted hover:text-foreground',
               )}
             >
               {tab === id && (
                 <motion.span
                   layoutId="feed-tab"
-                  className="absolute inset-0 rounded-lg bg-primary shadow-elevation-1"
+                  className="absolute inset-0 rounded-lg bg-surface shadow-surface"
                   transition={{ type: 'spring', stiffness: 480, damping: 38 }}
                 />
               )}
@@ -298,7 +296,7 @@ export function FeedPage() {
                   type="button"
                   aria-label="Из чего собрана лента"
                   title="Из чего собрана лента"
-                  className="state-layer relative inline-flex h-10 items-center gap-2 overflow-hidden rounded-full px-2.5 text-sm font-medium text-primary sm:px-4"
+                  className="transition-colors hover:bg-default/70 relative inline-flex h-10 items-center gap-2 overflow-hidden rounded-full px-2.5 text-sm font-medium text-accent sm:px-4"
                 >
                   <Layers size={19} />
                   <span className="hidden sm:inline">Из чего собрана лента</span>
@@ -319,7 +317,7 @@ export function FeedPage() {
             disabled={tab === 'saved' || feed.isRefetching}
             aria-label={`${refreshLabel} ленту`}
             title={`${refreshLabel} ленту`}
-            className="state-layer relative grid size-10 place-items-center overflow-hidden rounded-full text-primary disabled:opacity-40 sm:hidden"
+            className="transition-colors hover:bg-default/70 relative grid size-10 place-items-center overflow-hidden rounded-full text-accent disabled:opacity-40 sm:hidden"
           >
             <RefreshCw size={19} className={clsx(feed.isRefetching && 'animate-spin')} />
           </button>
@@ -343,7 +341,7 @@ export function FeedPage() {
                 <button
                   type="button"
                   onClick={showFresh}
-                  className="state-layer relative inline-flex h-10 items-center gap-2 overflow-hidden rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground shadow-elevation-2"
+                  className="relative inline-flex h-10 items-center gap-2 overflow-hidden rounded-full bg-accent hover:bg-accent-hover transition-colors px-4 text-sm font-medium text-accent-foreground shadow-overlay"
                 >
                   <ArrowUp size={16} />
                   {freshCount}{' '}
@@ -362,7 +360,7 @@ export function FeedPage() {
                 transition={{ duration: 0.25, ease: EASE }}
                 className="overflow-hidden"
               >
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-primary-container px-4 py-2.5 text-sm text-on-primary-container">
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-accent-soft px-4 py-2.5 text-sm text-accent-soft-foreground">
                   <span>
                     {pendingSignals} {plural(pendingSignals, ['отметка', 'отметки', 'отметок'])}{' '}
                     {plural(pendingSignals, ['учтена', 'учтены', 'учтено'])}. Порядок на экране не
@@ -379,7 +377,7 @@ export function FeedPage() {
           {tab !== 'saved' && taste.isSuccess && !knowsReader && (
             <Card className="p-5">
               <h2 className="text-base font-semibold">Интересы пока не заданы</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-1 text-sm text-muted">
                 Ниже показаны свежие публикации подряд. Загрузите резюме или настройте интересы,
                 чтобы лента подстроилась под вас.
               </p>
@@ -444,7 +442,7 @@ export function FeedPage() {
             </PostColumn>
           )}
           {tab !== 'saved' && generatedAt && items.length > 0 && (
-            <p className="pt-1 text-center text-xs text-outline">
+            <p className="pt-1 text-center text-xs text-muted">
               Лента собрана {formatRelative(generatedAt)}
             </p>
           )}

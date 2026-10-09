@@ -1,4 +1,4 @@
-// Palette colours a source can get (tag-* roles in styles/palette.css); grey is left out.
+// Tag colours a source can get (styles/tags.css); grey is left out.
 const TINTS = ['blue', 'violet', 'teal', 'green', 'amber', 'orange', 'red', 'pink'] as const
 
 /** A source's colour, the same wherever it shows: its avatar and its name. */

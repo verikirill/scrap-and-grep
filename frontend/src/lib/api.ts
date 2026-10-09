@@ -372,6 +372,38 @@ export interface DigestItem {
   unsupported: string[]
   /** The reader's own systems the entry names. */
   ours?: string[]
+  /** The attack card as data: indicators, ATT&CK techniques and the flaws it used. */
+  attack?: AttackData | null
+  /** The vulnerability card as data: its CVE and BDU ids. */
+  vulnerability?: { ids: string[] } | null
+}
+
+export interface AttackTechnique {
+  id: string
+  name: string
+}
+
+export interface AttackData {
+  /** Addresses, domains and hashes the article printed, defanged. */
+  indicators: string[]
+  techniques: AttackTechnique[]
+  vulnerabilities: string[]
+}
+
+/** The digest's machine-readable exports: a report, and threat intelligence for a SOC. */
+export type ExportFormat = 'md' | 'docx' | 'stix.json' | 'misp.json' | 'csv'
+
+export interface AskCitation {
+  number: number
+  headline: string
+  url: string
+}
+
+export interface AskAnswer {
+  answer: string
+  citations: AskCitation[]
+  /** False when the digest's entries do not hold the answer. */
+  is_in_digest: boolean
 }
 
 export type RecordKind = 'attack' | 'vulnerability' | 'news'
@@ -999,7 +1031,9 @@ export const api = {
   createShort: (digestId: string, voice: string | null) =>
     request<Video>(`/digests/${digestId}/short`, json('POST', { voice })),
 
-  exportUrl: (id: string, format: 'md' | 'docx') => `${API_BASE}/digests/${id}/export.${format}`,
+  exportUrl: (id: string, format: ExportFormat) => `${API_BASE}/digests/${id}/export.${format}`,
+  askDigest: (id: string, question: string) =>
+    request<AskAnswer>(`/digests/${id}/ask`, json('POST', { question })),
   eventsUrl: (id: string) => `${API_BASE}/digests/${id}/events`,
   /** Management digests only; `available` is false without a voice service. */
   briefing: (digestId: string) => request<BriefingState>(`/digests/${digestId}/briefing`),
