@@ -7,6 +7,7 @@ import { ArrowUp, Info, Sparkles } from '../../components/icons'
 import { EASE, INPUT_CLASS } from '../../components/tokens'
 import { Card, ErrorNote, Spinner } from '../../components/ui'
 import { api } from '../../lib/api'
+import { showEntry } from '../../lib/entryNav'
 import type { AskAnswer, Audience } from '../../lib/api'
 
 const SUGGESTIONS: Record<Audience, string[]> = {
@@ -23,20 +24,6 @@ const SUGGESTIONS: Record<Audience, string[]> = {
 }
 
 type Exchange = { question: string; answer: AskAnswer }
-
-/** Scrolls to an entry and makes it blink, so the eye finds what was cited. */
-function showEntry(number: number) {
-  const entry = document.getElementById(`entry-${number}`)
-  if (!entry) return
-  entry.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  entry.animate(
-    [
-      { backgroundColor: 'color-mix(in oklab, var(--accent) 16%, transparent)' },
-      { backgroundColor: 'transparent' },
-    ],
-    { duration: 1600, easing: 'ease-out', delay: 350 },
-  )
-}
 
 /** The answer's text, its "[2]" turned into buttons to the entry, word by word in. */
 function AnswerText({ text }: { text: string }) {

@@ -375,7 +375,35 @@ export interface DigestItem {
   /** The attack card as data: indicators, ATT&CK techniques and the flaws it used. */
   attack?: AttackData | null
   /** The vulnerability card as data: its CVE and BDU ids. */
-  vulnerability?: { ids: string[] } | null
+  vulnerability?: VulnerabilityData | null
+  /** What the reference bases say of the entry's CVE and BDU ids. */
+  references?: VulnerabilityReference[]
+}
+
+export type ExploitState = 'in_the_wild' | 'public' | 'none' | 'unknown'
+
+export interface VulnerabilityData {
+  ids: string[]
+  name: string
+  cvss_score: string
+  exploit: ExploitState
+}
+
+/** One CVE or BDU id in CISA KEV, NVD, the BDU, EPSS and Exploit-DB; dates as YYYY-MM-DD. */
+export interface VulnerabilityReference {
+  id: string
+  kev_added: string | null
+  kev_due: string | null
+  kev_ransomware: boolean
+  bdu_id: string
+  bdu_cvss: string
+  bdu_in_attacks: boolean
+  nvd_cvss: string
+  nvd_exploitation: string
+  nvd_published?: string | null
+  exploit_published?: string | null
+  epss: number | null
+  exploits: string[]
 }
 
 export interface AttackTechnique {
