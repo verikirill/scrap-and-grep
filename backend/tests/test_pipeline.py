@@ -509,6 +509,43 @@ async def test_a_reference_from_the_answer_cache_is_looked_up_again() -> None:
     assert (reference.epss, reference.exploits, reference.via) == (0.42, ("EDB-1",), "model")
 
 
+class TiedByBdu(FakeStore):
+    """The bases know CVE-2026-104286 as BDU:2026-15790, as the BDU of FSTEC does."""
+
+    async def vulnerability_facts(self, ids: Sequence[str]) -> list[VulnerabilityReference]:
+        return [
+            VulnerabilityReference(id=value, bdu_id="BDU:2026-15790", bdu_in_attacks=True)
+            if value in ("CVE-2026-104286", "BDU:2026-15790")
+            else VulnerabilityReference(id=value)
+            for value in ids
+        ]
+
+
+async def test_two_entries_the_bases_tie_to_one_vulnerability_are_saved_as_one(
+    profile: ProfileSpec, make_article: ArticleFactory
+) -> None:
+    """Selection merges by the ids an article prints; one post names the CVE,
+    the other only its BDU entry, and the cards meet them."""
+    english = make_article(
+        "Уязвимость CVE-2026-104286 в SCADA-шлюзе FortiMail", "Обход пути и запись файлов."
+    )
+    russian = make_article(
+        "Уязвимость BDU:2026-15790 в почтовом шлюзе", "Нарушитель записывает произвольные файлы."
+    )
+    store = TiedByBdu([english, russian])
+    graph = build_graph(_deps(store, HeuristicIntelligence())).compile(checkpointer=InMemorySaver())
+
+    await graph.ainvoke(_input(profile), CONFIG)
+
+    assert store.saved is not None
+    [section] = [topic for topic in store.saved["topics"] if topic.title == "Уязвимости"]
+    [entry] = section.items
+    assert entry.article.id == english.id
+    assert [dup.url for dup in entry.duplicates] == [russian.url]
+    assert store.saved["rejected"][russian.id] == "duplicate"
+    assert store.saved["stats"]["duplicates_merged"] == 1
+
+
 class AdvisesThePatch(HeuristicIntelligence):
     """A model answer like the one the jury read: the row knows the update is
     not out, the advice says to install it."""

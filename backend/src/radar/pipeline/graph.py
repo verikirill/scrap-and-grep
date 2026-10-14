@@ -60,7 +60,13 @@ from radar.pipeline.ports import PipelineDeps
 from radar.recsys.model import Learned, adapted_weight
 from radar.selection.clustering import cluster_items
 from radar.selection.retrieval import Window
-from radar.selection.scoring import final_score, rank_candidates, select
+from radar.selection.scoring import (
+    REJECT_DUPLICATE,
+    final_score,
+    merge_written,
+    rank_candidates,
+    select,
+)
 
 log = get_logger(__name__)
 
@@ -469,11 +475,18 @@ class DigestNodes:
             entry["index"]: TopicName.model_validate(entry["name"])
             for entry in state.get("topic_names", [])
         }
-        items = {
-            item.article.id: item.model_copy(update={"text": texts.get(item.article.id)})
+        written = [
+            item.model_copy(update={"text": texts.get(item.article.id)})
             for item in (SelectedItem.model_validate(raw) for raw in state["selected"])
-        }
-        groups = state.get("groups", [])
+        ]
+        # Cards may tie two entries to one vulnerability that their articles
+        # did not (a BDU id the bases give a CVE): one entry, the other a retelling.
+        merged, absorbed = merge_written(written)
+        items = {item.article.id: item for item in merged}
+        groups = [
+            [article_id for article_id in group if article_id in items]
+            for group in state.get("groups", [])
+        ]
         kinds = state.get("group_kinds") or [None] * len(groups)
         topics = _unique_titles(
             [
@@ -485,8 +498,13 @@ class DigestNodes:
                     items=tuple(items[article_id] for article_id in group),
                 )
                 for index, (group, kind) in enumerate(zip(groups, kinds, strict=True))
+                if group
             ]
         )
+        rejected = {
+            **state.get("rejected", {}),
+            **{str(item.article.id): REJECT_DUPLICATE for item in absorbed},
+        }
         if topics:
             overview = await self._deps.intelligence.overview(topics, profile)
         else:
@@ -502,6 +520,7 @@ class DigestNodes:
         return {
             "overview": overview.model_dump(mode="json"),
             "topics": [topic.model_dump(mode="json") for topic in topics],
+            "rejected": rejected,
         }
 
     async def persist(self, state: DigestState) -> dict[str, Any]:

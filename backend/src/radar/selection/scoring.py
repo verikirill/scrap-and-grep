@@ -7,6 +7,7 @@ decide what a reader sees easy to test and to explain.
 import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from datetime import timedelta
 
 import numpy as np
 
@@ -37,6 +38,15 @@ ROUNDUP_IDS = 12
 # A post with no Latin word in its first line ("Ирония судьбы") is named by
 # the start of its text.
 _NAMES_FROM_TEXT = 300
+# An exploited zero-day retold without its ids joins the entry with them when
+# the cards name one product by two Latin words or more, within a week.
+SAME_PRODUCT_NAMES = 2
+SAME_PRODUCT_WINDOW = timedelta(days=7)
+# Vendors and platforms with an exploited zero-day most weeks: "Microsoft
+# Windows" or "Google Chrome" names no single story.
+_BROAD_NAMES = frozenset(
+    {"microsoft", "windows", "google", "chrome", "android", "apple", "ios", "macos", "linux"}
+)
 _ID_WORDS_RE = re.compile(r"\b(?:CVE|BDU|БДУ|GHSA)[-:\s]*[\w-]*", re.IGNORECASE)
 
 REJECT_LOW_SCORE = "low_score"
@@ -209,6 +219,110 @@ def same_vulnerability(left: Mentions, right: Mentions) -> bool:
         and small <= large
         and bool(left.names & right.names)
     )
+
+
+def written_mentions(item: SelectedItem) -> Mentions:
+    """The ids a written vulnerability entry is about: its card's, and the BDU
+    id the reference bases tie to one of its CVEs. The names are the
+    headline's, as for an article."""
+    text = item.text
+    if text is None or text.vulnerability is None:
+        return Mentions(ids=frozenset(), names=frozenset())
+    named = list(text.vulnerability.ids)
+    aliases = [ref.bdu_id for ref in text.references if ref.bdu_id and ref.id in named]
+    return Mentions(
+        ids=frozenset(identifiers(" ".join([*named, *aliases]))),
+        names=_latin_words(item.article.title) or _latin_words(text.headline),
+    )
+
+
+def _product(item: SelectedItem) -> frozenset[str]:
+    card = item.text.vulnerability if item.text else None
+    return _latin_words(card.name) - _BROAD_NAMES if card is not None else frozenset()
+
+
+def same_exploited_product(left: SelectedItem, right: SelectedItem) -> bool:
+    """Two written entries about an exploited vulnerability of one product, one
+    of them without ids, which the ids rule cannot compare: "Warning: Two
+    Unpatched Citrix NetScaler RCE Zero-Days" names no CVE in the snapshot,
+    the post beside it names two. Both exploited in the wild, every Latin name
+    of one card's product in the other's, at least two of them ("citrix",
+    "netscaler"), published within a week.
+
+    On the snapshot of October 3, each card named by its headline's product
+    words, the rule merges 17 pairs the other rules leave apart, all of them
+    retellings of the Cisco Catalyst SD-WAN and Citrix NetScaler zero-days. In
+    the saved digest of docs/eval/human it merges one: The Hacker News on
+    Citrix into SecAtor.
+    """
+    a = left.text.vulnerability if left.text else None
+    b = right.text.vulnerability if right.text else None
+    if a is None or b is None or (a.ids and b.ids):
+        return False
+    if a.exploit != "in_the_wild" or b.exploit != "in_the_wild":
+        return False
+    small, large = sorted((_product(left), _product(right)), key=len)
+    apart = abs(left.article.published_at - right.article.published_at)
+    return len(small) >= SAME_PRODUCT_NAMES and small <= large and apart <= SAME_PRODUCT_WINDOW
+
+
+def merge_written(
+    items: Sequence[SelectedItem],
+) -> tuple[list[SelectedItem], list[SelectedItem]]:
+    """Two vulnerability entries that turn out to be one once their cards are
+    written become one: the higher-scored stays and lists the other among its
+    retellings.
+
+    Selection merges by the ids an article prints. The cards add what it does
+    not: the BDU id the bases tie to a CVE, so a Russian post that names only
+    BDU:2026-15790 and an English one that names only CVE-2026-104286 meet
+    here, by the thresholds of same_vulnerability; and the product of an
+    exploited zero-day retold without ids (same_exploited_product). Returns
+    the entries in their order and the entries merged away.
+    """
+    ordered = sorted(items, key=lambda item: (-item.graded.score, item.article.id))
+    named = {item.article.id: written_mentions(item) for item in ordered}
+    kept: list[SelectedItem] = []
+    absorbed_by: dict[int, list[SelectedItem]] = {}
+    absorbed: list[SelectedItem] = []
+    for item in ordered:
+        own = named[item.article.id]
+        twin = next(
+            (
+                seen
+                for seen in kept
+                if (own.ids and same_vulnerability(own, named[seen.article.id]))
+                or same_exploited_product(item, seen)
+            ),
+            None,
+        )
+        if twin is None:
+            kept.append(item)
+            continue
+        absorbed_by.setdefault(twin.article.id, []).append(item)
+        absorbed.append(item)
+    position = {item.article.id: index for index, item in enumerate(items)}
+    merged = [
+        item.model_copy(
+            update={
+                "duplicates": (
+                    *item.duplicates,
+                    *(ref for dup in absorbed_by[item.article.id] for ref in _as_retelling(dup)),
+                )
+            }
+        )
+        if item.article.id in absorbed_by
+        else item
+        for item in sorted(kept, key=lambda item: position[item.article.id])
+    ]
+    return merged, absorbed
+
+
+def _as_retelling(item: SelectedItem) -> tuple[DuplicateRef, ...]:
+    """An entry merged into another: its own link, then the ones it had merged."""
+    article = item.article
+    own = DuplicateRef(title=article.title, url=article.url, source_name=article.source_name)
+    return (own, *item.duplicates)
 
 
 def _same_story(
