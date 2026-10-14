@@ -15,6 +15,7 @@ from pydantic import BaseModel, ValidationError
 
 from radar.cards import EXPLOIT_LABELS, TAG_LABELS
 from radar.domain import Exploit, ItemSummary, ManagementTag, RecordKind, VulnerabilityReference
+from radar.fix_status import row_says_pending
 
 if TYPE_CHECKING:
     from radar.views import ItemView
@@ -155,11 +156,13 @@ def _epss(references: Sequence[VulnerabilityReference]) -> float | None:
 def _vulnerability_entry(item: ItemView) -> PlanEntry:
     card = item.vulnerability
     references = item.references
-    steps = []
-    if card is not None and card.fix:
-        steps.append(f"Обновление: {card.fix}")
-    if card is not None and card.workaround:
-        steps.append(f"Временные меры: {card.workaround}")
+    update = [f"Обновление: {card.fix}"] if card is not None and card.fix else []
+    workaround = (
+        [f"Временные меры: {card.workaround}"] if card is not None and card.workaround else []
+    )
+    # An update that is not out is no step for today's shift: the workaround is.
+    pending = card is not None and row_says_pending(card.fix)
+    steps = [*workaround, *update] if pending else [*update, *workaround]
     if not steps:
         steps += [f"Устранение по БДУ: {ref.bdu_fix}" for ref in references if ref.bdu_fix][:1]
     facts = [kev] if (kev := _kev(references)) else []
@@ -252,8 +255,12 @@ def vulnerability_states(
                 day=when.astimezone(MOSCOW).date(),
                 exploit=card.exploit,
                 kev_added=reference.kev_added if reference else None,
-                fixed=bool(card.fix)
-                or bool(reference and (reference.bdu_fix or reference.nvd_patch)),
+                # An update the row calls not out yet is no fix. Neither is BDU's
+                # "обновление программного обеспечения", written before any
+                # fixed build exists, nor NVD's "Patch" tag on an advisory: with
+                # them a vulnerability counted as fixed from its first issue, and
+                # the day its update really came out was never reported.
+                fixed=bool(card.fix) and not row_says_pending(card.fix),
             )
             states[identifier] = _merged(states.get(identifier), state)
     return states
