@@ -11,8 +11,9 @@ Method. The snapshot in data/samples is read and embedded with the hashing
 embedder, the default of the stack. Every pair of publications at most three
 days apart is checked by the old rules and by the id rule (scoring.
 same_vulnerability); the pairs only the id rule merges are listed for a
-person to read. Then the entries of each example digest are checked the same
-way: which of them the id rule would have merged into another entry.
+person to read. Then the entries of each example issue, those of change/,
+models/ and vs-analyst/ too, are checked the same way: which of them the id
+rule would have merged into another entry.
 """
 
 import argparse
@@ -34,6 +35,9 @@ from radar.text import content_hash
 ROOT = Path(__file__).resolve().parents[2]
 WINDOW = timedelta(days=3)
 _ENTRY_RE = re.compile(r"^### \[(.+?)\]\((https?://[^)\s]+)\)", re.MULTILINE)
+# The renderer heads every issue with the time it was built. The READMEs, the
+# diffs of change/, the analyst's answer and the resumes have no such line.
+_ISSUE_RE = re.compile(r"^\*\*Сформирован:\*\*", re.MULTILINE)
 
 
 @dataclass(frozen=True, slots=True)
@@ -82,6 +86,28 @@ def new_rule(a: Item, b: Item) -> bool:
     return same_vulnerability(a.named, b.named)
 
 
+def merged_in_examples(
+    examples: Path, items: list[Item]
+) -> list[tuple[str, int, list[tuple[Item, Item]]]]:
+    """Per issue saved under examples, in its subfolders too: its path there,
+    its entries and the pairs of them the id rule would have merged. The path
+    tells the issues apart: models/ repeats the names of the top level."""
+    by_url = {item.url: index for index, item in enumerate(items)}
+    digests = []
+    for path in sorted(examples.rglob("*.md")):
+        text = path.read_text(encoding="utf-8")
+        if not _ISSUE_RE.search(text):
+            continue
+        entries = [url for _, url in _ENTRY_RE.findall(text)]
+        known = [by_url[url] for url in entries if url in by_url]
+        merged = []
+        for first, second in itertools.combinations(known, 2):
+            if new_rule(items[first], items[second]):
+                merged.append((items[first], items[second]))
+        digests.append((path.relative_to(examples).as_posix(), len(entries), merged))
+    return digests
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -107,18 +133,7 @@ def main() -> None:
             if not old and new_rule(a, b):
                 added.append((a, b))
 
-    by_url = {item.url: index for index, item in enumerate(items)}
-    digests = []
-    for path in sorted(args.examples.glob("*.md")):
-        if path.name == "README.md":
-            continue
-        entries = [url for _, url in _ENTRY_RE.findall(path.read_text(encoding="utf-8"))]
-        known = [by_url[url] for url in entries if url in by_url]
-        merged = []
-        for first, second in itertools.combinations(known, 2):
-            if new_rule(items[first], items[second]):
-                merged.append((items[first], items[second]))
-        digests.append((path.name, len(entries), merged))
+    digests = merged_in_examples(args.examples, items)
 
     lines = [
         "# Склейка дублей: снимок и примеры выпусков",
