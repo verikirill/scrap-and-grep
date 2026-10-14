@@ -60,9 +60,13 @@ function SettingSwitch({
       aria-describedby={describedBy}
       aria-busy={isBusy || undefined}
     >
-      <Switch.Control>
-        <Switch.Thumb />
-      </Switch.Control>
+      {/* Since HeroUI 3.2 the input and the click live in Switch.Content:
+          without it the switch is drawn but cannot be turned. */}
+      <Switch.Content>
+        <Switch.Control>
+          <Switch.Thumb />
+        </Switch.Control>
+      </Switch.Content>
     </Switch>
   )
 }
