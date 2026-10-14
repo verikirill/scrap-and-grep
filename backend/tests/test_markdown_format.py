@@ -5,7 +5,7 @@ out, folded, all as GitLab renders it."""
 
 import yaml
 
-from radar.domain import AttackCard
+from radar.domain import AttackCard, VulnerabilityCard
 from radar.render.markdown import gitlab_anchor, render_markdown
 from radar.views import DigestView, TopicView
 from tests.test_render import _item, digest  # noqa: F401  (fixtures)
@@ -101,6 +101,27 @@ def test_a_card_is_a_table_and_a_pipe_in_a_value_cannot_break_it(digest: DigestV
     assert "| Поле | Значение |" in markdown
     assert "| --- | --- |" in markdown
     assert "| Группировка | Sandworm \\| APT44 |" in markdown
+
+
+def test_a_version_bound_in_a_card_reads_as_written(digest: DigestView) -> None:
+    card = _item(
+        9,
+        "Armatura One: удалённое выполнение кода",
+        kind="vulnerability",
+        vulnerability=VulnerabilityCard(
+            affected="Armatura One <4.7.2", fix="Обновить PCM600 до версии > 2.14"
+        ),
+    )
+    with_card = digest.model_copy(
+        update={"topics": [TopicView(title="Уязвимости", overview="", items=[card])]}
+    )
+
+    markdown = render_markdown(with_card)
+
+    assert "| Затронуто | Armatura One \\<4.7.2 |" in markdown
+    assert "| Обновление | Обновить PCM600 до версии \\> 2.14 |" in markdown
+    assert "&lt;" not in markdown
+    assert "&gt;" not in markdown
 
 
 def test_what_was_left_out_is_folded_with_its_reasons(digest: DigestView) -> None:
