@@ -4,7 +4,8 @@ import { ArrowDown, ArrowUp, Minus } from '../../components/icons'
 import { Card, Chip } from '../../components/ui'
 import type { Analytics, AnalyticsTotals, RankerRun, Rates } from '../../lib/api'
 import { CATEGORY_LABELS, formatDateTime, formatNumber, plural } from '../../lib/format'
-import { DayBars, RateBar, RateLines, formatPercent, formatPoints } from './charts'
+import { formatPercent, formatPoints } from '../../lib/analyticsFormat'
+import { DayBars, RateBar, RateLines } from './charts'
 
 export function Panel({
   title,
