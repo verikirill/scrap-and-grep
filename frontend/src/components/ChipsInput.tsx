@@ -16,10 +16,9 @@ export function ChipsInput({ values, onChange, placeholder, label, max = 30 }: P
   const [draft, setDraft] = useState('')
 
   const commit = () => {
-    const additions = draft
-      .split(',')
-      .map((part) => part.trim())
-      .filter((part) => part && !values.includes(part))
+    // A pasted list may name a word twice: it becomes one tag.
+    const parts = new Set(draft.split(',').map((part) => part.trim()))
+    const additions = [...parts].filter((part) => part && !values.includes(part))
     if (additions.length > 0) onChange([...values, ...additions].slice(0, max))
     setDraft('')
   }

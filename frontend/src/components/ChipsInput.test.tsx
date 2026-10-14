@@ -67,6 +67,19 @@ describe('ChipsInput', () => {
     expect(screen.getAllByRole('button', { name: /^Убрать/ })).toHaveLength(3)
   })
 
+  it('adds a word repeated in a pasted list once', async () => {
+    const onChange = vi.fn()
+    const user = userEvent.setup()
+    render(<Keywords initial={['SCADA']} onChange={onChange} />)
+
+    await user.click(field())
+    await user.paste('Modbus, DNP3, Modbus')
+    await user.keyboard('{Enter}')
+
+    expect(onChange).toHaveBeenCalledWith(['SCADA', 'Modbus', 'DNP3'])
+    expect(screen.getAllByRole('button', { name: 'Убрать «Modbus»' })).toHaveLength(1)
+  })
+
   it('reports no change for a word it already has or an empty entry', async () => {
     const onChange = vi.fn()
     const user = userEvent.setup()
