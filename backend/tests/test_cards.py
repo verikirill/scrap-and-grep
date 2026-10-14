@@ -90,6 +90,26 @@ def test_a_vulnerability_card_keeps_only_what_the_text_says() -> None:
     assert removed == ["CVE-2026-11111", "Оценка CVSS", "Затронутые версии"]
 
 
+def test_an_update_row_with_a_figure_the_text_lacks_goes_whole_caveat_and_all() -> None:
+    # CODESYS: the article gives the quarter in words. Taking out only the
+    # clause with the "4" would leave "Обновление до 3.5.22.40 ...", as if
+    # every platform had its fix. The clause with the figure may be the very
+    # caveat that the fix is not out, so the row goes whole.
+    source = (
+        "Разработчик CODESYS GmbH исправляет обе в версиях 3.5.22.40 и 4.23.0.0. "
+        "Вторая выйдет только в четвёртом квартале 2026 года."
+    )
+    claimed = VulnerabilityCard(
+        fix="Обновление до 3.5.22.40 для большинства компонентов; "
+        "4.23.0.0 для Linux выйдет в 4 квартале 2026 года."
+    )
+
+    checked, removed = check_vulnerability(claimed, source)
+
+    assert checked.fix == ""
+    assert removed == ["Обновление"]
+
+
 def test_an_advisory_number_the_text_gives_is_not_reported_as_removed() -> None:
     # The prompt asks for other ids too. A CISA advisory is not one the card
     # keeps, and the text has it: "not in the text" would be false.
