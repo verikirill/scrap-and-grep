@@ -286,6 +286,11 @@ function ReadBadges({ source }: { source: Source }) {
 
 export function SourcesTable({ sources, isAdmin, canAdd }: Props) {
   const { toggle, remove, refreshOne, refreshAll } = useSourceMutations()
+  // The last refusal, not the first: a failed poll after a failed removal says why the poll failed.
+  const latestError =
+    [toggle, remove, refreshOne, refreshAll]
+      .filter((mutation) => mutation.isError)
+      .sort((a, b) => b.submittedAt - a.submittedAt)[0]?.error ?? null
   const [adding, setAdding] = useState(false)
   // In the address, so a search survives a reload and can be sent on.
   const [params, setParams] = useSearchParams()
@@ -422,7 +427,7 @@ export function SourcesTable({ sources, isAdmin, canAdd }: Props) {
 
       <SourcesLegend />
 
-      <ErrorNote error={toggle.error ?? remove.error ?? refreshOne.error ?? refreshAll.error} />
+      <ErrorNote error={latestError} />
 
       <AnimatePresence initial={false}>
         {adding && (
