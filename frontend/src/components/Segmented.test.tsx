@@ -58,11 +58,19 @@ describe('Segmented', () => {
     expect(onChange).toHaveBeenLastCalledWith('1')
   })
 
-  it('checks nothing when the value is none of the options', () => {
-    render(<Segmented label="Период" value="custom" options={PERIODS} onChange={() => {}} />)
+  it('checks nothing when the value is none of the options, and arrows start from the first', async () => {
+    const onChange = vi.fn()
+    const user = userEvent.setup()
+    render(<Segmented label="Период" value="custom" options={PERIODS} onChange={onChange} />)
     for (const radio of screen.getAllByRole('radio')) expect(radio).not.toBeChecked()
     // The first option still takes the Tab stop.
-    expect(screen.getByRole('radio', { name: 'Сутки' })).toHaveAttribute('tabindex', '0')
+    await user.tab()
+    expect(screen.getByRole('radio', { name: 'Сутки' })).toHaveFocus()
+
+    await user.keyboard('{ArrowRight}')
+    expect(onChange).toHaveBeenLastCalledWith('7')
+    await user.keyboard('{ArrowLeft}')
+    expect(onChange).toHaveBeenLastCalledWith('30')
   })
 
   it('carries a short label for a phone beside the full one', async () => {
