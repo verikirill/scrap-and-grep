@@ -64,6 +64,11 @@ const isTab = (value: string | null): value is Tab => TABS.some((tab) => tab.id 
 // order left longer ago than this is ranked anew.
 const TAB_REUSE_MS = 5 * 60_000
 
+/** Whether a list was ranked longer ago than a look at the other order lasts. */
+function isOutdated(updatedAt: number | undefined): boolean {
+  return Date.now() - (updatedAt ?? 0) > TAB_REUSE_MS
+}
+
 // Signals that change what the next feed looks like.
 const TEACHING: ReactionKind[] = ['like', 'dislike', 'save', 'hide']
 // What a mark does, said where the reader is; a hidden card says it in its own place.
@@ -227,8 +232,8 @@ export function FeedPage() {
 
   const selectTab = (id: Tab) => {
     const queryKey = [...keys.feed, id]
-    const age = Date.now() - (client.getQueryState(queryKey)?.dataUpdatedAt ?? 0)
-    if (id !== 'saved' && id !== tab && age > TAB_REUSE_MS) void client.resetQueries({ queryKey })
+    const isOld = isOutdated(client.getQueryState(queryKey)?.dataUpdatedAt)
+    if (id !== 'saved' && id !== tab && isOld) void client.resetQueries({ queryKey })
     setIsQuiet(true)
     setSearch({ tab: id })
     if (id !== 'saved' && me && me.feed_order !== id) settings.mutate({ feed_order: id })
