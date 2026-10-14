@@ -241,6 +241,16 @@ def _figures_supported(value: str, allowed: set[str]) -> bool:
     return numbers(value) <= allowed
 
 
+def _checked_ids(values: Sequence[str], source: str) -> tuple[list[str], list[str]]:
+    """The card's ids the text names, and those it does not. A value of
+    another kind ("ICSA-26-274-03") is no id the card keeps, and the text may
+    well name it: it is not among the missing."""
+    named = _named_ids(source)
+    claimed = identifiers(" ".join(values))
+    kept = [value for value in claimed if value in named]
+    return kept, [value for value in claimed if value not in named]
+
+
 def check_vulnerability(
     card: VulnerabilityCard, source: str
 ) -> tuple[VulnerabilityCard, list[str]]:
@@ -249,10 +259,10 @@ def check_vulnerability(
     removed: list[str] = []
     allowed = numbers(source)
     known = identifiers(source)
-    named = _named_ids(source)
-    ids = [value for value in identifiers(" ".join(card.ids)) if value in named]
-    if len(ids) < len(card.ids):
-        removed.append("Идентификаторы")
+    ids, missing = _checked_ids(card.ids, source)
+    if missing:
+        # By number, not "Идентификаторы": the ids that stayed are still on the card.
+        removed.append(", ".join(missing))
     if not ids and len(known) <= 3:
         # The model left them out; the publication names them.
         ids = known
@@ -372,11 +382,10 @@ def check_attack(
     if len(tools) < len(card.tools):
         updates["tools"] = tools
         removed.append("Инструменты")
-    named = _named_ids(source)
-    ids = tuple(value for value in identifiers(" ".join(card.vulnerabilities)) if value in named)
-    if len(ids) < len(card.vulnerabilities):
-        removed.append("Уязвимости")
-    updates["vulnerabilities"] = ids
+    ids, missing = _checked_ids(card.vulnerabilities, source)
+    if missing:
+        removed.append(", ".join(missing))
+    updates["vulnerabilities"] = tuple(ids)
     allowed = numbers(source)
     if card.attack_date and not _figures_supported(card.attack_date, allowed):
         updates["attack_date"] = ""

@@ -385,7 +385,8 @@ class ItemSummary(BaseModel):
     attack: AttackCard | None = None
     vulnerability: VulnerabilityCard | None = None
     tags: tuple[ManagementTag, ...] = ()
-    # Card fields and claims the check against the article's text took out.
+    # Card fields and claims the check against the article's text took out;
+    # ids it took out are named by number, "CVE-2026-1234, BDU:2026-01679".
     unsupported: tuple[str, ...] = ()
     # The bases the card was checked against, id by id.
     references: tuple[VulnerabilityReference, ...] = ()

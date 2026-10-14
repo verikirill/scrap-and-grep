@@ -86,7 +86,19 @@ def test_a_vulnerability_card_keeps_only_what_the_text_says() -> None:
     assert checked.affected == ""
     # The text says it is used in attacks, whatever the model answered.
     assert checked.exploit == "in_the_wild"
-    assert removed == ["Идентификаторы", "Оценка CVSS", "Затронутые версии"]
+    # The id that went is named: the card still shows the other one.
+    assert removed == ["CVE-2026-11111", "Оценка CVSS", "Затронутые версии"]
+
+
+def test_an_advisory_number_the_text_gives_is_not_reported_as_removed() -> None:
+    # The prompt asks for other ids too. A CISA advisory is not one the card
+    # keeps, and the text has it: "not in the text" would be false.
+    source = "CISA опубликовала бюллетень ICSA-26-274-03 об уязвимости CVE-2026-1234."
+    claimed = VulnerabilityCard(ids=("CVE-2026-1234", "ICSA-26-274-03"))
+
+    _, removed = check_vulnerability(claimed, source)
+
+    assert removed == []
 
 
 def test_ids_inside_a_run_the_article_gives_by_its_ends_stay_on_the_card() -> None:
@@ -127,6 +139,17 @@ def test_an_attack_card_drops_tools_and_indicators_the_text_does_not_name() -> N
     assert checked.tools == ("KermitRAT",)
     assert checked.iocs is None
     assert removed == ["Инструменты", "Индикаторы компрометации"]
+
+
+def test_an_attack_card_names_the_vulnerabilities_the_text_does_not() -> None:
+    # Both ids in one value: one is the post's, the other the model made up.
+    source = "CyberAv3ngers атакует ПЛК Unitronics через CVE-2023-6448."
+    claimed = AttackCard(vulnerabilities=("CVE-2023-6448, CVE-2023-12345",))
+
+    checked, removed = check_attack(claimed, source)
+
+    assert checked.vulnerabilities == ("CVE-2023-6448",)
+    assert removed == ["CVE-2023-12345"]
 
 
 class Scripted:
