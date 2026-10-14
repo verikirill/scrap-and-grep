@@ -33,21 +33,19 @@ export function AddChannelDialog() {
           variant="primary"
           icon={<Plus size={18} />}
           disabled={!bots?.length}
-          onClick={() => setOpen(true)}
+          onClick={() => {
+            // A refusal from the last attempt is not this attempt's. The dialog
+            // opens only from here: it reports closing, never opening.
+            add.reset()
+            setOpen(true)
+          }}
         >
           Добавить канал
         </Button>
         {/* A disabled button says why next to it, not in a tooltip a phone never shows. */}
         {bots?.length === 0 && <span className="text-xs text-muted">Сначала подключите бота</span>}
       </div>
-      <Dialog
-        open={open}
-        onOpenChange={(next) => {
-          // A refusal from the last attempt is not this attempt's.
-          if (next) add.reset()
-          setOpen(next)
-        }}
-      >
+      <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Новый канал</DialogTitle>
