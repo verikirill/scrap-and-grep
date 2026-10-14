@@ -141,7 +141,8 @@ export function PostEditor({
     }),
   })
   const length = visibleLength(content.html, content.format)
-  const limit = limitFor(content.format, content.media)
+  // The limit follows what will be sent: an unfinished picture row is not.
+  const limit = limitFor(content.format, cleaned(content).media)
 
   const setLink = () => {
     if (!editor) return

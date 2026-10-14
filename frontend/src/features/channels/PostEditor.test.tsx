@@ -139,6 +139,17 @@ describe('PostEditor', () => {
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ format: 'rich' }), false)
   })
 
+  it('does not count an added picture row that is still empty against the caption limit', async () => {
+    const { user, onSave } = renderEditor({ html: `<p>${'а'.repeat(2000)}</p>` })
+
+    await user.click(await screen.findByRole('button', { name: 'Добавить' }))
+
+    expect(screen.getByRole('textbox', { name: 'Адрес' })).toHaveValue('')
+    expect(screen.getByText('2000 / 4096')).toBeInTheDocument()
+    await user.click(saveDraft())
+    expect(savedContent(onSave).media).toEqual([])
+  })
+
   it('sends the pictures and buttons the reader filled in, and drops the rows left unfinished', async () => {
     const { user, onSave } = renderEditor()
 
