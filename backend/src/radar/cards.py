@@ -112,13 +112,39 @@ _ATTACK_RE = re.compile(
 )
 
 
+def _plain_hyphens(text: str) -> str:
+    return text.replace("\u2011", "-").replace("\u2010", "-")
+
+
+def _one_way(value: str) -> str:
+    return re.sub(r"\s", "", value).upper().replace("БДУ:", "BDU:")
+
+
 def identifiers(text: str) -> list[str]:
     """CVE, BDU, GHSA and PT ids in the text, written one way: "BDU:2025-10116"."""
-    found = []
-    for match in _ID_RE.findall(text.replace("\u2011", "-").replace("\u2010", "-")):
-        value = re.sub(r"\s", "", match).upper().replace("БДУ:", "BDU:")
-        found.append(value)
+    found = [_one_way(match) for match in _ID_RE.findall(_plain_hyphens(text))]
     return list(dict.fromkeys(found))
+
+
+# A run of entries an article gives by its ends: "BDU:2026-01678–BDU:2026-01682".
+_ID_RUN_RE = re.compile(
+    r"\b(CVE-\d{4}-|(?:BDU|БДУ):\s?\d{4}-)(\d{4,7})\s?[-\u2013\u2014]\s?\1(\d{4,7})\b",
+    re.IGNORECASE,
+)
+# A longer run is a typo, not a list of flaws.
+MAX_ID_RUN = 100
+
+
+def _named_ids(text: str) -> set[str]:
+    """The ids a text names: those it prints and each one inside a run it
+    gives by its ends."""
+    named = set(identifiers(text))
+    for prefix, first, last in _ID_RUN_RE.findall(_plain_hyphens(text)):
+        start, end = int(first), int(last)
+        if 0 < end - start <= MAX_ID_RUN:
+            head = _one_way(prefix)
+            named.update(f"{head}{number:0{len(first)}d}" for number in range(start, end + 1))
+    return named
 
 
 def guess_kind(title: str, body: str) -> RecordKind:
@@ -223,7 +249,8 @@ def check_vulnerability(
     removed: list[str] = []
     allowed = numbers(source)
     known = identifiers(source)
-    ids = [value for value in identifiers(" ".join(card.ids)) if value in known]
+    named = _named_ids(source)
+    ids = [value for value in identifiers(" ".join(card.ids)) if value in named]
     if len(ids) < len(card.ids):
         removed.append("Идентификаторы")
     if not ids and len(known) <= 3:
@@ -345,8 +372,8 @@ def check_attack(
     if len(tools) < len(card.tools):
         updates["tools"] = tools
         removed.append("Инструменты")
-    known = identifiers(source)
-    ids = tuple(value for value in identifiers(" ".join(card.vulnerabilities)) if value in known)
+    named = _named_ids(source)
+    ids = tuple(value for value in identifiers(" ".join(card.vulnerabilities)) if value in named)
     if len(ids) < len(card.vulnerabilities):
         removed.append("Уязвимости")
     updates["vulnerabilities"] = ids

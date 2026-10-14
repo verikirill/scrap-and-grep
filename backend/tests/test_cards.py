@@ -89,6 +89,25 @@ def test_a_vulnerability_card_keeps_only_what_the_text_says() -> None:
     assert removed == ["Идентификаторы", "Оценка CVSS", "Затронутые версии"]
 
 
+def test_ids_inside_a_run_the_article_gives_by_its_ends_stay_on_the_card() -> None:
+    # SCADA «Каскад»: the article gives KWebVision's five BDU entries by the
+    # ends of their run, the model writes out each of them.
+    source = "Уязвимости KWebVision (BDU:2026-01678–BDU:2026-01682) исправлены в версии 8.3.1."
+    run = tuple(f"BDU:2026-{number:05d}" for number in range(1678, 1683))
+
+    checked, _ = check_vulnerability(VulnerabilityCard(ids=(*run, "BDU:2026-01683")), source)
+
+    assert checked.ids == run
+
+
+def test_a_run_of_thousands_of_ids_is_a_typo_and_names_only_its_ends() -> None:
+    claimed = VulnerabilityCard(ids=("CVE-2026-1000", "CVE-2026-5000"))
+
+    checked, _ = check_vulnerability(claimed, "Затронуты CVE-2026-1000–CVE-2026-9000.")
+
+    assert checked.ids == ("CVE-2026-1000",)
+
+
 def test_an_exploit_the_text_does_not_mention_does_not_raise_the_priority() -> None:
     claimed = VulnerabilityCard(exploit="public", ids=("CVE-2026-1234",))
 
