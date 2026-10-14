@@ -123,7 +123,7 @@ function InterestRow({ item }: { item: InterestLearning }) {
       <span className="col-span-2 text-xs text-muted">
         {marks.length > 0 ? marks.join(' · ') : 'отметок пока нет'}
         {item.drift >= 0.005 &&
-          `· фокус сдвинут к понравившемуся на ${Math.round(item.drift * 100)}%`}
+          ` · фокус сдвинут к понравившемуся на ${Math.round(item.drift * 100)}%`}
       </span>
     </li>
   )

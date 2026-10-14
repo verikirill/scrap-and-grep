@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import { HttpResponse, http } from 'msw'
 import { describe, expect, it, vi } from 'vitest'
 import type { Adaptation } from '../../lib/api'
-import { makeAdaptation, makeProfile } from '../../test/fixtures'
+import { makeAdaptation, makeInterestLearning, makeProfile } from '../../test/fixtures'
 import { renderWithProviders } from '../../test/render'
 import { apiUrl, server } from '../../test/server'
 import { AdaptationPanel } from './AdaptationPanel'
@@ -99,5 +99,64 @@ describe('AdaptationPanel switch', () => {
 
     await waitFor(() => expect(toggle).not.toBeChecked())
     expect(switched).toEqual([{ adaptive: false }])
+  })
+})
+
+describe('AdaptationPanel learning', () => {
+  it('shows on request how each interest was weighed, and folds it again', async () => {
+    serveAdaptation(
+      makeAdaptation({
+        interests: [
+          // Liked: the weight went up and the focus moved.
+          makeInterestLearning(),
+          // Disliked a little: down, the focus barely moved.
+          makeInterestLearning({
+            interest_id: 'interest-2',
+            title: 'Атаки на энергетику',
+            weight: 0.94,
+            factor: 0.94,
+            drift: 0.004,
+            positives: 0,
+            negatives: 1.25,
+            skipped: 0,
+          }),
+          makeInterestLearning({
+            interest_id: 'interest-3',
+            title: 'Требования регуляторов',
+            weight: 1,
+            factor: 1,
+            drift: 0,
+            positives: 0,
+            negatives: 0,
+            skipped: 0,
+          }),
+        ],
+      }),
+    )
+    const { user } = renderPanel()
+    const details = await screen.findByRole('button', { name: 'Как подстроены интересы' })
+    expect(details).toHaveAttribute('aria-expanded', 'false')
+
+    await user.click(details)
+
+    expect(details).toHaveAttribute('aria-expanded', 'true')
+    const region = document.getElementById(details.getAttribute('aria-controls') ?? '')
+    const [liked, disliked, untouched] = within(region as HTMLElement).getAllByRole('listitem')
+    expect(liked).toHaveTextContent('Уязвимости АСУ ТП1.00 → 1.06')
+    expect(
+      within(liked).getByText(
+        '«больше такого» 9 · «меньше такого» 2 · пропущено 14 · фокус сдвинут к понравившемуся на 12%',
+      ),
+    ).toBeInTheDocument()
+    expect(disliked).toHaveTextContent('Атаки на энергетику1.00 → 0.94')
+    expect(within(disliked).getByText('«меньше такого» 1,3')).toBeInTheDocument()
+    expect(untouched).toHaveTextContent('Требования регуляторов1.00')
+    expect(untouched).not.toHaveTextContent('→')
+    expect(within(untouched).getByText('отметок пока нет')).toBeInTheDocument()
+
+    await user.click(details)
+
+    expect(details).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByText('Атаки на энергетику')).toBeNull()
   })
 })

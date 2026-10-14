@@ -198,7 +198,7 @@ export function PreviewPanel({ draft, saved, isDirty }: Props) {
         <p className="border-t border-separator px-5 py-2.5 text-[11px] text-muted">
           Поиск: {modelLabel(current.data.embedding_model)}
           {current.data.lexical_only &&
-            '· векторный поиск недоступен, работает только полнотекстовый'}
+            ' · векторный поиск недоступен, работает только полнотекстовый'}
         </p>
       )}
     </Card>
