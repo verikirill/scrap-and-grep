@@ -1,23 +1,48 @@
 """What a `radar digest` command line asks for."""
 
 import json
-from datetime import UTC, datetime
+from collections.abc import Callable
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
+from typer.testing import CliRunner, Result
 
+from radar import cli
 from radar.console import (
     Audience,
     ConsoleError,
     Target,
     addresses,
     file_stem,
+    moment,
     progress_line,
     targets,
 )
+from radar.domain import Audience as ProfileAudience
 from radar.ingest import telegram
 from radar.ingest.detect import Found, as_source
 from radar.seed import DEFAULT_PROFILES
+
+# The console examples in examples/ were built on 3 October at 04:27 Moscow time.
+EXAMPLES_BUILT = datetime(2026, 10, 3, 1, 27, tzinfo=UTC)
+NOW = datetime(2026, 10, 14, 18, 0, tzinfo=UTC)
+
+Run = Callable[..., Result]
+
+
+@pytest.fixture
+def command_line(monkeypatch: pytest.MonkeyPatch) -> Run:
+    """`radar digest` with these options, as a terminal would run it."""
+    # The command sets up logging for the whole process. Set up inside the
+    # runner, it sends the later tests' log lines to the runner's closed output,
+    # and they fail on the write.
+    monkeypatch.setattr(cli, "configure_logging", lambda *_, **__: None)
+
+    def run(*options: str) -> Result:
+        return CliRunner().invoke(cli.app, ["digest", *options])
+
+    return run
 
 
 def test_without_options_both_audiences_come_with_their_own_period() -> None:
@@ -74,10 +99,93 @@ def test_two_ways_of_choosing_a_profile_at_once_are_refused(tmp_path: Path) -> N
         targets(Audience.specialist, "Мой профиль", None, None)
 
 
+@pytest.mark.parametrize(
+    "text",
+    ["2026-10-03T04:27", "2026-10-03T04:27+03:00", "2026-10-03T01:27Z"],
+    ids=["no offset", "moscow offset", "utc"],
+)
+def test_a_date_and_time_without_an_offset_is_moscow_time(text: str) -> None:
+    # The digests say МСК, so a time typed as it stands there means the same.
+    assert moment(text) == EXAMPLES_BUILT
+
+
+def test_a_date_and_time_not_in_iso_8601_is_told_in_words(command_line: Run) -> None:
+    result = command_line("--period-end", "03.10.2026 04:27")
+
+    assert result.exit_code == 2
+    # An example of the format, not only the value given back.
+    assert "2026-10-03T04:27" in result.output
+
+
+@pytest.mark.parametrize(
+    ("audience", "days", "back"),
+    [("specialist", None, 1), ("management", None, 7), ("management", 30, 30)],
+    ids=["a day for specialists", "a week for management", "an explicit month"],
+)
+def test_a_fixed_end_counts_the_period_back_from_it(
+    audience: ProfileAudience, days: int | None, back: int
+) -> None:
+    (target,) = targets(Audience(audience), None, None, days, end=EXAMPLES_BUILT, now=NOW)
+
+    assert target.bounds(audience, NOW) == (EXAMPLES_BUILT - timedelta(days=back), EXAMPLES_BUILT)
+
+
+def test_a_period_without_a_fixed_end_runs_until_now() -> None:
+    (daily,) = targets(Audience.specialist, None, None, None, now=NOW)
+    (since,) = targets(Audience.specialist, None, None, None, start=EXAMPLES_BUILT, now=NOW)
+
+    assert daily.bounds("specialist", NOW) == (NOW - timedelta(days=1), NOW)
+    assert since.bounds("specialist", NOW) == (EXAMPLES_BUILT, NOW)
+
+
+@pytest.mark.parametrize(
+    ("start", "end"),
+    [
+        (EXAMPLES_BUILT, EXAMPLES_BUILT - timedelta(days=1)),
+        (EXAMPLES_BUILT, EXAMPLES_BUILT),
+        (NOW + timedelta(hours=1), None),
+    ],
+    ids=["reversed", "empty", "starting after now"],
+)
+def test_a_period_must_start_before_it_ends(start: datetime, end: datetime | None) -> None:
+    with pytest.raises(ConsoleError, match="раньше конца"):
+        targets(Audience.specialist, None, None, None, start=start, end=end, now=NOW)
+
+
+def test_days_and_a_fixed_start_at_once_are_refused() -> None:
+    # With the start fixed the days would count nothing and be quietly dropped.
+    with pytest.raises(ConsoleError, match="что-то одно"):
+        targets(Audience.specialist, None, None, 3, start=EXAMPLES_BUILT, now=NOW)
+
+
+def test_the_command_line_builds_the_period_it_fixes(
+    command_line: Run, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    built: list[Target] = []
+
+    async def build(target: Target, *_: object) -> Path:
+        built.append(target)
+        return Path("specialist.md")
+
+    monkeypatch.setattr(cli, "_build", build)
+    result = command_line("--audience", "specialist", "--period-end", "2026-10-03T04:27")
+
+    assert result.exit_code == 0, result.output
+    (target,) = built
+    assert target.bounds("specialist", NOW) == (EXAMPLES_BUILT - timedelta(days=1), EXAMPLES_BUILT)
+
+
 def test_files_say_who_they_are_for_and_the_period() -> None:
     built = datetime(2026, 10, 3, 9, 30, tzinfo=UTC)
 
-    assert file_stem("specialist", 1, built) == "specialist-1d-20261003-0930"
+    def stem(label: str, length: timedelta) -> str:
+        return file_stem(label, built - length, built, built)
+
+    assert stem("specialist", timedelta(days=1)) == "specialist-1d-20261003-0930"
+    # A fixed period counts in whole days: the week of scripts/make_examples.py,
+    # 25.09 00:00 - 02.10 16:00, makes eight, and two hours still make one.
+    assert stem("management", timedelta(days=7, hours=16)) == "management-8d-20261003-0930"
+    assert stem("specialist", timedelta(hours=2)) == "specialist-1d-20261003-0930"
     assert progress_line("grade", 0.42) == " 42%  Оцениваем релевантность"
 
 
