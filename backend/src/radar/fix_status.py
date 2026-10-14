@@ -134,6 +134,8 @@ _TIED_TO_RELEASE_RE = re.compile(
     r"(?:планир|подготов)\w*\s+(?:к\s+)?(?:\w+\s+){0,2}?(?:обновлени|установк|патч|исправлени)",
     re.IGNORECASE,
 )
+# The card prompt's "выпущено, версия ..." with what follows the claim.
+_ROW_RELEASED_RE = re.compile(r"^\s*выпущено\b[\s,:;.-]*", re.IGNORECASE)
 # A workaround row that names none: "Нет указанных временных мер защиты", "N/A".
 _NO_WORKAROUND_RE = re.compile(r"(?:нет\b|n/?a\b|не\s+(?:указан|назван|приведен))", re.I)
 
@@ -205,6 +207,25 @@ def pending_advice(workaround: str) -> str:
     return "Исправление ещё не выпущено: следите за выходом обновления у производителя."
 
 
+def _restate_row(fix: str, status: FixStatus) -> str:
+    """The update row saying what the article says of the fix. A row that calls
+    the fix out ("Выпущено, версия 7.4.9") is true of the fixed branch when it
+    is partial and gets the caveat; when nothing is out, the claim goes."""
+    note = PENDING_NOTE if status == "pending" else PARTIAL_NOTE
+    if not fix:
+        return note
+    if row_says_pending(fix):
+        return fix
+    claim = _ROW_RELEASED_RE.match(fix)
+    if status == "pending" and claim:
+        versions = fix[claim.end() :].rstrip(" .")
+        return f"Ещё не выпущено: {versions}." if versions else note
+    # The versions the vendor names stay, and the reader learns they are not
+    # out. A sentence of its own: in brackets after "для ветки 7.2 перейти на
+    # 7.4" it read as said of that move, which is out.
+    return f"{fix.rstrip(' .')}. {note}"
+
+
 def reconcile_fix(text: ItemSummary, article: str) -> ItemSummary:
     """The vulnerability entry with its update row and its advice agreeing on
     whether the fix is out.
@@ -219,15 +240,7 @@ def reconcile_fix(text: ItemSummary, article: str) -> ItemSummary:
     status = fix_status(card, article)
     if not status:
         return text
-    note = PENDING_NOTE if status == "pending" else PARTIAL_NOTE
-    fix = card.fix
-    if not fix:
-        fix = note
-    elif not row_says_pending(fix):
-        # The versions the vendor names stay, and the reader learns they are
-        # not out. A sentence of its own: in brackets after "для ветки 7.2
-        # перейти на 7.4" it read as said of that move, which is out.
-        fix = f"{fix.rstrip(' .')}. {note}"
+    fix = _restate_row(card.fix, status)
     why = text.why
     removed = list(text.unsupported)
     if advises_patch(why):

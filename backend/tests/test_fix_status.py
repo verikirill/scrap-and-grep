@@ -129,6 +129,9 @@ def test_a_fix_that_is_out_is_not_read_as_coming(article: str) -> None:
             True,
         ),
         ("Обновить до FortiMail 7.4.9, 7.6.7 или 8.0.2, когда они станут доступны.", True),
+        # The two shapes the card prompt asks for.
+        ("Ещё не выпущено, ожидается версия 4.23.0.0.", True),
+        ("Выпущено, версия 3.5.22.40.", False),
         # Knowing nothing is not knowing that the fix is coming; "if available" hedges.
         ("Пока нет данных.", False),
         ("Обновить до последней версии, если доступно обновление.", False),
@@ -202,6 +205,34 @@ def test_an_update_row_that_hides_the_wait_gets_it_stated() -> None:
     assert (
         fixed.why == "Исправление ещё не выпущено: следите за выходом обновления у производителя."
     )
+
+
+@pytest.mark.parametrize(
+    ("fix", "article", "expected"),
+    [
+        (
+            "Выпущено, версии 8.0.2, 7.6.7 и 7.4.9.",
+            FORTIMAIL_1275,
+            "Ещё не выпущено: версии 8.0.2, 7.6.7 и 7.4.9.",
+        ),
+        ("Выпущено.", FORTIMAIL_1275, "Исправление ещё не выпущено."),
+        # One branch is out: "выпущено" is true of it, the caveat covers the rest.
+        (
+            "Выпущено, версия 3.5.22.40.",
+            CODESYS,
+            "Выпущено, версия 3.5.22.40. Для части версий исправление ещё не выпущено.",
+        ),
+    ],
+)
+def test_an_update_row_that_calls_a_coming_fix_released_is_put_right(
+    fix: str, article: str, expected: str
+) -> None:
+    """The card prompt asks for "выпущено, версия ..." or "ещё не выпущено,
+    ожидается ...": the note after "Выпущено" would contradict the row."""
+    fixed = reconcile_fix(_entry(fix=fix), article)
+
+    assert fixed.vulnerability is not None
+    assert fixed.vulnerability.fix == expected
 
 
 @pytest.mark.parametrize(
