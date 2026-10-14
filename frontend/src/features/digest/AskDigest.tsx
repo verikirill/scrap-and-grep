@@ -1,12 +1,13 @@
 import { useMutation } from '@tanstack/react-query'
 import clsx from 'clsx'
 import { AnimatePresence, motion } from 'motion/react'
-import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { ArrowUp, ChevronDown, Info, Sparkles } from '../../components/icons'
 import { EASE } from '../../components/tokens'
 import { ErrorNote, Spinner } from '../../components/ui'
 import { api } from '../../lib/api'
+import { answerPieces } from '../../lib/answerText'
 import { showEntry } from '../../lib/entryNav'
 import type { AskAnswer, Audience } from '../../lib/api'
 
@@ -27,14 +28,12 @@ type Exchange = { question: string; answer: AskAnswer }
 
 /** The answer's text, its "[2]" turned into buttons to the entry, word by word in. */
 function AnswerText({ text, onOpenEntry }: { text: string; onOpenEntry: (n: number) => void }) {
-  const parts = text.split(/(\[\d{1,3}\])/)
-  let word = 0
   return (
     <p className="text-[15px] leading-relaxed text-foreground">
-      {parts.map((part, index) => {
-        const cite = /^\[(\d{1,3})\]$/.exec(part)
-        if (cite) {
-          const number = Number(cite[1])
+      {answerPieces(text).map((piece, index) => {
+        if (piece.kind === 'gap') return piece.text
+        if (piece.kind === 'cite') {
+          const { number } = piece
           return (
             <button
               key={index}
@@ -48,22 +47,14 @@ function AnswerText({ text, onOpenEntry }: { text: string; onOpenEntry: (n: numb
           )
         }
         return (
-          <Fragment key={index}>
-            {part.split(/(\s+)/).map((piece, at) => {
-              if (/^\s+$/.test(piece) || piece === '') return piece
-              word += 1
-              return (
-                <motion.span
-                  key={at}
-                  initial={{ opacity: 0, filter: 'blur(4px)' }}
-                  animate={{ opacity: 1, filter: 'blur(0px)' }}
-                  transition={{ duration: 0.25, delay: Math.min(word, 80) * 0.018 }}
-                >
-                  {piece}
-                </motion.span>
-              )
-            })}
-          </Fragment>
+          <motion.span
+            key={index}
+            initial={{ opacity: 0, filter: 'blur(4px)' }}
+            animate={{ opacity: 1, filter: 'blur(0px)' }}
+            transition={{ duration: 0.25, delay: Math.min(piece.turn, 80) * 0.018 }}
+          >
+            {piece.text}
+          </motion.span>
         )
       })}
     </p>
