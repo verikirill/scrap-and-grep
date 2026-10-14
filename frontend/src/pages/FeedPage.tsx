@@ -178,23 +178,24 @@ export function FeedPage() {
   const freshCount = fresh.data?.fresh ?? 0
   const knowsReader = Boolean(taste.data?.facets.some((facet) => facet.kind !== 'avoid'))
 
+  // Each mark's own outcome: with marks queued one after another, the
+  // mutation's callbacks and its error follow only the last one made.
+  const [markError, setMarkError] = useState<unknown>(null)
   const react = (item: FeedItem, kind: ReactionKind, isActive: boolean) => {
-    feedback.mutate(
-      {
+    setMarkError(null)
+    feedback
+      .mutateAsync({
         articleId: item.article_id,
         kind,
         isActive,
         context: 'feed',
         placement: placementOf(item),
-      },
-      {
-        onSuccess: () => {
-          if (TEACHING.includes(kind)) setPendingSignals((count) => count + 1)
-          const said = MARKED[kind]
-          if (isActive && said) toast.success(said)
-        },
-      },
-    )
+      })
+      .then(() => {
+        if (TEACHING.includes(kind)) setPendingSignals((count) => count + 1)
+        const said = MARKED[kind]
+        if (isActive && said) toast.success(said)
+      }, setMarkError)
   }
 
   // On a desktop it stands beside the feed; narrower, it opens from a button
@@ -333,7 +334,7 @@ export function FeedPage() {
 
       <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_19rem]">
         <div className="min-w-0 space-y-3">
-          <ErrorNote error={list.error ?? feedback.error} />
+          <ErrorNote error={list.error ?? markError} />
 
           {/* New articles wait above the list until asked for: nothing moves under the reader. */}
           <AnimatePresence>
