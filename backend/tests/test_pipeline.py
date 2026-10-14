@@ -509,6 +509,47 @@ async def test_a_reference_from_the_answer_cache_is_looked_up_again() -> None:
     assert (reference.epss, reference.exploits, reference.via) == (0.42, ("EDB-1",), "model")
 
 
+class AdvisesThePatch(HeuristicIntelligence):
+    """A model answer like the one the jury read: the row knows the update is
+    not out, the advice says to install it."""
+
+    async def summarize(self, item: Any, profile: ProfileSpec, interest: Interest | None) -> Any:
+        from radar.domain import ItemSummary, VulnerabilityCard
+
+        return ItemSummary(
+            headline=item.article.title,
+            summary="Неавторизованный злоумышленник записывает произвольные файлы.",
+            why="Срочно установите патч.",
+            by_model=True,
+            vulnerability=VulnerabilityCard(
+                ids=("CVE-2026-104286",),
+                fix="Обновить до FortiMail 7.4.9",
+                workaround="Отключить IBE",
+                exploit="in_the_wild",
+            ),
+        )
+
+
+async def test_advice_to_patch_gives_way_to_the_workaround_when_the_fix_is_not_out(
+    profile: ProfileSpec, make_article: ArticleFactory
+) -> None:
+    article = make_article(
+        "Уязвимость CVE-2026-104286 в SCADA-шлюзе FortiMail",
+        "Обновления пока недоступны, Fortinet называет версию 7.4.9. Пока их нет, отключите IBE.",
+    )
+    store = FakeStore([article])
+    graph = build_graph(_deps(store, AdvisesThePatch())).compile(checkpointer=InMemorySaver())
+
+    await graph.ainvoke(_input(profile), CONFIG)
+
+    assert store.saved is not None
+    [entry] = [item for topic in store.saved["topics"] for item in topic.items]
+    assert entry.text.why == "Исправление ещё не выпущено, до его выхода: отключить IBE."
+    assert (
+        entry.text.vulnerability.fix == "Обновить до FortiMail 7.4.9. Исправление ещё не выпущено."
+    )
+
+
 class ModelGrades(CountingIntelligence):
     """A model's grades, as the cache keeps them: by_model is set."""
 

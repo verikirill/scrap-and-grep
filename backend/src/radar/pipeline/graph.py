@@ -54,6 +54,7 @@ from radar.domain import (
     TopicName,
     VulnerabilityReference,
 )
+from radar.fix_status import reconcile_fix
 from radar.logging import get_logger
 from radar.pipeline.ports import PipelineDeps
 from radar.recsys.model import Learned, adapted_weight
@@ -384,6 +385,10 @@ class DigestNodes:
         )
         techniques = await self._techniques(written, evidence)
         text = check_entry(written, evidence, techniques)
+        # The update row and the advice agree on whether the fix is out. The
+        # article decides, not the bases: BDU names "обновление программного
+        # обеспечения" as the way to fix before any fixed build exists.
+        text = reconcile_fix(text, source)
         # Past the cache as well: a brief written before the rule keeps to it.
         if profile.audience == "management":
             text = plain_brief(text)
