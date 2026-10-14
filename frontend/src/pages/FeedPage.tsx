@@ -407,33 +407,36 @@ export function FeedPage() {
               <Skeletons view={view} />
             </PostColumn>
           ) : items.length === 0 ? (
-            <Card>
-              {tab === 'saved' ? (
-                <EmptyState
-                  icon={<Bookmark size={22} />}
-                  title="Сохранённого пока нет"
-                  action={
-                    <Button variant="tonal" onClick={() => selectTab('new')}>
-                      Открыть новое
-                    </Button>
-                  }
-                >
-                  Здесь будут публикации, отложенные кнопкой «Сохранить».
-                </EmptyState>
-              ) : (
-                <EmptyState
-                  icon={<Search size={22} />}
-                  title="Подходящих публикаций не нашлось"
-                  action={
-                    <Link to="/profiles" className={buttonClass('tonal')}>
-                      Настроить интересы
-                    </Link>
-                  }
-                >
-                  За две недели публикаций по вашим интересам не нашлось.
-                </EmptyState>
-              )}
-            </Card>
+            // A list that did not load is not empty: the error above says why.
+            !list.isError && (
+              <Card>
+                {tab === 'saved' ? (
+                  <EmptyState
+                    icon={<Bookmark size={22} />}
+                    title="Сохранённого пока нет"
+                    action={
+                      <Button variant="tonal" onClick={() => selectTab('new')}>
+                        Открыть новое
+                      </Button>
+                    }
+                  >
+                    Здесь будут публикации, отложенные кнопкой «Сохранить».
+                  </EmptyState>
+                ) : (
+                  <EmptyState
+                    icon={<Search size={22} />}
+                    title="Подходящих публикаций не нашлось"
+                    action={
+                      <Link to="/profiles" className={buttonClass('tonal')}>
+                        Настроить интересы
+                      </Link>
+                    }
+                  >
+                    За две недели публикаций по вашим интересам не нашлось.
+                  </EmptyState>
+                )}
+              </Card>
+            )
           ) : (
             <PostColumn view={view}>
               {items.map((item, index) => (
