@@ -258,6 +258,30 @@ class ArticleBody(Base):
     read_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
+class ArticleTranslation(Base):
+    """An article's text in the reader's language, written by the model once
+    (radar.reader.translate) and shown to every reader after."""
+
+    __tablename__ = "article_translations"
+
+    article_id: Mapped[int] = mapped_column(
+        ForeignKey("articles.id", ondelete="CASCADE"), primary_key=True
+    )
+    # The language it was translated into.
+    language: Mapped[str] = mapped_column(String(8), primary_key=True)
+    # The language it was translated from, as the reader told it.
+    source_language: Mapped[str] = mapped_column(String(8))
+    # The text, the target and the prompt version it was made from: the text
+    # read again from a changed page, or a new prompt, is translated again.
+    fingerprint: Mapped[str] = mapped_column(String(32))
+    model: Mapped[str] = mapped_column(String(200))
+    title: Mapped[str] = mapped_column(Text)
+    blocks: Mapped[list[dict[str, Any]]] = mapped_column(JSONB)
+    # Fragments left in the original: the model could not keep them faithfully.
+    kept_original: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    translated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
 class ArticleEmbedding(Base):
     """One vector per (article, model); switching models keeps older vectors."""
 
