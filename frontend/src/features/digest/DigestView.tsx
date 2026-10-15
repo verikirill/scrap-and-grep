@@ -19,7 +19,7 @@ import { AskDigest } from './AskDigest'
 import { CveTimeline } from './CveTimeline'
 import { RiskMatrix } from './RiskMatrix'
 import { BriefingPlayer } from './BriefingPlayer'
-import { EntryDetails, PriorityChip } from './EntryCard'
+import { EntryDetails, PriorityChip, VerifiedBadge } from './EntryCard'
 import { MailButton } from './MailButton'
 import { IssueExtras, ManualWork } from './IssueExtras'
 import { ShortPanel } from './ShortPanel'
@@ -110,6 +110,7 @@ function ItemCard({ item, index, placement, reactions, onReact }: ItemCardProps)
         <span>{formatDate(item.published_at)}</span>
         <ReadingTime minutes={item.reading_minutes} />
         <PriorityChip item={item} />
+        <VerifiedBadge item={item} />
         <ScoreBar score={item.score} />
         {item.interest_title && <Chip tone="neutral">{item.interest_title}</Chip>}
         {personal !== 0 && (

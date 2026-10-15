@@ -47,6 +47,18 @@ export function severityBand(item: DigestItem): Band {
   return 0
 }
 
+/**
+ * The bases an entry's CVE and BDU ids were found in: CISA KEV and the BDU of
+ * FSTEC. The digest marks such an entry as checked against them.
+ */
+export function verifiedBases(item: DigestItem): string[] {
+  const references = item.references ?? []
+  return [
+    references.some((reference) => reference.kev_added !== null) && 'CISA KEV',
+    references.some((reference) => reference.bdu_id !== '') && 'БДУ ФСТЭК',
+  ].filter((base): base is string => Boolean(base))
+}
+
 // The relevance of an entry to the profile's interests that counts as close.
 const CLOSE = 0.8
 
