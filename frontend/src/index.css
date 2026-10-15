@@ -284,6 +284,26 @@
     animation: progress-glint 2.2s linear infinite;
   }
 
+  /* A rate on the analytics page: the call-to-action gradient, still. */
+  .rate-fill {
+    background: linear-gradient(90deg, var(--cta-from), var(--cta-to));
+  }
+
+  /* The interval across a rate: a thin violet whisker. */
+  .rate-interval {
+    color: color-mix(in oklab, var(--cta-to) 75%, var(--foreground));
+  }
+
+  .rate-interval__part {
+    border-radius: 999px;
+    background: currentColor;
+  }
+
+  /* The ends stand over the fill too: a ring of the card keeps them apart from it. */
+  .rate-interval__end {
+    box-shadow: 0 0 0 1.5px var(--surface);
+  }
+
   /* The front of the build progress: a light dot with a glow of the accent. */
   .progress-marker__dot {
     background: var(--surface);

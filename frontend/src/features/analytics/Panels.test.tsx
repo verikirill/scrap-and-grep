@@ -1,33 +1,54 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import {
-  makeAnalytics,
-  makeAnalyticsTotals,
-  makeRankerRun,
-  makeRankerRuns,
-  makeRates,
-} from '../../test/fixtures'
-import { Activity, Adaptation, Figures, Funnel, Ranker, Slots, Sources } from './Panels'
+import { makeAnalytics, makeAnalyticsTotals, makeRates } from '../../test/fixtures'
+import { Activity, Days, Figures, Funnel, Panel } from './Panels'
 
-/** The card of a figure: its label, value and change, as one line of text. */
+/** A figure's tile: its label, value and change, as one line of text. */
 // toHaveTextContent and getByText collapse a no-break space into a space; textContent keeps it.
-const figure = (label: string) => screen.getByText(label).closest('div')?.textContent
+const figure = (label: string) => screen.getByRole('group', { name: label }).textContent
+
+describe('Panel', () => {
+  it('is a region named by its title, with the line under it and the remark at its foot', () => {
+    render(
+      <Panel icon={<svg />} title="Категории" subtitle="Как часто открывают" note="Дни по UTC.">
+        <p>тело</p>
+      </Panel>,
+    )
+
+    const region = screen.getByRole('region', { name: 'Категории' })
+    expect(within(region).getByRole('heading', { level: 2 })).toHaveTextContent('Категории')
+    expect(region.textContent).toBe('КатегорииКак часто открываюттелоДни по UTC.')
+  })
+
+  it('leaves out the line and the remark it was not given', () => {
+    render(
+      <Panel icon={<svg />} title="По дням" note={null}>
+        <p>тело</p>
+      </Panel>,
+    )
+
+    expect(screen.getByRole('region', { name: 'По дням' }).textContent).toBe('По днямтело')
+  })
+})
 
 describe('Figures', () => {
-  it('shows each figure with its change against the previous period', () => {
+  it('shows each figure with its change against the previous period of the same length', () => {
     render(
       <Figures
         totals={makeAnalyticsTotals({ readers: 48, seen: 1200, opened: 180, liked: 40 })}
         previous={makeAnalyticsTotals({ readers: 40, seen: 1000, opened: 120, liked: 40 })}
+        days={30}
       />,
     )
 
     // Counts change in percent, rates in percentage points.
-    expect(figure('Читатели')).toBe('Читатели48+20\u00a0%')
-    expect(figure('Показано статей')).toBe('Показано статей1\u00a0200+20\u00a0%')
-    expect(figure('Доля открытий')).toBe('Доля открытий15\u00a0%+3 п. п.')
+    expect(figure('Читатели')).toBe('Читатели48+20\u00a0%к предыдущим 30 дням')
+    expect(figure('Показано статей')).toBe(
+      'Показано статей1\u00a0200+20\u00a0%к предыдущим 30 дням',
+    )
+    expect(figure('Доля открытий')).toBe('Доля открытий15\u00a0%+3 п. п.к предыдущим 30 дням')
     expect(figure('Реакции «больше» и сохранения')).toBe(
-      'Реакции «больше» и сохранения3,3\u00a0%−0,7 п. п.',
+      'Реакции «больше» и сохранения3,3\u00a0%−0,7 п. п.к предыдущим 30 дням',
     )
   })
 
@@ -36,27 +57,31 @@ describe('Figures', () => {
       <Figures
         totals={makeAnalyticsTotals({ readers: 5, seen: 10_000, opened: 1_501 })}
         previous={makeAnalyticsTotals({ readers: 0, seen: 10_000, opened: 1_500 })}
+        days={7}
       />,
     )
 
-    expect(figure('Читатели')).toBe('Читатели5было 0')
-    expect(figure('Показано статей')).toBe('Показано статей10\u00a00000\u00a0%')
-    expect(figure('Доля открытий')).toBe('Доля открытий15\u00a0%0 п. п.')
+    expect(figure('Читатели')).toBe('Читатели5было 0к предыдущим 7 дням')
+    expect(figure('Показано статей')).toBe('Показано статей10\u00a00000\u00a0%к предыдущим 7 дням')
+    expect(figure('Доля открытий')).toBe('Доля открытий15\u00a0%0 п. п.к предыдущим 7 дням')
   })
 
   it('shows no change without a previous period, and no rate change when nothing was seen then', () => {
-    const { rerender } = render(<Figures totals={makeAnalyticsTotals()} previous={null} />)
+    const { rerender } = render(
+      <Figures totals={makeAnalyticsTotals()} previous={null} days={30} />,
+    )
     expect(figure('Читатели')).toBe('Читатели48')
 
     rerender(
       <Figures
         totals={makeAnalyticsTotals()}
         previous={makeAnalyticsTotals({ seen: 0, opened: 0, liked: 0, rejected: 0 })}
+        days={30}
       />,
     )
 
     expect(figure('Доля открытий')).toBe('Доля открытий15\u00a0%')
-    expect(figure('Показано статей')).toMatch(/было 0$/)
+    expect(figure('Показано статей')).toMatch(/было 0к предыдущим 30 дням$/)
   })
 })
 
@@ -94,117 +119,17 @@ describe('Funnel', () => {
   })
 })
 
-/** A row of a breakdown: its name sits in the row's first cell. */
-const row = (name: string) => screen.getByText(name).parentElement?.parentElement as HTMLElement
+describe('Days', () => {
+  it('draws the views of each day and leaves out the rates of days with too few views', () => {
+    const daily = makeAnalytics().daily
+    render(<Days daily={daily} />)
 
-describe('RateRows', () => {
-  it('names the places of the feed and says when a row has too few views', () => {
-    render(
-      <Slots
-        slots={[
-          { ...makeRates({ seen: 820, opened: 131 }), slot: 'ranked' },
-          { ...makeRates({ seen: 12, opened: 3 }), slot: 'explore' },
-          { ...makeRates({ seen: 40, opened: 4 }), slot: 'mystery' },
-        ]}
-      />,
-    )
-
-    expect(screen.getByText('Лента по интересам')).toBeInTheDocument()
-    expect(screen.getByText('с учётом интересов читателя')).toBeInTheDocument()
-    expect(row('Что-то новое')).toHaveTextContent('мало данных')
-    expect(row('Лента по интересам')).toHaveTextContent('16 %')
-    // A place the page does not know keeps the server's name.
-    expect(screen.getByText('mystery')).toBeInTheDocument()
-  })
-
-  it('says so when there is nothing to break down', () => {
-    render(<Slots slots={[]} />)
-
-    expect(screen.getByText('Показов пока нет.')).toBeInTheDocument()
-  })
-})
-
-describe('Sources', () => {
-  it('lists the sources read most and those rejected most, or says there are none', () => {
-    const { rerender } = render(<Sources data={makeAnalytics()} />)
-    expect(screen.getByText('SecurityLab.ru')).toBeInTheDocument()
-    expect(screen.getByText('OpenNET').closest('li')).toHaveTextContent('8,8 %')
-
-    rerender(<Sources data={makeAnalytics({ sources_best: [], sources_rejected: [] })} />)
-
-    expect(
-      screen.getByText('Ни у одного источника пока нет 30 показов статей.'),
-    ).toBeInTheDocument()
-    expect(screen.getByText('Отклонённых статей пока нет.')).toBeInTheDocument()
-  })
-})
-
-describe('Adaptation', () => {
-  it('names each group with its readers in the right form', () => {
-    render(
-      <Adaptation
-        cohorts={[
-          { ...makeRates(), adaptive: true, readers: 21 },
-          { ...makeRates(), adaptive: false, readers: 3 },
-        ]}
-      />,
-    )
-
-    expect(screen.getByText('21 читатель')).toBeInTheDocument()
-    expect(screen.getByText('3 читателя')).toBeInTheDocument()
-  })
-})
-
-describe('Ranker', () => {
-  it('says which model serves the readers and how each night went', () => {
-    render(
-      <Ranker
-        data={makeAnalytics({
-          ranker: { share: 0.5, active: '20261014-021500', runs: makeRankerRuns(2) },
-        })}
-      />,
-    )
-
-    expect(screen.getByText('Обученная модель')).toBeInTheDocument()
-    expect(screen.getByText(/группа обученной модели · 24 читателя/)).toBeInTheDocument()
-    expect(
-      screen.getByText(
-        'Включена модель 20261014-021500: её порядок выдачи получают 50 % читателей.',
-      ),
-    ).toBeInTheDocument()
-    expect(screen.getByText('включена')).toBeInTheDocument()
-    expect(screen.getByText('не включена')).toBeInTheDocument()
-    expect(screen.getByText('nDCG@20 0.412 → 0.447')).toBeInTheDocument()
-  })
-
-  it('explains the hand weights when no model is on and nothing was trained yet', () => {
-    render(
-      <Ranker
-        data={makeAnalytics({ variants: [], ranker: { share: 0.5, active: null, runs: [] } })}
-      />,
-    )
-
-    expect(screen.getByText('Выдач пока нет.')).toBeInTheDocument()
-    expect(screen.getByText(/Сейчас ранжирование идёт по ручным весам/)).toBeInTheDocument()
-    expect(
-      screen.getByText('Обучение ещё не запускалось, оно идёт каждую ночь.'),
-    ).toBeInTheDocument()
-  })
-
-  it('leaves out the quality of a run that has none', () => {
-    render(
-      <Ranker
-        data={makeAnalytics({
-          ranker: {
-            share: 0.5,
-            active: null,
-            runs: [makeRankerRun({ status: 'retired', hand_ndcg: null, model_ndcg: null })],
-          },
-        })}
-      />,
-    )
-
-    expect(screen.getByText('снята')).toBeInTheDocument()
-    expect(screen.queryByText(/nDCG@20 \d/)).toBeNull()
+    const views = screen.getByRole('table', { name: 'Показы статей по дням' })
+    expect(within(views).getAllByRole('row')).toHaveLength(daily.length)
+    const rates = screen.getByRole('table', { name: 'Доля открытий и отметок' })
+    const thin = daily.filter((day) => !day.enough).length
+    // Two cells a day, both "мало данных" on a thin day.
+    expect(within(rates).queryAllByText('мало данных')).toHaveLength(thin * 2)
+    expect(screen.getByText('Дни, где меньше 30 показов, пропущены.')).toBeInTheDocument()
   })
 })
