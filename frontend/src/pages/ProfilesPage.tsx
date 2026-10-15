@@ -116,7 +116,7 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
           <>
             {dirty && saved && (
               <Button
-                variant="ghost"
+                variant="secondary"
                 icon={<RotateCcw size={15} />}
                 onClick={() => setDraft(saved)}
               >
@@ -165,9 +165,12 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
               // Never wider than the row: a long name wraps inside the tab instead of
               // pushing the page sideways on a phone or hiding behind an ellipsis.
               'relative isolate flex max-w-full min-w-0 items-center gap-2 rounded-[1.25rem] py-1 pr-3.5 pl-1 text-left text-sm font-medium transition-colors duration-300',
+              // A tab that is not chosen stands on a grey tile, the chosen one on the
+              // white pill with its shadow: as text alone the tabs sat straight on the
+              // dots and read as labels, as white tiles they all looked chosen.
               profile.id === activeId
                 ? 'text-foreground'
-                : 'text-muted hover:bg-default/60 hover:text-foreground',
+                : 'bg-default text-muted hover:text-foreground',
             )}
           >
             <ProfileAvatar profile={profile} size={28} />
@@ -176,7 +179,7 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
         ))}
         <Button
           size="sm"
-          variant="ghost"
+          variant="secondary"
           icon={<Plus size={15} />}
           onClick={() => leaveTo(NEW)}
           disabled={activeId === NEW}

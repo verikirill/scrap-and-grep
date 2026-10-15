@@ -212,6 +212,22 @@
     opacity: 1;
   }
 
+  /*
+   * A see-through button on the page ground shows the dots through itself:
+   * the outlined one and the soft danger one get a solid fill, hover too.
+   */
+  .button--outline {
+    --button-bg: var(--surface);
+    --button-bg-hover: var(--default);
+    --button-bg-pressed: var(--default);
+  }
+
+  .button--danger-soft {
+    --button-bg: color-mix(in oklab, var(--danger) 12%, var(--surface));
+    --button-bg-hover: color-mix(in oklab, var(--danger) 20%, var(--surface));
+    --button-bg-pressed: color-mix(in oklab, var(--danger) 20%, var(--surface));
+  }
+
   .button.cta .cta__arrow {
     transition: transform 0.25s var(--ease-out-quint);
   }

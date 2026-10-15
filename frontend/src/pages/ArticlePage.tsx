@@ -176,7 +176,7 @@ export function ArticlePage() {
   return (
     <div className="mx-auto max-w-[720px]">
       <div className="mb-6 flex items-center justify-between gap-3">
-        <Button variant="ghost" size="sm" icon={<ChevronLeft size={18} />} onClick={goBack}>
+        <Button variant="secondary" size="sm" icon={<ChevronLeft size={18} />} onClick={goBack}>
           Назад
         </Button>
         {article.data && !isMissing && (

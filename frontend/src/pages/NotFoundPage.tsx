@@ -21,7 +21,7 @@ export function NotFoundPage() {
         <Button variant="cta" onClick={() => navigate('/')}>
           На главную
         </Button>
-        <Button variant="ghost" icon={<ChevronLeft size={18} />} onClick={goBack}>
+        <Button variant="secondary" icon={<ChevronLeft size={18} />} onClick={goBack}>
           Назад
         </Button>
       </div>
