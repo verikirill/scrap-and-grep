@@ -1,6 +1,8 @@
 import clsx from 'clsx'
 import { Check } from '../../components/icons'
 import { motion } from 'motion/react'
+import { Mascot } from '../../components/Mascot'
+import type { MascotPose } from '../../components/Mascot'
 import { Card } from '../../components/ui'
 import type { DigestSummary, ProgressEvent } from '../../lib/api'
 import { STAGE_LABELS } from '../../lib/format'
@@ -24,6 +26,12 @@ function stepIndex(stage: string | null | undefined): number {
   if (stage === 'persist' || stage === 'done') return STEPS.length
   const index = STEPS.indexOf(stage as (typeof STEPS)[number])
   return index === -1 ? 0 : index
+}
+
+/** The cat waits in the queue, searches while the steps run and holds up the issue at the end. */
+function poseOf(isQueued: boolean, current: number): MascotPose {
+  if (isQueued) return 'waiting'
+  return current >= STEPS.length ? 'found' : 'searching'
 }
 
 type Props = {
@@ -63,23 +71,44 @@ export function ProgressCard({ digest, event }: Props) {
         </span>
       </div>
 
-      <div
-        role="progressbar"
-        aria-label="Готовность выпуска"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={percent}
-        className="mt-5 h-1.5 overflow-hidden rounded-full bg-surface-secondary"
-      >
+      {/* The track: the cat walks along the bar as the issue gets ready. */}
+      <div className="relative mx-4 mt-4 pt-16 sm:mx-6">
         <motion.div
-          className="h-full origin-left rounded-full bg-accent"
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0"
           initial={false}
-          animate={{ scaleX: progress }}
-          transition={{ type: 'spring', stiffness: 70, damping: 20 }}
-        />
+          animate={{ x: `${progress * 100}%` }}
+          transition={{ type: 'spring', stiffness: 60, damping: 18 }}
+        >
+          {/* Keyed by the step: the cat hops each time a step is done. */}
+          <motion.div
+            key={current}
+            className="w-fit -translate-x-1/2"
+            initial={{ y: -8 }}
+            animate={{ y: 0 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 14 }}
+          >
+            <Mascot pose={poseOf(isQueued, current)} size={64} />
+          </motion.div>
+        </motion.div>
+        <div
+          role="progressbar"
+          aria-label="Готовность выпуска"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={percent}
+          className="h-2.5 overflow-hidden rounded-full bg-surface-secondary"
+        >
+          <motion.div
+            className="progress-fill h-full origin-left rounded-full"
+            initial={false}
+            animate={{ scaleX: progress }}
+            transition={{ type: 'spring', stiffness: 60, damping: 18 }}
+          />
+        </div>
       </div>
 
-      <ol className="mt-6 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 lg:grid-cols-6">
+      <ol className="mt-4 grid grid-cols-6 gap-x-1 sm:mx-2">
         {STEPS.map((step, index) => {
           const isDone = index < current
           const isActive = index === current && !isQueued
@@ -87,7 +116,7 @@ export function ProgressCard({ digest, event }: Props) {
             <li
               key={step}
               aria-current={isActive ? 'step' : undefined}
-              className="flex items-center gap-2.5"
+              className="flex flex-col items-center gap-1.5 text-center"
             >
               <span
                 className={clsx(
@@ -110,6 +139,7 @@ export function ProgressCard({ digest, event }: Props) {
                 className={clsx(
                   'text-xs leading-tight transition-colors duration-300',
                   isDone || isActive ? 'text-foreground' : 'text-muted',
+                  isActive ? 'font-semibold whitespace-nowrap' : 'max-sm:sr-only',
                 )}
               >
                 {STEP_NAMES[step]}
