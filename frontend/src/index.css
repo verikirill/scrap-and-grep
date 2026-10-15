@@ -393,6 +393,28 @@
   }
 }
 
+/* The dot field behind the app (components/ui/dot-field.tsx): the React Bits
+   grid, fixed under every card like the halftone was. */
+.dot-grid.dot-field {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+.dot-grid {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.dot-grid__canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
 /* The brand cat (components/BrandCat.tsx): the parts of the logo, placed in
    percentages of their 640 by 660 scene. Its motion is transform and opacity
    only, on a 6 s cycle; the eyes blink on a 4 s one, so the two drift apart. */

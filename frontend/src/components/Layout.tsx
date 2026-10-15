@@ -28,6 +28,7 @@ import { LogoMark, Wordmark } from './Logo'
 import { DURATION, EASE } from './tokens'
 import { EntranceContext, newEntrance } from './entrance'
 import { Skeleton } from './loading'
+import { DotField } from './ui/dot-field'
 
 type NavItem = {
   to: string
@@ -392,7 +393,9 @@ export function Layout({ children }: { children: ReactNode }) {
     return newEntrance()
   }, [pageKey])
   return (
+    // isolate: the field sits under every card yet over the page colour.
     <div className="isolate min-h-dvh bg-background">
+      <DotField dark={dark} />
       <ActivityBar />
 
       {/* Sidebar, from tablet width up. */}

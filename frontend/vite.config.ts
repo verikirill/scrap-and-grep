@@ -56,6 +56,8 @@ export default defineConfig({
         'src/test/**',
         'src/main.tsx',
         'src/components/icons.tsx',
+        // React Bits' grid as shipped (ui/dot-field.tsx sets it up): WebGL2, nothing of it runs in jsdom.
+        'src/components/ui/dot-grid.tsx',
       ],
       // cobertura: the coverage GitLab draws on merge request diffs.
       reporter: ['text-summary', 'json-summary', 'html', 'cobertura'],
