@@ -152,7 +152,7 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
           container={tabs}
           activeKey={activeId}
           rememberAs="profile-tabs"
-          className="rounded-full bg-surface shadow-surface ring-1 ring-border"
+          className="rounded-[1.25rem] bg-surface shadow-surface ring-1 ring-border"
         />
         {profiles.map((profile) => (
           <button
@@ -162,17 +162,16 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
             aria-current={profile.id === activeId ? 'true' : undefined}
             data-active={profile.id === activeId}
             className={clsx(
-              // Never wider than the row: a long name used to push the whole page sideways on a phone.
-              'relative isolate flex max-w-full min-w-0 items-center gap-2 rounded-full py-1 pr-3.5 pl-1 text-sm font-medium transition-colors duration-300',
+              // Never wider than the row: a long name wraps inside the tab instead of
+              // pushing the page sideways on a phone or hiding behind an ellipsis.
+              'relative isolate flex max-w-full min-w-0 items-center gap-2 rounded-[1.25rem] py-1 pr-3.5 pl-1 text-left text-sm font-medium transition-colors duration-300',
               profile.id === activeId
                 ? 'text-foreground'
                 : 'text-muted hover:bg-default/60 hover:text-foreground',
             )}
           >
             <ProfileAvatar profile={profile} size={28} />
-            <span className="relative min-w-0 truncate sm:max-w-80" title={profile.spec.name}>
-              {profile.spec.name}
-            </span>
+            <span className="relative min-w-0 break-words">{profile.spec.name}</span>
           </button>
         ))}
         <Button
