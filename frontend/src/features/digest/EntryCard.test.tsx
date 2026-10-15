@@ -75,10 +75,14 @@ describe('EntryDetails', () => {
       <EntryDetails
         item={makeVulnerabilityItem({
           fields: [
-            { label: 'Уязвимость', value: 'Обход аутентификации в веб-сервере SIMATIC S7-1500' },
-            { label: 'Обновление', value: 'нет данных' },
-            { label: 'CVSS', value: 'нет данных' },
-            { label: 'CWE', value: 'CWE-287' },
+            {
+              key: 'vulnerability.name',
+              label: 'Уязвимость',
+              value: 'Обход аутентификации в веб-сервере SIMATIC S7-1500',
+            },
+            { key: 'vulnerability.fix', label: 'Обновление', value: 'нет данных' },
+            { key: 'vulnerability.cvss', label: 'CVSS', value: 'нет данных' },
+            { key: 'vulnerability.cwe', label: 'CWE', value: 'CWE-287' },
           ],
         })}
       />,
@@ -90,6 +94,23 @@ describe('EntryDetails', () => {
     ])
     // Inside a sentence a field name is lowered, an abbreviation is not.
     expect(screen.getByText('Нет в тексте: обновление, CVSS')).toBeInTheDocument()
+  })
+
+  it('leaves out the rows the reader’s profile hides, filled or silent', () => {
+    render(
+      <EntryDetails
+        item={makeVulnerabilityItem({
+          hidden_fields: ['vulnerability.cvss', 'vulnerability.cvss_words', 'vulnerability.fix'],
+        })}
+      />,
+    )
+
+    const labels = cardFields().map(([label]) => label)
+    expect(labels).not.toContain('CVSS')
+    expect(labels).not.toContain('Доступ')
+    expect(labels).not.toContain('Действия пользователя')
+    expect(labels).not.toContain('Обновление')
+    expect(labels.slice(0, 3)).toEqual(['Уязвимость', 'Затронуто', 'Временные меры'])
   })
 
   it('leaves the indicators and techniques to their own block, and only those it shows', () => {

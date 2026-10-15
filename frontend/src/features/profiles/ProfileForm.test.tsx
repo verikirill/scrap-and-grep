@@ -258,3 +258,35 @@ describe('ProfileForm filters', () => {
     expect(latest()?.categories).toEqual([])
   })
 })
+
+describe('ProfileForm card fields', () => {
+  it('hides a card row of an attack and shows it again, every row shown at first', async () => {
+    const { user, latest } = renderForm(makeSpec())
+    const head = screen.getByRole('button', { name: /^Поля карточек/ })
+    expect(head).toHaveTextContent('все показаны')
+
+    await user.click(head)
+    const attacks = within(screen.getByRole('group', { name: 'Атаки' }))
+    const group = attacks.getByRole('checkbox', { name: 'Группировка' })
+    expect(group).toBeChecked()
+
+    await user.click(group)
+
+    expect(group).not.toBeChecked()
+    expect(latest()?.hidden_card_fields).toEqual(['attack.group'])
+    expect(head).toHaveTextContent('скрыто 1 поле')
+    // The same name in the other group is a row of its own.
+    const vulnerabilities = within(screen.getByRole('group', { name: 'Уязвимости' }))
+    expect(vulnerabilities.getByRole('checkbox', { name: 'Сверено по базам' })).toBeChecked()
+
+    await user.click(group)
+
+    expect(latest()?.hidden_card_fields).toEqual([])
+    expect(head).toHaveTextContent('все показаны')
+  })
+
+  it('offers no card rows to a brief for management, which has no cards', () => {
+    renderForm(makeSpec({ audience: 'management' }))
+    expect(screen.queryByRole('button', { name: /^Поля карточек/ })).toBeNull()
+  })
+})
