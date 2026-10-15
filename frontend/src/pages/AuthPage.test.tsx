@@ -7,6 +7,7 @@ import { makeMe, makeMeta } from '../test/fixtures'
 import { renderWithProviders } from '../test/render'
 import { apiUrl, server } from '../test/server'
 import { AuthPage } from './AuthPage'
+import { TailVisual } from '../features/auth/TailVisual'
 
 /** A server with no session until the reader signs in or registers. */
 function serveSession({ meta = makeMeta() } = {}) {
@@ -281,19 +282,19 @@ describe('AuthPage', () => {
     )
   })
 
-  it('greets with the searching cat on both the sign-in and the registration form', async () => {
+  it('greets with the searching cat on the brand side, not over the form', async () => {
     serveSession()
-    for (const mode of ['login', 'register'] as const) {
-      const { container, unmount } = renderWithProviders(<AuthPage mode={mode} />, {
-        route: `/${mode}`,
-        path: `/${mode}`,
-      })
-      await screen.findByLabelText('Почта')
-      // Decorative: the form is what the page says, not the picture.
-      expect(container.querySelector('.brand-cat')).toHaveAttribute('data-pose', 'search')
-      expect(container.querySelector('.brand-cat')).toHaveAttribute('aria-hidden', 'true')
-      unmount()
-    }
+    const { container } = renderWithProviders(<AuthPage mode="login" />, {
+      route: '/login',
+      path: '/login',
+    })
+    await screen.findByLabelText('Почта')
+    // The form keeps its plain logo; the cat lives on the wide screen's brand side.
+    expect(container.querySelector('.brand-cat')).toBeNull()
+    const side = renderWithProviders(<TailVisual />)
+    // Decorative: the form is what the page says, not the picture.
+    expect(side.container.querySelector('.brand-cat')).toHaveAttribute('data-pose', 'search')
+    expect(side.container.querySelector('.brand-cat')).toHaveAttribute('aria-hidden', 'true')
   })
 
   it('keeps the registration form free of the one-click entries', async () => {
