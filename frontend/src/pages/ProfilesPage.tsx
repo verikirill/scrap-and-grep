@@ -1,7 +1,7 @@
 import clsx from 'clsx'
 import { Newspaper, Plus, RotateCcw, Save, Trash2 } from '../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
-import { useMemo, useRef, useState } from 'react'
+import { useContext, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { EASE } from '../components/tokens'
 import { Loading, Skeleton, SkeletonText } from '../components/loading'
@@ -13,7 +13,7 @@ import { ProfileAvatar, ProfileLookPicker } from '../features/profiles/ProfileLo
 import { ShareProfileButton } from '../features/profiles/ShareProfile'
 import type { Profile, ProfileSpec } from '../lib/api'
 import { useDeleteProfile, useProfiles, useSaveProfile } from '../lib/queries'
-import { SlidingPill } from '../components/SlidingPill'
+import { EntranceContext } from '../components/entrance'
 import { useConfirmLeave } from '../lib/useConfirmLeave'
 
 const NEW = 'new'
@@ -51,7 +51,6 @@ type EditorProps = {
  * section, the focus and anything typed while the request was in flight stay.
  */
 function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
-  const tabs = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
   const save = useSaveProfile()
   const remove = useDeleteProfile()
@@ -147,63 +146,62 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
         }
       />
 
-      <div ref={tabs} className="relative isolate mb-5 flex flex-wrap items-center gap-1.5">
-        <SlidingPill
-          container={tabs}
-          activeKey={activeId}
-          rememberAs="profile-tabs"
-          className="rounded-[1.25rem] bg-surface shadow-surface ring-1 ring-border"
-        />
-        {profiles.map((profile) => (
-          <button
-            key={profile.id}
-            type="button"
-            onClick={() => leaveTo(profile.id)}
-            aria-current={profile.id === activeId ? 'true' : undefined}
-            data-active={profile.id === activeId}
-            className={clsx(
-              // Never wider than the row: a long name wraps inside the tab instead of
-              // pushing the page sideways on a phone or hiding behind an ellipsis.
-              'relative isolate flex max-w-full min-w-0 items-center gap-2 rounded-[1.25rem] py-1 pr-3.5 pl-1 text-left text-sm font-medium transition-colors duration-300',
-              profile.id === activeId
-                ? 'text-foreground'
-                : 'text-muted hover:bg-default/60 hover:text-foreground',
-            )}
+      {/* The tabs sit on a card, as the digest page picks its profile: on the
+          dotted page the plain buttons around them blended in. */}
+      <Card className="mb-5 p-3 sm:p-4">
+        {/* The chosen tab is lit in place: no pill slides or springs between them. */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {profiles.map((profile) => (
+            <button
+              key={profile.id}
+              type="button"
+              onClick={() => leaveTo(profile.id)}
+              aria-current={profile.id === activeId ? 'true' : undefined}
+              data-active={profile.id === activeId}
+              className={clsx(
+                // Never wider than the row: a long name wraps inside the tab instead of
+                // pushing the page sideways on a phone or hiding behind an ellipsis.
+                'relative isolate flex max-w-full min-w-0 items-center gap-2 rounded-[1.25rem] py-1 pr-3.5 pl-1 text-left text-sm font-medium',
+                profile.id === activeId
+                  ? 'bg-accent-soft text-foreground ring-1 ring-accent/40'
+                  : 'text-muted hover:bg-default/60 hover:text-foreground',
+              )}
+            >
+              <ProfileAvatar profile={profile} size={28} />
+              <span className="relative min-w-0 break-words">{profile.spec.name}</span>
+            </button>
+          ))}
+          <Button
+            size="sm"
+            variant="ghost"
+            icon={<Plus size={15} />}
+            onClick={() => leaveTo(NEW)}
+            disabled={activeId === NEW}
           >
-            <ProfileAvatar profile={profile} size={28} />
-            <span className="relative min-w-0 break-words">{profile.spec.name}</span>
-          </button>
-        ))}
-        <Button
-          size="sm"
-          variant="ghost"
-          icon={<Plus size={15} />}
-          onClick={() => leaveTo(NEW)}
-          disabled={activeId === NEW}
-        >
-          Новый
-        </Button>
-        {stored && (
-          <div className="ml-auto flex flex-wrap gap-1.5">
-            <ShareProfileButton profile={stored} />
-            {profiles.length > 1 && (
-              <Button
-                size="sm"
-                variant="danger"
-                icon={<Trash2 size={14} />}
-                isBusy={remove.isPending}
-                onClick={() => {
-                  if (window.confirm(`Удалить профиль «${stored.spec.name}»?`)) {
-                    remove.mutate(stored.id, { onSuccess: () => onSelect(null) })
-                  }
-                }}
-              >
-                Удалить профиль
-              </Button>
-            )}
-          </div>
-        )}
-      </div>
+            Новый
+          </Button>
+          {stored && (
+            <div className="ml-auto flex flex-wrap gap-1.5">
+              <ShareProfileButton profile={stored} />
+              {profiles.length > 1 && (
+                <Button
+                  size="sm"
+                  variant="danger"
+                  icon={<Trash2 size={14} />}
+                  isBusy={remove.isPending}
+                  onClick={() => {
+                    if (window.confirm(`Удалить профиль «${stored.spec.name}»?`)) {
+                      remove.mutate(stored.id, { onSuccess: () => onSelect(null) })
+                    }
+                  }}
+                >
+                  Удалить профиль
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      </Card>
 
       <div className="mb-4 space-y-2">
         <ErrorNote error={save.error ?? remove.error} />
@@ -271,6 +269,7 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
 export function ProfilesPage() {
   const profiles = useProfiles()
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const entrance = useContext(EntranceContext)
 
   if (!profiles.data) {
     return (
@@ -318,11 +317,14 @@ export function ProfilesPage() {
   const activeId = selectedId ?? profiles.data[0]?.id ?? NEW
   const stored = profiles.data.find((profile) => profile.id === activeId) ?? null
   return (
-    <ProfileEditor
-      key={stored?.id ?? NEW}
-      profiles={profiles.data}
-      stored={stored}
-      onSelect={setSelectedId}
-    />
+    // Another profile opens in place: its cards rise only on the page's first view.
+    <EntranceContext.Provider value={selectedId === null ? entrance : null}>
+      <ProfileEditor
+        key={stored?.id ?? NEW}
+        profiles={profiles.data}
+        stored={stored}
+        onSelect={setSelectedId}
+      />
+    </EntranceContext.Provider>
   )
 }

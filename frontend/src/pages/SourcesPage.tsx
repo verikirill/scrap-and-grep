@@ -31,15 +31,11 @@ export function SourcesPage() {
       />
       <div
         ref={tabRow}
-        className="relative isolate mb-5 inline-flex gap-1 rounded-xl bg-surface-secondary p-1"
+        className="relative isolate mb-5 inline-flex gap-1 rounded-xl bg-surface p-1 ring-1 ring-border"
         role="group"
         aria-label="Раздел"
       >
-        <SlidingPill
-          container={tabRow}
-          activeKey={tab}
-          className="rounded-lg bg-surface shadow-surface"
-        />
+        <SlidingPill container={tabRow} activeKey={tab} className="rounded-lg bg-default" />
         {TABS.map((item) => (
           <button
             key={item.id}

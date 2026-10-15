@@ -78,7 +78,7 @@ function ItemCard({ item, index, placement, reactions, onReact }: ItemCardProps)
       ref={seenRef}
       id={`entry-${placement.position}`}
       {...rowMotion(index)}
-      className="group lift scroll-mt-24 rounded-xl border border-transparent px-4 py-4 hover:border-separator hover:bg-surface"
+      className="group scroll-mt-24 rounded-xl border border-separator bg-surface px-4 py-4"
     >
       <div className="flex items-start gap-1">
         <Link

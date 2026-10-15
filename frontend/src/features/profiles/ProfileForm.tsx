@@ -286,11 +286,12 @@ export function ProfileForm({
       </Card>
 
       <div>
-        <div className="mb-2.5 flex items-center justify-between px-1">
+        {/* A bar of its own: on the dotted page a bare heading and button sank in. */}
+        <div className="mb-2.5 flex items-center justify-between rounded-2xl bg-surface py-2 pr-2 pl-4 shadow-surface">
           <h2 className="text-sm font-semibold">Интересы</h2>
           <Button
             size="sm"
-            variant="ghost"
+            variant="secondary"
             icon={<Plus size={15} />}
             onClick={addInterest}
             disabled={spec.interests.length >= 20}

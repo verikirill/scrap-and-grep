@@ -258,7 +258,7 @@ export function AdaptationPanel({
   return (
     <section
       aria-labelledby="adaptation-title"
-      className="rounded-3xl border border-separator bg-background p-4 sm:p-5"
+      className="rounded-3xl bg-surface p-4 shadow-surface sm:p-5"
     >
       <div className="flex items-start gap-3">
         <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-accent-soft text-accent-soft-foreground">

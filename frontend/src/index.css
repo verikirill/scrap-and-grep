@@ -194,16 +194,33 @@
   }
 
   /*
-   * HeroUI halves a disabled button, and an outlined one all but vanished
-   * against the page. It stays solid instead: a plain grey fill and muted
+   * HeroUI halves a disabled button, and on the dotted page an outlined one
+   * all but vanished. It stays solid instead: white with an edge and muted
    * text say "not now" while the label still reads.
    */
   .button:not(.cta):not([aria-busy='true']):disabled,
   .button:not(.cta)[aria-disabled='true'] {
     opacity: 1;
-    background: var(--default);
-    border-color: transparent;
+    background: var(--surface);
+    border: 1px solid var(--border);
     color: var(--muted);
+    box-shadow: none;
+  }
+
+  /* An outlined button is white, not see-through: on the dotted page the
+     dots ran through it. */
+  .button--outline {
+    --button-bg: var(--surface);
+  }
+
+  /* Tabs as the segmented control: a white track with an edge and a grey
+     chosen tab, so the track does not sink into the dotted page. */
+  .tabs__list-container {
+    background-color: var(--surface);
+    box-shadow: inset 0 0 0 1px var(--border);
+  }
+  .tabs__indicator {
+    background-color: var(--default);
     box-shadow: none;
   }
 
@@ -257,20 +274,6 @@
 
   .progress-marker[data-state='queued'] .progress-marker__dot {
     box-shadow: inset 0 0 0 3px color-mix(in oklab, var(--muted) 60%, transparent);
-  }
-
-  /* A card that opens something rises a little under the pointer. */
-  .lift {
-    transition-property: translate, box-shadow, border-color, background-color;
-    transition-duration: 0.25s;
-    transition-timing-function: var(--ease-out-quint);
-  }
-
-  @media (hover: hover) {
-    .lift:hover {
-      translate: 0 -3px;
-      box-shadow: 0 14px 30px -18px rgb(0 0 0 / 0.35);
-    }
   }
 
   /* Skeletons carry a breath of the accent, so a loading page is ours too. */
@@ -375,6 +378,24 @@
   to {
     clip-path: circle(150% at 0% 0%);
   }
+}
+
+/* The halftone behind the app (components/ui/dotted-veil.tsx): barely there.
+   Black dots on white multiply into the light page, white dots on black
+   screen into the dark one, so the page colour shows through untouched. */
+.dotted-veil {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.03;
+  mix-blend-mode: multiply;
+}
+.dark .dotted-veil {
+  opacity: 0.04;
+  mix-blend-mode: screen;
 }
 
 /* The brand cat (components/BrandCat.tsx): the parts of the logo, placed in

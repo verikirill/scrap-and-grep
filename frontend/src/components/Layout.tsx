@@ -28,6 +28,7 @@ import { LogoMark, Wordmark } from './Logo'
 import { DURATION, EASE } from './tokens'
 import { EntranceContext, newEntrance } from './entrance'
 import { Skeleton } from './loading'
+import { DottedVeil } from './ui/dotted-veil'
 
 type NavItem = {
   to: string
@@ -392,7 +393,9 @@ export function Layout({ children }: { children: ReactNode }) {
     return newEntrance()
   }, [pageKey])
   return (
+    // isolate: the veil sits under every card yet over the page colour.
     <div className="isolate min-h-dvh bg-background">
+      <DottedVeil className="dotted-veil" />
       <ActivityBar />
 
       {/* Sidebar, from tablet width up. */}

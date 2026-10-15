@@ -53,7 +53,8 @@ export function Segmented<T extends string>({
       aria-label={label}
       onKeyDown={keys.onKeyDown}
       className={cn(
-        'relative isolate flex rounded-full bg-default p-1',
+        // White with an edge rather than grey: a grey track sank into the dotted page.
+        'relative isolate flex rounded-full bg-surface p-1 ring-1 ring-border',
         // A fade at the right edge says there is more to scroll to.
         isScrollable &&
           'overflow-x-auto [mask-image:linear-gradient(to_right,black_85%,transparent)] [scrollbar-width:none]',
@@ -63,7 +64,7 @@ export function Segmented<T extends string>({
       <SlidingPill
         container={group}
         activeKey={found >= 0 ? String(value) : null}
-        className="rounded-full bg-surface shadow-surface"
+        className="rounded-full bg-default"
       />
       {options.map((option, index) => {
         const isChosen = index === found
