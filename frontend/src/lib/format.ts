@@ -139,7 +139,7 @@ export function modelLabel(id: string | undefined): string {
   if (!id) return 'н/д'
   if (id.startsWith('hashing')) return 'без модели (n-граммы)'
   if (id === 'heuristic') return 'без модели (эвристика)'
-  return id.replace(/^ollama:/, '')
+  return id.replace(/^(ollama|openai):/, '').replace(/\/latest$/, '')
 }
 
 /**

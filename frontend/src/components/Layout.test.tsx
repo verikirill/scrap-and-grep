@@ -71,6 +71,20 @@ describe('Layout', () => {
     expect(await screen.findByText('qwen3:8b')).toBeInTheDocument()
   })
 
+  it('names a model behind an OpenAI-compatible API instead of calling it offline', async () => {
+    serveAdmin()
+    server.use(
+      http.get(apiUrl('/meta'), () =>
+        HttpResponse.json(
+          makeMeta({ llm_provider: 'openai', llm_model: 'qwen3.6-35b-a3b/latest' }),
+        ),
+      ),
+    )
+    renderLayout()
+    expect(await screen.findByText('qwen3.6-35b-a3b')).toBeInTheDocument()
+    expect(screen.queryByText('Автономный режим')).toBeNull()
+  })
+
   it('says when the API does not answer', async () => {
     serveAdmin()
     server.use(http.get(apiUrl('/meta'), () => HttpResponse.json(null, { status: 500 })))
