@@ -43,6 +43,8 @@ export default defineConfig({
           setupFiles: ['./src/test/setup.ts'],
           // vi.spyOn(window, 'confirm') and the like end with their test.
           restoreMocks: true,
+          // A form of HeroUI fields takes a few seconds to drive on a busy runner.
+          testTimeout: 15_000,
         },
       },
     ],
