@@ -27,10 +27,16 @@ from radar.domain import (
     VulnerabilityCard,
     VulnerabilityReference,
 )
-from radar.indicators import extract_indicators, parse_cvss_vector, refang
+from radar.indicators import (
+    cvss_version,
+    extract_indicators,
+    normal_cvss_vector,
+    parse_cvss_vector,
+    refang,
+)
 from radar.text import numbers, split_sentences
 
-__all__ = ["extract_indicators", "parse_cvss_vector"]
+__all__ = ["extract_indicators", "normal_cvss_vector", "parse_cvss_vector"]
 
 KIND_LABELS: dict[RecordKind, str] = {
     "attack": "Атака",
@@ -276,6 +282,10 @@ def check_vulnerability(
     if card.cvss_vector and _compact(card.cvss_vector) not in _compact(source):
         updates["cvss_vector"] = ""
         removed.append("Вектор CVSS")
+    elif card.cvss_vector:
+        # One form whatever the text printed: the version from the score or the text.
+        context = card.cvss_score if cvss_version(card.cvss_score) else source
+        updates["cvss_vector"] = normal_cvss_vector(card.cvss_vector, context)
     for field, label in (
         ("name", "Название"),
         ("affected", "Затронутые версии"),
@@ -611,7 +621,7 @@ def offline_vulnerability(source: str) -> VulnerabilityCard:
     return VulnerabilityCard(
         ids=tuple(identifiers(source)[:5]),
         cvss_score=score.group(1).replace(",", ".") if score else "",
-        cvss_vector=vector.group(0) if vector else "",
+        cvss_vector=normal_cvss_vector(vector.group(0), source) if vector else "",
         exploit=exploit_evidence(source),
         cwe=tuple(dict.fromkeys(value.upper() for value in _CWE_RE.findall(source)))[:3],
     )
@@ -675,9 +685,9 @@ def attack_rows(card: AttackCard) -> list[tuple[str, str]]:
 
 def vulnerability_rows(card: VulnerabilityCard) -> list[tuple[str, str]]:
     score = card.cvss_score
-    cvss = (
-        f"{score} ({card.cvss_vector})" if score and card.cvss_vector else score or card.cvss_vector
-    )
+    # Saved issues hold the vector as the text printed it, prefixed or not.
+    vector = normal_cvss_vector(card.cvss_vector, score)
+    cvss = f"{score} ({vector})" if score and vector else score or vector
     rows = [
         ("Уязвимость", card.name or NO_DATA),
         ("Затронуто", card.affected or NO_DATA),
@@ -687,7 +697,7 @@ def vulnerability_rows(card: VulnerabilityCard) -> list[tuple[str, str]]:
         ("Идентификаторы", ", ".join(card.ids) or NO_DATA),
         ("CVSS", cvss or NO_DATA),
         # The vector in words: from the network, with which rights, with a click.
-        *parse_cvss_vector(card.cvss_vector),
+        *parse_cvss_vector(vector),
         ("CWE", ", ".join(card.cwe) or NO_DATA),
         ("Последствия", card.impact or NO_DATA),
     ]
