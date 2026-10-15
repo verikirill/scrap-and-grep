@@ -1,0 +1,6 @@
+# Findings of gitleaks (ci/secrets-scan.sh) that are not secrets, one
+# fingerprint per line, as the scan prints it.
+# A key made up for the tests of Telegram publishing.
+4f879ca889cf40d8a7e360ad61c960d5cb5a0b88:backend/tests/test_publishing_api.py:generic-api-key:34
+# An MCP token made up for the web app's test fixtures (branch test/frontend).
+4fe47b2ec4c1fb72bf48560dbeab46f5fec5d188:frontend/src/test/fixtures/account.ts:generic-api-key:154
