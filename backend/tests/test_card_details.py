@@ -172,6 +172,22 @@ def test_the_due_date_is_in_the_reference_text_and_row() -> None:
     assert "устранить до 18.10.2026" in reference_rows([reference])[0][1]
 
 
+def test_a_bdu_id_the_partial_copy_lacks_is_not_called_missing() -> None:
+    """The local BDU holds the entries of two feeds only: an id it lacks may
+    well exist. A CVE that no base knows is still named."""
+    known = VulnerabilityReference(id="BDU:2026-15497", bdu_id="BDU:2026-15497")
+    lacking = VulnerabilityReference(id="BDU:2026-01678")
+    unknown = VulnerabilityReference(id="CVE-2026-11111")
+
+    [(_, row)] = reference_rows([known, lacking, unknown])
+
+    assert "BDU:2026-01678" not in row
+    assert row.startswith("BDU:2026-15497: BDU:2026-15497")
+    assert row.endswith("нет в справочных базах: CVE-2026-11111")
+    assert reference_rows([lacking]) == []
+    assert "нет в справочных базах" not in lacking.text()
+
+
 def test_the_attack_card_lists_the_new_rows() -> None:
     card = AttackCard(
         vector="фишинг",

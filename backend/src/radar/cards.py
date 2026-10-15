@@ -704,7 +704,12 @@ def reference_rows(references: Sequence[VulnerabilityReference]) -> list[tuple[s
     if not references:
         return []
     parts = []
-    unknown = [reference.id for reference in references if not reference.found]
+    # Only absence from complete bases is news: a BDU id the partial copy lacks is not named.
+    unknown = [
+        reference.id
+        for reference in references
+        if not reference.found and not reference.partial_source
+    ]
     for reference in (reference for reference in references if reference.found):
         facts = []
         if reference.kev_added is not None:
@@ -732,4 +737,4 @@ def reference_rows(references: Sequence[VulnerabilityReference]) -> list[tuple[s
         parts.append(f"{reference.id}: {'; '.join(facts)}")
     if unknown:
         parts.append(f"нет в справочных базах: {', '.join(unknown)}")
-    return [("Сверено по базам", "; ".join(parts))]
+    return [("Сверено по базам", "; ".join(parts))] if parts else []
