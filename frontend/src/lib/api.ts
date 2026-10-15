@@ -513,6 +513,8 @@ export interface PlanEntry {
   kind: RecordKind
   steps: string[]
   facts: string[]
+  /** The reader ticked it off; kept with the digest on the server. */
+  done: boolean
 }
 
 export interface VulnerabilityChange {
@@ -1100,6 +1102,9 @@ export const api = {
     request<Video>(`/digests/${digestId}/short`, json('POST', { voice })),
 
   exportUrl: (id: string, format: ExportFormat) => `${API_BASE}/digests/${id}/export.${format}`,
+  /** Tick a line of the shift plan off or untick it; the answer lists the ticked lines. */
+  tickPlan: (id: string, url: string, done: boolean) =>
+    request<{ done: string[] }>(`/digests/${id}/plan`, json('PUT', { url, done })),
   askDigest: (id: string, question: string) =>
     request<AskAnswer>(`/digests/${id}/ask`, json('POST', { question })),
   eventsUrl: (id: string) => `${API_BASE}/digests/${id}/events`,

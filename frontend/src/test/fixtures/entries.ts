@@ -195,6 +195,7 @@ export function makePlanEntry(overrides: Partial<PlanEntry> = {}): PlanEntry {
       'Временные меры: закрыть доступ к порту 443 из корпоративной сети',
     ],
     facts: ['в каталоге CISA KEV с 10.10.2026, устранить до 31.10.2026', 'EPSS 62%', 'CVSS 9.8'],
+    done: false,
     ...overrides,
   }
 }

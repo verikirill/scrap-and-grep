@@ -1,6 +1,5 @@
 import clsx from 'clsx'
 import { motion } from 'motion/react'
-import { useState } from 'react'
 import {
   Analytics,
   EventRepeat,
@@ -15,6 +14,7 @@ import { EASE, rowMotion } from '../../components/tokens'
 import { Card, Chip } from '../../components/ui'
 import type { Digest, PlanEntry, TagCount, VulnerabilityChange } from '../../lib/api'
 import { durationWords, externalHref, formatDate, formatNumber, plural } from '../../lib/format'
+import { useTickPlan } from '../../lib/queries'
 
 /** The issue's work as an analyst would do it by hand, at the pace measured on one. */
 const decimal = (value: number) => String(value).replace('.', ',')
@@ -64,8 +64,16 @@ function SectionHead({
   )
 }
 
-function PlanRow({ entry, index }: { entry: PlanEntry; index: number }) {
-  const [done, setDone] = useState(false)
+function PlanRow({
+  entry,
+  index,
+  onToggle,
+}: {
+  entry: PlanEntry
+  index: number
+  onToggle: (done: boolean) => void
+}) {
+  const done = entry.done
   const id = `plan-${index}`
   return (
     <motion.li {...rowMotion(index)} className="flex gap-3 py-3">
@@ -73,7 +81,7 @@ function PlanRow({ entry, index }: { entry: PlanEntry; index: number }) {
         id={id}
         type="checkbox"
         checked={done}
-        onChange={(event) => setDone(event.target.checked)}
+        onChange={(event) => onToggle(event.target.checked)}
         className="mt-1 size-4 shrink-0 accent-accent"
         aria-label={`Сделано: ${entry.headline}`}
       />
@@ -110,7 +118,12 @@ function PlanRow({ entry, index }: { entry: PlanEntry; index: number }) {
   )
 }
 
-function ShiftPlan({ entries }: { entries: PlanEntry[] }) {
+/**
+ * The ticks are the digest's, kept on the server: they come with the digest
+ * and survive a fold of the block, a reload and another device.
+ */
+function ShiftPlan({ digestId, entries }: { digestId: string; entries: PlanEntry[] }) {
+  const tick = useTickPlan(digestId)
   return (
     <Card className="p-6">
       <Collapsible
@@ -124,9 +137,18 @@ function ShiftPlan({ entries }: { entries: PlanEntry[] }) {
           />
         }
       >
-        <ol className="mt-3 divide-y divide-separator">
+        <p className="mt-3 text-sm text-muted">
+          Что сделать за смену по срочным записям. Отмечайте сделанное, отметки сохранятся в этом
+          выпуске.
+        </p>
+        <ol className="mt-1 divide-y divide-separator">
           {entries.map((entry, index) => (
-            <PlanRow key={entry.url} entry={entry} index={index} />
+            <PlanRow
+              key={entry.url}
+              entry={entry}
+              index={index}
+              onToggle={(done) => tick.mutate({ url: entry.url, done })}
+            />
           ))}
         </ol>
       </Collapsible>
@@ -243,7 +265,7 @@ export function IssueExtras({ digest }: { digest: Digest }) {
   if (plan.length + changes.length + numbers.length === 0) return null
   return (
     <div className="space-y-6">
-      {plan.length > 0 && <ShiftPlan entries={plan} />}
+      {plan.length > 0 && <ShiftPlan digestId={digest.id} entries={plan} />}
       {changes.length > 0 && <Changes changes={changes} />}
       {numbers.length > 0 && (
         <Numbers rows={numbers} title={digest.numbers_title || 'Период в цифрах'} />

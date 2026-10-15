@@ -8,6 +8,7 @@ import {
 import type { QueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { ApiError, api } from './api'
+import { toast } from './toast'
 import type {
   Digest,
   DigestSummary,
@@ -115,6 +116,47 @@ export const useDigest = (id: string | undefined) =>
     enabled: Boolean(id),
     refetchInterval: (query) => (isBuilding(query.state.data) ? ACTIVE_POLL_MS : false),
   })
+
+/**
+ * Tick a line of a digest's shift plan off, or untick it. The box changes at
+ * once in the cached digest, so a folded and unfolded plan shows it too; the
+ * server keeps it with the digest for the next load. A tick the server
+ * refuses goes back, and the reader is told. Ticks reach the server in the
+ * order they were made.
+ */
+export function useTickPlan(digestId: string) {
+  const client = useQueryClient()
+  const key = keys.digest(digestId)
+  const mark = (url: string, done: boolean) =>
+    client.setQueryData<Digest>(key, (digest) =>
+      digest
+        ? {
+            ...digest,
+            plan: digest.plan?.map((entry) => (entry.url === url ? { ...entry, done } : entry)),
+          }
+        : digest,
+    )
+  return useMutation({
+    scope: { id: `plan-${digestId}` },
+    mutationFn: ({ url, done }: { url: string; done: boolean }) =>
+      api.tickPlan(digestId, url, done),
+    onMutate: async ({ url, done }) => {
+      // A load of the digest in flight would bring the tick back unticked.
+      await client.cancelQueries({ queryKey: key })
+      const before = client.getQueryData<Digest>(key)?.plan?.find((entry) => entry.url === url)
+      mark(url, done)
+      return { before: before?.done ?? false }
+    },
+    onError: (error, { url }, context) => {
+      mark(url, context?.before ?? false)
+      toast.error('Отметка не сохранилась', {
+        description: error instanceof Error ? error.message : undefined,
+      })
+    },
+    // Only this line: the others may have ticks of their own still on the way.
+    onSuccess: ({ done }, { url }) => mark(url, done.includes(url)),
+  })
+}
 
 /** Put a profile the server returned into the cached list, new or replaced. */
 function putProfile(client: QueryClient, profile: Profile): void {
