@@ -29,6 +29,8 @@ MINUTES_PER_ENTRY = 3
 PLAN_SIZE = 8
 PLAN_INDICATORS = 5
 PLAN_TECHNIQUES = 3
+# More ids than this make an entry a roundup, as for the ids a card is about (cards.card_ids).
+ROUNDUP_IDS = 3
 # How far back a vulnerability counts as one the reader has already seen.
 HISTORY_DAYS = 30
 HISTORY_ISSUES = 10
@@ -215,9 +217,20 @@ def shift_plan(items: Iterable[ItemView]) -> list[PlanEntry]:
     plan = []
     for item in sorted(urgent, key=order):
         entry = _vulnerability_entry(item) if item.kind == "vulnerability" else _attack_entry(item)
-        if entry.steps or entry.facts:
+        # The facts of a roundup belong to one of its many ids, not to a task.
+        if entry.steps or (entry.facts and not _roundup(item)):
             plan.append(entry)
     return plan[:PLAN_SIZE]
+
+
+def _roundup(item: ItemView) -> bool:
+    """An entry about many vulnerabilities at once: "trending vulnerabilities of September"."""
+    ids = {ref.id for ref in item.references}
+    if item.vulnerability is not None:
+        ids.update(item.vulnerability.ids)
+    if item.attack is not None:
+        ids.update(item.attack.vulnerabilities)
+    return len(ids) > ROUNDUP_IDS
 
 
 class VulnerabilityState(BaseModel):

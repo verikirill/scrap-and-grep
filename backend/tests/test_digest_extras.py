@@ -204,6 +204,41 @@ def test_a_thinner_card_later_does_not_take_back_the_catalogue_or_the_exploit() 
     assert changes(earlier, now) == []
 
 
+def test_a_roundup_with_nothing_to_do_stays_out_of_the_shift_plan() -> None:
+    """examples/vs-analyst/assistant-ics-security-engineer.md:45 put a digest of
+    trending vulnerabilities in the plan with a KEV date and a score, no step."""
+    ids = [f"CVE-2026-{number}" for number in range(10, 16)]
+    listed = [VulnerabilityReference(id=value, kev_added=date(2026, 8, 5)) for value in ids]
+    roundup = _vulnerability(
+        1,
+        "Сентябрьский дайджест трендовых уязвимостей",
+        priority="high",
+        vulnerability=VulnerabilityCard(ids=tuple(ids), cvss_score="9.8", exploit="in_the_wild"),
+        references=listed,
+    )
+    single = _vulnerability(
+        2,
+        "Уязвимость из KEV без исправления",
+        priority="high",
+        vulnerability=VulnerabilityCard(ids=(ids[0],), exploit="in_the_wild"),
+        references=listed[:1],
+    )
+    with_steps = _vulnerability(
+        3,
+        "Обзор с исправлениями",
+        priority="high",
+        vulnerability=VulnerabilityCard(ids=tuple(ids), fix="Обновить до 2.1"),
+        references=listed,
+    )
+
+    plan = shift_plan([roundup, single, with_steps])
+
+    assert [entry.headline for entry in plan] == [
+        "Уязвимость из KEV без исправления",
+        "Обзор с исправлениями",
+    ]
+
+
 def test_the_shift_plan_puts_the_workaround_first_while_the_fix_is_not_out() -> None:
     """examples/vs-analyst/assistant-ics-security-engineer.md:52 listed the
     unreleased FortiMail update as the first thing to do."""
