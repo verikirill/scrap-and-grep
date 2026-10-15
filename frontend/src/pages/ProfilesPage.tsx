@@ -147,63 +147,67 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
         }
       />
 
-      <div ref={tabs} className="relative isolate mb-5 flex flex-wrap items-center gap-1.5">
-        <SlidingPill
-          container={tabs}
-          activeKey={activeId}
-          rememberAs="profile-tabs"
-          className="rounded-[1.25rem] bg-surface shadow-surface ring-1 ring-border"
-        />
-        {profiles.map((profile) => (
-          <button
-            key={profile.id}
-            type="button"
-            onClick={() => leaveTo(profile.id)}
-            aria-current={profile.id === activeId ? 'true' : undefined}
-            data-active={profile.id === activeId}
-            className={clsx(
-              // Never wider than the row: a long name wraps inside the tab instead of
-              // pushing the page sideways on a phone or hiding behind an ellipsis.
-              'relative isolate flex max-w-full min-w-0 items-center gap-2 rounded-[1.25rem] py-1 pr-3.5 pl-1 text-left text-sm font-medium transition-colors duration-300',
-              profile.id === activeId
-                ? 'text-foreground'
-                : 'text-muted hover:bg-default/60 hover:text-foreground',
-            )}
+      {/* The tabs sit on a card, as the digest page picks its profile: on the
+          dotted page the plain buttons around them blended in. */}
+      <Card className="mb-5 p-3 sm:p-4">
+        <div ref={tabs} className="relative isolate flex flex-wrap items-center gap-1.5">
+          <SlidingPill
+            container={tabs}
+            activeKey={activeId}
+            rememberAs="profile-tabs"
+            className="rounded-[1.25rem] bg-accent-soft ring-1 ring-accent/40"
+          />
+          {profiles.map((profile) => (
+            <button
+              key={profile.id}
+              type="button"
+              onClick={() => leaveTo(profile.id)}
+              aria-current={profile.id === activeId ? 'true' : undefined}
+              data-active={profile.id === activeId}
+              className={clsx(
+                // Never wider than the row: a long name wraps inside the tab instead of
+                // pushing the page sideways on a phone or hiding behind an ellipsis.
+                'relative isolate flex max-w-full min-w-0 items-center gap-2 rounded-[1.25rem] py-1 pr-3.5 pl-1 text-left text-sm font-medium transition-colors duration-300',
+                profile.id === activeId
+                  ? 'text-foreground'
+                  : 'text-muted hover:bg-default/60 hover:text-foreground',
+              )}
+            >
+              <ProfileAvatar profile={profile} size={28} />
+              <span className="relative min-w-0 break-words">{profile.spec.name}</span>
+            </button>
+          ))}
+          <Button
+            size="sm"
+            variant="ghost"
+            icon={<Plus size={15} />}
+            onClick={() => leaveTo(NEW)}
+            disabled={activeId === NEW}
           >
-            <ProfileAvatar profile={profile} size={28} />
-            <span className="relative min-w-0 break-words">{profile.spec.name}</span>
-          </button>
-        ))}
-        <Button
-          size="sm"
-          variant="ghost"
-          icon={<Plus size={15} />}
-          onClick={() => leaveTo(NEW)}
-          disabled={activeId === NEW}
-        >
-          Новый
-        </Button>
-        {stored && (
-          <div className="ml-auto flex flex-wrap gap-1.5">
-            <ShareProfileButton profile={stored} />
-            {profiles.length > 1 && (
-              <Button
-                size="sm"
-                variant="danger"
-                icon={<Trash2 size={14} />}
-                isBusy={remove.isPending}
-                onClick={() => {
-                  if (window.confirm(`Удалить профиль «${stored.spec.name}»?`)) {
-                    remove.mutate(stored.id, { onSuccess: () => onSelect(null) })
-                  }
-                }}
-              >
-                Удалить профиль
-              </Button>
-            )}
-          </div>
-        )}
-      </div>
+            Новый
+          </Button>
+          {stored && (
+            <div className="ml-auto flex flex-wrap gap-1.5">
+              <ShareProfileButton profile={stored} />
+              {profiles.length > 1 && (
+                <Button
+                  size="sm"
+                  variant="danger"
+                  icon={<Trash2 size={14} />}
+                  isBusy={remove.isPending}
+                  onClick={() => {
+                    if (window.confirm(`Удалить профиль «${stored.spec.name}»?`)) {
+                      remove.mutate(stored.id, { onSuccess: () => onSelect(null) })
+                    }
+                  }}
+                >
+                  Удалить профиль
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      </Card>
 
       <div className="mb-4 space-y-2">
         <ErrorNote error={save.error ?? remove.error} />
