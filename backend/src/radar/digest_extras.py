@@ -6,7 +6,7 @@ Everything here is worked out from the entries and their cards, never written
 by the model, so each line leads back to an entry and its article.
 """
 
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Collection, Iterable, Mapping, Sequence
 from datetime import date, datetime
 from typing import TYPE_CHECKING, Any
 from zoneinfo import ZoneInfo
@@ -65,6 +65,8 @@ class PlanEntry(BaseModel):
     steps: list[str]
     # Why it is urgent: the CISA catalogue and its deadline, EPSS, CVSS.
     facts: list[str]
+    # The reader ticked it off on the page; kept with the digest (plan_done).
+    done: bool = False
 
 
 class Change(BaseModel):
@@ -213,10 +215,11 @@ def _attack_entry(item: ItemView) -> PlanEntry:
     return PlanEntry(headline=item.headline, url=item.url, kind="attack", steps=steps, facts=facts)
 
 
-def shift_plan(items: Iterable[ItemView]) -> list[PlanEntry]:
+def shift_plan(items: Iterable[ItemView], done: Collection[str] = ()) -> list[PlanEntry]:
     """The high-priority attacks and vulnerabilities as a checklist: exploited
     vulnerabilities first, by EPSS, then attacks. An entry whose card gives
-    nothing to do or check is left to the issue itself."""
+    nothing to do or check is left to the issue itself. `done` holds the
+    addresses of the entries the reader ticked off."""
     urgent = [
         item
         for item in items
@@ -232,7 +235,7 @@ def shift_plan(items: Iterable[ItemView]) -> list[PlanEntry]:
         entry = _vulnerability_entry(item) if item.kind == "vulnerability" else _attack_entry(item)
         # The facts of a roundup belong to one of its many ids, not to a task.
         if entry.steps or (entry.facts and not _roundup(item)):
-            plan.append(entry)
+            plan.append(entry.model_copy(update={"done": entry.url in done}))
     return plan[:PLAN_SIZE]
 
 

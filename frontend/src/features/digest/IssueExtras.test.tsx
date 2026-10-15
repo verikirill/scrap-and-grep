@@ -1,6 +1,8 @@
-import { render, screen, within } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { render, screen, waitFor, within } from '@testing-library/react'
+import { HttpResponse, http } from 'msw'
 import { describe, expect, it } from 'vitest'
+import type { Digest } from '../../lib/api'
+import { useDigest } from '../../lib/queries'
 import {
   makeDigest,
   makeManualWork,
@@ -8,7 +10,58 @@ import {
   makeTagCount,
   makeVulnerabilityChange,
 } from '../../test/fixtures'
+import { renderWithProviders } from '../../test/render'
+import { apiUrl, server } from '../../test/server'
 import { IssueExtras, ManualWork } from './IssueExtras'
+
+const SIMATIC = 'Сделано: Уязвимость SIMATIC S7-1500 используется в атаках'
+const PHISHING = 'Сделано: Фишинг от имени Минэнерго'
+
+const twoLinePlan = () =>
+  makeDigest({
+    plan: [
+      makePlanEntry(),
+      makePlanEntry({
+        headline: 'Фишинг от имени Минэнерго',
+        url: 'https://ics-cert.kaspersky.ru/publications/minenergo-phishing-2026/',
+        steps: [],
+        facts: [],
+      }),
+    ],
+  })
+
+/**
+ * The issue as the server keeps it: a tick sent to it comes back with the
+ * next load. Returns the ticks the page sent, in order.
+ */
+function serveIssue(digest: Digest, { refuse = false } = {}) {
+  const ticked = new Set<string>()
+  const sent: unknown[] = []
+  server.use(
+    http.get(apiUrl(`/digests/${digest.id}`), () =>
+      HttpResponse.json({
+        ...digest,
+        plan: digest.plan?.map((entry) => ({ ...entry, done: ticked.has(entry.url) })),
+      }),
+    ),
+    http.put(apiUrl(`/digests/${digest.id}/plan`), async ({ request }) => {
+      const tick = (await request.json()) as { url: string; done: boolean }
+      sent.push(tick)
+      if (refuse)
+        return HttpResponse.json({ detail: 'Пункта нет в плане выпуска.' }, { status: 404 })
+      if (tick.done) ticked.add(tick.url)
+      else ticked.delete(tick.url)
+      return HttpResponse.json({ done: [...ticked] })
+    }),
+  )
+  return sent
+}
+
+/** The issue as its page shows it: loaded from the server, then kept in the cache. */
+function Issue({ id }: { id: string }) {
+  const digest = useDigest(id)
+  return digest.data ? <IssueExtras digest={digest.data} /> : null
+}
 
 describe('ManualWork', () => {
   it('shows nothing when the issue does not count the handwork', () => {
@@ -56,23 +109,13 @@ describe('IssueExtras', () => {
   })
 
   it('lists the shift’s plan with steps and facts, and ticks a line off', async () => {
-    const user = userEvent.setup()
-    render(
-      <IssueExtras
-        digest={makeDigest({
-          plan: [
-            makePlanEntry(),
-            makePlanEntry({
-              headline: 'Фишинг от имени Минэнерго',
-              url: 'https://ics-cert.kaspersky.ru/publications/minenergo-phishing-2026/',
-              steps: [],
-              facts: [],
-            }),
-          ],
-        })}
-      />,
-    )
-    expect(screen.getByRole('heading', { name: 'План на смену' })).toBeInTheDocument()
+    const digest = twoLinePlan()
+    serveIssue(digest)
+    const { user } = renderWithProviders(<Issue id={digest.id} />)
+    expect(await screen.findByRole('heading', { name: 'План на смену' })).toBeInTheDocument()
+    expect(
+      screen.getByText(/Отмечайте сделанное, отметки сохранятся в этом выпуске/),
+    ).toBeInTheDocument()
     const first = screen.getByRole('link', {
       name: 'Уязвимость SIMATIC S7-1500 используется в атаках',
     })
@@ -84,14 +127,44 @@ describe('IssueExtras', () => {
     ).toBeInTheDocument()
     expect(within(row).getByText('EPSS 62%')).toBeInTheDocument()
 
-    const done = screen.getByRole('checkbox', {
-      name: 'Сделано: Уязвимость SIMATIC S7-1500 используется в атаках',
-    })
+    const done = screen.getByRole('checkbox', { name: SIMATIC })
     await user.click(done)
     expect(done).toBeChecked()
-    expect(
-      screen.getByRole('checkbox', { name: 'Сделано: Фишинг от имени Минэнерго' }),
-    ).not.toBeChecked()
+    expect(screen.getByRole('checkbox', { name: PHISHING })).not.toBeChecked()
+  })
+
+  it('keeps a ticked line with the issue: folded, unfolded and loaded again', async () => {
+    const digest = twoLinePlan()
+    const sent = serveIssue(digest)
+    const page = renderWithProviders(<Issue id={digest.id} />)
+
+    await page.user.click(await screen.findByRole('checkbox', { name: SIMATIC }))
+    expect(screen.getByRole('checkbox', { name: SIMATIC })).toBeChecked()
+    await waitFor(() =>
+      expect(sent).toEqual([{ url: 'https://www.securitylab.ru/news/562811.php', done: true }]),
+    )
+
+    // Folding the block takes its lines off the page; unfolded, the tick is there.
+    await page.user.click(screen.getByRole('button', { name: 'Свернуть: план на смену' }))
+    await page.user.click(screen.getByRole('button', { name: 'Развернуть: план на смену' }))
+    expect(screen.getByRole('checkbox', { name: SIMATIC })).toBeChecked()
+    page.unmount()
+
+    // A reload: a fresh page asks the server for the issue again.
+    renderWithProviders(<Issue id={digest.id} />)
+    expect(await screen.findByRole('checkbox', { name: SIMATIC })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: PHISHING })).not.toBeChecked()
+  })
+
+  it('takes a tick back and says so when the server does not keep it', async () => {
+    const digest = twoLinePlan()
+    serveIssue(digest, { refuse: true })
+    const { user } = renderWithProviders(<Issue id={digest.id} />)
+
+    await user.click(await screen.findByRole('checkbox', { name: SIMATIC }))
+
+    expect(await screen.findByText('Отметка не сохранилась')).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: SIMATIC })).not.toBeChecked()
   })
 
   it('tells what became known about vulnerabilities of earlier issues', () => {
@@ -134,15 +207,14 @@ describe('IssueExtras', () => {
   })
 
   it('folds a block away under its head and keeps the fold for the next visit', async () => {
-    const user = userEvent.setup()
     const digest = makeDigest({ plan: [makePlanEntry()] })
-    const { unmount } = render(<IssueExtras digest={digest} />)
+    const { unmount, user } = renderWithProviders(<IssueExtras digest={digest} />)
 
     await user.click(screen.getByRole('button', { name: 'Свернуть: план на смену' }))
     expect(screen.queryByRole('checkbox')).toBeNull()
     unmount()
 
-    render(<IssueExtras digest={digest} />)
+    renderWithProviders(<IssueExtras digest={digest} />)
     expect(screen.getByRole('button', { name: 'Развернуть: план на смену' })).toBeInTheDocument()
     expect(screen.queryByRole('checkbox')).toBeNull()
   })

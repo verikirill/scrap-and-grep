@@ -5,7 +5,7 @@ from collections.abc import Sequence
 from datetime import datetime
 from typing import Any, Self
 
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from radar.cards import (
     OTHER_TOPIC,
@@ -164,6 +164,9 @@ class DigestView(DigestSummaryView):
     numbers_title: str = ""
     # The card rows left out of every entry, as the reader set them.
     hidden_card_fields: list[CardFieldKey] = []
+    # The addresses of the plan's lines the reader ticked off; shown as each
+    # line's `done`, not sent on their own.
+    plan_done: list[str] = Field(default=[], exclude=True)
 
     @model_validator(mode="after")
     def _extras(self) -> Self:
@@ -174,7 +177,7 @@ class DigestView(DigestSummaryView):
             self.numbers = period_numbers(selected, before if isinstance(before, dict) else None)
             self.numbers_title = numbers_title(self.period_start, self.period_end)
         else:
-            self.plan = shift_plan(selected)
+            self.plan = shift_plan(selected, set(self.plan_done))
             self.changes = stored_changes(self.stats.get("changes"))
         return self
 
@@ -323,4 +326,5 @@ def digest_view(digest: Digest, hidden: Sequence[CardFieldKey] | None = None) ->
         ],
         rejected=sorted(rejected, key=lambda view: -view.score),
         hidden_card_fields=list(hidden),
+        plan_done=list(digest.plan_done or []),
     )

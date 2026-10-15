@@ -618,6 +618,9 @@ class Digest(Base):
     stats: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="{}")
     # "manual" when the reader ordered it, "schedule" when their schedule did.
     origin: Mapped[str] = mapped_column(String(16), default="manual", server_default="manual")
+    # The lines of the shift plan the reader ticked off, by the entry's
+    # address: the plan is worked out again at every show (digest_extras).
+    plan_done: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list, server_default="{}")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Last sign of life from the build; lets a reaper tell slow from dead.

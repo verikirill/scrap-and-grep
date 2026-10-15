@@ -460,6 +460,19 @@ class MetaOut(BaseModel):
     short_voices: list[VoiceOption] = []
 
 
+class PlanTickIn(BaseModel):
+    """A line of a digest's shift plan ticked off or unticked, by its entry's address."""
+
+    url: str = Field(min_length=1, max_length=2048)
+    done: bool
+
+
+class PlanDoneOut(BaseModel):
+    """The addresses of the plan's lines ticked off, in the plan's order."""
+
+    done: list[str]
+
+
 class AskIn(BaseModel):
     """A reader's question to a finished digest."""
 
