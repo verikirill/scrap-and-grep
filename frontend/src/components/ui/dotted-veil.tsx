@@ -46,8 +46,8 @@ void main() {
 }
 `
 
-// Time runs slowly: the dots breathe, they do not crawl.
-const TIME_SCALE = 0.35
+// The pace of the preset: the dots breathe, a wave about every eight seconds.
+const TIME_SCALE = 0.8
 
 function isDark(): boolean {
   return document.documentElement.classList.contains('dark')
