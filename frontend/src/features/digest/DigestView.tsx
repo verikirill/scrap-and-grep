@@ -1,5 +1,12 @@
 import clsx from 'clsx'
-import { ChevronDown, Download, FileText, GitCompareArrows, Info } from '../../components/icons'
+import {
+  ChevronDown,
+  ChevronRight,
+  Download,
+  FileText,
+  GitCompareArrows,
+  Info,
+} from '../../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
@@ -12,6 +19,8 @@ import { useSeen } from '../../lib/impressions'
 import { useFeedback, useMe, useReactions, useUpdateSettings } from '../../lib/queries'
 import { firstEntries, foldSummary, withFolded } from '../../lib/folding'
 import { REVEAL_EVENT } from '../../lib/entryNav'
+import { isShown } from '../../lib/digestBlocks'
+import type { DigestBlockKey } from '../../lib/digestBlocks'
 import { ReactionBar } from '../feed/ReactionBar'
 import { OriginalLink } from '../reader/OriginalLink'
 import { articlePath } from '../reader/paths'
@@ -26,6 +35,7 @@ import { ShortPanel } from './ShortPanel'
 import { StoryStack } from './StoryStack'
 import { IndicatorsBlock, SocExport } from './ThreatIntel'
 
+/** From the period's publications to the issue, as three small chips in one line. */
 function Funnel({ digest }: { digest: Digest }) {
   const stats = digest.stats
   const steps = [
@@ -33,28 +43,23 @@ function Funnel({ digest }: { digest: Digest }) {
     { label: 'кандидатов по интересам', value: stats.candidates ?? 0 },
     { label: 'в выпуске', value: stats.selected ?? 0 },
   ]
-  const max = Math.max(steps[0].value, 1)
   return (
-    <div className="grid gap-3 sm:grid-cols-3">
+    <ul aria-label="Цифры выпуска" className="flex flex-wrap items-center gap-1.5 text-xs">
       {steps.map((step, index) => (
-        <div key={step.label} className="rounded-xl bg-surface-secondary px-4 py-3">
-          <AnimatedNumber value={step.value} className="text-2xl font-semibold" />
-          <p className="text-xs text-muted">{step.label}</p>
-          <div className="mt-2.5 h-1 overflow-hidden rounded-full bg-separator">
-            <motion.div
-              className={clsx(
-                'h-full origin-left rounded-full',
-                index === 2 ? 'bg-warning' : 'bg-accent',
-              )}
-              initial={{ scaleX: 0 }}
-              // A log scale keeps the last bar visible: 20 of 800 would be a sliver.
-              animate={{ scaleX: Math.log1p(step.value) / Math.log1p(max) }}
-              transition={{ duration: 0.8, ease: EASE, delay: 0.1 * index }}
-            />
-          </div>
-        </div>
+        <li key={step.label} className="flex items-center gap-1.5">
+          {index > 0 && <ChevronRight size={12} aria-hidden className="text-muted" />}
+          <span
+            className={clsx(
+              'inline-flex items-baseline gap-1 rounded-full px-2.5 py-1',
+              index === 2 ? 'bg-warning-soft' : 'bg-surface-secondary',
+            )}
+          >
+            <AnimatedNumber value={step.value} className="font-semibold text-foreground" />
+            <span className="text-muted">{step.label}</span>
+          </span>
+        </li>
       ))}
-    </div>
+    </ul>
   )
 }
 
@@ -64,9 +69,11 @@ type ItemCardProps = {
   placement: Placement
   reactions: ReactionKind[] | undefined
   onReact: (kind: ReactionKind, isActive: boolean) => void
+  /** The vulnerability's dated steps under the entry, unless the reader hides them. */
+  hasTimeline: boolean
 }
 
-function ItemCard({ item, index, placement, reactions, onReact }: ItemCardProps) {
+function ItemCard({ item, index, placement, reactions, onReact, hasTimeline }: ItemCardProps) {
   const translated = item.headline !== item.title
   const personal = Math.abs(item.personal) >= 0.005 ? item.personal : 0
   const seenRef = useSeen(item.article_id, 'digest', !reactions?.length, placement)
@@ -137,7 +144,7 @@ function ItemCard({ item, index, placement, reactions, onReact }: ItemCardProps)
         <p className="mt-2.5 text-sm leading-relaxed text-foreground/90">{item.summary}</p>
       )}
       <EntryDetails item={item} />
-      <CveTimeline item={item} />
+      {hasTimeline && <CveTimeline item={item} />}
       <IndicatorsBlock attack={item.attack} hidden={item.hidden_fields} />
       {item.why && (
         <p className="mt-2.5 border-l-2 border-warning pl-3 text-sm leading-relaxed text-muted">
@@ -158,6 +165,7 @@ type TopicSectionProps = {
   firstPosition: number
   reactions: Record<string, ReactionKind[]> | undefined
   onReact: (articleId: number, kind: ReactionKind, isActive: boolean, position: number) => void
+  hasTimeline: boolean
 }
 
 function TopicSection({
@@ -167,6 +175,7 @@ function TopicSection({
   firstPosition,
   reactions,
   onReact,
+  hasTimeline,
 }: TopicSectionProps) {
   const { data: me } = useMe()
   const update = useUpdateSettings()
@@ -201,8 +210,10 @@ function TopicSection({
 
   return (
     <section>
-      <div className="sticky top-14 z-10 -mx-1 bg-background/90 px-1 py-2 backdrop-blur md:top-0">
-        <h3>
+      {/* A white card of its own, folded or open: on the dotted page a bare
+          heading blended into the background. */}
+      <div className="sticky top-14 z-10 py-1.5 md:top-0">
+        <h3 className="rounded-2xl bg-surface shadow-surface">
           <button
             type="button"
             onClick={toggle}
@@ -212,7 +223,7 @@ function TopicSection({
                 ? 'Развернуть раздел'
                 : 'Свернуть раздел, он останется свёрнутым и в следующих выпусках'
             }
-            className="group flex w-full items-center gap-2.5 rounded-xl px-1 py-0.5 text-left transition-colors hover:bg-default/50"
+            className="group flex w-full items-center gap-2.5 rounded-2xl px-4 py-2.5 text-left transition-colors hover:bg-surface-secondary/60"
           >
             <span className="tabular font-sans text-sm font-medium text-warning">
               {String(number).padStart(2, '0')}
@@ -253,7 +264,7 @@ function TopicSection({
                 onClick={() => setNoteOpen((value) => !value)}
                 aria-expanded={isNoteOpen}
                 className={clsx(
-                  'mt-1 mb-2 w-full px-4 text-left text-sm text-muted hover:text-foreground',
+                  'mt-0.5 mb-1.5 w-full rounded-xl bg-surface px-4 py-2 text-left text-sm text-muted hover:text-foreground',
                   isNoteOpen ? 'block' : 'line-clamp-1',
                 )}
               >
@@ -271,6 +282,7 @@ function TopicSection({
                   onReact={(kind, isActive) =>
                     onReact(item.article_id, kind, isActive, firstPosition + index)
                   }
+                  hasTimeline={hasTimeline}
                 />
               ))}
             </div>
@@ -278,7 +290,7 @@ function TopicSection({
               <button
                 type="button"
                 onClick={() => setAll(true)}
-                className="mx-4 mt-2 mb-1 text-sm font-medium text-accent hover:underline"
+                className="mt-2 mb-1 rounded-full bg-surface px-4 py-1.5 text-sm font-medium text-accent shadow-surface hover:underline"
               >
                 Ещё {hidden} {plural(hidden, ['запись', 'записи', 'записей'])}
               </button>
@@ -369,6 +381,8 @@ export function DigestView({ digest, previousId }: { digest: Digest; previousId?
       context: 'digest',
       placement: { listId: digest.id, position, slot: 'digest' },
     })
+  // A block the reader's profile hides is not drawn; the entries always are.
+  const shows = (key: DigestBlockKey) => isShown(digest, key)
   // Articles are counted through the whole digest, topic after topic.
   const firstPositions = digest.topics.map(
     (_, index) =>
@@ -406,45 +420,35 @@ export function DigestView({ digest, previousId }: { digest: Digest; previousId?
               <Download size={15} />
               DOCX
             </a>
-            {digest.audience !== 'management' && <SocExport digestId={digest.id} />}
-            <BriefingPlayer digest={digest} />
+            {digest.audience !== 'management' && shows('soc_export') && (
+              <SocExport digestId={digest.id} />
+            )}
+            {shows('briefing') && <BriefingPlayer digest={digest} />}
             <MailButton digest={digest} />
           </div>
         </div>
 
-        <div className="mt-5">
-          <Funnel digest={digest} />
-          <ManualWork digest={digest} />
-        </div>
-
-        {stats.degraded && (
-          <p className="mt-4 flex items-start gap-2 rounded-lg bg-warning-soft px-3 py-2 text-sm text-warning">
-            <Info size={16} className="mt-0.5 shrink-0" />
-            Модель была частично недоступна: оценила {stats.graded_by_model ?? 0} из{' '}
-            {stats.candidates ?? 0} кандидатов и составила {stats.written_by_model ?? 0} из{' '}
-            {stats.selected ?? 0} записей. Остальное обработал резервный алгоритм.
-          </p>
-        )}
-
-        {digest.profile.audience === 'management' && digest.implications.length > 0 && (
-          <div className="mt-6">
-            <h3 className="text-xs font-semibold tracking-wide text-muted uppercase">
-              Что это значит для нас
-            </h3>
-            <ul className="mt-2 space-y-1.5">
-              {digest.implications.map((point, index) => (
-                <motion.li
-                  key={`${index}-${point}`}
-                  {...rowMotion(index)}
-                  className="flex gap-2.5 text-sm"
-                >
-                  <span className="mt-2 size-1.5 shrink-0 rounded-full bg-accent" />
-                  {point}
-                </motion.li>
-              ))}
-            </ul>
-          </div>
-        )}
+        {digest.profile.audience === 'management' &&
+          shows('implications') &&
+          digest.implications.length > 0 && (
+            <div className="mt-6">
+              <h3 className="text-xs font-semibold tracking-wide text-muted uppercase">
+                Что это значит для нас
+              </h3>
+              <ul className="mt-2 space-y-1.5">
+                {digest.implications.map((point, index) => (
+                  <motion.li
+                    key={`${index}-${point}`}
+                    {...rowMotion(index)}
+                    className="flex gap-2.5 text-sm"
+                  >
+                    <span className="mt-2 size-1.5 shrink-0 rounded-full bg-accent" />
+                    {point}
+                  </motion.li>
+                ))}
+              </ul>
+            </div>
+          )}
 
         {digest.highlights.length > 0 && (
           <div className="mt-6">
@@ -464,22 +468,41 @@ export function DigestView({ digest, previousId }: { digest: Digest; previousId?
           </div>
         )}
 
-        <p className="mt-5 text-xs text-muted">
-          Поиск: {modelLabel(stats.embedding_model)}
-          {stats.lexical_only && ' (только полнотекстовый)'} · оценка и тексты:{' '}
-          {modelLabel(stats.llm)} · {stats.sources ?? 0}{' '}
-          {plural(stats.sources ?? 0, ['источник', 'источника', 'источников'])}
-          {stats.duplicates_merged ? ` · объединено повторов: ${stats.duplicates_merged}` : ''}
-          {stats.personalized ? ` · поправок по вашим отметкам: ${stats.personalized}` : ''}
-          {adapted > 0 ? ` · интересов подстроено под ваши отметки: ${adapted}` : ''}
-          {stats.duration_seconds ? ` · ${Math.round(stats.duration_seconds)} с` : ''}
-          {digest.finished_at && ` · ${formatDateTime(digest.finished_at)}`}
-        </p>
+        {/* The numbers come after the news: what happened first, how it was found second. */}
+        {(shows('funnel') || (shows('manual') && digest.manual)) && (
+          <div className="mt-5 space-y-2">
+            {shows('funnel') && <Funnel digest={digest} />}
+            {shows('manual') && <ManualWork digest={digest} />}
+          </div>
+        )}
+
+        {stats.degraded && (
+          <p className="mt-4 flex items-start gap-2 rounded-lg bg-warning-soft px-3 py-2 text-sm text-warning">
+            <Info size={16} className="mt-0.5 shrink-0" />
+            Модель была частично недоступна: оценила {stats.graded_by_model ?? 0} из{' '}
+            {stats.candidates ?? 0} кандидатов и составила {stats.written_by_model ?? 0} из{' '}
+            {stats.selected ?? 0} записей. Остальное обработал резервный алгоритм.
+          </p>
+        )}
+
+        {shows('method') && (
+          <p className="mt-4 text-xs text-muted">
+            Поиск: {modelLabel(stats.embedding_model)}
+            {stats.lexical_only && ' (только полнотекстовый)'} · оценка и тексты:{' '}
+            {modelLabel(stats.llm)} · {stats.sources ?? 0}{' '}
+            {plural(stats.sources ?? 0, ['источник', 'источника', 'источников'])}
+            {stats.duplicates_merged ? ` · объединено повторов: ${stats.duplicates_merged}` : ''}
+            {stats.personalized ? ` · поправок по вашим отметкам: ${stats.personalized}` : ''}
+            {adapted > 0 ? ` · интересов подстроено под ваши отметки: ${adapted}` : ''}
+            {stats.duration_seconds ? ` · ${Math.round(stats.duration_seconds)} с` : ''}
+            {digest.finished_at && ` · ${formatDateTime(digest.finished_at)}`}
+          </p>
+        )}
       </Card>
 
       <IssueExtras digest={digest} />
 
-      {digest.audience !== 'management' && (
+      {digest.audience !== 'management' && shows('risk_matrix') && (
         <RiskMatrix
           entries={digest.topics.flatMap((topic, topicIndex) =>
             topic.items.map((item, index) => ({
@@ -491,7 +514,9 @@ export function DigestView({ digest, previousId }: { digest: Digest; previousId?
       )}
 
       {/* Keyed by the digest: a voice picked for one must not carry over to the next. */}
-      {digest.topics.length > 0 && <ShortPanel key={digest.id} digestId={digest.id} />}
+      {digest.topics.length > 0 && shows('short') && (
+        <ShortPanel key={digest.id} digestId={digest.id} />
+      )}
 
       {digest.topics.length === 0 ? (
         <Card className="px-6 py-10 text-center text-sm text-muted">
@@ -508,14 +533,15 @@ export function DigestView({ digest, previousId }: { digest: Digest; previousId?
               firstPosition={firstPositions[index]}
               reactions={reactions.data}
               onReact={react}
+              hasTimeline={shows('cve_timeline')}
             />
           ))}
         </div>
       )}
 
-      <RejectedList items={digest.rejected} />
+      {shows('rejected') && <RejectedList items={digest.rejected} />}
       {/* Last, so that it stays docked at the bottom through the whole issue. */}
-      {digest.topics.length > 0 && (
+      {digest.topics.length > 0 && shows('ask') && (
         <AskDigest digestId={digest.id} audience={digest.audience ?? 'specialist'} />
       )}
     </div>

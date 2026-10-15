@@ -10,6 +10,7 @@ import { Button, Card, Chip, Field } from '../../components/ui'
 import type { Audience, Interest, ProfileSpec, SourceCategory } from '../../lib/api'
 import { CATEGORY_LABELS } from '../../lib/format'
 import { CardFieldsPicker } from './CardFieldsPicker'
+import { DigestBlocksPicker } from './DigestBlocksPicker'
 
 const WEIGHT_LABELS: [number, string][] = [
   [0.75, 'второстепенный'],
@@ -284,12 +285,20 @@ export function ProfileForm({
             })}
           </div>
         </Field>
-        {spec.audience === 'specialist' && (
-          <CardFieldsPicker
-            hidden={spec.hidden_card_fields ?? []}
-            onChange={(hidden_card_fields) => onChange({ ...spec, hidden_card_fields })}
+        {/* Side by side on a wide screen: both are folded to one line. */}
+        <div className="grid items-start gap-2 sm:grid-cols-2">
+          {spec.audience === 'specialist' && (
+            <CardFieldsPicker
+              hidden={spec.hidden_card_fields ?? []}
+              onChange={(hidden_card_fields) => onChange({ ...spec, hidden_card_fields })}
+            />
+          )}
+          <DigestBlocksPicker
+            audience={spec.audience}
+            hidden={spec.hidden_digest_blocks ?? []}
+            onChange={(hidden_digest_blocks) => onChange({ ...spec, hidden_digest_blocks })}
           />
-        )}
+        </div>
       </Card>
 
       <div>

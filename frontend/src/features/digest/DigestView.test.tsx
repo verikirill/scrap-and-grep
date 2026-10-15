@@ -180,11 +180,13 @@ describe('DigestView header', () => {
         })}
       />,
     )
-    const step = (label: string) => screen.getByText(label).closest('div')
-    expect(await screen.findByText('публикаций за период')).toBeInTheDocument()
-    expect(step('публикаций за период')).toHaveTextContent(/^1\s240/)
-    expect(step('кандидатов по интересам')).toHaveTextContent(/^40/)
-    expect(step('в выпуске')).toHaveTextContent(/^12/)
+    // Three small chips in one line, no bars.
+    const funnel = await screen.findByRole('list', { name: 'Цифры выпуска' })
+    const steps = within(funnel).getAllByRole('listitem')
+    expect(steps).toHaveLength(3)
+    expect(steps[0]).toHaveTextContent(/^1\s240публикаций за период$/)
+    expect(steps[1]).toHaveTextContent(/^40кандидатов по интересам$/)
+    expect(steps[2]).toHaveTextContent(/^12в выпуске$/)
     expect(screen.getByText(/9 источников · объединено повторов: 3/)).toBeInTheDocument()
     expect(screen.queryByText(/Модель была частично недоступна/)).toBeNull()
   })
@@ -261,6 +263,48 @@ describe('DigestView header', () => {
     expect(screen.getByRole('heading', { name: 'Главное' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Что это значит для нас' })).toBeNull()
     expect(screen.queryByText('Проверить подрядчиков на фишинг')).toBeNull()
+  })
+
+  it('puts the most important news before the issue’s numbers', async () => {
+    renderWithProviders(
+      <DigestView
+        digest={makeDigest({
+          highlights: ['Атаки на энергетику участились'],
+          stats: { window_total: 1210, candidates: 60, selected: 15 },
+        })}
+      />,
+    )
+    const funnel = await screen.findByRole('list', { name: 'Цифры выпуска' })
+    const news = screen.getByRole('heading', { name: 'Главное' })
+    expect(news.compareDocumentPosition(funnel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('leaves out the blocks the reader’s profile hides and keeps the entries', async () => {
+    const digest = makeDigest({
+      highlights: ['Атаки на энергетику участились'],
+      topics: [vulnerabilities],
+      rejected: [makeItem({ title: 'Обзор рынка SIEM', reject_reason: 'low_score' })],
+      stats: { window_total: 300, candidates: 40, selected: 3, sources: 9 },
+    })
+    const { rerender } = renderWithProviders(<DigestView digest={digest} />)
+    expect(await screen.findByRole('list', { name: 'Цифры выпуска' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Не вошло в выпуск/ })).toBeInTheDocument()
+    expect(screen.getByText(/9 источников/)).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Вопрос к выпуску' })).toBeInTheDocument()
+
+    rerender(
+      <DigestView
+        digest={{ ...digest, hidden_digest_blocks: ['funnel', 'rejected', 'method', 'ask'] }}
+      />,
+    )
+
+    expect(screen.queryByRole('list', { name: 'Цифры выпуска' })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Не вошло в выпуск/ })).toBeNull()
+    expect(screen.queryByText(/9 источников/)).toBeNull()
+    expect(screen.queryByRole('textbox', { name: 'Вопрос к выпуску' })).toBeNull()
+    // The entries and "Главное" always stay.
+    expect(screen.getByRole('heading', { name: 'Главное' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Siemens закрыла уязвимость' })).toBeInTheDocument()
   })
 
   it('says so when the period gave nothing for the interests', async () => {
