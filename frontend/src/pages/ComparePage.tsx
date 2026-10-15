@@ -13,7 +13,8 @@ import type { ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { SelectField } from '../components/SelectField'
 import { buttonClass, rowMotion } from '../components/tokens'
-import { AnimatedNumber, Card, Chip, EmptyState, ErrorNote, PageHeader } from '../components/ui'
+import { Loading, Skeleton, SkeletonList } from '../components/loading'
+import { AnimatedNumber, Card, Chip, EmptyState, ErrorState, PageHeader } from '../components/ui'
 import type { DigestItem, DigestSummary, InterestChange } from '../lib/api'
 import { externalHref, formatDateTime, SETTING_LABELS } from '../lib/format'
 import { sameKind } from '../lib/digestPairs'
@@ -170,7 +171,11 @@ export function ComparePage() {
             />
           </Card>
 
-          <ErrorNote error={comparison.error} />
+          {comparison.error && (
+            <Card>
+              <ErrorState title="Сравнение не получилось" error={comparison.error} />
+            </Card>
+          )}
           {base && base === other && (
             <p className="text-sm text-muted">Выбран один и тот же выпуск. Выберите два разных.</p>
           )}
@@ -244,7 +249,19 @@ export function ComparePage() {
               </div>
             </motion.div>
           )}
-          {comparison.isLoading && <div className="skeleton skeleton--shimmer rounded-xl h-72" />}
+          {comparison.isLoading && (
+            <Loading label="Сравниваем выпуски" className="space-y-4">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {[0, 1, 2, 3].map((index) => (
+                  <Skeleton key={index} className="h-20 rounded-3xl" />
+                ))}
+              </div>
+              <div className="grid gap-4 lg:grid-cols-2">
+                <SkeletonList count={2} hasMark={false} />
+                <SkeletonList count={2} hasMark={false} />
+              </div>
+            </Loading>
+          )}
         </>
       )}
     </>

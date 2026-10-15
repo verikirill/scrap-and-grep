@@ -3,7 +3,8 @@ import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { EASE } from '../components/tokens'
-import { Button, Card, EmptyState, ErrorNote, PageHeader } from '../components/ui'
+import { Loading, Skeleton, SkeletonList, SkeletonText } from '../components/loading'
+import { Button, Card, EmptyState, ErrorNote, ErrorState, PageHeader } from '../components/ui'
 import { BuildPanel } from '../features/digest/BuildPanel'
 import { DigestView } from '../features/digest/DigestView'
 import { History } from '../features/digest/History'
@@ -122,14 +123,12 @@ export function DigestPage() {
           <ErrorNote error={profiles.error ?? digests.error ?? remove.error ?? retry.error} />
 
           {digest.isError && (
-            <Card className="p-6">
-              <h2 className="text-base font-semibold">Не удалось открыть выпуск</h2>
-              <p className="mt-1 text-sm text-muted">
-                {digest.error instanceof Error ? digest.error.message : 'Неизвестная ошибка.'}
-              </p>
-              <Button className="mt-4" onClick={() => navigate('/')}>
-                К последнему выпуску
-              </Button>
+            <Card>
+              <ErrorState
+                title="Не удалось открыть выпуск"
+                error={digest.error}
+                action={<Button onClick={() => navigate('/')}>К последнему выпуску</Button>}
+              />
             </Card>
           )}
 
@@ -147,9 +146,15 @@ export function DigestPage() {
 
           <AnimatePresence mode="wait">
             {digest.isLoading && activeId && (
-              <motion.div key="loading" exit={{ opacity: 0 }} className="space-y-3">
-                <div className="skeleton skeleton--shimmer rounded-xl h-40" />
-                <div className="skeleton skeleton--shimmer rounded-xl h-24" />
+              <motion.div key="loading" exit={{ opacity: 0 }}>
+                <Loading label="Открываем выпуск" className="space-y-3">
+                  <div aria-hidden className="rounded-3xl bg-surface p-6 shadow-surface">
+                    <Skeleton className="h-3 w-28" />
+                    <Skeleton className="mt-3 h-6 w-2/3" />
+                    <SkeletonText lines={3} className="mt-4" />
+                  </div>
+                  <SkeletonList count={3} hasMark={false} />
+                </Loading>
               </motion.div>
             )}
 
@@ -174,21 +179,24 @@ export function DigestPage() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
               >
-                <Card className="p-6">
-                  <h2 className="text-base font-semibold">Не удалось собрать выпуск</h2>
-                  <p className="mt-1 text-sm text-muted">
+                <Card>
+                  <ErrorState
+                    title="Не удалось собрать выпуск"
+                    action={
+                      current.profile_id && (
+                        <Button
+                          variant="primary"
+                          icon={<RotateCcw size={15} />}
+                          isBusy={retry.isPending}
+                          onClick={handleRetry}
+                        >
+                          Собрать заново
+                        </Button>
+                      )
+                    }
+                  >
                     {current.error ?? 'Причина неизвестна.'}
-                  </p>
-                  {current.profile_id && (
-                    <Button
-                      className="mt-4"
-                      icon={<RotateCcw size={15} />}
-                      isBusy={retry.isPending}
-                      onClick={handleRetry}
-                    >
-                      Собрать заново
-                    </Button>
-                  )}
+                  </ErrorState>
                 </Card>
               </motion.div>
             )}
@@ -209,8 +217,9 @@ export function DigestPage() {
               <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <Card>
                   <EmptyState icon={<FileText size={22} />} title="Выпусков пока нет">
-                    Выпуск за неделю собирается за несколько секунд в автономном режиме и за пару
-                    минут с языковой моделью.
+                    Кот с лупой ждёт команды. Выберите профиль и нажмите «Собрать выпуск»: за неделю
+                    новостей это несколько секунд в автономном режиме и пара минут с языковой
+                    моделью.
                   </EmptyState>
                 </Card>
               </motion.div>
@@ -235,10 +244,11 @@ export function DigestPage() {
               onDelete={handleDelete}
             />
           ) : (
-            <div className="space-y-2">
-              <div className="skeleton skeleton--shimmer rounded-xl h-16" />
-              <div className="skeleton skeleton--shimmer rounded-xl h-16" />
-            </div>
+            <Loading label="Загружаем историю" className="space-y-2">
+              <Skeleton className="h-16" />
+              <Skeleton className="h-16" />
+              <Skeleton className="h-16" />
+            </Loading>
           )}
         </motion.aside>
       </div>

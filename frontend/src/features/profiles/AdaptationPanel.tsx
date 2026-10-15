@@ -14,6 +14,7 @@ import {
   Users,
 } from '../../components/icons'
 import { EASE } from '../../components/tokens'
+import { Loading, Skeleton } from '../../components/loading'
 import { Button, ErrorNote } from '../../components/ui'
 import type { InterestLearning, Profile, Suggestion } from '../../lib/api'
 import { externalHref, formatRelative } from '../../lib/format'
@@ -292,6 +293,13 @@ export function AdaptationPanel({
       <div className="mt-3 space-y-2">
         <ErrorNote error={adaptation.error ?? setAdaptive.error ?? reset.error ?? decide.error} />
       </div>
+
+      {isOn && adaptation.isLoading && (
+        <Loading label="Считаем подстройку" className="mt-4 space-y-2.5">
+          <Skeleton className="h-16 rounded-2xl" />
+          <Skeleton className="h-16 rounded-2xl" />
+        </Loading>
+      )}
 
       {isOn && data && data.suggestions.length > 0 && (
         <ul className="mt-4 flex flex-col gap-2.5" aria-label="Предложения для профиля">

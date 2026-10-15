@@ -16,7 +16,8 @@ import { Segmented } from '../../components/Segmented'
 import { useRadioKeys } from '../../components/useRadioKeys'
 import { ProfileAvatar } from '../profiles/ProfileLook'
 import { buttonClass } from '../../components/tokens'
-import { Button, Card, ErrorNote, Spinner } from '../../components/ui'
+import { Loading, Skeleton } from '../../components/loading'
+import { Button, Card, ErrorNote } from '../../components/ui'
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover'
 import type { DigestPeriod, Profile } from '../../lib/api'
 import { plural } from '../../lib/format'
@@ -234,9 +235,18 @@ export function BuildPanel({ profiles, initialProfileId, isBuilding = false, onC
           <PopoverContent align="start" className="w-auto rounded-3xl p-2">
             <Suspense
               fallback={
-                <div className="grid h-72 w-64 place-items-center">
-                  <Spinner className="size-6 text-accent" label="Открываем календарь" />
-                </div>
+                <Loading label="Открываем календарь" className="w-64 space-y-3 p-2">
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="size-7 rounded-full" />
+                    <Skeleton className="h-4 w-28" />
+                    <Skeleton className="size-7 rounded-full" />
+                  </div>
+                  <div className="grid grid-cols-7 gap-1.5">
+                    {Array.from({ length: 35 }, (_, day) => (
+                      <Skeleton key={day} className="aspect-square rounded-full" />
+                    ))}
+                  </div>
+                </Loading>
               }
             >
               <Calendar

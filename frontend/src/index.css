@@ -165,6 +165,44 @@
     stroke-width: 1.2;
   }
 
+  /* The picture tile of an empty or failed place, as the cards of the inspiration. */
+  .mascot-tile {
+    border-radius: 2rem;
+    background:
+      radial-gradient(
+        circle at 30% 20%,
+        color-mix(in oklab, white 55%, transparent),
+        transparent 60%
+      ),
+      linear-gradient(
+        140deg,
+        color-mix(in oklab, var(--accent) 22%, var(--surface)),
+        color-mix(in oklab, var(--cta-to) 18%, var(--surface))
+      );
+  }
+
+  .dark .mascot-tile {
+    background: linear-gradient(
+      140deg,
+      color-mix(in oklab, var(--accent) 24%, var(--surface)),
+      color-mix(in oklab, var(--cta-to) 18%, var(--surface))
+    );
+  }
+
+  .mascot-tile--danger,
+  .dark .mascot-tile--danger {
+    background: linear-gradient(
+      140deg,
+      color-mix(in oklab, var(--danger) 16%, var(--surface)),
+      color-mix(in oklab, var(--warning) 14%, var(--surface))
+    );
+  }
+
+  /* Skeletons carry a breath of the accent, so a loading page is ours too. */
+  .skeleton {
+    background-color: color-mix(in oklab, var(--accent) 7%, var(--surface-tertiary));
+  }
+
   .tabular {
     font-variant-numeric: tabular-nums;
   }

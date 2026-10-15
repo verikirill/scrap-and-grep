@@ -5,7 +5,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { ArrowUp, ChevronDown, Info, Sparkles } from '../../components/icons'
 import { EASE } from '../../components/tokens'
-import { ErrorNote, Spinner } from '../../components/ui'
+import { MascotLoader } from '../../components/loading'
+import { ErrorNote } from '../../components/ui'
 import { api } from '../../lib/api'
 import { answerPieces } from '../../lib/answerText'
 import { showEntry } from '../../lib/entryNav'
@@ -227,14 +228,9 @@ export function AskDigest({ digestId, audience }: { digestId: string; audience: 
                   ))}
                 </AnimatePresence>
                 {ask.isPending && (
-                  <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex items-center gap-2 text-sm text-muted"
-                  >
-                    <Spinner className="text-accent" />
-                    Читаем записи выпуска
-                  </motion.p>
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                    <MascotLoader label="Читаем записи выпуска" isInline />
+                  </motion.div>
                 )}
                 <ErrorNote error={ask.error} />
               </div>

@@ -4,7 +4,8 @@ import { AnimatePresence, motion } from 'motion/react'
 import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { EASE } from '../components/tokens'
-import { Button, ErrorNote, PageHeader } from '../components/ui'
+import { Loading, Skeleton, SkeletonText } from '../components/loading'
+import { Button, Card, ErrorNote, ErrorState, PageHeader } from '../components/ui'
 import { AdaptationPanel } from '../features/profiles/AdaptationPanel'
 import { PreviewPanel } from '../features/profiles/PreviewPanel'
 import { ProfileForm } from '../features/profiles/ProfileForm'
@@ -276,11 +277,41 @@ export function ProfilesPage() {
     return (
       <>
         <PageHeader title="Интересы" />
-        <ErrorNote error={profiles.error} />
-        <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-2">
-          <div className="skeleton skeleton--shimmer rounded-xl h-96" />
-          <div className="skeleton skeleton--shimmer rounded-xl h-96" />
-        </div>
+        {profiles.error ? (
+          <Card>
+            <ErrorState
+              title="Профили не загрузились"
+              error={profiles.error}
+              action={<Button onClick={() => void profiles.refetch()}>Повторить</Button>}
+            />
+          </Card>
+        ) : (
+          <Loading
+            label="Загружаем профили"
+            className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-2"
+          >
+            {[0, 1].map((column) => (
+              <div key={column} className="space-y-4 rounded-3xl bg-surface p-6 shadow-surface">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="size-12 rounded-2xl" />
+                  <Skeleton className="h-5 w-40" />
+                </div>
+                <SkeletonText lines={3} />
+                <div className="flex flex-wrap gap-2">
+                  {[16, 24, 20, 28, 14].map((width) => (
+                    <Skeleton
+                      key={width}
+                      className="h-7 rounded-full"
+                      style={{ width: width * 4 }}
+                    />
+                  ))}
+                </div>
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ))}
+          </Loading>
+        )}
       </>
     )
   }

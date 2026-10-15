@@ -5,6 +5,7 @@ import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { toast } from '../../lib/toast'
 import { ErrorBoundary } from '../../components/ErrorBoundary'
+import { Loading, MascotLoader, SkeletonCard, SkeletonText } from '../../components/loading'
 import { Button, Card, Chip, EmptyState, Spinner } from '../../components/ui'
 import { DURATION, EASE, rowMotion } from '../../components/tokens'
 import {
@@ -214,11 +215,9 @@ function PostRow({
               </p>
             ))}
             {post.status === 'composing' && (
-              <div className="space-y-2 pt-1" aria-label="Генерируем текст поста">
-                <div className="skeleton skeleton--shimmer rounded-xl h-4 w-3/4" />
-                <div className="skeleton skeleton--shimmer rounded-xl h-4 w-full" />
-                <div className="skeleton skeleton--shimmer rounded-xl h-4 w-2/3" />
-              </div>
+              <Loading label="Генерируем текст поста" className="pt-1">
+                <SkeletonText lines={3} />
+              </Loading>
             )}
           </div>
           {post.content && (
@@ -241,9 +240,7 @@ function PostRow({
             <ErrorBoundary title="Редактор не загрузился">
               <Suspense
                 fallback={
-                  <div className="grid h-80 place-items-center">
-                    <Spinner className="size-8 text-accent" label="Открываем редактор" />
-                  </div>
+                  <MascotLoader label="Открываем редактор" className="h-80 justify-center" />
                 }
               >
                 <PostEditor
@@ -278,16 +275,16 @@ export function PostsPanel({ channelId, channels }: { channelId?: string; channe
   const byId = new Map(channels.map((channel) => [channel.id, channel]))
   if (isPending) {
     return (
-      <div className="space-y-3">
-        <div className="skeleton skeleton--shimmer rounded-xl h-48" />
-        <div className="skeleton skeleton--shimmer rounded-xl h-48" />
-      </div>
+      <Loading label="Загружаем посты" className="space-y-3">
+        <SkeletonCard className="h-48" />
+        <SkeletonCard className="h-48" />
+      </Loading>
     )
   }
   if (!posts?.length) {
     return (
       <Card variant="outlined">
-        <EmptyState icon={<Send size={22} />} title="Постов пока нет">
+        <EmptyState icon={<Send size={22} />} title="Постов пока нет" pose="waiting">
           Создайте пост вручную («Опубликовать сейчас» или «Создать черновик») либо дождитесь
           публикации по расписанию.
         </EmptyState>

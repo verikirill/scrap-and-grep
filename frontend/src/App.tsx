@@ -6,6 +6,7 @@ import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from 'rea
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { Layout } from './components/Layout'
 import { RequireAuth } from './components/RequireAuth'
+import { PageSkeleton } from './components/loading'
 import { createQueryClient } from './lib/queryClient'
 import { Toast } from '@heroui/react'
 import { AuthPage } from './pages/AuthPage'
@@ -27,13 +28,8 @@ import {
 /** The client of the running app; a test passes one of its own. */
 const queryClient = createQueryClient()
 
-const fallback = (
-  <div className="space-y-4" aria-hidden>
-    <div className="skeleton skeleton--shimmer rounded-xl h-9 w-64" />
-    <div className="skeleton skeleton--shimmer rounded-xl h-40" />
-    <div className="skeleton skeleton--shimmer rounded-xl h-64" />
-  </div>
-)
+// The code of a page is on its way: the page's outline, announced as loading.
+const fallback = <PageSkeleton />
 
 /** Pages of a signed-in reader, inside the navigation shell. */
 function Shell() {

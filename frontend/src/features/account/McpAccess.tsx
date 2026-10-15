@@ -4,6 +4,7 @@ import type { FormEvent } from 'react'
 import { toast } from '../../lib/toast'
 import { Check, ContentCopy, Hub, KeyRound, Trash2 } from '../../components/icons'
 import { EASE, INPUT_CLASS } from '../../components/tokens'
+import { Loading, Skeleton } from '../../components/loading'
 import { Button, Card, ErrorNote, Field } from '../../components/ui'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs'
 import type { NewMcpKey } from '../../lib/api'
@@ -171,6 +172,17 @@ export function McpAccess() {
         {created && <NewKey key={created.id} created={created} url={url} />}
       </AnimatePresence>
 
+      {keys.isPending && (
+        <Loading label="Загружаем ключи" className="space-y-3 py-1">
+          {[0, 1].map((row) => (
+            <div key={row} className="flex items-center gap-3">
+              <Skeleton className="size-8 shrink-0 rounded-full" />
+              <Skeleton className="h-3.5 flex-1" />
+              <Skeleton className="h-7 w-20 rounded-full" />
+            </div>
+          ))}
+        </Loading>
+      )}
       {keys.data && keys.data.length > 0 && (
         <ul className="flex flex-col divide-y divide-separator">
           <AnimatePresence initial={false}>
