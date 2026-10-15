@@ -1,22 +1,21 @@
 """Read models of a digest, shared by the API and the renderers."""
 
 import uuid
+from collections.abc import Sequence
 from datetime import datetime
 from typing import Any, Self
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 from radar.cards import (
     OTHER_TOPIC,
     TAG_LABELS,
-    attack_rows,
+    card_fields,
     plain_brief,
     plain_lines,
     plain_prose,
     plain_title,
     priority_reason,
-    reference_rows,
-    vulnerability_rows,
 )
 from radar.db.models import Digest, DigestItem
 from radar.digest_extras import (
@@ -33,6 +32,7 @@ from radar.digest_extras import (
 from radar.domain import (
     AttackCard,
     Audience,
+    CardFieldKey,
     ItemSummary,
     ManagementTag,
     Priority,
@@ -52,6 +52,7 @@ class DuplicateView(BaseModel):
 
 
 class CardField(BaseModel):
+    key: CardFieldKey
     label: str
     value: str
 
@@ -95,19 +96,25 @@ class ItemView(BaseModel):
     links: list[str] = []
     # The bases the card was checked against.
     references: list[VulnerabilityReference] = []
-    # The card as label and value, in the dataset's order, and the tags in
-    # words: worked out from the fields above, for the page and the exports.
+    # The card rows the reader chose not to see (ProfileSpec.hidden_card_fields).
+    hidden_fields: list[CardFieldKey] = []
+    # The card as label and value, in the dataset's order and without the
+    # hidden rows, and the tags in words: worked out from the fields above,
+    # for the page and the exports.
     fields: list[CardField] = []
     tag_labels: list[str] = []
 
+    @field_validator("fields", mode="before")
+    @classmethod
+    def _worked_out_again(cls, value: object) -> object:
+        """Rows a saved view holds, written before rows had keys, are not read:
+        they are worked out again from the card below."""
+        return []
+
     @model_validator(mode="after")
     def _derived(self) -> Self:
-        rows: list[tuple[str, str]] = []
-        if self.attack is not None:
-            rows = attack_rows(self.attack) + reference_rows(self.references)
-        elif self.vulnerability is not None:
-            rows = vulnerability_rows(self.vulnerability) + reference_rows(self.references)
-        self.fields = [CardField(label=label, value=value) for label, value in rows]
+        rows = card_fields(self.attack, self.vulnerability, self.references, self.hidden_fields)
+        self.fields = [CardField(key=key, label=label, value=value) for key, label, value in rows]
         self.tag_labels = [TAG_LABELS[tag] for tag in self.tags]
         return self
 
@@ -155,6 +162,8 @@ class DigestView(DigestSummaryView):
     changes: list[Change] = []
     numbers: list[TagCount] = []
     numbers_title: str = ""
+    # The card rows left out of every entry, as the reader set them.
+    hidden_card_fields: list[CardFieldKey] = []
 
     @model_validator(mode="after")
     def _extras(self) -> Self:
@@ -193,7 +202,7 @@ _KINDS: dict[str, RecordKind] = {"attack": "attack", "vulnerability": "vulnerabi
 _PRIORITIES: dict[str, Priority] = {"high": "high", "medium": "medium", "low": "low"}
 
 
-def _item_view(item: DigestItem, profile: ProfileSpec) -> ItemView:
+def _item_view(item: DigestItem, profile: ProfileSpec, hidden: Sequence[CardFieldKey]) -> ItemView:
     article = item.article
     interest = profile.interest(item.interest_id)
     card = ItemSummary.model_validate({"summary": item.summary, **(item.card or {})})
@@ -244,6 +253,7 @@ def _item_view(item: DigestItem, profile: ProfileSpec) -> ItemView:
         unsupported=list(card.unsupported),
         links=list(article.links or []),
         references=list(card.references),
+        hidden_fields=list(hidden),
     )
 
 
@@ -273,14 +283,19 @@ def digest_summary(digest: Digest) -> DigestSummaryView:
     )
 
 
-def digest_view(digest: Digest) -> DigestView:
-    """Build the full view; `digest` must be loaded with topics and items."""
+def digest_view(digest: Digest, hidden: Sequence[CardFieldKey] | None = None) -> DigestView:
+    """Build the full view; `digest` must be loaded with topics and items.
+
+    `hidden` are the card rows to leave out, as the reader's profile has them
+    now; without it the profile the issue was built for decides."""
     profile = ProfileSpec.model_validate(digest.profile_spec)
+    if hidden is None:
+        hidden = profile.hidden_card_fields
     management = profile.audience == "management"
     by_topic: dict[int, list[ItemView]] = {}
     rejected = []
     for item in digest.items:
-        view = _item_view(item, profile)
+        view = _item_view(item, profile, hidden)
         if item.selected and item.topic_id is not None:
             by_topic.setdefault(item.topic_id, []).append(view)
         else:
@@ -307,4 +322,5 @@ def digest_view(digest: Digest) -> DigestView:
             for topic in digest.topics
         ],
         rejected=sorted(rejected, key=lambda view: -view.score),
+        hidden_card_fields=list(hidden),
     )

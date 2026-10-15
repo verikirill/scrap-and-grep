@@ -5,7 +5,7 @@ selection logic can be tested without infrastructure.
 """
 
 from datetime import date, datetime
-from typing import Literal
+from typing import Literal, get_args
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -65,6 +65,37 @@ ManagementTag = Literal[
     "people_events",
     "curious",
 ]
+# Rows of a specialist's attack and vulnerability cards a reader may hide
+# (radar.cards labels them). Hiding is presentation alone: the model still
+# fills the card and the check still verifies every row.
+CardFieldKey = Literal[
+    "attack.victim_country",
+    "attack.group",
+    "attack.date",
+    "attack.sectors",
+    "attack.vector",
+    "attack.initial_access",
+    "attack.affected",
+    "attack.tools",
+    "attack.vulnerabilities",
+    "attack.techniques",
+    "attack.indicators",
+    "attack.references",
+    "vulnerability.name",
+    "vulnerability.affected",
+    "vulnerability.fix",
+    "vulnerability.workaround",
+    "vulnerability.exploit",
+    "vulnerability.ids",
+    "vulnerability.cvss",
+    "vulnerability.cvss_words",
+    "vulnerability.cwe",
+    "vulnerability.impact",
+    "vulnerability.equipment",
+    "vulnerability.protocols",
+    "vulnerability.references",
+]
+CARD_FIELD_KEYS: tuple[CardFieldKey, ...] = get_args(CardFieldKey)
 
 
 class Interest(BaseModel):
@@ -109,6 +140,10 @@ class ProfileSpec(BaseModel):
     languages: tuple[Language, ...] = Field(default=("ru", "en"), min_length=1, max_length=2)
     categories: tuple[SourceCategory, ...] = Field(default=(), max_length=5)
     audience: Audience = "specialist"
+    # Card rows the reader does not want to see; every row is shown by default.
+    hidden_card_fields: tuple[CardFieldKey, ...] = Field(
+        default=(), max_length=len(CARD_FIELD_KEYS)
+    )
 
     @field_validator("interests")
     @classmethod
@@ -138,13 +173,20 @@ class ProfileSpec(BaseModel):
             return tuple(unique.values())
         return value
 
+    @field_validator("hidden_card_fields", mode="before")
+    @classmethod
+    def _unique_hidden(cls, value: object) -> object:
+        if isinstance(value, (list, tuple)):
+            return tuple(dict.fromkeys(value))
+        return value
+
     def fingerprint(self) -> str:
         """Changes whenever anything that affects grading changes."""
         # The audience changes how an entry is written, not how it is graded;
-        # the model never sees the systems, an entry is marked by their words.
-        return stable_hash(
-            self.model_dump_json(exclude={"name", "max_items", "min_score", "audience", "systems"})
-        )
+        # the model never sees the systems, an entry is marked by their words;
+        # a hidden card row changes only what the reader is shown.
+        presentation = {"name", "max_items", "min_score", "audience", "systems"}
+        return stable_hash(self.model_dump_json(exclude=presentation | {"hidden_card_fields"}))
 
     def interest(self, interest_id: str | None) -> Interest | None:
         return next((item for item in self.interests if item.id == interest_id), None)

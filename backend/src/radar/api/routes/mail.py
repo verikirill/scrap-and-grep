@@ -86,8 +86,9 @@ async def send_mail(
     to = (payload.to if payload is not None else None) or _own_address(user)
     if not to:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Укажите адрес почты.")
+    hidden = await digest_store.hidden_card_fields(session, digest)
     try:
-        message = mail.letter(digest_view(digest), to, settings)
+        message = mail.letter(digest_view(digest, hidden), to, settings)
     except mail.MailError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     try:

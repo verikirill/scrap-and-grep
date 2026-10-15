@@ -67,11 +67,29 @@ async def _load(
     return digest
 
 
-async def _load_done(session: SessionDep, user: CurrentUser, digest_id: uuid.UUID) -> DigestView:
+async def _shown(session: SessionDep, digest: Digest) -> DigestView:
+    """The digest as its reader sees it: without the card rows the profile hides now."""
+    return digest_view(digest, await digest_store.hidden_card_fields(session, digest))
+
+
+async def _load_done(
+    session: SessionDep, user: CurrentUser, digest_id: uuid.UUID, *, as_shown: bool = True
+) -> DigestView:
+    """A finished digest; `as_shown=False` keeps every card row, for answers
+    drawn from the entries."""
     digest = await _load(session, user, digest_id, full=True)
     if digest.status != digest_store.STATUS_DONE:
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Выпуск ещё не готов.")
-    return digest_view(digest)
+    return await _shown(session, digest) if as_shown else digest_view(digest, ())
+
+
+def _export_key(view: DigestView, kind: str) -> str:
+    """A report's cache key: one copy for each set of hidden card rows."""
+    key = f"export:{view.id}:{kind}"
+    if not view.hidden_card_fields:
+        return key
+    hidden = ",".join(sorted(view.hidden_card_fields))
+    return f"{key}:{hashlib.sha256(hidden.encode()).hexdigest()[:12]}"
 
 
 async def _ready_to_build(
@@ -245,7 +263,7 @@ def _settings_changed(base: ProfileSpec, other: ProfileSpec) -> list[str]:
 @router.get("/digests/{digest_id}")
 async def get_digest(digest_id: uuid.UUID, session: SessionDep, user: CurrentUser) -> DigestView:
     digest = await _load(session, user, digest_id, full=True)
-    view = digest_view(digest)
+    view = await _shown(session, digest)
     if digest.status == digest_store.STATUS_DONE:
         await record.digest_opened(user, digest.id, digest.profile_id, digest.origin)
     await measure_soon(
@@ -290,7 +308,7 @@ async def export_markdown(
     digest_id: uuid.UUID, session: SessionDep, cache: CacheDep, user: CurrentUser
 ) -> Response:
     view = await _load_done(session, user, digest_id)
-    key = f"export:{digest_id}:md"
+    key = _export_key(view, "md")
     body = await cache.get_bytes(key)
     if body is None:
         body = (await asyncio.to_thread(render_markdown, view)).encode("utf-8")
@@ -305,7 +323,7 @@ async def export_docx(
     digest_id: uuid.UUID, session: SessionDep, cache: CacheDep, user: CurrentUser
 ) -> Response:
     view = await _load_done(session, user, digest_id)
-    key = f"export:{digest_id}:docx"
+    key = _export_key(view, "docx")
     body = await cache.get_bytes(key)
     if body is None:
         body = await asyncio.to_thread(render_docx, view)
@@ -368,7 +386,7 @@ async def ask_digest(
     digest_id: uuid.UUID, body: AskIn, session: SessionDep, cache: CacheDep, user: CurrentUser
 ) -> AskOut:
     """Answers a question from the digest's entries, with the entries it used."""
-    view = await _load_done(session, user, digest_id)
+    view = await _load_done(session, user, digest_id, as_shown=False)
     question = " ".join(body.question.split())
     key = f"ask:{digest_id}:{hashlib.sha256(question.casefold().encode()).hexdigest()[:24]}"
     cached = await cache.get_json(key)

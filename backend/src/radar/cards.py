@@ -13,12 +13,13 @@ a CVSS score or a version number the model made up.
 """
 
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from urllib.parse import urlsplit, urlunsplit
 
 from radar.domain import (
     AttackCard,
     AttackTechnique,
+    CardFieldKey,
     Exploit,
     ItemSummary,
     ManagementTag,
@@ -679,48 +680,86 @@ def _flag(value: bool | None) -> str:
     return NO_DATA if value is None else ("есть" if value else "нет")
 
 
-def attack_rows(card: AttackCard) -> list[tuple[str, str]]:
+# A card row: the key a reader hides it by, its label and its value.
+CardRow = tuple[CardFieldKey, str, str]
+
+
+def attack_fields(card: AttackCard) -> list[CardRow]:
     """The attack card as the dataset's "desired output" lists it."""
     techniques = "; ".join(f"{item.id} {item.name}".strip() for item in card.techniques)
     return [
-        ("Страна жертвы", card.victim_country or NO_DATA),
-        ("Группировка", card.group or NO_DATA),
-        ("Дата атаки", card.attack_date or NO_DATA),
-        ("Отрасли и компании", card.sectors or NO_DATA),
-        ("Вектор атаки", card.vector or NO_DATA),
-        ("Первоначальный доступ", card.initial_access or NO_DATA),
-        ("Затронутые продукты", card.affected or NO_DATA),
-        ("Инструменты", ", ".join(card.tools) or NO_DATA),
-        ("Уязвимости", ", ".join(card.vulnerabilities) or NO_DATA),
-        ("Техники ATT&CK", techniques or NO_DATA),
-        ("Индикаторы компрометации", ", ".join(card.indicators) or _flag(card.iocs)),
+        ("attack.victim_country", "Страна жертвы", card.victim_country or NO_DATA),
+        ("attack.group", "Группировка", card.group or NO_DATA),
+        ("attack.date", "Дата атаки", card.attack_date or NO_DATA),
+        ("attack.sectors", "Отрасли и компании", card.sectors or NO_DATA),
+        ("attack.vector", "Вектор атаки", card.vector or NO_DATA),
+        ("attack.initial_access", "Первоначальный доступ", card.initial_access or NO_DATA),
+        ("attack.affected", "Затронутые продукты", card.affected or NO_DATA),
+        ("attack.tools", "Инструменты", ", ".join(card.tools) or NO_DATA),
+        ("attack.vulnerabilities", "Уязвимости", ", ".join(card.vulnerabilities) or NO_DATA),
+        ("attack.techniques", "Техники ATT&CK", techniques or NO_DATA),
+        (
+            "attack.indicators",
+            "Индикаторы компрометации",
+            ", ".join(card.indicators) or _flag(card.iocs),
+        ),
     ]
 
 
-def vulnerability_rows(card: VulnerabilityCard) -> list[tuple[str, str]]:
+def vulnerability_fields(card: VulnerabilityCard) -> list[CardRow]:
     score = card.cvss_score
     # Saved issues hold the vector as the text printed it, prefixed or not.
     vector = normal_cvss_vector(card.cvss_vector, score)
     cvss = f"{score} ({vector})" if score and vector else score or vector
-    rows = [
-        ("Уязвимость", card.name or NO_DATA),
-        ("Затронуто", card.affected or NO_DATA),
-        ("Обновление", card.fix or NO_DATA),
-        ("Временные меры", card.workaround or NO_DATA),
-        ("Эксплойт", EXPLOIT_LABELS[card.exploit]),
-        ("Идентификаторы", ", ".join(card.ids) or NO_DATA),
-        ("CVSS", cvss or NO_DATA),
+    rows: list[CardRow] = [
+        ("vulnerability.name", "Уязвимость", card.name or NO_DATA),
+        ("vulnerability.affected", "Затронуто", card.affected or NO_DATA),
+        ("vulnerability.fix", "Обновление", card.fix or NO_DATA),
+        ("vulnerability.workaround", "Временные меры", card.workaround or NO_DATA),
+        ("vulnerability.exploit", "Эксплойт", EXPLOIT_LABELS[card.exploit]),
+        ("vulnerability.ids", "Идентификаторы", ", ".join(card.ids) or NO_DATA),
+        ("vulnerability.cvss", "CVSS", cvss or NO_DATA),
         # The vector in words: from the network, with which rights, with a click.
-        *parse_cvss_vector(vector),
-        ("CWE", ", ".join(card.cwe) or NO_DATA),
-        ("Последствия", card.impact or NO_DATA),
+        *(("vulnerability.cvss_words", label, value) for label, value in parse_cvss_vector(vector)),
+        ("vulnerability.cwe", "CWE", ", ".join(card.cwe) or NO_DATA),
+        ("vulnerability.impact", "Последствия", card.impact or NO_DATA),
     ]
     # Industrial control systems only: there is nothing to say for the rest.
     if card.equipment:
-        rows.append(("Оборудование", card.equipment))
+        rows.append(("vulnerability.equipment", "Оборудование", card.equipment))
     if card.protocols:
-        rows.append(("Протоколы", card.protocols))
+        rows.append(("vulnerability.protocols", "Протоколы", card.protocols))
     return rows
+
+
+def attack_rows(card: AttackCard) -> list[tuple[str, str]]:
+    return [(label, value) for _, label, value in attack_fields(card)]
+
+
+def vulnerability_rows(card: VulnerabilityCard) -> list[tuple[str, str]]:
+    return [(label, value) for _, label, value in vulnerability_fields(card)]
+
+
+def card_fields(
+    attack: AttackCard | None,
+    vulnerability: VulnerabilityCard | None,
+    references: Sequence[VulnerabilityReference],
+    hidden: Collection[CardFieldKey] = (),
+) -> list[CardRow]:
+    """The rows of an entry's card the reader keeps; none for news or a brief.
+
+    Hiding leaves the card itself alone: a hidden row is still filled by the
+    model and checked against the article, it is only not shown."""
+    if attack is not None:
+        rows = attack_fields(attack)
+        checked: CardFieldKey = "attack.references"
+    elif vulnerability is not None:
+        rows = vulnerability_fields(vulnerability)
+        checked = "vulnerability.references"
+    else:
+        return []
+    rows += [(checked, label, value) for label, value in reference_rows(references)]
+    return [row for row in rows if row[0] not in hidden]
 
 
 def reference_rows(references: Sequence[VulnerabilityReference]) -> list[tuple[str, str]]:

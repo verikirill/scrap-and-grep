@@ -5,12 +5,13 @@ from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from pydantic import ValidationError
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from radar.cards import priority
-from radar.db.models import Article, Digest, DigestItem, DigestTopic
+from radar.db.models import Article, Digest, DigestItem, DigestTopic, Profile
 from radar.digest_extras import (
     HISTORY_DAYS,
     HISTORY_ISSUES,
@@ -18,7 +19,14 @@ from radar.digest_extras import (
     tag_counts,
     vulnerability_states,
 )
-from radar.domain import DigestOverview, GradedCandidate, ItemSummary, ProfileSpec, Topic
+from radar.domain import (
+    CardFieldKey,
+    DigestOverview,
+    GradedCandidate,
+    ItemSummary,
+    ProfileSpec,
+    Topic,
+)
 
 STATUS_QUEUED = "queued"
 STATUS_RUNNING = "running"
@@ -67,6 +75,23 @@ async def get(
     if full:
         statement = statement.options(selectinload(Digest.topics), selectinload(Digest.items))
     return (await session.execute(statement)).scalar_one_or_none()
+
+
+async def hidden_card_fields(
+    session: AsyncSession, digest: Digest
+) -> tuple[CardFieldKey, ...] | None:
+    """The card rows the reader hides now: an issue built before the reader
+    changed the setting reads by the new one. None when the profile is gone or
+    no longer reads; the issue then keeps the choice it was built with."""
+    if digest.profile_id is None:
+        return None
+    profile = await session.get(Profile, digest.profile_id)
+    if profile is None:
+        return None
+    try:
+        return ProfileSpec.model_validate(profile.spec).hidden_card_fields
+    except ValidationError:
+        return None
 
 
 async def list_recent(
