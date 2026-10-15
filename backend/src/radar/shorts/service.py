@@ -40,7 +40,8 @@ from radar.shorts.script import (
     pick_items,
 )
 from radar.shorts.timing import build_props, format_period
-from radar.shorts.voice import VoiceClient, VoiceOption, narrate
+from radar.shorts.voice import Voice, VoiceClient, VoiceOption, narrate
+from radar.shorts.yandex_voice import YandexVoiceClient
 from radar.store import digests as digest_store
 from radar.views import digest_view
 
@@ -70,8 +71,15 @@ def get_writer() -> ScriptWriter:
     return ResilientScriptWriter(OllamaScriptWriter(chat), fallback, get_breaker())
 
 
-def get_voice() -> VoiceClient | None:
+def get_voice() -> Voice | None:
     settings = get_settings()
+    if settings.tts_provider == "yandex" and settings.tts_api_key is not None:
+        return YandexVoiceClient(
+            settings.tts_api_key,
+            settings.tts_folder,
+            timeout=settings.tts_timeout_seconds,
+            speaker=settings.tts_voice,
+        )
     if not settings.tts_url:
         return None
     return VoiceClient(

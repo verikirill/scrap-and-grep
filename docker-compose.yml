@@ -84,6 +84,10 @@ x-backend: &backend
     # One request to the voice: a few lines on a GPU take seconds, on a CPU
     # minutes, so a stand without a GPU raises it.
     RADAR_TTS_TIMEOUT_SECONDS: ${RADAR_TTS_TIMEOUT_SECONDS:-300}
+    # yandex: the voice from Yandex SpeechKit with the key of a folder, no tts service.
+    RADAR_TTS_PROVIDER: ${RADAR_TTS_PROVIDER:-service}
+    RADAR_TTS_API_KEY: ${RADAR_TTS_API_KEY:-}
+    RADAR_TTS_FOLDER: ${RADAR_TTS_FOLDER:-}
     # A digest by email through the company's mail server; empty host turns
     # it off. With the mail profile: host mail, port 1025, security none.
     RADAR_SMTP_HOST: ${RADAR_SMTP_HOST:-}

@@ -251,6 +251,12 @@ class Settings(BaseSettings):
     # Empty means the voice service's own default speaker.
     tts_voice: str = ""
     tts_timeout_seconds: float = Field(default=300.0, ge=10)
+    # The voice: our Qwen3-TTS service at tts_url, or Yandex SpeechKit in the
+    # cloud with an API key of the folder (its service account needs the role
+    # ai.speechkit-tts.user). SpeechKit needs no tts_url.
+    tts_provider: Literal["service", "yandex"] = "service"
+    tts_api_key: SecretStr | None = None
+    tts_folder: str = ""
     # Finished videos, one MP4 per digest. Shared by the media worker, which
     # writes, and the api, which serves.
     media_dir: str = "data/media"
@@ -368,7 +374,12 @@ class Settings(BaseSettings):
         return check_proxy_url(url) if url else url
 
     @field_validator(
-        "llm_api_key", "nvd_api_key", "embedding_api_key", "embedding_dimensions", mode="before"
+        "llm_api_key",
+        "nvd_api_key",
+        "embedding_api_key",
+        "embedding_dimensions",
+        "tts_api_key",
+        mode="before",
     )
     @classmethod
     def _unset(cls, value: object) -> object:
@@ -388,7 +399,14 @@ class Settings(BaseSettings):
             raise ValueError(
                 "RADAR_EMBEDDING_BASE_URL is required for OpenAI-compatible embeddings"
             )
+        if self.tts_provider == "yandex" and self.tts_api_key is None:
+            raise ValueError("RADAR_TTS_API_KEY is required for the voice in Yandex SpeechKit")
         return self
+
+    @property
+    def has_voice(self) -> bool:
+        """Videos and briefs can be voiced: our service is reachable or SpeechKit set."""
+        return self.tts_provider == "yandex" or bool(self.tts_url)
 
     @computed_field  # type: ignore[prop-decorator]
     @property

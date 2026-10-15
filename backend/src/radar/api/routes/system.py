@@ -78,6 +78,8 @@ async def meta(session: SessionDep, settings: SettingsDep, cache: CacheDep) -> M
         ),
         resume_max_bytes=settings.resume_max_bytes,
         shorts=bool(settings.shorts_url),
-        shorts_voice=bool(settings.shorts_url and settings.tts_url),
-        short_voices=await known_voices(cache) if settings.shorts_url and settings.tts_url else [],
+        shorts_voice=bool(settings.shorts_url) and settings.has_voice,
+        short_voices=await known_voices(cache)
+        if settings.shorts_url and settings.has_voice
+        else [],
     )

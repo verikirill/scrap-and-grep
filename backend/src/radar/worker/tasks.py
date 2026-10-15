@@ -485,7 +485,7 @@ async def housekeeping() -> dict[str, int]:
             log.warning("short_purge_not_queued", error=type(exc).__name__)
     # The voices for the api to list: a video and a spoken brief both pick
     # one, and the brief needs the voice alone.
-    if settings.tts_url:
+    if settings.has_voice:
         try:
             await refresh_short_voices.kiq()
         except Exception as exc:
