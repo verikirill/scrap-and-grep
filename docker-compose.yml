@@ -29,6 +29,14 @@ x-backend: &backend
     RADAR_OLLAMA_BASE_URL: ${RADAR_OLLAMA_BASE_URL:-http://ollama:11434}
     RADAR_EMBEDDING_PROVIDER: ${RADAR_EMBEDDING_PROVIDER:-hashing}
     RADAR_EMBEDDING_MODEL: ${RADAR_EMBEDDING_MODEL:-embeddinggemma:300m}
+    # An OpenAI-compatible embeddings server, Yandex AI Studio among them
+    # (see .env.example); used when the provider is openai.
+    RADAR_EMBEDDING_BASE_URL: ${RADAR_EMBEDDING_BASE_URL:-}
+    RADAR_EMBEDDING_API_KEY: ${RADAR_EMBEDDING_API_KEY:-}
+    RADAR_EMBEDDING_PROJECT: ${RADAR_EMBEDDING_PROJECT:-}
+    RADAR_EMBEDDING_QUERY_MODEL: ${RADAR_EMBEDDING_QUERY_MODEL:-}
+    RADAR_EMBEDDING_DIMENSIONS: ${RADAR_EMBEDDING_DIMENSIONS:-}
+    RADAR_EMBEDDING_REQUESTS_PER_SECOND: ${RADAR_EMBEDDING_REQUESTS_PER_SECOND:-8}
     RADAR_LLM_PROVIDER: ${RADAR_LLM_PROVIDER:-heuristic}
     # A local model of the finals in the bundled Ollama, which also pulls it.
     # vLLM and other servers are set by the base URL (see .env.example).

@@ -5,7 +5,13 @@ from dataclasses import dataclass
 from functools import lru_cache
 from typing import TYPE_CHECKING
 
-from radar.ai.embedder import Embedder, HashingEmbedder, OllamaEmbedder
+from radar.ai.embedder import (
+    Embedder,
+    HashingEmbedder,
+    OllamaEmbedder,
+    OpenAIEmbedder,
+    short_model_name,
+)
 from radar.ai.heuristic import HeuristicIntelligence
 from radar.ai.intelligence import Intelligence
 from radar.ai.resilient import CachedIntelligence, CircuitBreaker, ResilientIntelligence
@@ -70,6 +76,20 @@ def embedding_preset(model: str) -> EmbeddingPreset:
 @lru_cache
 def get_embedder() -> Embedder:
     settings = get_settings()
+    if settings.embedding_provider == "openai":
+        preset = embedding_preset(short_model_name(settings.embedding_model))
+        api_key = settings.embedding_api_key
+        return OpenAIEmbedder(
+            settings.embedding_model,
+            settings.embedding_base_url,
+            query_model=settings.embedding_query_model,
+            api_key=api_key.get_secret_value() if api_key else None,
+            project=settings.embedding_project,
+            dimensions=settings.embedding_dimensions or preset.dimensions,
+            duplicate_threshold=preset.duplicate_threshold,
+            search_floor=preset.search_floor,
+            requests_per_second=settings.embedding_requests_per_second,
+        )
     if settings.embedding_provider == "ollama":
         preset = embedding_preset(settings.embedding_model)
         return OllamaEmbedder(
