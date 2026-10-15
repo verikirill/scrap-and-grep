@@ -42,3 +42,11 @@ CLAUDE.local.md
 *.mp4
 *.tar
 *.tar.gz
+
+# CI: the reports of ci/*.sh and the caches of a local pipeline run
+junit.xml
+coverage.xml
+gitleaks.xml
+gl-code-quality-*.json
+/.cache/
+/.gitlab-ci-local/

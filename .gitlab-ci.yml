@@ -1,0 +1,386 @@
+# Checks, images and the stand of Scrap&Grep.
+#
+# A merge request gets every check. main and tags also build the images the
+# stand runs and push them to the project registry; main then rolls the stand
+# out and walks the jury's path on it. Every job runs one script from ci/: the
+# same scripts run on GitHub Actions (.github/workflows/ci.yml) and on a
+# laptop. docs/CI.md describes the jobs, the runner, the variables and how to
+# roll back.
+#
+# Jobs run on the team's own runner with the Docker executor. The jobs that
+# drive Docker (images, deployment) ask for the docker-socket tag: a runner
+# that mounts /var/run/docker.sock into its jobs.
+
+variables:
+  # Pipelines start once PIPELINES is "on": here, or as a project CI/CD
+  # variable that a Maintainer adds together with the runner (docs/CI.md).
+  PIPELINES: "off"
+  GIT_DEPTH: "20"
+  # Caches live inside the project directory, where GitLab can archive them.
+  UV_CACHE_DIR: $CI_PROJECT_DIR/.cache/uv
+  UV_LINK_MODE: copy
+  UV_PYTHON_DOWNLOADS: never
+  UV_NO_PROGRESS: "1"
+  npm_config_cache: $CI_PROJECT_DIR/.cache/npm
+  npm_config_audit: "false"
+  npm_config_fund: "false"
+  FF_USE_FASTZIP: "true"
+  CACHE_COMPRESSION_LEVEL: fast
+  # Where the images go and what the stand runs. One tag per commit, so a
+  # rollback is a rerun of an older deployment job.
+  RADAR_IMAGE_PREFIX: $CI_REGISTRY_IMAGE/
+  RADAR_IMAGE_TAG: $CI_COMMIT_SHORT_SHA
+
+workflow:
+  auto_cancel:
+    on_new_commit: interruptible
+  rules:
+    - if: $PIPELINES != "on"
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    # A branch with an open merge request already has the pipeline above.
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS && $CI_PIPELINE_SOURCE == "push"
+      when: never
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
+    # "Run pipeline" by hand and scheduled runs, on any branch.
+    - if: $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "schedule"
+
+stages:
+  - check
+  - test
+  - build
+  - deploy
+  - verify
+
+default:
+  interruptible: true
+  timeout: 20 minutes
+  # Only failures of the infrastructure are retried, never a red test.
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
+      - api_failure
+      - scheduler_failure
+
+# --- Templates -----------------------------------------------------------------
+
+# The cache keeps the downloaded wheels as well (no `uv cache prune --ci`):
+# the runner holds it on its own disk, where unpacking them is faster than
+# fetching them from PyPI again.
+.uv:
+  image: ghcr.io/astral-sh/uv:0.13.1-python3.14-trixie-slim
+
+.node:
+  image: node:24.21.0-alpine
+
+.cache-uv-backend: &cache-uv-backend
+  key:
+    prefix: uv-backend
+    files: [backend/uv.lock]
+  paths: [.cache/uv]
+
+.cache-npm-frontend: &cache-npm-frontend
+  key:
+    prefix: npm-frontend
+    files: [frontend/package-lock.json]
+  paths: [.cache/npm]
+
+# --- check: static checks, all at once ------------------------------------------
+
+backend:lint:
+  extends: .uv
+  stage: check
+  needs: []
+  cache: *cache-uv-backend
+  variables:
+    CODE_QUALITY_REPORT: gl-code-quality-ruff.json
+  script:
+    - sh ci/backend-lint.sh
+  artifacts:
+    when: always
+    expire_in: 2 weeks
+    reports:
+      codequality: gl-code-quality-ruff.json
+
+frontend:lint:
+  extends: .node
+  stage: check
+  needs: []
+  cache: *cache-npm-frontend
+  variables:
+    CODE_QUALITY_REPORT: gl-code-quality-oxlint.json
+  script:
+    - sh ci/frontend-lint.sh
+  artifacts:
+    when: always
+    expire_in: 2 weeks
+    reports:
+      codequality: gl-code-quality-oxlint.json
+
+python:services:
+  extends: .uv
+  stage: check
+  needs: []
+  script:
+    - sh ci/python-services.sh
+
+compose:config:
+  stage: check
+  image: docker:29.9.0-cli
+  needs: []
+  script:
+    - sh ci/compose-config.sh
+
+dockerfiles:lint:
+  stage: check
+  image: hadolint/hadolint:v2.15.1-alpine
+  needs: []
+  variables:
+    CODE_QUALITY_REPORT: gl-code-quality-hadolint.json
+  script:
+    - sh ci/dockerfiles-lint.sh
+  artifacts:
+    when: always
+    expire_in: 2 weeks
+    reports:
+      codequality: gl-code-quality-hadolint.json
+
+shell:lint:
+  stage: check
+  image: koalaman/shellcheck-alpine:v0.11.0
+  needs: []
+  script:
+    - sh ci/shell-lint.sh
+
+secrets:scan:
+  stage: check
+  image:
+    name: zricethezav/gitleaks:v8.30.1
+    entrypoint: [""]
+  needs: []
+  variables:
+    GIT_DEPTH: "0"
+  rules:
+    # A merge request: the commits it brings. Other pipelines: the whole history.
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      variables:
+        COMMIT_RANGE: $CI_MERGE_REQUEST_DIFF_BASE_SHA..$CI_COMMIT_SHA
+    - when: on_success
+  script:
+    - sh ci/secrets-scan.sh
+  artifacts:
+    when: always
+    expire_in: 2 weeks
+    reports:
+      junit: gitleaks.xml
+
+# A warning, not a stop: a fresh advisory leaves an unrelated merge free; a
+# pipeline schedule on main runs it every night (docs/CI.md).
+deps:audit:
+  stage: check
+  image:
+    name: ghcr.io/google/osv-scanner:v2.6.0
+    entrypoint: [""]
+  needs: []
+  allow_failure: true
+  script:
+    - sh ci/deps-audit.sh
+
+commits:lint:
+  stage: check
+  image: docker:29.9.0-cli
+  needs: []
+  variables:
+    GIT_DEPTH: "0"
+    COMMIT_RANGE: $CI_MERGE_REQUEST_DIFF_BASE_SHA..$CI_COMMIT_SHA
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  script:
+    - sh ci/commits-lint.sh
+
+# --- test -------------------------------------------------------------------------
+
+# The services are of the versions in docker-compose.yml.
+backend:test:
+  extends: .uv
+  stage: test
+  needs: []
+  timeout: 30 minutes
+  cache: *cache-uv-backend
+  services:
+    - name: pgvector/pgvector:0.8.6-pg18
+      alias: postgres
+      variables:
+        POSTGRES_USER: radar
+        POSTGRES_PASSWORD: radar
+        POSTGRES_DB: radar
+    - name: valkey/valkey:9.1-alpine
+      alias: valkey
+    - name: clickhouse/clickhouse-server:26.9.8-alpine
+      alias: clickhouse
+      variables:
+        CLICKHOUSE_USER: radar
+        CLICKHOUSE_PASSWORD: radar
+        CLICKHOUSE_DB: radar
+  variables:
+    RADAR_TEST_ADMIN_DSN: postgresql://radar:radar@postgres:5432/postgres
+    RADAR_TEST_CACHE_URL: redis://valkey:6379/15
+    RADAR_TEST_BROKER_URL: redis://valkey:6379/15
+    RADAR_TEST_CLICKHOUSE_URL: http://clickhouse:8123
+  script:
+    - sh ci/backend-test.sh
+  coverage: '/TOTAL\s.*\s(\d+(?:\.\d+)?)%$/'
+  artifacts:
+    when: always
+    expire_in: 2 weeks
+    reports:
+      junit: backend/junit.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: backend/coverage.xml
+
+frontend:test:
+  extends: .node
+  stage: test
+  needs: []
+  cache: *cache-npm-frontend
+  script:
+    - sh ci/frontend-test.sh
+  coverage: '/Lines\s*:\s*(\d+(?:\.\d+)?)%/'
+  artifacts:
+    when: always
+    expire_in: 2 weeks
+    reports:
+      junit: frontend/junit.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: frontend/coverage/cobertura-coverage.xml
+
+shorts:test:
+  extends: .node
+  stage: test
+  needs: []
+  cache:
+    key:
+      prefix: npm-shorts
+      files: [shorts/package-lock.json]
+    paths: [.cache/npm]
+  script:
+    - sh ci/shorts-test.sh
+  artifacts:
+    when: always
+    expire_in: 2 weeks
+    reports:
+      junit: shorts/junit.xml
+
+browser:test:
+  extends: .uv
+  stage: test
+  needs: []
+  cache:
+    key:
+      prefix: uv-browser
+      files: [browser/uv.lock]
+    paths: [.cache/uv]
+  script:
+    - sh ci/browser-test.sh
+  artifacts:
+    when: always
+    expire_in: 2 weeks
+    reports:
+      junit: browser/junit.xml
+
+# --- build ------------------------------------------------------------------------
+
+frontend:build:
+  extends: .node
+  stage: build
+  needs: []
+  cache:
+    <<: *cache-npm-frontend
+    policy: pull
+  script:
+    - sh ci/frontend-build.sh
+  artifacts:
+    expire_in: 1 week
+    paths: [frontend/dist]
+
+# The images of the stand, built by the runner's Docker with its layer cache
+# once every check and test is green. main and tags push them, tagged with the
+# commit and with main or the tag; a merge request that touches what goes
+# into them builds them.
+images:
+  stage: build
+  image: docker:29.9.0-cli
+  tags: [docker-socket]
+  timeout: 45 minutes
+  dependencies: []
+  variables:
+    REGISTRY: $CI_REGISTRY
+    REGISTRY_USER: $CI_REGISTRY_USER
+    REGISTRY_PASSWORD: $CI_REGISTRY_PASSWORD
+    IMAGE_ALIAS: $CI_COMMIT_REF_NAME
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_TAG
+      variables:
+        PUSH_IMAGES: "true"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - .gitlab-ci.yml
+        - ci/images.sh
+        - docker-compose*.yml
+        - "**/Dockerfile"
+        - "**/.dockerignore"
+        - backend/pyproject.toml
+        - backend/uv.lock
+        - browser/**/*
+        - egress/**/*
+        - frontend/Caddyfile
+        - frontend/package*.json
+        - shorts/package*.json
+    - if: $CI_PIPELINE_SOURCE == "web"
+  script:
+    - sh ci/images.sh
+
+# --- deploy and verify: main, once the stand is configured ----------------------
+#
+# These jobs join main pipelines once STAND_URL and STAND_DEPLOY (ssh or local)
+# are set, as project variables or in `variables:` above; ci/deploy-stand.sh
+# lists the rest. To roll back, press "Rollback" on the environment page: the
+# older job runs again with the images of its own commit.
+
+deploy:stand:
+  stage: deploy
+  image: docker:29.9.0-cli
+  tags: [docker-socket]
+  timeout: 30 minutes
+  interruptible: false
+  dependencies: []
+  resource_group: stand
+  environment:
+    name: stand
+    url: $STAND_URL
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $STAND_URL && $STAND_DEPLOY =~ /^(ssh|local)$/
+  script:
+    - sh ci/deploy-stand.sh
+
+verify:stand:
+  extends: .uv
+  stage: verify
+  needs: [deploy:stand]
+  dependencies: []
+  timeout: 45 minutes
+  interruptible: false
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $STAND_URL && $STAND_DEPLOY =~ /^(ssh|local)$/
+  script:
+    - sh ci/verify-stand.sh

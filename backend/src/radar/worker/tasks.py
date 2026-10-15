@@ -2,6 +2,7 @@
 
 import asyncio
 import uuid
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, select
@@ -445,12 +446,13 @@ async def _kev_at_start(state: TaskiqState) -> None:
             model: not await session.scalar(select(func.count()).select_from(model))
             for model in (EpssScore, PublicExploit)
         }
-    for task, event in (
+    starters: list[tuple[Callable[[], Awaitable[object]], str]] = [
         (refresh_kev, "kev_not_refreshed"),
         *([(refresh_epss, "epss_not_refreshed")] if empty[EpssScore] else []),
         *([(refresh_exploitdb, "exploitdb_not_refreshed")] if empty[PublicExploit] else []),
         (_all_avatars, "avatars_not_refreshed"),
-    ):
+    ]
+    for task, event in starters:
         try:
             await task()
         except Exception as exc:

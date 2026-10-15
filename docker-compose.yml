@@ -2,10 +2,14 @@ name: radar
 
 # One image, several roles. Everything that holds state is a separate service,
 # so the api and the workers can be scaled with --scale without coordination.
+#
+# Images are built here as radar-<name>:local. The stand takes the ones CI
+# pushed to the project registry instead: RADAR_IMAGE_PREFIX is the registry
+# path with a trailing slash, RADAR_IMAGE_TAG the commit (see .gitlab-ci.yml).
 x-backend: &backend
   build:
     context: ./backend
-  image: radar-backend:local
+  image: ${RADAR_IMAGE_PREFIX:-radar-}backend:${RADAR_IMAGE_TAG:-local}
   restart: unless-stopped
   # The backend needs no privileges and writes nothing but temporary files.
   read_only: true
@@ -333,7 +337,7 @@ services:
   web:
     build:
       context: ./frontend
-    image: radar-web:local
+    image: ${RADAR_IMAGE_PREFIX:-radar-}web:${RADAR_IMAGE_TAG:-local}
     restart: unless-stopped
     ports:
       - "${WEB_PORT:-8080}:80"
@@ -354,7 +358,7 @@ services:
     profiles: ["docling"]
     build:
       context: ./docparser
-    image: radar-docparser:local
+    image: ${RADAR_IMAGE_PREFIX:-radar-}docparser:${RADAR_IMAGE_TAG:-local}
     restart: unless-stopped
     read_only: true
     tmpfs:
@@ -387,7 +391,7 @@ services:
     profiles: ["video"]
     build:
       context: ./shorts
-    image: radar-shorts:local
+    image: ${RADAR_IMAGE_PREFIX:-radar-}shorts:${RADAR_IMAGE_TAG:-local}
     restart: unless-stopped
     read_only: true
     tmpfs:
@@ -437,7 +441,7 @@ services:
     profiles: ["voice"]
     build:
       context: ./tts
-    image: radar-tts:local
+    image: ${RADAR_IMAGE_PREFIX:-radar-}tts:${RADAR_IMAGE_TAG:-local}
     restart: unless-stopped
     read_only: true
     tmpfs:
@@ -482,7 +486,7 @@ services:
       context: ./ollama
       args:
         EMBEDDING_MODEL: ${RADAR_EMBEDDING_MODEL:-embeddinggemma:300m}
-    image: radar-ollama:local
+    image: ${RADAR_IMAGE_PREFIX:-radar-}ollama:${RADAR_IMAGE_TAG:-local}
     restart: unless-stopped
     environment:
       # Parallel slots did not raise throughput on one GPU (76 vs 84 tokens/s
@@ -507,7 +511,7 @@ services:
   ollama-pull:
     profiles: ["ollama"]
     build: *ollama-build
-    image: radar-ollama:local
+    image: ${RADAR_IMAGE_PREFIX:-radar-}ollama:${RADAR_IMAGE_TAG:-local}
     restart: "no"
     environment:
       OLLAMA_HOST: http://ollama:11434
@@ -554,7 +558,7 @@ services:
       context: ./browser
       additional_contexts:
         certs: ./backend/src/radar/ingest/certs
-    image: radar-browser:local
+    image: ${RADAR_IMAGE_PREFIX:-radar-}browser:${RADAR_IMAGE_TAG:-local}
     restart: unless-stopped
     read_only: true
     tmpfs:

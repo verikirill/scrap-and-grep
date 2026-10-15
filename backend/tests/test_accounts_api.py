@@ -29,6 +29,8 @@ pytestmark = pytest.mark.integration
 ADMIN_DSN = os.environ.get(
     "RADAR_TEST_ADMIN_DSN", "postgresql://radar:radar@127.0.0.1:5432/postgres"
 )
+# Database 15 keeps the run away from the development cache and queues.
+CACHE_URL = os.environ.get("RADAR_TEST_CACHE_URL", "redis://127.0.0.1:6379/15")
 TEST_DB = "radar_test"
 PASSWORD = "correct-horse-battery"
 
@@ -57,8 +59,7 @@ def database() -> Iterator[None]:
         )[0]
         + f"/{TEST_DB}",
         "RADAR_DB_DISABLE_PREPARED_STATEMENTS": "false",
-        # Database 15 keeps the run away from the development cache and queues.
-        "RADAR_CACHE_URL": "redis://127.0.0.1:6379/15",
+        "RADAR_CACHE_URL": CACHE_URL,
         "RADAR_EMBEDDING_PROVIDER": "hashing",
         "RADAR_LLM_PROVIDER": "heuristic",
         "RADAR_DOCPARSER_URL": "",
@@ -101,12 +102,15 @@ async def api(database: None, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[
     get_embedder.cache_clear()
     get_intelligence.cache_clear()
     # Tasks are not sent anywhere: the tests call the task bodies themselves.
+    # A real queue here would be the development stack's own: a refresh of
+    # the catalogue would start a fetch of every source there.
     for task in (
         tasks.process_resume,
         tasks.refresh_taste,
         tasks.build_digest,
         tasks.measure_articles,
         tasks.adapt_profiles,
+        tasks.ingest_all,
     ):
         monkeypatch.setattr(task, "kiq", AsyncMock())
 

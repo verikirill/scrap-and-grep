@@ -1,0 +1,10 @@
+# hadolint settings for ci/dockerfiles-lint.sh. A warning fails the check.
+failure-threshold: warning
+ignored:
+  # Debian and Alpine packages come from the release the base image tag names;
+  # pinning their exact versions breaks the build at the next point release.
+  - DL3008
+  - DL3018
+  # browser/Dockerfile copies from `certs`, a build context compose passes in
+  # (additional_contexts), not from a stage.
+  - DL3022

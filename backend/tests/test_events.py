@@ -20,7 +20,7 @@ import numpy as np
 import pytest
 from redis.exceptions import ConnectionError as RedisConnectionError
 
-from tests.test_accounts_api import database  # noqa: F401  (fixture)
+from tests.test_accounts_api import CACHE_URL, database  # noqa: F401  (fixture)
 
 pytestmark = pytest.mark.integration
 
@@ -30,7 +30,7 @@ SETTINGS = {
     "RADAR_CLICKHOUSE_USER": os.environ.get("RADAR_TEST_CLICKHOUSE_USER", "radar"),
     "RADAR_CLICKHOUSE_PASSWORD": os.environ.get("RADAR_TEST_CLICKHOUSE_PASSWORD", "radar"),
     "RADAR_CLICKHOUSE_DATABASE": "radar_test",
-    "RADAR_CACHE_URL": "redis://127.0.0.1:6379/15",
+    "RADAR_CACHE_URL": CACHE_URL,
 }
 
 
