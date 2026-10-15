@@ -5,6 +5,7 @@ person gets an account with the team's profile already in it and a link that
 lets them set a password and come in. Nothing else is asked of them.
 """
 
+import re
 import secrets
 import uuid
 from collections.abc import Sequence
@@ -20,6 +21,12 @@ from radar.ai.factory import get_breaker, get_chat
 from radar.auth.passwords import hash_password
 from radar.auth.service import normalize_email
 from radar.avatars import random_preset
+from radar.company.patches import (
+    MAX_PERSONAL_PATCHES,
+    ProfilePatch,
+    apply_all,
+    apply_patch,
+)
 from radar.company.roles import (
     HeuristicTeamDrafter,
     ResilientTeamDrafter,
@@ -27,7 +34,7 @@ from radar.company.roles import (
     TeamDrafter,
     member_spec,
 )
-from radar.db.models import Company, Profile, Team, User
+from radar.db.models import Company, Profile, Team, TeamRole, User
 from radar.domain import ProfileSpec
 
 # 192 random bits: a link cannot be guessed.
@@ -35,6 +42,7 @@ _INVITE_BYTES = 24
 INVITE_TTL_DAYS = 14
 MAX_TEAMS = 50
 MAX_MEMBERS_PER_TEAM = 300
+MAX_ROLES_PER_TEAM = 20
 
 
 @lru_cache
@@ -154,21 +162,78 @@ async def count_teams(session: AsyncSession, company_id: uuid.UUID) -> int:
     return int(count or 0)
 
 
+async def team_roles(session: AsyncSession, team_ids: Sequence[uuid.UUID]) -> list[TeamRole]:
+    if not team_ids:
+        return []
+    rows = await session.scalars(
+        select(TeamRole)
+        .where(TeamRole.team_id.in_(team_ids))
+        .order_by(TeamRole.created_at, TeamRole.id)
+    )
+    return list(rows)
+
+
+async def owned_role(session: AsyncSession, team: Team, role_id: uuid.UUID) -> TeamRole | None:
+    return await session.scalar(
+        select(TeamRole).where(TeamRole.id == role_id, TeamRole.team_id == team.id)
+    )
+
+
+def source_spec(team: Team, role: TeamRole | None) -> ProfileSpec:
+    """What a member starts from: their role's profile, or else the team's."""
+    return ProfileSpec.model_validate(role.spec if role is not None else team.spec)
+
+
+def personal_spec(source: ProfileSpec, user: User) -> ProfileSpec:
+    """A member's copy: worded for the position, with the manager's changes
+    for this person laid over it."""
+    return apply_all(member_spec(source, user.job_title), user.profile_overrides or [])
+
+
+_WORD_RE = re.compile(r"\w+")
+# A word of a role's name stands for its forms: «аналитик» finds «аналитика».
+_STEM = 6
+_MIN_WORD = 4
+
+
+def match_role(job_title: str | None, roles: Sequence[TeamRole]) -> TeamRole | None:
+    """The role a position names, by its long words: «ведущий аналитик SOC»
+    gets the role «Аналитик ИБ». The role with most words found wins."""
+    if not job_title or not roles:
+        return None
+    words = [word.casefold() for word in _WORD_RE.findall(job_title)]
+    best: tuple[int, TeamRole | None] = (0, None)
+    for role in roles:
+        stems = [
+            word.casefold()[:_STEM]
+            for word in _WORD_RE.findall(role.name)
+            if len(word) >= _MIN_WORD
+        ]
+        if not stems or not all(any(w.startswith(stem) for w in words) for stem in stems):
+            continue
+        if len(stems) > best[0]:
+            best = (len(stems), role)
+    return best[1]
+
+
 async def follow_team(session: AsyncSession, team: Team) -> list[uuid.UUID]:
-    """Give the team's current profile to every member profile that still
-    follows it, and return whose profiles changed. A profile its reader edited
-    no longer follows, and keeps the edit. The look stays the reader's."""
-    spec = ProfileSpec.model_validate(team.spec)
+    """Give every member profile that still follows the team what its member
+    should have now: the role's or the team's profile with their own changes.
+    Returns whose profiles changed. A profile its reader edited no longer
+    follows, and keeps the edit. The look stays the reader's."""
+    roles = {role.id: role for role in await team_roles(session, [team.id])}
     rows = (
         await session.execute(
-            select(Profile, User.job_title)
+            select(Profile, User)
             .join(User, User.id == Profile.user_id)
             .where(Profile.team_id == team.id)
         )
     ).all()
     changed: list[uuid.UUID] = []
-    for profile, job_title in rows:
-        personal = member_spec(spec, job_title).model_dump(mode="json")
+    for profile, user in rows:
+        role = roles.get(user.role_id) if user.role_id else None
+        spec = personal_spec(source_spec(team, role), user)
+        personal = spec.model_dump(mode="json")
         if personal != profile.spec:
             profile.spec = personal
             profile.name = spec.name
@@ -178,10 +243,14 @@ async def follow_team(session: AsyncSession, team: Team) -> list[uuid.UUID]:
     return changed
 
 
-async def move_profiles(session: AsyncSession, user: User, source: uuid.UUID, target: Team) -> None:
-    """A member changed team or position: the profiles that follow the team are
-    worded anew; the reader's own profiles stay as they are."""
-    spec = member_spec(ProfileSpec.model_validate(target.spec), user.job_title)
+async def refresh_member(
+    session: AsyncSession, user: User, source: uuid.UUID, target: Team
+) -> None:
+    """A member changed team, role, position or own changes: the profiles that
+    follow the team are made anew; the reader's own profiles stay as they are."""
+    role = await owned_role(session, target, user.role_id) if user.role_id else None
+    spec = personal_spec(source_spec(target, role), user)
+    look = {"icon": target.icon, "color": target.color} if source != target.id else {}
     await session.execute(
         update(Profile)
         .where(Profile.user_id == user.id, Profile.team_id == source)
@@ -189,23 +258,65 @@ async def move_profiles(session: AsyncSession, user: User, source: uuid.UUID, ta
             team_id=target.id,
             name=spec.name,
             spec=spec.model_dump(mode="json"),
-            icon=target.icon,
-            color=target.color,
             version=Profile.version + 1,
+            **look,
         )
     )
 
 
+def role_spec(team: Team, name: str, spec: ProfileSpec) -> ProfileSpec:
+    """A role's profile is named after the team and the role: «SOC: аналитик»."""
+    title = f"{team.name}: {name.strip()}"[:120]
+    return ProfileSpec.model_validate({**spec.model_dump(mode="json"), "name": title})
+
+
+async def patch_team(session: AsyncSession, team: Team, patch: ProfilePatch) -> list[uuid.UUID]:
+    """One change for the whole team: its profile and every role's."""
+    team.spec = apply_patch(ProfileSpec.model_validate(team.spec), patch).model_dump(mode="json")
+    for role in await team_roles(session, [team.id]):
+        role.spec = apply_patch(ProfileSpec.model_validate(role.spec), patch).model_dump(
+            mode="json"
+        )
+    await session.flush()
+    return await follow_team(session, team)
+
+
+async def patch_role(
+    session: AsyncSession, team: Team, role: TeamRole, patch: ProfilePatch
+) -> list[uuid.UUID]:
+    role.spec = apply_patch(ProfileSpec.model_validate(role.spec), patch).model_dump(mode="json")
+    await session.flush()
+    return await follow_team(session, team)
+
+
+async def patch_people(
+    session: AsyncSession, team: Team, people: Sequence[User], patch: ProfilePatch
+) -> list[uuid.UUID]:
+    """One change kept with each chosen person, over their team's or role's
+    profile: a later change of the team does not undo it."""
+    roles = {role.id: role for role in await team_roles(session, [team.id])}
+    for user in people:
+        # Refused as a whole if it does not fit even one of them.
+        role = roles.get(user.role_id) if user.role_id else None
+        apply_patch(personal_spec(source_spec(team, role), user), patch)
+    raw = patch.model_dump(mode="json", exclude_defaults=True)
+    for user in people:
+        user.profile_overrides = [*(user.profile_overrides or []), raw][-MAX_PERSONAL_PATCHES:]
+    await session.flush()
+    return await follow_team(session, team)
+
+
 async def add_members(
-    session: AsyncSession, team: Team, people: Sequence[Person]
+    session: AsyncSession, team: Team, people: Sequence[Person], role: TeamRole | None = None
 ) -> tuple[list[User], list[Skipped]]:
-    """Make an account with the team's profile for each person.
+    """Make an account with the team's profile for each person. Everyone gets
+    the role given; without one, the role their position names, if any.
 
     An address that is already registered is skipped, not taken over: the
     space cannot reach into an account someone made for themselves. The
     unique index decides, so two managers adding one address cannot both win.
     """
-    spec = ProfileSpec.model_validate(team.spec)
+    roles = await team_roles(session, [team.id])
     present = await session.scalar(
         select(func.count()).select_from(User).where(User.team_id == team.id)
     )
@@ -227,6 +338,7 @@ async def add_members(
             continue
         token, expires_at = new_invite()
         job_title = person.job_title.strip()[:120] or None
+        assigned = role or match_role(job_title, roles)
         user = await session.scalar(
             insert(User)
             .values(
@@ -234,6 +346,7 @@ async def add_members(
                 display_name=(person.name.strip() or email.split("@")[0])[:80],
                 avatar_preset=random_preset(),
                 team_id=team.id,
+                role_id=assigned.id if assigned else None,
                 job_title=job_title,
                 invite_token=token,
                 invite_expires_at=expires_at,
@@ -244,7 +357,7 @@ async def add_members(
         if user is None:
             skipped.append(Skipped(email, "С этой почтой уже есть аккаунт."))
             continue
-        personal = member_spec(spec, job_title)
+        personal = personal_spec(source_spec(team, assigned), user)
         session.add(
             Profile(
                 user_id=user.id,

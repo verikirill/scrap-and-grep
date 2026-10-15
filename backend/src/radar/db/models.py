@@ -349,6 +349,15 @@ class User(Base):
     # working once used or past its date.
     invite_token: Mapped[str | None] = mapped_column(String(64), unique=True)
     invite_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # A role of the team (TeamRole): its profile instead of the team's.
+    role_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("team_roles.id", ondelete="SET NULL", use_alter=True)
+    )
+    # The manager's changes for this person (radar.company.patches), laid over
+    # the team's or the role's profile, oldest first.
+    profile_overrides: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, default=list, server_default="[]"
+    )
 
 
 class Company(Base):
@@ -390,6 +399,26 @@ class Team(Base):
     )
 
     __table_args__ = (Index("ix_teams_company", "company_id", "created_at"),)
+
+
+class TeamRole(Base):
+    """A role within a team, e.g. two security people who read differently:
+    a profile of its own that its members get instead of the team's."""
+
+    __tablename__ = "team_roles"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid7)
+    team_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("teams.id", ondelete="CASCADE"))
+    name: Mapped[str] = mapped_column(String(120))
+    # How the role differs from the rest of the team, in the manager's words.
+    description: Mapped[str] = mapped_column(Text, default="", server_default="")
+    spec: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (Index("ix_team_roles_team", "team_id", "created_at"),)
 
 
 class ApiKey(Base):

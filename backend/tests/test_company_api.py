@@ -367,3 +367,152 @@ async def test_one_link_lets_in_one_password(api: str) -> None:
         )
 
     assert sorted(answer.status_code for answer in answers) == [200, 404]
+
+
+async def _profile_of(api: str, member: dict[str, Any]) -> dict[str, Any]:
+    async with client(api) as person:
+        await person.post(f"/auth/invite/{token_of(member)}", json={"password": PASSWORD})
+        return (await person.get("/profiles")).json()[0]
+
+
+async def test_a_role_gives_its_people_their_own_profile_within_the_team(api: str) -> None:
+    async with register(api, "boss") as boss:
+        await boss.post("/company", json={"name": "Энергосеть"})
+        team = await make_team(boss)
+        added = await add(
+            boss,
+            team["id"],
+            {"name": "Аня", "email": "anya@energo.example", "job_title": "ведущий аналитик"},
+            {"name": "Ваня", "email": "vanya@energo.example", "job_title": "инженер SOC"},
+        )
+        draft = await boss.post(
+            f"/company/teams/{team['id']}/roles/draft",
+            json={"name": "Аналитик", "description": "Разбирает угрозы и пишет отчёты"},
+        )
+        spec = {**draft.json()["spec"], "max_items": 8}
+        role = await boss.post(
+            f"/company/teams/{team['id']}/roles",
+            json={"name": "Аналитик", "description": "Разбирает угрозы", "spec": spec},
+        )
+        company = (await boss.get("/company")).json()
+        later = await add(
+            boss,
+            team["id"],
+            {"name": "Петя", "email": "petya@energo.example", "job_title": "аналитик"},
+        )
+
+    anya, vanya = added["created"]
+    anya_profile = await _profile_of(api, anya)
+    vanya_profile = await _profile_of(api, vanya)
+
+    assert draft.status_code == 200
+    assert draft.json()["spec"]["name"] == "SOC: Аналитик"
+    assert role.status_code == 201
+    members = {m["email"]: m for m in company["teams"][0]["members"]}
+    # The position named the role: the analyst got it at once, the engineer did not.
+    assert members["anya@energo.example"]["role_id"] == role.json()["id"]
+    assert members["vanya@energo.example"]["role_id"] is None
+    assert later["created"][0]["role_id"] == role.json()["id"]
+    assert company["teams"][0]["roles"][0]["name"] == "Аналитик"
+    assert anya_profile["spec"]["max_items"] == 8
+    assert anya_profile["spec"]["name"] == "SOC: Аналитик"
+    assert vanya_profile["spec"]["max_items"] == team["spec"]["max_items"]
+
+
+async def test_one_change_for_a_team_a_role_or_chosen_people(api: str) -> None:
+    async with register(api, "boss") as boss:
+        await boss.post("/company", json={"name": "Энергосеть"})
+        team = await make_team(boss)
+        role = (
+            await boss.post(f"/company/teams/{team['id']}/roles", json={"name": "Аналитик"})
+        ).json()
+        anna, boris, vera = (
+            await add(
+                boss,
+                team["id"],
+                {"name": "Анна", "email": "a@energo.example", "job_title": "аналитик"},
+                {"name": "Борис", "email": "b@energo.example"},
+                {"name": "Вера", "email": "v@energo.example"},
+            )
+        )["created"]
+        url = f"/company/teams/{team['id']}/patch"
+        everyone = await boss.post(
+            url, json={"scope": "team", "patch": {"add_exclusions": ["реклама"]}}
+        )
+        analysts = await boss.post(
+            url, json={"scope": "role", "role_id": role["id"], "patch": {"max_items": 5}}
+        )
+        only_vera = await boss.post(
+            url,
+            json={
+                "scope": "people",
+                "member_ids": [vera["id"]],
+                "patch": {
+                    "add_interests": [{"title": "Облачные сервисы", "keywords": ["SaaS"]}],
+                    "audience": "management",
+                },
+            },
+        )
+        # The team changes later: Vera's own change stays over it.
+        await boss.put(
+            f"/company/teams/{team['id']}",
+            json={**SOC, "spec": {**team["spec"], "max_items": 11}},
+        )
+        nothing = await boss.post(url, json={"scope": "team", "patch": {}})
+        too_much = await boss.post(
+            url,
+            json={
+                "scope": "team",
+                "patch": {"remove_interests": [i["title"] for i in team["spec"]["interests"]]},
+            },
+        )
+        company = (await boss.get("/company")).json()
+        reset = await boss.delete(f"/company/members/{vera['id']}/overrides")
+
+    profiles = {m["email"]: await _profile_of(api, m) for m in (anna, boris, vera)}
+
+    assert (everyone.status_code, analysts.status_code, only_vera.status_code) == (200, 200, 200)
+    assert everyone.json()["changed"] == 3
+    assert analysts.json()["changed"] == 1
+    assert nothing.status_code == 422
+    assert too_much.status_code == 422
+    assert "реклама" in profiles["a@energo.example"]["spec"]["exclusions"]
+    assert profiles["a@energo.example"]["spec"]["max_items"] == 5
+    assert profiles["b@energo.example"]["spec"]["max_items"] == 11
+    vera_out = next(m for m in company["teams"][0]["members"] if m["id"] == vera["id"])
+    assert (vera_out["overrides"], vera_out["audience"]) == (1, "management")
+    assert reset.json()["overrides"] == 0
+    assert reset.json()["audience"] == "specialist"
+    titles = [item["title"] for item in profiles["v@energo.example"]["spec"]["interests"]]
+    assert "Облачные сервисы" not in titles
+
+
+async def test_people_dragged_to_another_team_get_its_profile(api: str) -> None:
+    async with register(api, "boss") as boss:
+        await boss.post("/company", json={"name": "Энергосеть"})
+        soc = await make_team(boss)
+        network = await make_team(boss, NETWORK)
+        await boss.post(f"/company/teams/{network['id']}/roles", json={"name": "Инженер сетей"})
+        first, second = (
+            await add(
+                boss,
+                soc["id"],
+                {"name": "Глеб", "email": "g@energo.example", "job_title": "инженер сетей"},
+                {"name": "Дина", "email": "d@energo.example"},
+            )
+        )["created"]
+        moved = await boss.post(
+            "/company/members/move",
+            json={"member_ids": [first["id"], second["id"]], "team_id": network["id"]},
+        )
+        company = (await boss.get("/company")).json()
+
+    profile = await _profile_of(api, first)
+
+    assert moved.status_code == 200
+    assert {m["team_id"] for m in moved.json()} == {network["id"]}
+    assert [len(team["members"]) for team in company["teams"]] == [0, 2]
+    gleb = next(m for m in moved.json() if m["id"] == first["id"])
+    assert gleb["role_id"] == company["teams"][1]["roles"][0]["id"]
+    assert profile["team_id"] == network["id"]
+    assert profile["spec"]["name"] == "Сети: Инженер сетей"
