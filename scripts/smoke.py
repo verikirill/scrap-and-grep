@@ -12,8 +12,10 @@ profile selects something, a digest builds and reports progress, both exports
 download, a short video is made when the server has the video profile on, and
 editing the interests changes the selection. Then a new reader
 registers, uploads a resume, gets a profile suggested from it and a personal
-feed that reacts to a dislike, and deletes the account. Exit code 0 means every
-step passed.
+feed that reacts to a dislike, and deletes the account. Last, a manager makes
+a company space: the model drafts a team's profile from its description, a
+person from a pasted list opens the invitation and comes in with the profile
+ready, and both accounts go. Exit code 0 means every step passed.
 
 The digest part runs in the shared reader account («Войти как читатель»,
 RADAR_PRESET_LOGIN=true, the default) and removes what it made there. With
@@ -165,6 +167,60 @@ def new_reader() -> None:
             fail("the session survived account deletion")
 
 
+def company_space(*, by_model: bool) -> None:
+    """A manager's space: a team drafted from its description, a person invited."""
+    password = f"smoke-{uuid.uuid4().hex}"
+    email = f"smoke-boss-{uuid.uuid4().hex[:8]}@example.org"
+    person = f"smoke-person-{uuid.uuid4().hex[:8]}@example.org"
+    with httpx.Client(timeout=180) as boss, httpx.Client(timeout=30) as member:
+        step("company space: a team drafted from its description")
+        boss.post(
+            f"{API}/auth/register",
+            json={"email": email, "password": password, "display_name": "Smoke manager"},
+        ).raise_for_status()
+        try:
+            boss.post(
+                f"{API}/company", json={"name": "Smoke Energy", "about": "Электросетевая компания"}
+            ).raise_for_status()
+            brief = {
+                "name": "SOC",
+                "services": "Круглосуточный мониторинг в MaxPatrol SIEM, реагирование на инциденты, "
+                "защита АСУ ТП подстанций.",
+                "systems": ["MaxPatrol SIEM"],
+            }
+            started = time.monotonic()
+            draft = boss.post(f"{API}/company/teams/draft", json=brief).raise_for_status().json()
+            topics = [interest["title"] for interest in draft["spec"]["interests"]]
+            print(
+                f"  drafted by {draft['drafted_by']} in {time.monotonic() - started:.1f} s: "
+                + "; ".join(topics)
+            )
+            if by_model and draft["drafted_by"] == "taxonomy":
+                fail("the model did not draft the team: the offline table answered instead")
+            team = boss.post(
+                f"{API}/company/teams", json={**brief, "spec": draft["spec"]}
+            ).raise_for_status().json()
+
+            step("company space: a person from the list comes in with the profile ready")
+            added = boss.post(
+                f"{API}/company/teams/{team['id']}/members",
+                json={"people": [{"name": "Smoke Person", "email": person, "job_title": "инженер"}]},
+            ).raise_for_status().json()
+            if len(added["created"]) != 1:
+                fail(f"the person was not added: {added['skipped']}")
+            link = added["created"][0]["invite_path"].removeprefix("/invite/")
+            member.post(
+                f"{API}/auth/invite/{link}", json={"password": password}
+            ).raise_for_status()
+            profiles = member.get(f"{API}/profiles").raise_for_status().json()
+            if len(profiles) != 1 or profiles[0]["team_id"] != team["id"]:
+                fail("the invited person has no team profile")
+            print(f"  '{profiles[0]['spec']['name']}', {len(profiles[0]['spec']['interests'])} topics")
+            boss.delete(f"{API}/company/members/{added['created'][0]['id']}").raise_for_status()
+        finally:
+            boss.post(f"{API}/auth/me/delete", json={"password": password})
+
+
 def main() -> None:
     with httpx.Client(timeout=30) as client:
         step("gateway and API are up")
@@ -257,6 +313,7 @@ def main() -> None:
             client.post(f"{API}/auth/me/delete", json={"password": ""}).raise_for_status()
 
     new_reader()
+    company_space(by_model=ready["llm_provider"] != "heuristic")
     print("OK")
 
 

@@ -27,6 +27,7 @@
 | `images` | `images.sh` | сборка образов `backend`, `web`, `browser`, `shorts`, `egress`; в GitLab на `main` и в тегах push в реестр | после проверок; в merge request и pull request, когда меняется то, что попадает в образы |
 | `deploy:stand` | `deploy-stand.sh` | выкатка стенда | GitLab, `main`, когда стенд настроен |
 | `verify:stand` | `verify-stand.sh` | путь жюри на стенде, `scripts/smoke.py` | GitLab, после выкатки |
+| `stand:yandex` | `yandex-stand.sh` | весь стек коммита на моделях Yandex AI Studio и путь жюри по нему, `scripts/smoke.py` | GitHub, после тестов, когда заданы секреты Yandex |
 
 Бэкенд проверяется на настоящих сервисах. Адреса тесты берут из `RADAR_TEST_ADMIN_DSN`, `RADAR_TEST_CACHE_URL`, `RADAR_TEST_BROKER_URL` и `RADAR_TEST_CLICKHOUSE_URL`, без них идут на `127.0.0.1`. На ноутбуке без Docker интеграционные тесты пропускаются сами. `backend-test.sh` такой пропуск считает ошибкой: если сервис не ответил, задание красное.
 
@@ -66,6 +67,12 @@ act pull_request -e event.json -j commits-lint -P ubuntu-latest=node:24.21.0-alp
 ```
 
 `event.json` задаёт `pull_request.base.sha` и `pull_request.head.sha`, из них `commits-lint` и `secrets-scan` берут диапазон коммитов. Шаги `actions/cache` и `actions/upload-artifact` act выполняет по-своему: Node.js берёт из образа задания, артефакты принимает своим сервером. Задания без этих шагов (`commits-lint`, `shell-lint`, `dockerfiles-lint`, `deps-audit`) проходят под act так же, как на GitHub, остальные удобнее проверять самими скриптами или через gitlab-ci-local.
+
+## Стенд на моделях Yandex
+
+`stand:yandex` поднимает в виртуальной машине GitHub Actions весь стек этого коммита. Тексты пишет Qwen3.6 35B, поиск идёт через text-embeddings-v2, голос роликов озвучивает SpeechKit. Когда статьи снимка проиндексированы, `scripts/smoke.py` проходит путь жюри: выпуск с прогрессом, выгрузки в Markdown и DOCX, короткое видео с голосом, резюме, персональная лента и пространство компании, где модель подбирает команде темы по описанию, а приглашённый сотрудник входит с готовым профилем. В конце стек удаляется вместе с томами.
+
+Задаче нужны два секрета репозитория: `YANDEX_API_KEY` (API-ключ сервисного аккаунта с ролями `ai.languageModels.user` и `ai.speechkit-tts.user`) и `YANDEX_FOLDER` (id каталога). Ключ попадает только в файл окружения внутри машины задания, в журнал и в командную строку он не выходит. Тот же прогон у себя: `YANDEX_API_KEY=... YANDEX_FOLDER=... sh ci/yandex-stand.sh`.
 
 ## Образы и стенд
 

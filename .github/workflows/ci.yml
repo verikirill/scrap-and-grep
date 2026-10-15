@@ -354,3 +354,35 @@ jobs:
           fi
       - if: github.event_name != 'pull_request' || steps.changes.outputs.build == 'true'
         run: sh ci/images.sh
+
+  # --- the stand on Yandex models ----------------------------------------------
+
+  # The stack of this commit on Yandex AI Studio: Qwen3.6, text-embeddings-v2
+  # and SpeechKit, then the smoke walk of the jury's path. Runs where the
+  # repository has the YANDEX_API_KEY and YANDEX_FOLDER secrets.
+  yandex-stand:
+    name: stand:yandex
+    needs: [backend-test, frontend-test]
+    if: ${{ !cancelled() && !failure() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      YANDEX_API_KEY: ${{ secrets.YANDEX_API_KEY }}
+      YANDEX_FOLDER: ${{ secrets.YANDEX_FOLDER }}
+    steps:
+      - name: Secrets for Yandex AI Studio
+        id: keys
+        run: |
+          if [ -n "$YANDEX_API_KEY" ] && [ -n "$YANDEX_FOLDER" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::YANDEX_API_KEY and YANDEX_FOLDER are not set: the stand check is skipped"
+          fi
+      - if: steps.keys.outputs.ready == 'true'
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - if: steps.keys.outputs.ready == 'true'
+        uses: astral-sh/setup-uv@v10
+      - if: steps.keys.outputs.ready == 'true'
+        run: sh ci/yandex-stand.sh
