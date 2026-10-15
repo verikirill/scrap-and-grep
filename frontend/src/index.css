@@ -207,6 +207,23 @@
     box-shadow: none;
   }
 
+  /* An outlined button is white, not see-through: on the dotted page the
+     dots ran through it. */
+  .button--outline {
+    --button-bg: var(--surface);
+  }
+
+  /* Tabs as the segmented control: a white track with an edge and a grey
+     chosen tab, so the track does not sink into the dotted page. */
+  .tabs__list-container {
+    background-color: var(--surface);
+    box-shadow: inset 0 0 0 1px var(--border);
+  }
+  .tabs__indicator {
+    background-color: var(--default);
+    box-shadow: none;
+  }
+
   /* A button at work is disabled too, but its spinner already says so. */
   .button:not(.cta)[aria-busy='true']:disabled {
     opacity: 1;
@@ -387,11 +404,11 @@
   width: 100%;
   height: 100%;
   pointer-events: none;
-  opacity: 0.045;
+  opacity: 0.03;
   mix-blend-mode: multiply;
 }
 .dark .dotted-veil {
-  opacity: 0.06;
+  opacity: 0.04;
   mix-blend-mode: screen;
 }
 

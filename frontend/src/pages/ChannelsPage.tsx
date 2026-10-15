@@ -37,7 +37,7 @@ export function ChannelsPage() {
       />
 
       {defaults && !defaults.enabled && (
-        <Card variant="filled" className="mb-6 flex items-start gap-3 p-5">
+        <Card className="mb-6 flex items-start gap-3 p-5">
           <KeyRound size={20} className="mt-0.5 shrink-0 text-warning" />
           {isAdmin ? (
             <p className="text-sm">
@@ -51,7 +51,7 @@ export function ChannelsPage() {
         </Card>
       )}
       {isMock && (
-        <p className="mb-6 rounded-2xl bg-default px-4 py-3 text-sm text-default-foreground">
+        <p className="mb-6 rounded-2xl bg-surface px-4 py-3 text-sm shadow-surface">
           Стенд подключён к тестовому эмулятору Telegram, подойдёт любой токен вида 123456789:AA… и
           любой @канал. Публикации видны на порту 8089.
         </p>

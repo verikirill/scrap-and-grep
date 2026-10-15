@@ -74,11 +74,12 @@ export function Spinner({ className, label }: { className?: string; label?: stri
 
 type CardVariant = 'elevated' | 'filled' | 'outlined'
 
-// HeroUI surfaces: a raised card, a filled block, or an outline where it sits on a card.
+// HeroUI surfaces: a raised card, a filled block, or an outline. The outline is
+// white too: on the dotted page a transparent card let the dots through.
 const CARD_STYLES: Record<CardVariant, string> = {
   elevated: 'bg-surface shadow-surface',
   filled: 'bg-surface-secondary',
-  outlined: 'border border-border bg-transparent',
+  outlined: 'border border-border bg-surface',
 }
 
 /** A card: raised by default, filled or outlined where it sits on another card. */

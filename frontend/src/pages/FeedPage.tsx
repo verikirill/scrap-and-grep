@@ -290,15 +290,11 @@ export function FeedPage() {
       <div className="@container mb-5 flex flex-wrap items-center gap-1.5 @md:gap-2">
         <div
           ref={tabRow}
-          className="relative isolate inline-flex gap-1 rounded-xl bg-surface-secondary p-1"
+          className="relative isolate inline-flex gap-1 rounded-xl bg-surface p-1 ring-1 ring-border"
           role="group"
           aria-label="Раздел"
         >
-          <SlidingPill
-            container={tabRow}
-            activeKey={tab}
-            className="rounded-lg bg-surface shadow-surface"
-          />
+          <SlidingPill container={tabRow} activeKey={tab} className="rounded-lg bg-default" />
           {TABS.map(({ id, label, icon: Icon }) => (
             <button
               key={id}

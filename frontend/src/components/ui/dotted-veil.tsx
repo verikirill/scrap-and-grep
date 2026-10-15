@@ -35,7 +35,7 @@ float grainHash(vec2 p) {
 void main() {
   vec2 p = (gl_FragCoord.xy - 0.5 * u_resolution.xy) / min(u_resolution.x, u_resolution.y);
   p *= 1.1;
-  float cells = 26.7;
+  float cells = 40.0;
   vec2 f = fract(p * cells) - 0.5;
   float field = 0.5 + 0.5 * sin(p.x * 3.0 + u_time + 2.3) * sin(p.y * 2.4 - u_time * 0.7);
   float r = 0.23 + field * 0.2;
