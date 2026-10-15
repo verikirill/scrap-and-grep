@@ -3,52 +3,61 @@
  "runs": [
   {
    "profile": "Специалист по ИБ АСУ ТП",
-   "seconds": 237.1,
-   "title": "Иранская атака на водоснабжение и критические OT-уязвимости 2026",
+   "seconds": 222.2,
+   "usage": {
+    "requests": 104,
+    "input_tokens": 191410,
+    "output_tokens": 14776,
+    "tokens_per_second": null,
+    "output_per_build_second": 66.5
+   },
+   "title": "Атаки и уязвимости: CyberAv3ngers, RCE в Citrix, критические 0-day",
    "topics": [
     "Атаки",
     "Уязвимости",
-    "Долги по безопасности OT"
+    "Долг модернизации OT",
+    "ФСТЭК и аттестация ИС"
    ],
    "stats": {
     "llm": "ollama:gpt-oss:20b",
     "kinds": {
-     "news": 1,
+     "news": 3,
      "attack": 1,
-     "vulnerability": 18
+     "vulnerability": 15
     },
-    "topics": 3,
-    "sources": 13,
+    "topics": 4,
+    "changes": [],
+    "sources": 12,
     "degraded": false,
-    "selected": 20,
+    "selected": 19,
     "adaptation": {},
     "candidates": 60,
     "priorities": {
      "low": 1,
      "high": 7,
-     "medium": 11
+     "medium": 8
     },
     "embedded_now": 0,
     "lexical_only": false,
     "personalized": 0,
-    "window_total": 1584,
+    "window_total": 1716,
     "embedding_model": "ollama:embeddinggemma:300m",
     "graded_by_model": 60,
-    "duration_seconds": 236.9,
-    "lookups_by_model": 22,
-    "references_found": 5,
-    "written_by_model": 20,
-    "duplicates_merged": 8,
-    "entries_corrected": 4,
-    "unsupported_fields": 4,
-    "lookups_by_pipeline": 3,
+    "duration_seconds": 222.0,
+    "lookups_by_model": 15,
+    "references_found": 15,
+    "written_by_model": 19,
+    "duplicates_merged": 4,
+    "entries_corrected": 5,
+    "unsupported_fields": 8,
+    "lookups_by_pipeline": 0,
     "personalization_failed": false
    },
    "items": [
     {
-     "article_id": 87668,
+     "article_id": 487,
      "url": "https://t.me/alukatsky/15356",
-     "headline": "Иранская группировка CyberAv3ngers атакует американские системы водоснабжения через уязвимости в PLC Unitronics",
+     "headline": "Иранская группировка CyberAv3ngers атакует PLC в системах водоснабжения США",
      "kind": "attack",
      "priority": "low",
      "tags": [],
@@ -56,58 +65,9 @@
      "references": []
     },
     {
-     "article_id": 54292,
-     "url": "https://t.me/true_secator/8662",
-     "headline": "Citrix NetScaler – 0-day CVE-2026-88772: удалённое выполнение кода и получение root-доступа",
-     "kind": "vulnerability",
-     "priority": "high",
-     "tags": [],
-     "unsupported": [
-      "Затронутые версии"
-     ],
-     "references": [
-      "CVE-2026-88772",
-      "CVE-2026-88771"
-     ]
-    },
-    {
-     "article_id": 536,
-     "url": "https://safe.cnews.ru/news/top/2026-09-28_d-link_rassleduet_informatsiyu",
-     "headline": "D-Link «расследует» информацию о двух критических уязвимостях в роутерах",
-     "kind": "vulnerability",
-     "priority": "high",
-     "tags": [],
-     "unsupported": [],
-     "references": []
-    },
-    {
-     "article_id": 54288,
-     "url": "https://t.me/true_secator/8666",
-     "headline": "Cisco Catalyst SD-WAN Manager – критическая 0-day CVE-2026-76504",
-     "kind": "vulnerability",
-     "priority": "high",
-     "tags": [],
-     "unsupported": [
-      "Обновление"
-     ],
-     "references": [
-      "CVE-2026-76504"
-     ]
-    },
-    {
-     "article_id": 634,
-     "url": "https://thehackernews.com/2026/09/warning-two-unpatched-citrix-netscaler.html",
-     "headline": "Citrix NetScaler ADC и Gateway: критические уязвимости RCE в эксплуатации",
-     "kind": "vulnerability",
-     "priority": "high",
-     "tags": [],
-     "unsupported": [],
-     "references": []
-    },
-    {
-     "article_id": 54302,
-     "url": "https://bleepingcomputer.com/news/security/fortinet-warns-of-critical-fortimail-flaw-exploited-in-zero-day-attacks",
-     "headline": "FortiMail критическая уязвимость CVE-2026-104286 – возможность удалённого выполнения кода",
+     "article_id": 227,
+     "url": "https://t.me/true_secator/8672",
+     "headline": "Критическая уязвимость FortiMail позволяет записывать произвольные файлы",
      "kind": "vulnerability",
      "priority": "high",
      "tags": [],
@@ -117,9 +77,78 @@
      ]
     },
     {
-     "article_id": 87583,
+     "article_id": 756,
+     "url": "https://t.me/true_secator/8666",
+     "headline": "Cisco Catalyst SD-WAN Manager – критическая 0-day CVE-2026-76504",
+     "kind": "vulnerability",
+     "priority": "high",
+     "tags": [],
+     "unsupported": [],
+     "references": [
+      "CVE-2026-76504"
+     ]
+    },
+    {
+     "article_id": 292,
+     "url": "https://1275.ru/vulnerability/dve-uyazvimosti-v-codesys-pozvolyayut-vyzvat-otkaz-v-obsluzhivanii-i-iskazit-dannye-monitoringa_42653",
+     "headline": "Две уязвимости в CODESYS позволяют вызвать отказ в обслуживании и исказить данные мониторинга",
+     "kind": "vulnerability",
+     "priority": "medium",
+     "tags": [],
+     "unsupported": [
+      "Вектор CVSS",
+      "CWE"
+     ],
+     "references": [
+      "CVE-2026-76992",
+      "CVE-2026-79625"
+     ]
+    },
+    {
+     "article_id": 1125,
+     "url": "https://t.me/true_secator/8662",
+     "headline": "Citrix NetScaler – RCE-уязвимость CVE-2026-88772",
+     "kind": "vulnerability",
+     "priority": "high",
+     "tags": [],
+     "unsupported": [],
+     "references": [
+      "CVE-2026-88772"
+     ]
+    },
+    {
+     "article_id": 1911,
+     "url": "https://ptsecurity.com/about/news/pt-has-released-its-sept-digest-of-trending-vulnerabilities",
+     "headline": "Positive Technologies представила сентябрьский дайджест трендовых уязвимостей",
+     "kind": "vulnerability",
+     "priority": "high",
+     "tags": [],
+     "unsupported": [
+      "Вектор CVSS"
+     ],
+     "references": [
+      "CVE-2026-63077"
+     ]
+    },
+    {
+     "article_id": 547,
+     "url": "https://t.me/true_secator/8670",
+     "headline": "TeamViewer обход контроля доступа к удаленным сессиям (CVE-2026-92370) и Zimbra внедрение команд ОС (CVE-2026-73570)",
+     "kind": "vulnerability",
+     "priority": "high",
+     "tags": [],
+     "unsupported": [
+      "Вектор CVSS"
+     ],
+     "references": [
+      "CVE-2026-92370",
+      "CVE-2026-73570"
+     ]
+    },
+    {
+     "article_id": 429,
      "url": "https://t.me/cyberok_news/260",
-     "headline": "WSO2 API Manager – критическая уязвимость обхода аутентификации (CVE-2026-5430)",
+     "headline": "WSO2 API Manager обход аутентификации через подделку JWT (CVE-2026-5430)",
      "kind": "vulnerability",
      "priority": "high",
      "tags": [],
@@ -129,7 +158,7 @@
      ]
     },
     {
-     "article_id": 708,
+     "article_id": 1896,
      "url": "https://habr.com/ru/articles/1086358",
      "headline": "Как приоритизировать новости об уязвимостях вместо балла CVSS",
      "kind": "vulnerability",
@@ -139,40 +168,8 @@
      "references": []
     },
     {
-     "article_id": 383,
-     "url": "https://cisa.gov/news-events/ics-advisories/icsa-26-272-02",
-     "headline": "Toptech TMS7 и TopHAT 7.6.3 – критические уязвимости с возможностью удалённого выполнения кода",
-     "kind": "vulnerability",
-     "priority": "medium",
-     "tags": [],
-     "unsupported": [],
-     "references": []
-    },
-    {
-     "article_id": 407,
-     "url": "https://industrialcyber.co/threats-attacks/nozomi-identifies-19-vulnerabilities-in-pepperlfuchs-io-link-master-enabling-root-access-and-ot-attacks",
-     "headline": "Pepperl+Fuchs IO-Link Master – 19 уязвимостей, позволяющих получить root-доступ и управлять OT-системами",
-     "kind": "vulnerability",
-     "priority": "medium",
-     "tags": [],
-     "unsupported": [],
-     "references": []
-    },
-    {
-     "article_id": 35929,
-     "url": "https://cisa.gov/news-events/ics-advisories/icsa-26-274-05",
-     "headline": "Johnson Controls EasyIO Neo Series EC и CW Controllers – передача чувствительных данных в открытом виде",
-     "kind": "vulnerability",
-     "priority": "medium",
-     "tags": [],
-     "unsupported": [
-      "Вектор CVSS"
-     ],
-     "references": []
-    },
-    {
-     "article_id": 20274,
-     "url": "https://cnews.ru/news/line/2026-10-01_positive_technologies_pomogla_ispravit",
+     "article_id": 832,
+     "url": "https://safe.cnews.ru/news/line/2026-10-01_positive_technologies_pomogla_ispravit",
      "headline": "Positive Technologies помогла исправить 17 уязвимостей в популярной российской SCADA-системе",
      "kind": "vulnerability",
      "priority": "medium",
@@ -181,51 +178,37 @@
      "references": []
     },
     {
-     "article_id": 35931,
-     "url": "https://cisa.gov/news-events/ics-advisories/icsa-26-274-03",
-     "headline": "ABB Protection and Control IED Manager PCM600 – уязвимости с повышением привилегий и обходом ограничения путей",
-     "kind": "vulnerability",
-     "priority": "medium",
-     "tags": [],
-     "unsupported": [],
-     "references": []
-    },
-    {
-     "article_id": 62122,
-     "url": "https://t.me/bdufstecru/3488",
-     "headline": "Обновление БДУ",
-     "kind": "vulnerability",
-     "priority": "medium",
-     "tags": [],
-     "unsupported": [],
-     "references": []
-    },
-    {
-     "article_id": 483,
-     "url": "https://darkreading.com/ics-ot-security/one-packet-crash-servers-tdengine",
-     "headline": "Уязвимость в TDengine time-series database",
-     "kind": "vulnerability",
-     "priority": "medium",
-     "tags": [],
-     "unsupported": [],
-     "references": []
-    },
-    {
-     "article_id": 87686,
-     "url": "https://1275.ru/vulnerability/dve-uyazvimosti-v-codesys-pozvolyayut-vyzvat-otkaz-v-obsluzhivanii-i-iskazit-dannye-monitoringa_42653",
-     "headline": "Две уязвимости в CODESYS позволяют вызвать отказ в обслуживании и исказить данные мониторинга",
+     "article_id": 252,
+     "url": "https://1275.ru/vulnerability/kontrollery-johnson-controls-easyio-neo-dopuskayut-utechku-uchyotnyh-dannyh-cherez-http-i-otladochnye-porty_42663",
+     "headline": "Контроллеры Johnson Controls EasyIO Neo допускают утечку учётных данных через HTTP и отладочные порты",
      "kind": "vulnerability",
      "priority": "medium",
      "tags": [],
      "unsupported": [
-      "Вектор CVSS"
+      "Вектор CVSS",
+      "CWE"
      ],
-     "references": []
+     "references": [
+      "CVE-2026-64893",
+      "CVE-2026-64892"
+     ]
     },
     {
-     "article_id": 35928,
-     "url": "https://cisa.gov/news-events/ics-advisories/icsa-26-274-06",
-     "headline": "Meari IoT Cloud Platform OpenAPI Service – уязвимость отсутствия авторизации",
+     "article_id": 1502,
+     "url": "https://cisa.gov/news-events/ics-advisories/icsa-26-272-02",
+     "headline": "Toptech TMS7 и TopHAT 7.6.3 – удалённое выполнение кода и доступ к критическим данным",
+     "kind": "vulnerability",
+     "priority": "medium",
+     "tags": [],
+     "unsupported": [],
+     "references": [
+      "CVE-2026-71379"
+     ]
+    },
+    {
+     "article_id": 1017,
+     "url": "https://t.me/bdufstecru/3488",
+     "headline": "Обновление БДУ ФСТЭК России",
      "kind": "vulnerability",
      "priority": "medium",
      "tags": [],
@@ -233,29 +216,67 @@
      "references": []
     },
     {
-     "article_id": 386,
+     "article_id": 1625,
+     "url": "https://darkreading.com/ics-ot-security/one-packet-crash-servers-tdengine",
+     "headline": "Уязвимость в TDengine, позволяющая сбросить OT-серверы",
+     "kind": "vulnerability",
+     "priority": "medium",
+     "tags": [],
+     "unsupported": [],
+     "references": []
+    },
+    {
+     "article_id": 1532,
+     "url": "https://industrialcyber.co/threats-attacks/nozomi-identifies-19-vulnerabilities-in-pepperlfuchs-io-link-master-enabling-root-access-and-ot-attacks",
+     "headline": "Pepperl+Fuchs IO-Link Master – аутентификация и командный инъекций позволяют получить root",
+     "kind": "vulnerability",
+     "priority": "medium",
+     "tags": [],
+     "unsupported": [
+      "CWE",
+      "Эксплойт"
+     ],
+     "references": [
+      "CVE-2026-27546"
+     ]
+    },
+    {
+     "article_id": 1505,
      "url": "https://cisa.gov/news-events/ics-advisories/icsa-26-272-01",
-     "headline": "Lantronix G520 Series Cellular Gateway – удалённое выполнение кода с привилегиями root",
+     "headline": "Lantronix G520 Series Cellular Gateway – удалённое выполнение кода с правами root",
      "kind": "vulnerability",
      "priority": "medium",
      "tags": [],
      "unsupported": [],
-     "references": []
+     "references": [
+      "CVE-2026-84409",
+      "CVE-2026-91191"
+     ]
     },
     {
-     "article_id": 87692,
-     "url": "https://1275.ru/vulnerability/bolee-sotni-uyazvimostey-v-chetyryoh-produktah-kiteworks-otkryvayut-put-k-zahvatu-uchyotnyh-zapisey-i-vypolneniyu-koda_42644",
-     "headline": "Более сотни уязвимостей в четырёх продуктах Kiteworks открывают путь к захвату учётных записей и выполнению кода",
-     "kind": "vulnerability",
-     "priority": "medium",
-     "tags": [],
-     "unsupported": [],
-     "references": []
-    },
-    {
-     "article_id": 394,
+     "article_id": 1516,
      "url": "https://industrialcyber.co/features/how-decades-of-disconnected-modernization-created-ot-security-debt-manufacturers-cant-escape",
-     "headline": "Долг по OT-безопасности, накопленный за десятилетия, создает уязвимости в промышленной инфраструктуре",
+     "headline": "Долг по OT-безопасности: модернизация без архитектурных изменений повышает уязвимость",
+     "kind": "news",
+     "priority": null,
+     "tags": [],
+     "unsupported": [],
+     "references": []
+    },
+    {
+     "article_id": 315,
+     "url": "https://1275.ru/compliance/fstek-razyasnila-poryadok-i-sroki-predstavleniya-rezultatov-otsenki-zaschischyonnosti-informatsionnyh-sistem_42689",
+     "headline": "ФСТЭК разъяснила порядок и сроки представления результатов оценки защищённости информационных систем",
+     "kind": "news",
+     "priority": null,
+     "tags": [],
+     "unsupported": [],
+     "references": []
+    },
+    {
+     "article_id": 1738,
+     "url": "https://habr.com/ru/companies/selectel/articles/1078612",
+     "headline": "Аттестация и практика работы по приказу ФСТЭК 117",
      "kind": "news",
      "priority": null,
      "tags": [],
@@ -266,22 +287,30 @@
   },
   {
    "profile": "Руководство и сотрудники: кибербезопасность",
-   "seconds": 158.4,
-   "title": "Киберугрозы критической инфраструктуры: от атак на водоснабжение до DDoS-атак",
+   "seconds": 169.1,
+   "usage": {
+    "requests": 80,
+    "input_tokens": 108123,
+    "output_tokens": 11498,
+    "tokens_per_second": null,
+    "output_per_build_second": 68.0
+   },
+   "title": "Кибератаки на критическую инфраструктуру и утечки данных: что важно знать руководителям",
    "topics": [
     "Киберугрозы критической инфраструктуры",
-    "Уязвимости SCADA и контроллеров",
-    "Утечки данных в США и России"
+    "Меры противодействия мошенникам",
+    "Утечки данных в госструктурах и фастфуде"
    ],
    "stats": {
     "llm": "ollama:gpt-oss:20b",
     "kinds": {
-     "news": 7,
-     "attack": 5,
-     "vulnerability": 3
+     "news": 9,
+     "attack": 4,
+     "vulnerability": 2
     },
     "topics": 3,
-    "sources": 9,
+    "changes": [],
+    "sources": 10,
     "degraded": false,
     "selected": 15,
     "adaptation": {},
@@ -294,14 +323,14 @@
     "embedded_now": 0,
     "lexical_only": false,
     "personalized": 0,
-    "window_total": 1584,
+    "window_total": 1716,
     "embedding_model": "ollama:embeddinggemma:300m",
     "graded_by_model": 59,
-    "duration_seconds": 158.2,
+    "duration_seconds": 169.0,
     "lookups_by_model": 0,
     "references_found": 0,
     "written_by_model": 15,
-    "duplicates_merged": 6,
+    "duplicates_merged": 8,
     "entries_corrected": 0,
     "unsupported_fields": 0,
     "lookups_by_pipeline": 0,
@@ -309,226 +338,224 @@
    },
    "items": [
     {
-     "article_id": 87668,
+     "article_id": 487,
      "url": "https://t.me/alukatsky/15356",
-     "headline": "Атаки на системы водоснабжения США выявили уязвимости в PLC",
+     "headline": "Атаки на системы водоснабжения США через PLC привели к массовым сбоям",
      "kind": "attack",
      "priority": null,
      "tags": [
       "abroad",
-      "critical_infrastructure",
-      "energy",
-      "industry"
-     ],
-     "unsupported": [],
-     "references": []
-    },
-    {
-     "article_id": 18282,
-     "url": "https://safe.cnews.ru/news/line/2026-10-01_najdi_menya_po_nomeru_moshenniki",
-     "headline": "«Найди меня по номеру»: мошенники создали сеть фальшивых сайтов проверки госслужащих",
-     "kind": "attack",
-     "priority": null,
-     "tags": [
-      "ru",
-      "industry",
-      "data_leak"
-     ],
-     "unsupported": [],
-     "references": []
-    },
-    {
-     "article_id": 23223,
-     "url": "https://safe.cnews.ru/news/line/2026-10-01_dress-kod_i_priglashenie_na",
-     "headline": "Дресс-код и приглашение на субботник: какие фишинговые письма чаще всего открывают сотрудники компаний",
-     "kind": "news",
-     "priority": null,
-     "tags": [
-      "ru",
       "energy",
       "industry",
-      "mass_service",
-      "curious"
+      "critical_infrastructure"
      ],
      "unsupported": [],
      "references": []
     },
     {
-     "article_id": 675,
-     "url": "https://safe.cnews.ru/news/line/2026-09-25_solar_infrastruktura",
-     "headline": "«Солар»: инфраструктура выборов выдержала тысячи DDoS-атак и более 170 млн кибернападений с ИИ на веб-сервисы",
-     "kind": "attack",
-     "priority": null,
-     "tags": [
-      "ru",
-      "critical_infrastructure",
-      "government_law"
-     ],
-     "unsupported": [],
-     "references": []
-    },
-    {
-     "article_id": 21279,
-     "url": "https://habr.com/ru/companies/runity/articles/1089016",
-     "headline": "Security-by-Design: как построить защищенный хостинг в режиме непрекращающихся киберугроз",
-     "kind": "attack",
-     "priority": null,
-     "tags": [
-      "ru",
-      "critical_infrastructure",
-      "energy",
-      "industry"
-     ],
-     "unsupported": [],
-     "references": []
-    },
-    {
-     "article_id": 374,
-     "url": "https://cnews.ru/news/line/2026-09-29_skolko_stoit_polozhit",
-     "headline": "Сколько стоит «положить» сайт: цена организации DDoS-атаки на заказ начинается от $30",
-     "kind": "attack",
-     "priority": null,
-     "tags": [
-      "ru",
-      "energy",
-      "industry",
-      "financial_loss"
-     ],
-     "unsupported": [],
-     "references": []
-    },
-    {
-     "article_id": 531,
-     "url": "https://safe.cnews.ru/news/line/2026-09-28_solar_aura_v_2026_godu_liderami",
-     "headline": "Solar Aura: в 2026 году лидерами по утечкам стали финансы и услуги вместо госсектора",
-     "kind": "news",
-     "priority": null,
-     "tags": [
-      "ru",
-      "financial_loss",
-      "data_leak",
-      "industry"
-     ],
-     "unsupported": [],
-     "references": []
-    },
-    {
-     "article_id": 448,
-     "url": "https://safe.cnews.ru/news/line/2026-09-29_cicada8_vo_ii_kvartale_2026_gmoshenniki",
-     "headline": "Cicada8: во II квартале 2026 г. мошенники чаще атаковали операторов связи, брокеров и социальные фонды",
-     "kind": "news",
-     "priority": null,
-     "tags": [
-      "ru",
-      "energy",
-      "industry",
-      "mass_service",
-      "data_leak"
-     ],
-     "unsupported": [],
-     "references": []
-    },
-    {
-     "article_id": 20267,
+     "article_id": 832,
      "url": "https://safe.cnews.ru/news/line/2026-10-01_positive_technologies_pomogla_ispravit",
      "headline": "Positive Technologies помогла исправить 17 уязвимостей в популярной российской SCADA-системе",
      "kind": "vulnerability",
      "priority": null,
      "tags": [
       "ru",
-      "critical_infrastructure",
       "energy",
-      "industry"
+      "industry",
+      "critical_infrastructure"
      ],
      "unsupported": [],
      "references": []
     },
     {
-     "article_id": 87681,
-     "url": "https://1275.ru/vulnerability/kontrollery-johnson-controls-easyio-neo-dopuskayut-utechku-uchyotnyh-dannyh-cherez-http-i-otladochnye-porty_42663",
-     "headline": "Контроллеры Johnson Controls EasyIO Neo допускают утечку учётных данных через HTTP и отладочные порты",
-     "kind": "vulnerability",
-     "priority": null,
-     "tags": [
-      "ru",
-      "critical_infrastructure",
-      "energy",
-      "industry"
-     ],
-     "unsupported": [],
-     "references": []
-    },
-    {
-     "article_id": 54290,
-     "url": "https://t.me/true_secator/8664",
-     "headline": "Масштабная утечка данных в Министерстве обороны США",
+     "article_id": 1625,
+     "url": "https://darkreading.com/ics-ot-security/one-packet-crash-servers-tdengine",
+     "headline": "Один пакет может вывести из строя OT-серверы в промышленности",
      "kind": "vulnerability",
      "priority": null,
      "tags": [
       "abroad",
-      "data_leak",
-      "industry"
+      "energy",
+      "industry",
+      "critical_infrastructure"
      ],
      "unsupported": [],
      "references": []
     },
     {
-     "article_id": 121,
-     "url": "https://xakep.ru/2026/09/30/fbi-leak",
-     "headline": "После атаки ShinyHunters ФБР уведомило сотрудников об утечке данных",
+     "article_id": 752,
+     "url": "https://safe.cnews.ru/news/line/2026-10-01_dress-kod_i_priglashenie_na",
+     "headline": "Дресс-код и приглашение на субботник: какие фишинговые письма чаще всего открывают сотрудники компаний",
+     "kind": "attack",
+     "priority": null,
+     "tags": [
+      "ru",
+      "energy",
+      "industry",
+      "curious"
+     ],
+     "unsupported": [],
+     "references": []
+    },
+    {
+     "article_id": 1858,
+     "url": "https://safe.cnews.ru/news/line/2026-09-25_solar_infrastruktura",
+     "headline": "«Солар»: инфраструктура выборов выдержала тысячи DDoS-атак и более 170 млн кибернападений с ИИ на веб-сервисы",
+     "kind": "attack",
+     "priority": null,
+     "tags": [
+      "ru",
+      "critical_infrastructure"
+     ],
+     "unsupported": [],
+     "references": []
+    },
+    {
+     "article_id": 763,
+     "url": "https://habr.com/ru/companies/runity/articles/1089016",
+     "headline": "Security-by-Design: как построить защищенный хостинг в режиме непрекращающихся киберугроз",
+     "kind": "attack",
+     "priority": null,
+     "tags": [
+      "ru",
+      "energy",
+      "industry",
+      "critical_infrastructure"
+     ],
+     "unsupported": [],
+     "references": []
+    },
+    {
+     "article_id": 506,
+     "url": "https://securitymedia.org/news/blagodarya-ii-khakery-stali-chashche-i-slozhnee-atakovat-rossiyskie-kompanii.html",
+     "headline": "Благодаря ИИ хакеры стали чаще и сложнее атаковать российские компании",
      "kind": "news",
      "priority": null,
      "tags": [
       "ru",
+      "energy",
+      "industry",
+      "critical_infrastructure"
+     ],
+     "unsupported": [],
+     "references": []
+    },
+    {
+     "article_id": 1685,
+     "url": "https://safe.cnews.ru/news/line/2026-09-28_solar_aura_v_2026_godu_liderami",
+     "headline": "Solar Aura: в 2026 году лидерами по утечкам стали финансы и услуги вместо госсектора",
+     "kind": "news",
+     "priority": null,
+     "tags": [
+      "ru",
+      "energy",
+      "industry",
       "data_leak"
      ],
      "unsupported": [],
      "references": []
     },
     {
-     "article_id": 470,
-     "url": "https://safe.cnews.ru/news/top/2026-09-29_rossiyane_v_ogromnoj_opasnosti",
-     "headline": "Россияне в опасности. «Додо Пиццу» взломали, хакерам могли достаться домашние адреса миллионов клиентов",
+     "article_id": 223,
+     "url": "https://habr.com/ru/companies/aurorium/articles/1089660",
+     "headline": "«Волчий билет» на один год за VPN на сервере — использовать все еще можно, а вот поднимать уже с ограничениями",
      "kind": "news",
      "priority": null,
      "tags": [
       "ru",
-      "data_leak",
       "energy",
-      "industry"
-     ],
-     "unsupported": [],
-     "references": []
-    },
-    {
-     "article_id": 87659,
-     "url": "https://t.me/cyberguerre/4478",
-     "headline": "Утечка персональных данных клиентов «Додо Пиццы» привлекла внимание властей трёх стран",
-     "kind": "news",
-     "priority": null,
-     "tags": [
-      "abroad",
-      "data_leak",
       "government_law"
      ],
      "unsupported": [],
      "references": []
     },
     {
-     "article_id": 87402,
-     "url": "https://habr.com/ru/news/1088992",
-     "headline": "Исследователи обнаружили утечку данных ИИ со скриншотами на GitHub",
+     "article_id": 1064,
+     "url": "https://securitylab.ru/news/578108.php",
+     "headline": "Минцифры вынесло Антифрод 3.0 на обсуждение: что предлагают изменить для SIM-карт, сайтов и Госуслуг",
+     "kind": "news",
+     "priority": null,
+     "tags": [
+      "ru",
+      "government_law"
+     ],
+     "unsupported": [],
+     "references": []
+    },
+    {
+     "article_id": 515,
+     "url": "https://comnews.ru/content/247650/2026-10-02/2026-w40/1008/mincifry-opublikovalo-proekt-tretego-paketa-mer-protivodeystviya-moshennikam",
+     "headline": "Минцифры опубликовало проект третьего пакета мер противодействия мошенникам",
+     "kind": "news",
+     "priority": null,
+     "tags": [
+      "ru",
+      "energy",
+      "government_law"
+     ],
+     "unsupported": [],
+     "references": []
+    },
+    {
+     "article_id": 1065,
+     "url": "https://t.me/true_secator/8664",
+     "headline": "Масштабная утечка данных военнослужащих США",
+     "kind": "news",
+     "priority": null,
+     "tags": [
+      "abroad",
+      "data_leak"
+     ],
+     "unsupported": [],
+     "references": []
+    },
+    {
+     "article_id": 1185,
+     "url": "https://xakep.ru/2026/09/30/fbi-leak",
+     "headline": "После атаки ShinyHunters ФБР уведомило сотрудников об утечке данных",
+     "kind": "news",
+     "priority": null,
+     "tags": [
+      "ru"
+     ],
+     "unsupported": [],
+     "references": []
+    },
+    {
+     "article_id": 1570,
+     "url": "https://xakep.ru/2026/09/29/datasuckers-dodo",
+     "headline": "«Додо Пицца» пострадала от кибератаки. Хакеры утверждают, что похитили данные пользователей",
+     "kind": "news",
+     "priority": null,
+     "tags": [
+      "ru"
+     ],
+     "unsupported": [],
+     "references": []
+    },
+    {
+     "article_id": 848,
+     "url": "https://t.me/cyberguerre/4478",
+     "headline": "Утечка персональных данных клиентов «Додо Пиццы» привлекла внимание властей трёх стран",
      "kind": "news",
      "priority": null,
      "tags": [
       "ru",
       "data_leak",
-      "industry"
+      "reputation"
      ],
      "unsupported": [],
      "references": []
     }
    ]
+  }
+ ],
+ "memory": [
+  {
+   "name": "embeddinggemma:300m",
+   "size_gb": 0.68,
+   "on_card_gb": 0.68,
+   "context": 2048
   }
  ]
 }

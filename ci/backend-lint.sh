@@ -1,5 +1,6 @@
 #!/bin/sh
-# The backend: ruff, the ruff formatter and mypy in strict mode.
+# The backend: ruff, the ruff formatter, mypy in strict mode and the check of
+# the saved issues.
 #
 # CODE_QUALITY_REPORT  a path from the repository root; when set, the ruff
 #                      findings also go there for the Code Quality widget of
@@ -16,3 +17,6 @@ fi
 uv run --no-sync ruff check .
 uv run --no-sync ruff format --check .
 uv run --no-sync mypy
+# The saved issues under examples/: one vulnerability per entry, advice that
+# agrees with the fix, no ids or versions for management.
+uv run --no-sync python "$root/scripts/check_examples.py" "$root/examples"
