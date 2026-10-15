@@ -383,6 +383,6 @@ jobs:
         with:
           persist-credentials: false
       - if: steps.keys.outputs.ready == 'true'
-        uses: astral-sh/setup-uv@v10
+        uses: astral-sh/setup-uv@v10.3.0
       - if: steps.keys.outputs.ready == 'true'
         run: sh ci/yandex-stand.sh
