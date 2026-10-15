@@ -369,6 +369,8 @@ async def test_an_openai_compatible_server_gets_the_key_the_folder_and_no_schema
     # Yandex AI Studio wants the folder id as the project.
     assert first.headers["openai-project"] == "b1g"
     assert server.body(0)["model"] == "gpt://b1g/qwen3.6-35b-a3b/latest"
+    # The name on the digest's page leaves out the folder.
+    assert model.name == "openai:qwen3.6-35b-a3b/latest"
     # Not every such server takes json_schema: the prompt carries the schema.
     assert "response_format" not in server.body(0)
     assert server.body(1)["messages"][-1]["role"] == "tool"

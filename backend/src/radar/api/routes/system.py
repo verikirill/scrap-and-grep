@@ -6,6 +6,7 @@ from fastapi import APIRouter, Response, status
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from sqlalchemy import func, select, text
 
+from radar.ai.embedder import short_model_name
 from radar.ai.factory import get_embedder
 from radar.api.deps import CacheDep, SessionDep, SettingsDep
 from radar.api.schemas import MetaOut
@@ -62,7 +63,11 @@ async def meta(session: SessionDep, settings: SettingsDep, cache: CacheDep) -> M
         embedding_provider=settings.embedding_provider,
         embedding_model=embedder.model_id,
         llm_provider=settings.llm_provider,
-        llm_model=settings.llm_model if settings.llm_provider != "heuristic" else "heuristic",
+        llm_model=(
+            short_model_name(settings.llm_model)
+            if settings.llm_provider != "heuristic"
+            else "heuristic"
+        ),
         articles=stats["articles"],
         articles_last_day=stats["last_day"],
         embedded=stats["embedded"],

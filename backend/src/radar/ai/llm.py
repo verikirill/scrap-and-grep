@@ -25,6 +25,7 @@ from pydantic import BaseModel, SecretStr, ValidationError
 
 from radar import cards
 from radar.ai import prompts
+from radar.ai.embedder import short_model_name
 from radar.ai.heuristic import extractive_summary
 from radar.domain import (
     AttackCard,
@@ -413,7 +414,10 @@ def openai_chat(
         max_retries=1,
         http_async_client=httpx.AsyncClient(transport=transport) if transport else None,
     )
-    return ModelChat(llm, f"openai:{model}", concurrency=concurrency, timeout=timeout)
+    # The name goes into every digest's stats and onto its page: without the
+    # folder of a Yandex URI, gpt://<folder>/qwen3.6-35b-a3b/latest.
+    name = f"openai:{short_model_name(model)}"
+    return ModelChat(llm, name, concurrency=concurrency, timeout=timeout)
 
 
 # Looks vulnerabilities up in the reference bases by their ids.
