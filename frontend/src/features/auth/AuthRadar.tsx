@@ -1,5 +1,5 @@
 /**
- * The radar behind the cat on the sign-in page: faint rings, a beam that
+ * The radar on the dark side of the sign-in page: faint rings, a beam that
  * sweeps the circle once in SWEEP_S, and blips that flare as the beam passes
  * them, as the service combs its sources. CSS only (index.css, .auth-radar):
  * transform and opacity, still under "reduce motion".

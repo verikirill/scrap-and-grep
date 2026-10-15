@@ -417,7 +417,7 @@
   mix-blend-mode: screen;
 }
 
-/* The radar behind the cat on the sign-in page (features/auth/AuthRadar.tsx):
+/* The radar on the dark side of the sign-in page (features/auth/AuthRadar.tsx):
    rings, a beam sweeping once in 12 s with a fading tail in the call-to-action
    colours, blips flaring as it passes. Transform and opacity only. */
 .auth-radar {
@@ -425,7 +425,7 @@
   top: 50%;
   left: 50%;
   z-index: -1;
-  /* Wide enough to reach every corner of the dark side from the cat. */
+  /* Wide enough to reach every corner of the dark side from its middle. */
   width: 96rem;
   height: 96rem;
   translate: -50% -50%;
