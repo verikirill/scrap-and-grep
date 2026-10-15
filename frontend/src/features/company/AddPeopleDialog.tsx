@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { CircleCheck, ContentCopy, TriangleAlert } from '../../components/icons'
+import { SelectField } from '../../components/SelectField'
 import { TEXTAREA_CLASS } from '../../components/tokens'
 import { Button, ErrorNote, Field } from '../../components/ui'
 import {
@@ -115,6 +116,7 @@ export function AddPeopleDialog({ team, open, onOpenChange }: Props) {
   const add = useAddMembers()
   const [text, setText] = useState('')
   const [result, setResult] = useState<MembersAdded | null>(null)
+  const [roleId, setRoleId] = useState('')
   const rows = useMemo(() => parsePeople(text), [text])
   const ready = rows.filter((row) => row.problem === null)
   const isTooMany = ready.length > MAX_PEOPLE
@@ -131,6 +133,7 @@ export function AddPeopleDialog({ team, open, onOpenChange }: Props) {
       {
         teamId: team.id,
         people: ready.map(({ name, email, job_title }) => ({ name, email, job_title })),
+        roleId: roleId || null,
       },
       { onSuccess: setResult },
     )
@@ -212,6 +215,20 @@ export function AddPeopleDialog({ team, open, onOpenChange }: Props) {
                   </tbody>
                 </table>
               </div>
+            )}
+
+            {team.roles.length > 0 && (
+              <Field label="Роль в команде" isGroup>
+                <SelectField
+                  label="Роль в команде"
+                  value={roleId}
+                  onChange={setRoleId}
+                  options={[
+                    { value: '', label: 'По должности каждого' },
+                    ...team.roles.map((role) => ({ value: role.id, label: `Всем: ${role.name}` })),
+                  ]}
+                />
+              </Field>
             )}
 
             {isTooMany && (

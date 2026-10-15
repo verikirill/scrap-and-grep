@@ -1,9 +1,9 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { ChipsInput } from '../../components/ChipsInput'
-import { RefreshCw, Sparkles, X } from '../../components/icons'
+import { RefreshCw, Sparkles } from '../../components/icons'
 import { EASE, INPUT_CLASS, TEXTAREA_CLASS } from '../../components/tokens'
-import { Button, Card, ErrorNote, Field } from '../../components/ui'
+import { Button, ErrorNote, Field } from '../../components/ui'
 import {
   Dialog,
   DialogContent,
@@ -14,8 +14,8 @@ import {
 import type { ProfileSpec } from '../../lib/api'
 import type { Team, TeamBrief } from '../../lib/company'
 import { useDraftTeam, useSaveTeam } from '../../lib/companyQueries'
-import { plural } from '../../lib/format'
 import { toast } from '../../lib/toast'
+import { SpecReview } from './SpecReview'
 
 const SERVICES_HINT =
   'Например: круглосуточный мониторинг событий ИБ в MaxPatrol SIEM, разбор инцидентов, правила корреляции. Ведём EDR на рабочих станциях трёх филиалов.'
@@ -28,7 +28,10 @@ type Props = {
   onSaved: (team: Team) => void
 }
 
-/** What the draft was read from, to notice when the manager changed it since. A new name alone needs no new draft. */
+/**
+ * What the draft was read from, to notice when the manager changed it since.
+ * A new name alone needs no new draft.
+ */
 const briefKey = (brief: TeamBrief) => JSON.stringify([brief.services.trim(), brief.systems])
 
 /**
@@ -81,13 +84,6 @@ export function TeamEditor({ team, open, onOpenChange, onSaved }: Props) {
       },
     )
   }
-
-  const dropInterest = (id: string) =>
-    setSpec((current) =>
-      current
-        ? { ...current, interests: current.interests.filter((item) => item.id !== id) }
-        : current,
-    )
 
   return (
     <Dialog open={open} onOpenChange={(next) => !save.isPending && onOpenChange(next)}>
@@ -169,73 +165,18 @@ export function TeamEditor({ team, open, onOpenChange, onSaved }: Props) {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.25, ease: EASE }}
+                className="space-y-2"
               >
-                <Card variant="filled" className="space-y-4 p-4 sm:p-5">
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <h3 className="text-sm font-semibold">Профиль сотрудников</h3>
-                    {draftedBy && (
-                      <span className="text-xs text-muted">
-                        {draftedBy === 'taxonomy'
-                          ? 'Подобран по справочнику направлений'
-                          : 'Подобран моделью по описанию'}
-                      </span>
-                    )}
-                  </div>
-                  <Field label="Роль" hint="сотрудник увидит её в начале своего профиля">
-                    <textarea
-                      maxLength={600}
-                      rows={3}
-                      className={TEXTAREA_CLASS}
-                      value={spec.role}
-                      onChange={(event) => setSpec({ ...spec, role: event.target.value })}
-                    />
-                  </Field>
-                  <div>
-                    <p className="mb-1.5 px-1 text-[13px] font-medium text-muted">
-                      {spec.interests.length}{' '}
-                      {plural(spec.interests.length, ['тема', 'темы', 'тем'])} новостей
-                    </p>
-                    <ul className="space-y-2">
-                      <AnimatePresence initial={false}>
-                        {spec.interests.map((interest) => (
-                          <motion.li
-                            key={interest.id}
-                            layout
-                            exit={{ opacity: 0, height: 0 }}
-                            transition={{ duration: 0.2, ease: EASE }}
-                            className="flex items-start gap-3 rounded-2xl bg-surface p-3"
-                          >
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium break-words">{interest.title}</p>
-                              {interest.description && (
-                                <p className="mt-0.5 text-xs text-muted">{interest.description}</p>
-                              )}
-                              {interest.keywords.length > 0 && (
-                                <p className="mt-1 text-xs break-words text-muted">
-                                  {interest.keywords.slice(0, 8).join(' · ')}
-                                </p>
-                              )}
-                            </div>
-                            <button
-                              type="button"
-                              aria-label={`Убрать тему «${interest.title}»`}
-                              disabled={spec.interests.length === 1}
-                              onClick={() => dropInterest(interest.id)}
-                              className="button button--ghost button--icon-only button--sm shrink-0 text-muted"
-                            >
-                              <X size={15} />
-                            </button>
-                          </motion.li>
-                        ))}
-                      </AnimatePresence>
-                    </ul>
-                  </div>
-                  <p className="text-xs text-muted">
-                    Остальное (порог, размер выпуска, исключения) сотрудник настроит под себя в
-                    разделе «Интересы». Руководителям по должности достаётся краткий брифинг вместо
-                    карточек.
-                  </p>
-                </Card>
+                <SpecReview
+                  spec={spec}
+                  onChange={setSpec}
+                  title="Профиль сотрудников"
+                  draftedBy={draftedBy}
+                />
+                <p className="px-1 text-xs text-muted">
+                  Отдельным людям или ролям в команде профиль можно поменять потом. Руководителям по
+                  должности достаётся краткий брифинг вместо карточек.
+                </p>
               </motion.div>
             )}
           </AnimatePresence>

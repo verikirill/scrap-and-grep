@@ -10,7 +10,9 @@ import { TeamEditor } from '../features/company/TeamEditor'
 import { TeamPanel } from '../features/company/TeamPanel'
 import { ProfileAvatar } from '../features/profiles/ProfileLook'
 import type { Company, Team } from '../lib/company'
-import { useCompany } from '../lib/companyQueries'
+import { useCompany, useMoveMembers } from '../lib/companyQueries'
+import { DRAG_TYPE, droppedMembers } from '../features/company/drag'
+import { toast } from '../lib/toast'
 import { plural } from '../lib/format'
 
 const TITLE = 'Компания'
@@ -63,6 +65,27 @@ function Space({ company }: { company: Company }) {
   const [isAbout, setIsAbout] = useState(false)
   const chosen = params.get('team')
   const team = company.teams.find((item) => item.id === chosen) ?? company.teams[0] ?? null
+
+  const move = useMoveMembers()
+  const [dropTarget, setDropTarget] = useState<string | null>(null)
+
+  /** People dropped on a team move there; their own team cannot take them twice. */
+  const dropOn = (target: Team, ids: string[]) => {
+    const moving = ids.filter((id) => !target.members.some((member) => member.id === id))
+    if (moving.length === 0) return
+    move.mutate(
+      { memberIds: moving, teamId: target.id },
+      {
+        onSuccess: (moved) =>
+          toast.success(
+            moved.length === 1
+              ? `${moved[0].display_name} теперь в «${target.name}»`
+              : `Переведено в «${target.name}»: ${moved.length}`,
+          ),
+        onError: (error) => toast.error(error.message),
+      },
+    )
+  }
 
   const select = (id: string | null) =>
     setParams(id ? { team: id } : {}, { replace: true, preventScrollReset: true })
@@ -120,11 +143,26 @@ function Space({ company }: { company: Company }) {
                         type="button"
                         onClick={() => select(item.id)}
                         aria-current={item.id === team?.id ? 'true' : undefined}
+                        // Member rows dragged here move to this team.
+                        onDragOver={(event) => {
+                          if (!event.dataTransfer.types.includes(DRAG_TYPE)) return
+                          event.preventDefault()
+                          event.dataTransfer.dropEffect = 'move'
+                          setDropTarget(item.id)
+                        }}
+                        onDragLeave={() => setDropTarget(null)}
+                        onDrop={(event) => {
+                          event.preventDefault()
+                          setDropTarget(null)
+                          dropOn(item, droppedMembers(event.dataTransfer))
+                        }}
                         className={clsx(
                           'flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-colors',
-                          item.id === team?.id
-                            ? 'bg-accent-soft ring-1 ring-accent/40'
-                            : 'hover:bg-default/60',
+                          dropTarget === item.id
+                            ? 'bg-accent-soft ring-2 ring-accent'
+                            : item.id === team?.id
+                              ? 'bg-accent-soft ring-1 ring-accent/40'
+                              : 'hover:bg-default/60',
                         )}
                       >
                         <ProfileAvatar profile={item} size={36} />

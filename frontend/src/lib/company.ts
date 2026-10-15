@@ -13,6 +13,10 @@ export interface Member {
   job_title: string | null
   avatar_preset: AvatarPreset
   team_id: string | null
+  /** A role of the team: its profile instead of the team's. */
+  role_id: string | null
+  /** How many changes the manager made for this person alone. */
+  overrides: number
   /** What their copy of the team profile reads: the cards or the brief. */
   audience: Audience
   status: MemberStatus
@@ -23,6 +27,22 @@ export interface Member {
   created_at: string
 }
 
+/** A role within a team: two security people may read differently. */
+export interface Role {
+  id: string
+  name: string
+  description: string
+  spec: ProfileSpec
+  created_at: string
+  updated_at: string
+}
+
+export interface RoleInput {
+  name: string
+  description: string
+  spec?: ProfileSpec
+}
+
 export interface Team {
   id: string
   name: string
@@ -30,6 +50,7 @@ export interface Team {
   spec: ProfileSpec
   icon: string | null
   color: string | null
+  roles: Role[]
   members: Member[]
   created_at: string
   updated_at: string
@@ -76,9 +97,28 @@ export interface MembersAdded {
 
 export interface MemberChange {
   team_id?: string
+  /** null takes the role away. */
+  role_id?: string | null
   display_name?: string
   job_title?: string
 }
+
+/** One change for many profiles; only what is set changes. */
+export interface ProfilePatch {
+  add_interests?: { title: string; description?: string; keywords: string[] }[]
+  remove_interests?: string[]
+  add_exclusions?: string[]
+  remove_exclusions?: string[]
+  add_systems?: string[]
+  audience?: Audience
+  max_items?: number
+}
+
+/** Who gets the change: the whole team, everyone with one role, or chosen people. */
+export type PatchTarget =
+  | { scope: 'team' }
+  | { scope: 'role'; role_id: string }
+  | { scope: 'people'; member_ids: string[] }
 
 /** Where an account stands in a company space. */
 export interface Membership {
@@ -114,8 +154,31 @@ export const companyApi = {
   updateTeam: (id: string, team: TeamInput) =>
     request<Team>(`/company/teams/${id}`, json('PUT', team)),
   deleteTeam: (id: string) => request<void>(`/company/teams/${id}`, { method: 'DELETE' }),
-  addMembers: (teamId: string, people: PersonInput[]) =>
-    request<MembersAdded>(`/company/teams/${teamId}/members`, json('POST', { people })),
+  addMembers: (teamId: string, people: PersonInput[], roleId: string | null = null) =>
+    request<MembersAdded>(
+      `/company/teams/${teamId}/members`,
+      json('POST', { people, role_id: roleId }),
+    ),
+  moveMembers: (memberIds: string[], teamId: string) =>
+    request<Member[]>(
+      '/company/members/move',
+      json('POST', { member_ids: memberIds, team_id: teamId }),
+    ),
+  resetOverrides: (id: string) =>
+    request<Member>(`/company/members/${id}/overrides`, { method: 'DELETE' }),
+  draftRole: (teamId: string, role: Omit<RoleInput, 'spec'>) =>
+    request<TeamDraft>(`/company/teams/${teamId}/roles/draft`, json('POST', role)),
+  createRole: (teamId: string, role: RoleInput) =>
+    request<Role>(`/company/teams/${teamId}/roles`, json('POST', role)),
+  updateRole: (teamId: string, roleId: string, role: RoleInput) =>
+    request<Role>(`/company/teams/${teamId}/roles/${roleId}`, json('PUT', role)),
+  deleteRole: (teamId: string, roleId: string) =>
+    request<void>(`/company/teams/${teamId}/roles/${roleId}`, { method: 'DELETE' }),
+  patchProfiles: (teamId: string, target: PatchTarget, patch: ProfilePatch) =>
+    request<{ changed: number }>(
+      `/company/teams/${teamId}/patch`,
+      json('POST', { ...target, patch }),
+    ),
   updateMember: (id: string, change: MemberChange) =>
     request<Member>(`/company/members/${id}`, json('PATCH', change)),
   renewInvite: (id: string) => request<Member>(`/company/members/${id}/invite`, { method: 'POST' }),

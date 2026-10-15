@@ -1,6 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { companyApi } from './company'
-import type { Company, MemberChange, PersonInput, TeamBrief, TeamInput } from './company'
+import type {
+  Company,
+  MemberChange,
+  PatchTarget,
+  PersonInput,
+  ProfilePatch,
+  RoleInput,
+  TeamBrief,
+  TeamInput,
+} from './company'
 import { keys } from './queries'
 
 export const companyKeys = {
@@ -69,8 +78,15 @@ export function useDeleteTeam() {
 export function useAddMembers() {
   const refresh = useRefresh()
   return useMutation({
-    mutationFn: ({ teamId, people }: { teamId: string; people: PersonInput[] }) =>
-      companyApi.addMembers(teamId, people),
+    mutationFn: ({
+      teamId,
+      people,
+      roleId = null,
+    }: {
+      teamId: string
+      people: PersonInput[]
+      roleId?: string | null
+    }) => companyApi.addMembers(teamId, people, roleId),
     onSuccess: () => refresh(),
   })
 }
@@ -92,6 +108,62 @@ export function useRenewInvite() {
 export function useRemoveMember() {
   const refresh = useRefresh()
   return useMutation({ mutationFn: companyApi.removeMember, onSuccess: () => refresh() })
+}
+
+/** Several people to another team at once, as dragged there. */
+export function useMoveMembers() {
+  const refresh = useRefresh()
+  return useMutation({
+    mutationFn: ({ memberIds, teamId }: { memberIds: string[]; teamId: string }) =>
+      companyApi.moveMembers(memberIds, teamId),
+    onSuccess: () => refresh(),
+  })
+}
+
+export function useResetOverrides() {
+  const refresh = useRefresh()
+  return useMutation({ mutationFn: companyApi.resetOverrides, onSuccess: () => refresh() })
+}
+
+export const useDraftRole = () =>
+  useMutation({
+    mutationFn: ({ teamId, role }: { teamId: string; role: Omit<RoleInput, 'spec'> }) =>
+      companyApi.draftRole(teamId, role),
+  })
+
+export function useSaveRole() {
+  const refresh = useRefresh()
+  return useMutation({
+    mutationFn: ({ teamId, id, role }: { teamId: string; id: string | null; role: RoleInput }) =>
+      id ? companyApi.updateRole(teamId, id, role) : companyApi.createRole(teamId, role),
+    onSuccess: () => refresh(),
+  })
+}
+
+export function useDeleteRole() {
+  const refresh = useRefresh()
+  return useMutation({
+    mutationFn: ({ teamId, id }: { teamId: string; id: string }) =>
+      companyApi.deleteRole(teamId, id),
+    onSuccess: () => refresh(),
+  })
+}
+
+/** One change for the team, a role or chosen people. */
+export function usePatchProfiles() {
+  const refresh = useRefresh()
+  return useMutation({
+    mutationFn: ({
+      teamId,
+      target,
+      patch,
+    }: {
+      teamId: string
+      target: PatchTarget
+      patch: ProfilePatch
+    }) => companyApi.patchProfiles(teamId, target, patch),
+    onSuccess: () => refresh(),
+  })
 }
 
 /** Who an invitation is for; a used or old link answers 404 and is not retried. */

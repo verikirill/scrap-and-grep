@@ -1,5 +1,5 @@
 // A company space: a team of an energy company, its people and an invitation.
-import type { Company, Invite, Member, Team } from '../../lib/company'
+import type { Company, Invite, Member, Role, Team } from '../../lib/company'
 import { makeInterests, makeSpec } from './profiles'
 
 export function makeMember(overrides: Partial<Member> = {}): Member {
@@ -10,6 +10,8 @@ export function makeMember(overrides: Partial<Member> = {}): Member {
     job_title: 'Инженер SOC',
     avatar_preset: 'blue',
     team_id: 'team-1',
+    role_id: null,
+    overrides: 0,
     audience: 'specialist',
     status: 'invited',
     invite_path: '/invite/oleg-link-0000000000000000000',
@@ -33,6 +35,7 @@ export function makeTeam(overrides: Partial<Team> = {}): Team {
     }),
     icon: 'shield',
     color: 'blue',
+    roles: [],
     members: [],
     created_at: '2026-10-16T09:00:00Z',
     updated_at: '2026-10-16T09:00:00Z',
@@ -61,6 +64,18 @@ export function makeInvite(overrides: Partial<Invite> = {}): Invite {
     manager: 'Анна Петрова',
     audience: 'specialist',
     interests: ['Безопасность АСУ ТП', 'Уязвимости'],
+    ...overrides,
+  }
+}
+
+export function makeRole(overrides: Partial<Role> = {}): Role {
+  return {
+    id: 'role-1',
+    name: 'Аналитик',
+    description: 'Разбирает угрозы и пишет отчёты',
+    spec: makeSpec({ name: 'SOC: Аналитик', interests: makeInterests(3) }),
+    created_at: '2026-10-16T10:00:00Z',
+    updated_at: '2026-10-16T10:00:00Z',
     ...overrides,
   }
 }
