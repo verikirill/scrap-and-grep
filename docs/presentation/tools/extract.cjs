@@ -148,7 +148,9 @@ function collect() {
       alt: img ? img.alt : (e.id || kind), label: bar ? bar.textContent : '', src: img ? img.getAttribute('src') : '',
     })
   }
-  return { texts, tables, pictures }
+  // Each slide is one field of colour: ultramarine, black or yellow.
+  const bg = getComputedStyle(slide).backgroundColor
+  return { texts, tables, pictures, bg }
 }
 
 async function main() {
@@ -179,6 +181,8 @@ async function main() {
       const x0 = Math.max(0, Math.floor(p.rect.x - m)), y0 = Math.max(0, Math.floor(p.rect.y - m))
       const x1 = Math.min(1920, Math.ceil(p.rect.x + p.rect.w + m)), y1 = Math.min(1080, Math.ceil(p.rect.y + p.rect.h + m))
       p.clip = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 }
+      // Nothing of it is on the slide: no picture to cut.
+      if (p.clip.w < 1 || p.clip.h < 1) { console.log(`slide ${i + 1}: ${p.kind} ${p.alt} is off the slide`); p.skip = true; continue }
       p.file = `img/s${num}-${String(k + 1).padStart(2, '0')}-${p.kind}.png`
       await page.evaluate(({ k, notext, selector }) => {
         const s = document.querySelector('section.slide:not(.pp-hide)')
@@ -192,6 +196,7 @@ async function main() {
         document.querySelectorAll('.pp-iso, .pp-target, .pp-notext').forEach((e) => e.classList.remove('pp-iso', 'pp-target', 'pp-notext'))
       })
     }
+    data.pictures = data.pictures.filter((p) => !p.skip)
     deck.push(data)
   }
   fs.writeFileSync(path.join(OUT, 'deck.json'), JSON.stringify(deck, null, 1))

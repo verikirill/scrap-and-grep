@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=1920">
 <title>Scrap&amp;Grep</title>
 <style>
-@font-face { font-family: 'Roboto Flex'; font-weight: 100 1000; font-display: block;
-  src: url(fonts/roboto-flex-cyrillic-wght-normal.woff2) format('woff2-variations');
+@font-face { font-family: 'Golos Text'; font-weight: 400 900; font-display: block;
+  src: url(fonts/golos-text-cyrillic-wght-normal.woff2) format('woff2-variations');
   unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
-@font-face { font-family: 'Roboto Flex'; font-weight: 100 1000; font-display: block;
-  src: url(fonts/roboto-flex-latin-wght-normal.woff2) format('woff2-variations');
+@font-face { font-family: 'Golos Text'; font-weight: 400 900; font-display: block;
+  src: url(fonts/golos-text-latin-wght-normal.woff2) format('woff2-variations');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
 @font-face { font-family: 'Source Serif 4'; font-weight: 200 900; font-display: block;
   src: url(fonts/source-serif-4-cyrillic-wght-normal.woff2) format('woff2-variations');
@@ -18,743 +18,412 @@
   src: url(fonts/source-serif-4-latin-wght-normal.woff2) format('woff2-variations');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
 
-/* One palette for the whole deck: warm paper, muted teal, ochre for the numbers that matter. */
+/*
+ * The deck is set as an issue of a printed digest: a two-colour print job on
+ * ultramarine, black and yellow fields, a heavy grotesque for titles over a
+ * reading serif, and the product's own screens butted together like plates.
+ * One axis at 42% of the width splits words from pictures on every page.
+ */
 :root {
-  --bg: #f4f2ec;
-  --surface: #ffffff;
-  --tint: #e3ebe9;
-  --text: #1d2a30;
-  --muted: #55646a;
-  --faint: #86939a;
-  --line: #d6dbd8;
-  --primary: #2f5f66;
-  --primary-soft: #8fb0b4;
-  --accent: #a8743d;
-  --accent-tint: #f0e5d5;
+  --blue: #1423b8;
+  --blue-step: #1b2cc7;
+  --black: #0b0b0e;
+  --black-step: #1a1a20;
+  --yellow: #f7dd47;
+  --yellow-step: #efd232;
+  --white: #ffffff;
+  --soft-on-blue: #c3c9f5;
+  --soft-on-black: #b9b9c2;
+  --soft-on-yellow: #3d3600;
+  --green: #1fc27a;
+  --sans: 'Golos Text', 'Segoe UI', Arial, sans-serif;
   --serif: 'Source Serif 4', Georgia, serif;
-  --sans: 'Roboto Flex', 'Segoe UI', Arial, sans-serif;
-  --mono: 'Cascadia Mono', Consolas, monospace;
+  --axis: 806px;
+  --margin: 96px;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 @page { size: 1920px 1080px; margin: 0; }
-html, body { background: #cfd3d0; }
-body { font-family: var(--sans); color: var(--text); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+html, body { background: #2a2a30; }
+body { font-family: var(--serif); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 section.slide {
   width: 1920px; height: 1080px; position: relative; overflow: hidden;
-  background: var(--bg); padding: 84px 104px 110px; display: flex; flex-direction: column;
   break-after: page; margin: 0 auto 24px;
 }
-@media print { section.slide { margin: 0; } html, body { background: var(--bg); } }
+@media print { section.slide { margin: 0; } }
 
-.kicker { font-size: 21px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; color: var(--primary); }
-h2 { font-family: var(--serif); font-weight: 600; font-size: 54px; line-height: 1.16; margin-top: 16px; max-width: 1560px; text-wrap: balance; }
-.lead { font-size: 30px; line-height: 1.5; color: var(--muted); max-width: 1400px; margin-top: 22px; text-wrap: pretty; }
-p, li { font-size: 27px; line-height: 1.5; text-wrap: pretty; }
-.muted { color: var(--muted); }
-b, strong { font-weight: 650; }
-.num { color: var(--accent); font-weight: 700; }
-code { font-family: var(--mono); font-size: .84em; background: var(--tint); padding: 2px 8px; border-radius: 8px; }
-.src { font-size: 19px; line-height: 1.45; color: var(--faint); }
-.foot { position: absolute; left: 104px; right: 104px; bottom: 40px; display: flex; justify-content: space-between; align-items: baseline; font-size: 19px; color: var(--faint); }
-.foot .crit { color: var(--primary); }
-.grow { flex: 1; min-height: 0; }
-.row { display: flex; gap: 64px; }
-.col { display: flex; flex-direction: column; }
+.blue { background: var(--blue); color: var(--white); --soft: var(--soft-on-blue); --step: var(--blue-step); }
+.black { background: var(--black); color: var(--white); --soft: var(--soft-on-black); --step: var(--black-step); }
+.yellow { background: var(--yellow); color: #000; --soft: var(--soft-on-yellow); --step: var(--yellow-step); }
 
-/* A browser window around a screenshot: drawn once here, used on every slide. */
-.browser { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; overflow: hidden;
-  box-shadow: 0 8px 28px rgba(29, 42, 48, .08); }
-.browser .bar { height: 42px; display: flex; align-items: center; gap: 9px; padding: 0 18px; background: #eceeeb; border-bottom: 1px solid var(--line); }
-.browser .bar i { width: 13px; height: 13px; border-radius: 50%; background: #cdd3d1; }
-.browser .bar span { margin-left: 18px; height: 24px; flex: 0 1 460px; border-radius: 12px; background: #fbfbf9; font-size: 15px; line-height: 24px; padding: 0 14px; color: var(--faint); }
-.browser img { display: block; width: 100%; }
-/* A frame of a set height shows the top of the screen and crops the rest. */
-.browser.fit { display: flex; flex-direction: column; }
-.browser.fit img { flex: 1; min-height: 0; object-fit: cover; object-position: top left; }
-.phone { width: 330px; border: 13px solid #1d2a30; border-radius: 50px; overflow: hidden; background: #1d2a30;
-  box-shadow: 0 10px 30px rgba(29, 42, 48, .16); position: relative; }
-.phone img { display: block; width: 100%; border-radius: 37px; }
-.caption { font-size: 21px; line-height: 1.45; color: var(--muted); margin-top: 14px; }
+/* Five sizes do all the work: the figure, the title, the statement, the text, the note. */
+h1, h2, h3, .figure { font-family: var(--sans); font-weight: 800; letter-spacing: -0.035em; }
+h1 { font-size: 214px; line-height: 0.86; text-transform: uppercase; }
+h2 { font-size: 74px; line-height: 1; max-width: 1180px; }
+h3 { font-size: 36px; line-height: 1.12; letter-spacing: -0.02em; }
+.statement { font-size: 34px; line-height: 1.34; max-width: 640px; }
+p, li { font-size: 25px; line-height: 1.48; }
+.aside { font-size: 19px; line-height: 1.45; color: var(--soft); }
+.figure { font-size: 112px; line-height: 1; font-variant-numeric: tabular-nums lining-nums; }
+b { font-weight: 650; }
 
-/* Cover */
-.cover { padding: 96px 104px; }
-.cover .brand { font-family: var(--serif); font-size: 40px; font-weight: 650; color: var(--primary); }
-.cover h1 { font-family: var(--serif); font-weight: 600; font-size: 66px; line-height: 1.12; margin-top: 40px; max-width: 760px; text-wrap: balance; }
-.cover .lead { max-width: 740px; font-size: 28px; }
-.cover .meta { position: absolute; left: 104px; bottom: 72px; font-size: 22px; color: var(--muted); }
-.cover .art { position: absolute; right: 72px; top: 170px; width: 980px; }
-.cover .art .phone { position: absolute; right: -10px; top: 330px; width: 250px; }
+/* Words on the left of the axis, the picture to the right, running off the page. */
+.words { position: absolute; left: var(--margin); top: 88px; width: calc(var(--axis) - var(--margin) - 56px); bottom: 88px;
+  display: flex; flex-direction: column; }
+.words h2 { margin-bottom: 40px; }
+.words .statement { margin-bottom: 36px; }
+.words ul { list-style: none; display: flex; flex-direction: column; gap: 18px; }
+.words li { padding-left: 30px; position: relative; }
+.words li::before { content: ''; position: absolute; left: 0; top: 15px; width: 12px; height: 12px; background: currentColor; }
+.words .aside { margin-top: auto; }
+.plate { position: absolute; left: var(--axis); right: 0; top: 0; bottom: 0; display: grid; }
 
-/* Process and step diagrams */
-.steps { display: grid; gap: 22px; }
-.step { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 30px 30px 32px; }
-.step .n { font-family: var(--serif); font-size: 40px; font-weight: 650; color: var(--primary); line-height: 1; }
-.step h3 { font-size: 30px; font-weight: 650; margin: 14px 0 10px; }
-.step p { font-size: 24px; line-height: 1.45; color: var(--muted); }
-.note { margin-top: 26px; padding: 20px 28px; border-left: 5px solid var(--accent); background: var(--accent-tint); border-radius: 0 14px 14px 0; font-size: 24px; line-height: 1.45; }
+/* A screen of the product: no browser chrome, square corners, cropped like a photograph. */
+.browser { overflow: hidden; background: #f3f4f6; position: relative; }
+.browser img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: right top; }
+.browser.left img { object-position: left top; }
+.browser.right img { object-position: right top; }
+.browser.mid img { object-position: center top; }
 
-.flow { display: flex; align-items: stretch; gap: 0; margin-top: 44px; }
-.flow .box { flex: 1; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 22px 20px; }
-.flow .box b { display: block; font-size: 25px; margin-bottom: 8px; color: var(--primary); }
-.flow .box span { font-size: 21px; line-height: 1.4; color: var(--muted); display: block; }
-.flow .arrow { width: 34px; display: grid; place-items: center; color: var(--primary-soft); font-size: 30px; }
-.flow .box.key { background: var(--tint); border-color: var(--primary-soft); }
+/* Ledger: figures stacked on one right edge, captions on their baselines. */
+.ledger { display: grid; grid-template-columns: auto 1fr; column-gap: 40px; row-gap: 26px; align-items: baseline; }
+.ledger .figure { text-align: right; }
+.ledger p { max-width: 560px; }
 
-.stair { display: flex; align-items: flex-end; gap: 18px; height: 520px; }
-.stair .tread { flex: 1; background: var(--surface); border: 1px solid var(--line); border-radius: 16px 16px 4px 4px; padding: 22px 22px; display: flex; flex-direction: column; }
-.stair .tread .n { font-family: var(--serif); font-size: 34px; color: var(--primary); font-weight: 650; }
-.stair .tread b { font-size: 25px; margin: 8px 0; }
-.stair .tread span { font-size: 21px; line-height: 1.4; color: var(--muted); }
-.stair .tread em { font-style: normal; color: var(--accent); font-weight: 650; }
+.tile { background: var(--step); padding: 40px 40px 44px; display: flex; flex-direction: column; gap: 18px; }
 
-table { border-collapse: collapse; width: 100%; }
-th { text-align: left; font-size: 21px; font-weight: 650; color: var(--muted); padding: 0 18px 12px 0; border-bottom: 2px solid var(--text); }
-td { font-size: 24px; line-height: 1.4; padding: 14px 18px 14px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
-td.r, th.r { text-align: right; font-variant-numeric: tabular-nums; }
-tr.hl td { background: rgba(47, 95, 102, .07); }
-
-.chart text { font-family: var(--sans); }
-.cards { display: grid; gap: 22px; }
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 24px 26px; }
-.card h3 { font-size: 26px; font-weight: 650; margin-bottom: 8px; }
-.card p { font-size: 22px; line-height: 1.45; color: var(--muted); }
-.big { font-family: var(--serif); font-weight: 650; font-size: 104px; line-height: 1; color: var(--accent); }
-.cmd { font-family: var(--mono); font-size: 23px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; margin-top: 12px; white-space: nowrap; }
-
-/* The stack: four lanes of services, drawn as boxes. */
-.arch { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; margin-top: 36px; }
-.lane { background: var(--tint); border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
-.lane-h { font-size: 20px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--primary); }
-.node { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font-size: 22px; font-weight: 650; }
-.node span { display: block; font-size: 18px; font-weight: 400; color: var(--muted); line-height: 1.35; margin-top: 4px; }
-.node.soft { background: #fbfaf7; }
-.stat { font-family: var(--serif); font-weight: 650; font-size: 60px; line-height: 1; color: var(--accent); margin-bottom: 12px; }
+/* Real tables keep their rules: rows of measured numbers. */
+.models { border-collapse: collapse; font-family: var(--sans); }
+.models th { font-size: 19px; font-weight: 600; line-height: 1.3; text-align: left; vertical-align: bottom; padding: 0 20px 18px 0; color: var(--soft); }
+.models td { font-size: 34px; font-weight: 500; padding: 18px 20px 18px 0; border-top: 3px solid #000; font-variant-numeric: tabular-nums; }
+.models td:first-child { font-family: var(--serif); font-size: 23px; font-weight: 400; width: 34%; }
+.models td b { font-weight: 800; }
 </style>
 </head>
 <body>
 
-<section class="slide cover">
-  <div class="brand">Scrap&amp;Grep</div>
-  <h1>Выпуск новостей ИБ под каждого читателя собирается за 24 секунды</h1>
-  <p class="lead">Выпуск специалисту на Qwen3.6 35B в Yandex AI Studio. 104 источника, отбор по интересам, приоритет по правилу датасета организаторов и сверка с CISA KEV и БДУ ФСТЭК. Специалисту подробно за сутки, руководству тезисно за неделю.</p>
-  <div class="art">
-    <div class="browser"><div class="bar"><i></i><i></i><i></i><span>localhost:8080</span></div><img src="img/specialist-top.png" alt="Выпуск специалисту"></div>
-    <div class="phone"><img src="../screenshots/adapt-phone.png" alt="Подстройка профиля на телефоне"></div>
+<!-- 1. Cover: the name as a masthead, two plates of the product beside it. -->
+<section class="slide blue">
+  <div class="words" style="width: 900px; top: 96px;">
+    <h1>Scrap<br>&amp;Grep</h1>
+    <p class="statement" style="margin-top: 56px; max-width: 700px;">Ассистент читает 104 источника по ИТ и ИБ и каждый день собирает выпуски для энергокомпании: специалисту подробно, руководству коротко.</p>
+    <p class="aside">Хакатон «ИИ-ассистенты для энергетики», октябрь 2026</p>
   </div>
-  <div class="meta">Хакатон «ИИ-ассистенты для энергетики», финал · команда misis-mojarung · октябрь 2026</div>
+  <div class="plate" style="left: 1010px; grid-template-rows: 58% 42%;">
+    <div class="browser"><img src="../screenshots/digest.png" alt="Выпуск специалисту по ИБ АСУ ТП"></div>
+    <div class="browser"><img src="../screenshots/company.png" alt="Пространство компании с командами"></div>
+  </div>
 </section>
 
-<section class="slide">
-  <div class="kicker">Задача заказчика</div>
-  <h2>Недельный выпуск вручную занимает у аналитика 102,5 минуты, четырём читателям это 34&nbsp;999&nbsp;₽ в месяц</h2>
-  <div class="row grow" style="margin-top: 48px;">
-    <div class="col" style="flex: 0 0 760px;">
-      <ul style="list-style: none; display: grid; gap: 22px;">
-        <li>Только в списках организаторов <span class="num">62</span> источника: 24 сайта и 18 Telegram-каналов для специалистов, 20 сайтов для руководства.</li>
-        <li>Часть сайтов не пускает бота: Cloudflare, Akamai, страницы, которые собирает скрипт.</li>
-        <li>Специалисту нужны детали каждый день, руководству выводы раз в неделю.</li>
-        <li>Аналитик ИБ собрал два выпуска одной недели за 205 минут и успел просмотреть около 80 публикаций из 1&nbsp;737.</li>
-      </ul>
-    </div>
-    <div class="col grow">
-      <div class="chart" id="chart-manual"></div>
-      <p class="caption">Ручная сборка в месяц при недельном выпуске каждому читателю: 102,5 минуты на выпуск по журналу аналитика, час аналитика SOC стоит 1&nbsp;179&nbsp;₽.</p>
-    </div>
+<!-- 2. The hook: the analyst's log against the assistant. -->
+<section class="slide black">
+  <div class="words">
+    <h2>205 минут против 85 секунд</h2>
+    <p class="statement">Аналитик ИБ вручную собрал два выпуска одной недели и вёл журнал времени. Ассистент собрал те же выпуски сам.</p>
+    <p class="aside">Замер: docs/eval/vs-analyst.md</p>
   </div>
-  <p class="src">Медиана аналитика SOC 149&nbsp;000&nbsp;₽, Хабр Карьера, 10.08.2026; взносы 30%; 1&nbsp;972 рабочих часа в 2026 году. Журнал аналитика: docs/eval/vs-analyst.md. Расчёт: docs/BUSINESS.md, «Экономика».</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>2</span></div>
+  <div class="ledger" style="position: absolute; left: calc(var(--axis) + 40px); top: 150px;">
+    <div class="figure">205</div><p>минут ушло у аналитика на два выпуска: просмотр источников, отбор, текст</p>
+    <div class="figure">85</div><p>секунд у ассистента на те же два выпуска</p>
+    <div class="figure">24</div><p>секунды на выпуск специалисту на Qwen3.6 в Yandex AI Studio</p>
+    <div class="figure">17</div><p>секунд на выпуск руководству на той же модели</p>
+  </div>
 </section>
 
-<section class="slide">
-  <div class="kicker">Решение</div>
-  <h2>Scrap&amp;Grep делает каждый шаг работы аналитика сам и показывает, почему</h2>
-  <div class="steps" style="grid-template-columns: repeat(4, 1fr); margin-top: 52px;">
-    <div class="step"><div class="n">1</div><h3>Сбор</h3><p>104 источника, из 62 позиций списков организаторов читаются 60. Защищённые сайты читаются лестницей способов, свой адрес добавляет любой читатель.</p></div>
-    <div class="step"><div class="n">2</div><h3>Отбор</h3><p>Профиль читателя: интересы, исключения, порог. Модель оценивает 60 кандидатов, у каждой записи и каждого отказа есть причина.</p></div>
-    <div class="step"><div class="n">3</div><h3>Приоритет</h3><p>Правило датасета: атака на энергетику и промышленность РФ выше остальных, уязвимость с эксплойтом выше. Эксплойт сверяется с CISA KEV и БДУ ФСТЭК.</p></div>
-    <div class="step"><div class="n">4</div><h3>Выпуск</h3><p>Специалисту за сутки с планом на смену, руководству за неделю с выводами и брифингом голосом. Markdown и DOCX, из браузера, консоли или на почту.</p></div>
+<!-- 3. What the company gets, in figures. -->
+<section class="slide yellow">
+  <div class="words">
+    <h2>Что получает компания</h2>
+    <p class="statement">Один выпуск по делу вместо десятков сайтов и каналов, в формате датасета организаторов.</p>
+    <p class="aside">Экономика: docs/BUSINESS.md, раздел «Экономика»</p>
   </div>
-  <div class="note">Аналитик ИБ собрал те же два выпуска за ту же неделю вручную: сравнение на следующем слайде.</div>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>3</span></div>
+  <div class="ledger" style="position: absolute; left: calc(var(--axis) + 40px); top: 110px;">
+    <div class="figure">104</div><p>источника: ленты, сайты без ленты, Telegram-каналы, БДУ ФСТЭК</p>
+    <div class="figure">2</div><p>выпуска: специалисту за сутки, руководству за неделю</p>
+    <div class="figure">27 486 ₽</div><p>экономии в месяц на четырёх читателях с недельными выпусками</p>
+    <div class="figure">3,04 ₽</div><p>стоят токены выпуска специалисту на gpt-oss-120b</p>
+  </div>
 </section>
 
-<section class="slide">
-  <div class="kicker">Гипотеза жюри · Ассистент и аналитик</div>
-  <h2>Аналитик собрал те же два выпуска вручную за 205 минут, ассистент за 85 секунд</h2>
-  <div class="row grow" style="margin-top: 40px; gap: 60px;">
-    <div class="col" style="flex: 0 0 760px; gap: 18px;">
-      <p class="muted" style="font-size: 23px;">Время на два выпуска</p>
-      <div class="chart" id="chart-analyst"></div>
-      <p class="caption">Время аналитика - его журнал: 75 минут на просмотр источников и по 65 минут на каждый выпуск. Ассистент собрал оба выпуска в 144 раза быстрее и просмотрел все публикации недели.</p>
-    </div>
-    <div class="col grow">
-      <table>
-        <tr><th></th><th class="r">Ассистент</th><th class="r">Аналитик</th></tr>
-        <tr><td>Выпуск специалисту</td><td class="r">70,5 с</td><td class="r">102,5 мин</td></tr>
-        <tr><td>Выпуск руководству</td><td class="r">14,7 с</td><td class="r">102,5 мин</td></tr>
-        <tr><td>Записей в выпусках</td><td class="r">19 и 15</td><td class="r">14 и 9</td></tr>
-        <tr><td>Просмотрено публикаций</td><td class="r">все: 1&nbsp;737 и 1&nbsp;757</td><td class="r">около 80</td></tr>
-      </table>
-      <p style="margin-top: 26px; font-size: 24px;">Оба выпуска специалисту ставят в «Главное» 0-day в Citrix NetScaler с высоким приоритетом. Аналитик добавил регуляторику и удары по энергосистеме, ассистент - бюллетени CISA ICS по оборудованию АСУ ТП, 17 уязвимостей SCADA «Каскад» и сверку номеров по CISA KEV и БДУ.</p>
-      <p style="margin-top: 18px; font-size: 24px;">4 октября в каталог вошли ещё 19 источников, среди них Help Net Security, на который ссылается аналитик.</p>
-    </div>
+<!-- 4. How it works: four steps from feed to issue, read left to right. -->
+<section class="slide blue">
+  <div class="words" style="width: 1500px;">
+    <h2>От ленты до выпуска за четыре шага</h2>
   </div>
-  <p class="src" style="margin-top: 14px;">Неделя 25 сентября - 2 октября 2026 года, 69 источников. docs/eval/vs-analyst.md; ответ аналитика целиком - examples/vs-analyst.</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>4</span></div>
+  <div style="position: absolute; left: var(--margin); right: var(--margin); top: 360px; bottom: 96px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
+    <div class="tile card"><h3>Собирает</h3><p>104 источника каждые 15 минут. Защищённые сайты читаются заголовками и отпечатком Chrome, браузером в стеке или через прокси.</p></div>
+    <div class="tile card"><h3>Отбирает</h3><p>Поиск по смыслу и по словам под интересы читателя. 60 лучших кандидатов оценивает модель, у каждого отказа есть причина.</p></div>
+    <div class="tile card"><h3>Проверяет</h3><p>Карточка сверяется с текстом статьи, CISA KEV, БДУ ФСТЭК, NVD, EPSS и Exploit-DB. Числа без источника в выпуск не попадают.</p></div>
+    <div class="tile card"><h3>Выпускает</h3><p>Страница, Markdown и DOCX со ссылками, письмо, пост в Telegram-канал и доступ из ИИ-ассистента по MCP.</p></div>
+  </div>
 </section>
 
-<section class="slide">
-  <div class="kicker">Критерий 1 · Репрезентативность материалов</div>
-  <h2>Каталог из 104 источников читает 60 из 62 позиций списков организаторов</h2>
-  <div class="row grow" style="margin-top: 40px; gap: 56px;">
-    <div class="col" style="flex: 0 0 700px; gap: 30px;">
-      <div><p class="muted" style="font-size: 23px; margin-bottom: 8px;">104 источника по виду</p><div class="chart" id="chart-kinds"></div></div>
-      <div><p class="muted" style="font-size: 23px; margin-bottom: 8px;">по теме</p><div class="chart" id="chart-themes"></div></div>
-    </div>
-    <div class="col grow" style="gap: 26px;">
-      <div class="browser"><div class="bar"><i></i><i></i><i></i><span>localhost:8080/sources</span></div><img src="img/sources-top.png" alt="Источники"></div>
-      <p style="font-size: 24px;"><span class="num">1&nbsp;737</span> публикаций за неделю сравнения с аналитиком. Стек приходит со снимком из <span class="num">2&nbsp;068</span> реальных публикаций 75 источников и собирает выпуск руководству сразу после старта.</p>
-      <p class="caption" style="margin-top: 0;">Каждый источник опрашивается раз в 15 минут, сайт без ленты читается как страница новостей. Любой читатель добавляет сайт или канал по адресу, ассистент сам понимает, что это.</p>
-    </div>
+<!-- 5. Sources. -->
+<section class="slide black">
+  <div class="words">
+    <h2>Защищённые сайты тоже</h2>
+    <p class="statement">68 лент, 22 Telegram-канала и 12 сайтов без ленты. Из 62 позиций списков датасета читаются 60.</p>
+    <ul>
+      <li>Сайт, который не пускает бота, читается следующим способом по лестнице</li>
+      <li>Свой источник добавляется по любому адресу, три статьи видны до сохранения</li>
+      <li>У каждого источника видно здоровье и способ чтения</li>
+    </ul>
   </div>
-  <p class="src">docs/DECISIONS.md, «Источники из датасета»; README, «Быстрый запуск».</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>5</span></div>
+  <div class="plate"><div class="browser"><img src="../screenshots/sources.png" alt="Источники с аватарками и числом публикаций"></div></div>
 </section>
 
-<section class="slide">
-  <div class="kicker">Критерий 1 · Репрезентативность материалов</div>
-  <h2>На 21 примере организаторов прочитаны все страницы, тип записи совпал в 7 случаях из 7</h2>
-  <p class="lead">Каждый пример прошёл те же шаги, что запись выпуска, и лежит рядом с желаемым выводом.</p>
-  <table style="margin-top: 36px;">
-    <tr><th style="width: 34%;">Что сравнивали</th><th style="width: 22%;">Результат</th><th>Пояснение</th></tr>
-    <tr><td>Страницы примеров</td><td>21 из 21</td><td>каждая страница читается так же, как источник каталога</td></tr>
-    <tr><td>Специалисты: тип и приоритет</td><td>тип 7 из 7, приоритет 4 из 7</td><td>у specialist-4 в датасете стоит CVE другой уязвимости, WSUS из specialist-7</td></tr>
-    <tr><td>Специалисты: посты Telegram</td><td>тип по содержанию</td><td>датасет кладёт пост в «Инфо» по источнику, Scrap&amp;Grep даёт посту об уязвимости карточку и ссылки из поста, как в желаемом выводе</td></tr>
-    <tr><td>Руководство: двенадцать признаков датасета</td><td>23 из 36 у gpt-oss:120b</td><td>у Qwen3.6 35B в Yandex AI Studio 24 из 36, у Alice AI LLM 22</td></tr>
+<!-- 6. Interests. -->
+<section class="slide blue">
+  <div class="words">
+    <h2>Отбор под каждого читателя</h2>
+    <p class="statement">Профиль задаёт темы, исключения, порог и системы компании. Предпросмотр пересчитывает выпуск при каждой правке.</p>
+    <ul>
+      <li>Запись о продукте компании помечена «касается нас» и идёт первой</li>
+      <li>У каждой статьи есть причина, почему она в выпуске</li>
+    </ul>
+  </div>
+  <div class="plate"><div class="browser"><img src="../screenshots/interests.png" alt="Редактор профиля интересов с предпросмотром"></div></div>
+</section>
+
+<!-- 7. The specialist's issue. -->
+<section class="slide yellow">
+  <div class="words">
+    <h2>Выпуск специалисту ИБ</h2>
+    <ul>
+      <li>Атаки и уязвимости первыми, по правилу датасета: атака на энергетику РФ выше всех</li>
+      <li>Карточка: продукт, версии, исправление, временные меры, CVSS словами</li>
+      <li>План на смену с галочками, которые хранятся на сервере</li>
+      <li>Матрица риска 3×3 и путь уязвимости по датам</li>
+    </ul>
+  </div>
+  <div class="plate" style="grid-template-rows: 1fr 1fr;">
+    <div class="browser"><img src="../screenshots/digest.png" alt="Выпуск специалисту: главное и цифры периода"></div>
+    <div class="browser"><img src="../screenshots/digest-topics.png" alt="Раздел «Уязвимости» с карточкой"></div>
+  </div>
+</section>
+
+<!-- 8. The management issue. -->
+<section class="slide blue">
+  <div class="words">
+    <h2>Руководству без жаргона</h2>
+    <p class="statement">Тезисы в одну строку и блок «Что это значит для нас». CVE, версии и адреса код вырезает сам.</p>
+    <ul>
+      <li>Двенадцать признаков датасета: «в РФ», «ущерб», «утечка», «энергетика»</li>
+      <li>Неделя в цифрах против прошлого выпуска</li>
+    </ul>
+  </div>
+  <div class="plate"><div class="browser"><img src="../screenshots/digest-management.png" alt="Выпуск руководству с признаками"></div></div>
+</section>
+
+<!-- 9. Facts are checked. -->
+<section class="slide black">
+  <div class="words">
+    <h2>Факты сверены с источником</h2>
+    <p class="statement">Пока модель пишет карточку, она сама спрашивает базы уязвимостей. Число, которого нет в статье, в выпуск не попадёт.</p>
+    <ul>
+      <li>CISA KEV, БДУ ФСТЭК, NVD, EPSS и Exploit-DB: локальные копии</li>
+      <li>Пока исправления нет, совет начинается с временных мер</li>
+      <li>Пересказы одной новости склеиваются в одну запись</li>
+    </ul>
+  </div>
+  <div class="plate"><div class="browser mid"><img src="../screenshots/compare.png" alt="Сравнение двух выпусков с причинами"></div></div>
+</section>
+
+<!-- 10. New: the company space opens. -->
+<section class="slide yellow">
+  <div class="words">
+    <h2>Пространство компании</h2>
+    <p class="statement">Руководитель описывает команды, сервис заводит сотрудникам аккаунты с готовыми профилями.</p>
+    <p class="aside">Новое в финале: раздел «Компания»</p>
+  </div>
+  <div class="plate"><div class="browser"><img src="../screenshots/company.png" alt="Пространство компании: команды, сотрудники, профиль команды"></div></div>
+</section>
+
+<!-- 11. A team drafted by the model. -->
+<section class="slide blue">
+  <div class="words">
+    <h2>Темы подбирает модель</h2>
+    <p class="statement">Хватит пары фраз о работе команды и её системах. Qwen3.6 предложит роль, темы и продукты за секунды.</p>
+    <ul>
+      <li>Лишняя тема убирается крестиком, своя добавляется в одно поле</li>
+      <li>Правка команды доходит до профилей всех её людей</li>
+    </ul>
+  </div>
+  <div class="plate"><div class="browser mid"><img src="../screenshots/company-team-draft.png" alt="Новая команда: профиль, подобранный моделью"></div></div>
+</section>
+
+<!-- 12. People in a minute. -->
+<section class="slide black">
+  <div class="words">
+    <h2>Сотрудники за минуту</h2>
+    <p class="statement">Список вставляется строками или столбцами из таблицы. Каждый получает свою ссылку и входит с профилем команды.</p>
+    <ul>
+      <li>Строка без почты видна до добавления</li>
+      <li>По должности руководитель получает брифинг вместо карточек</li>
+    </ul>
+  </div>
+  <div class="plate" style="grid-template-rows: 1fr 1fr;">
+    <div class="browser mid"><img src="../screenshots/company-add-people.png" alt="Вставленный список сотрудников до добавления"></div>
+    <div class="browser right"><img src="../screenshots/company-invite.png" alt="Приглашение: профиль уже настроен, остаётся пароль"></div>
+  </div>
+</section>
+
+<!-- 13. Roles and one change for many. -->
+<section class="slide blue">
+  <div class="words">
+    <h2>Роли и правки для многих</h2>
+    <ul>
+      <li>Роль внутри команды: аналитику и инженеру SOC важны разные темы</li>
+      <li>Роль сама находит людей по должности</li>
+      <li>Одна правка для команды, роли или выбранных людей: темы, исключения, формат, размер</li>
+      <li>Сотрудник переходит в другую команду перетаскиванием</li>
+    </ul>
+  </div>
+  <div class="plate" style="grid-template-rows: 1fr 1fr;">
+    <div class="browser right"><img src="../screenshots/company-roles.png" alt="Роли в команде и список сотрудников"></div>
+    <div class="browser mid"><img src="../screenshots/company-patch.png" alt="Одна правка для выбранных сотрудников"></div>
+  </div>
+</section>
+
+<!-- 14. The feed learns. -->
+<section class="slide yellow">
+  <div class="words">
+    <h2>Лента учится на отметках</h2>
+    <p class="statement">«Для вас» объясняет, почему статья здесь. Профиль сдвигается к понравившимся статьям, новые темы приходят предложениями.</p>
+    <ul>
+      <li>Английские и китайские статьи читаются по-русски</li>
+      <li>Ранжирование на LightGBM включается, когда обгоняет ручные веса</li>
+    </ul>
+  </div>
+  <div class="plate" style="grid-template-rows: 1fr 1fr;">
+    <div class="browser"><img src="../screenshots/feed.png" alt="Лента «Для вас» с причинами"></div>
+    <div class="browser"><img src="../screenshots/adapt-panel.png" alt="Подстройка профиля по отметкам"></div>
+  </div>
+</section>
+
+<!-- 15. Resume and the first run. -->
+<section class="slide blue">
+  <div class="words">
+    <h2>Профиль из резюме</h2>
+    <p class="statement">Контакты вырезаются до анализа, по должности и навыкам предлагается профиль. Новый читатель проходит тур и собирает первый выпуск.</p>
+  </div>
+  <div class="plate"><div class="browser"><img src="../screenshots/resume.png" alt="Профиль, предложенный по резюме"></div></div>
+</section>
+
+<!-- 16. Delivery. -->
+<section class="slide black">
+  <div class="words">
+    <h2>Выпуск приходит сам</h2>
+    <ul>
+      <li>Расписание: каждый день, по будням или раз в неделю, в своё время</li>
+      <li>Письмо с DOCX во вложении</li>
+      <li>Посты в Telegram-каналы по расписанию, со своей подачей у каждого канала</li>
+      <li>Claude или Cursor читают ленту и выпуски по личному ключу MCP</li>
+    </ul>
+  </div>
+  <div class="plate" style="grid-template-rows: 1fr 1fr;">
+    <div class="browser"><img src="../screenshots/schedule.png" alt="Расписание выпусков"></div>
+    <div class="browser"><img src="../screenshots/channels.png" alt="Каналы Telegram и посты"></div>
+  </div>
+</section>
+
+<!-- 17. Media. -->
+<section class="slide blue">
+  <div class="words">
+    <h2>Ролик и голос по выпуску</h2>
+    <p class="statement">Вертикальный ролик с картинками статей, QR-кодами и субтитрами. Брифинг руководителю озвучивает SpeechKit.</p>
+    <p class="aside">Ролик на 55 секунд собирается за 175 секунд</p>
+  </div>
+  <div class="plate"><div class="browser mid"><img src="../screenshots/shorts-frames.png" alt="Кадры короткого видео по выпуску"></div></div>
+</section>
+
+<!-- 18. Model research. -->
+<section class="slide yellow">
+  <div class="words">
+    <h2>Почему Qwen3.6 на Yandex</h2>
+    <p class="statement">На одном сценарии и датасете организаторов Qwen3.6 в восемь раз быстрее и точнее находит признаки для руководства.</p>
+    <p class="aside">Замеры: docs/INSTALL.md, examples/models</p>
+  </div>
+  <table class="models" style="position: absolute; left: calc(var(--axis) + 40px); right: var(--margin); top: 140px;">
+    <tr><th></th><th>Qwen3.6 35B<br>Yandex AI Studio</th><th>gpt-oss-120b<br>облако Ollama</th><th>Alice AI LLM<br>Yandex AI Studio</th></tr>
+    <tr><td>Выпуск специалисту</td><td><b>24 с</b></td><td>193 с</td><td></td></tr>
+    <tr><td>Выпуск руководству</td><td><b>17 с</b></td><td>113 с</td><td></td></tr>
+    <tr><td>Признаки руководства, из 36</td><td><b>24</b></td><td>23</td><td>22</td></tr>
+    <tr><td>Лишние признаки</td><td><b>14</b></td><td>21</td><td>20</td></tr>
   </table>
-  <p style="margin-top: 32px; font-size: 25px;">Ещё в репозитории восемь выпусков в Markdown и DOCX, собранные 15 октября на текущем коде, и три сценария смены интересов с причиной у каждой статьи, которая пришла или ушла.</p>
-  <p class="src" style="margin-top: auto;">Прогон 15 октября 2026 года: examples/models/README.md, «Датасет организаторов»; examples/dataset/README.md; examples/README.md.</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>6</span></div>
+  <table class="models" style="position: absolute; left: calc(var(--axis) + 40px); right: var(--margin); top: 690px;">
+    <tr><th></th><th>Yandex v2</th><th>embeddinggemma</th></tr>
+    <tr><td>Точность первых 20 кандидатов</td><td><b>0,65</b></td><td>0,40</td></tr>
+    <tr><td>Полнота первых 60</td><td><b>0,443</b></td><td>0,426</td></tr>
+  </table>
 </section>
 
-<section class="slide">
-  <div class="kicker">Критерий 2 · Техническая реализация</div>
-  <h2>Стек поднимается одной командой: один образ бэкенда в шести ролях и граф сборки с чекпоинтами</h2>
-  <div class="arch">
-    <div class="lane">
-      <div class="lane-h">Сбор</div>
-      <div class="node">worker-ingest<span>RSS, t.me/s, страницы, лестница чтения, эмбеддинги новых статей</span></div>
-      <div class="node soft">FlareSolverr<span>для сайтов, которые проверяют посетителя скриптом</span></div>
-    </div>
-    <div class="lane">
-      <div class="lane-h">Хранение</div>
-      <div class="node">PostgreSQL 18<span>статьи, pgvector и полнотекстовый поиск, чекпоинты графа</span></div>
-      <div class="node">Valkey<span>очереди задач, кеш ответов модели, прогресс</span></div>
-      <div class="node">ClickHouse<span>события показов и отметок</span></div>
-    </div>
-    <div class="lane">
-      <div class="lane-h">Сборка и модель</div>
-      <div class="node">worker-digest<span>граф LangGraph, оценка и выжимки веером</span></div>
-      <div class="node">Языковая модель<span>Qwen3.6 35B-A3B в Ollama или vLLM либо Yandex AI Studio</span></div>
-      <div class="node soft">worker-profile, worker-media<span>резюме и вкус читателя; ролики и брифинг</span></div>
-    </div>
-    <div class="lane">
-      <div class="lane-h">Доступ</div>
-      <div class="node">web (Caddy) и api (FastAPI)<span>интерфейс, REST, прогресс по SSE, MCP</span></div>
-      <div class="node soft">cli<span>выпуск в Markdown и DOCX одной командой</span></div>
-      <div class="node soft">scheduler<span>опрос раз в 15 минут, выпуски по расписанию</span></div>
-    </div>
+<!-- 19. Where it runs. -->
+<section class="slide blue">
+  <div class="words" style="width: 1500px;">
+    <h2>Работает там, где нужно заказчику</h2>
+    <p class="statement" style="max-width: 1100px;">Модель меняется в .env без правки кода.</p>
   </div>
-  <p class="muted" style="font-size: 23px; margin-top: 30px;">Граф сборки выпуска</p>
-  <div class="flow" style="margin-top: 12px;">
-    <div class="box"><b>prepare</b><span>профиль и период</span></div><div class="arrow">›</div>
-    <div class="box"><b>retrieve</b><span>поиск по смыслу и словам</span></div><div class="arrow">›</div>
-    <div class="box key"><b>grade</b><span>веер: задача на кандидата</span></div><div class="arrow">›</div>
-    <div class="box"><b>select</b><span>порог, лимит, исключения</span></div><div class="arrow">›</div>
-    <div class="box"><b>cluster</b><span>склейка повторов, темы</span></div><div class="arrow">›</div>
-    <div class="box key"><b>summarize</b><span>веер: задача на статью</span></div><div class="arrow">›</div>
-    <div class="box"><b>compose</b><span>разделы, «Главное»</span></div><div class="arrow">›</div>
-    <div class="box"><b>persist</b><span>запись выпуска</span></div>
+  <div style="position: absolute; left: var(--margin); right: var(--margin); top: 420px; bottom: 96px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+    <div class="tile card"><h3>Yandex AI Studio</h3><p>Qwen3.6 пишет тексты, text-embeddings-v2 ищет по смыслу, SpeechKit озвучивает. Своего железа не нужно.</p></div>
+    <div class="tile card"><h3>Закрытый контур</h3><p>Модель в Ollama или vLLM, базы уязвимостей в копиях, сбор через прокси. Поставка одной папкой, проверена без сети.</p></div>
+    <div class="tile card"><h3>Без модели</h3><p>Поиск, оценка и выжимки работают в автономном режиме на любом сервере.</p></div>
   </div>
-  <p class="src" style="margin-top: 18px;">Упавший воркер продолжает с прерванного шага: чекпоинты в PostgreSQL. docs/ARCHITECTURE.md, «Компоненты» и «Граф сборки».</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>7</span></div>
 </section>
 
-<section class="slide">
-  <div class="kicker">Критерий 2 · Техническая реализация</div>
-  <h2>Сайт, который не пускает бота, читается следующей ступенью лестницы</h2>
-  <div class="row grow" style="margin-top: 40px; gap: 48px; align-items: flex-end;">
-    <div class="stair grow">
-      <div class="tread" style="height: 46%;"><div class="n">1</div><b>Обычный запрос</b><span>SecurityLab, Habr: <em style="white-space: nowrap;">0,2-0,7 с</em></span></div>
-      <div class="tread" style="height: 62%;"><div class="n">2</div><b>Заголовки браузера</b><span>для сайтов, которым хватает User-Agent браузера</span></div>
-      <div class="tread" style="height: 80%;"><div class="n">3</div><b>Отпечаток Chrome</b><span>Cloudflare с 403 и заглушкой: Dark Reading <em>0,9 с</em>, Cybernews <em>1,0 с</em>, SecurityWeek <em>1,4 с</em>, Netskope <em>4,2 с</em></span></div>
-      <div class="tread" style="height: 100%;"><div class="n">4</div><b>FlareSolverr в стеке</b><span>проверка Cloudflare с JS: <em>15,9 с</em>; McAfee за Akamai</span></div>
-    </div>
-    <div class="col" style="flex: 0 0 520px; gap: 22px;">
-      <div class="card"><h3>Прокси</h3><p>Общий, свой у источника или пулом с ротацией при 403 и 429.</p></div>
-      <div class="card"><h3>Видно у источника</h3><p>Ступень и причина записываются: «403, заглушка Cloudflare на шаге «обычный запрос», прочитан через curl_cffi».</p></div>
-      <div class="card"><h3>Безопасно</h3><p>Защита от SSRF на каждой ступени: внутренние адреса не читаются.</p></div>
-    </div>
+<!-- 20. Quality. -->
+<section class="slide black">
+  <div class="words">
+    <h2>Проверено тестами</h2>
+    <p class="statement">Каждый прогон CI поднимает весь стенд на моделях Yandex и проходит путь жюри: выпуск, видео, резюме, команды.</p>
+    <p class="aside">docs/CI.md, docs/QUALITY.md</p>
   </div>
-  <p class="src" style="margin-top: 24px;">Замеры 2 октября 2026 года, без прокси. docs/DECISIONS.md, «Сбор: лестница способов чтения».</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>8</span></div>
+  <div class="ledger" style="position: absolute; left: calc(var(--axis) + 40px); top: 150px;">
+    <div class="figure">999</div><p>тестов бэкенда на настоящих PostgreSQL, Valkey и ClickHouse</p>
+    <div class="figure">882</div><p>теста интерфейса</p>
+    <div class="figure">16</div><p>заданий GitHub Actions, включая стенд на моделях Yandex</p>
+  </div>
 </section>
 
-<section class="slide">
-  <div class="kicker">Критерий 2 · Техническая реализация</div>
-  <h2>Запись сверяется с текстом статьи, с базами уязвимостей и с тем, вышло ли исправление</h2>
-  <div class="flow">
-    <div class="box"><b>Сбор</b><span>полный текст со страницы, если в ленте анонс</span></div><div class="arrow">›</div>
-    <div class="box"><b>Поиск</b><span>по смыслу и по словам для каждого интереса</span></div><div class="arrow">›</div>
-    <div class="box"><b>Оценка</b><span>60 кандидатов по шкале 0-3 с причиной</span></div><div class="arrow">›</div>
-    <div class="box"><b>Склейка</b><span>одна уязвимость - одна запись</span></div><div class="arrow">›</div>
-    <div class="box"><b>Запись</b><span>тип, карточка, приоритет, «почему важно»</span></div><div class="arrow">›</div>
-    <div class="box key"><b>Проверка</b><span>чего нет в статье, нет в карточке; номера по CISA KEV и БДУ</span></div><div class="arrow">›</div>
-    <div class="box"><b>Выпуск</b><span>Markdown с оглавлением, DOCX, история</span></div>
+<!-- 21. Economics. -->
+<section class="slide yellow">
+  <div class="words">
+    <h2>27&nbsp;486&nbsp;₽ экономии в месяц</h2>
+    <p class="statement">Расчёт стоит на журнале аналитика и замере токенов. Ассистент окупается, пока ручной выпуск дольше 22 минут.</p>
+    <p class="aside">docs/BUSINESS.md, раздел «Экономика»</p>
   </div>
-  <div class="row grow" style="margin-top: 36px; gap: 48px;">
-    <div class="col" style="flex: 0 0 780px; gap: 16px;">
-      <p>Модель сама вызывает <code>lookup_vulnerability</code>: CISA KEV, БДУ ФСТЭК, NVD, EPSS и Exploit-DB по локальным копиям. Номера, о которых она не спросила, граф проверяет сам.</p>
-      <p>Пока производитель только обещает обновление, карточка так и пишет, а «почему важно» и план на смену советуют временные меры. «Что изменилось» сообщает об исправлении, когда оно вышло.</p>
-      <p>Пересказы одной уязвимости склеиваются по номерам CVE и БДУ: в восьми выпусках примеров склеен 51 пересказ.</p>
-    </div>
-    <div class="col grow">
-      <div class="browser fit" style="height: 452px;"><div class="bar"><i></i><i></i><i></i><span>Карточка уязвимости</span></div><img src="../screenshots/digest-topics.png" alt="Карточка уязвимости"></div>
-    </div>
+  <div class="ledger" style="position: absolute; left: calc(var(--axis) + 40px); top: 150px;">
+    <div class="figure">8 750 ₽</div><p>стоит в месяц ручной недельный выпуск на одного читателя</p>
+    <div class="figure">22</div><p>минуты: ассистент окупается, пока ручной выпуск дольше</p>
+    <div class="figure">1 659</div><p>выпусков специалисту в месяц покрывает тариф за $20</p>
   </div>
-  <p class="src" style="margin-top: 14px;">docs/DECISIONS.md, «Инструмент модели», «Совет согласован с тем, вышло ли исправление», «Склейка дублей по номерам уязвимостей».</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>9</span></div>
 </section>
 
-<section class="slide">
-  <div class="kicker">Критерий 2 · Техническая реализация</div>
-  <h2>Специалист получает выпуск за сутки с планом на смену, руководство выводы за неделю</h2>
-  <div class="row grow" style="margin-top: 40px; gap: 48px;">
-    <div class="col grow">
-      <div class="browser fit" style="height: 520px;"><div class="bar"><i></i><i></i><i></i><span>Выпуск специалисту по ИБ АСУ ТП</span></div><img src="img/specialist-main.png" alt="Выпуск специалисту"></div>
-      <p class="caption">«Главное», путь от публикаций периода до записей и строка «Вместо ручной работы». Дальше план на смену с галочками, которые хранятся на сервере, и пометка «касается нас» у продуктов из «Наших систем».</p>
-    </div>
-    <div class="col grow">
-      <div class="browser fit" style="height: 520px;"><div class="bar"><i></i><i></i><i></i><span>Выпуск руководству</span></div><img src="../screenshots/digest-management.png" alt="Выпуск руководству"></div>
-      <p class="caption">Записи в одно-два предложения с признаками датасета, без номеров уязвимостей. Наверху «Что это значит для нас», рядом период в цифрах против прошлого выпуска и брифинг голосом на две минуты.</p>
-    </div>
+<!-- 22. Pilot. -->
+<section class="slide blue">
+  <div class="words">
+    <h2>Пилот за четыре недели</h2>
+    <p class="statement">10-20 сотрудников из разных групп. Команды и аккаунты заводятся списком в разделе «Компания» за минуту.</p>
   </div>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>10</span></div>
+  <div style="position: absolute; left: calc(var(--axis) + 40px); right: var(--margin); top: 150px; display: grid; gap: 8px;">
+    <div class="tile card"><h3>Старт</h3><p>Аналитик собирает выпуски недели вручную и ведёт журнал, размечает кандидатов по шкале 0-3.</p></div>
+    <div class="tile card"><h3>Через две недели</h3><p>Проверка выпусков ассистента как черновика, второй замер полноты и точности.</p></div>
+    <div class="tile card"><h3>Через четыре недели</h3><p>Цель: полнота «обязательных» не ниже 90%, проверка недельного выпуска не дольше 30 минут.</p></div>
+  </div>
 </section>
 
-<section class="slide">
-  <div class="kicker">Критерий 2 · Техническая реализация</div>
-  <h2>Правка профиля сразу меняет подборку, и это видно ещё до сборки</h2>
-  <div class="row grow" style="margin-top: 40px; gap: 52px;">
-    <div class="col" style="flex: 0 0 960px;">
-      <div class="browser fit" style="height: 640px;"><div class="bar"><i></i><i></i><i></i><span>localhost:8080/profiles</span></div><img src="../screenshots/interests.png" alt="Интересы и предпросмотр"></div>
-    </div>
-    <div class="col grow" style="gap: 18px;">
-      <div class="card"><h3>Убран интерес «Уязвимости»</h3><p>19 записей → 20: пришло 7, ушло 6.</p></div>
-      <div class="card"><h3>Исключение «уязвимости Citrix»</h3><p>Пришло 5, ушло 4; запись о Citrix ушла с причиной.</p></div>
-      <div class="card"><h3>Порог 0,50 → 0,70, размер 20 → 10</h3><p>Ушли 9 записей, у каждой её оценка.</p></div>
-      <div class="card"><h3>Поля карточек и блоки выпуска</h3><p>Профиль прячет лишние строки карточек и любые из 14 блоков вокруг записей.</p></div>
-    </div>
+<!-- 23. Close: the name returns at full width over a strip of three screens. -->
+<section class="slide black">
+  <div class="words" style="width: 1700px; bottom: auto;">
+    <h1>Scrap&amp;Grep</h1>
+    <p class="statement" style="margin-top: 48px; max-width: 1100px;">Новости ИТ и ИБ под работу каждого сотрудника энергокомпании: собраны, проверены и доставлены без ручной работы.</p>
+    <p class="aside" style="margin-top: 28px;">git.codenrock.com/codenrock/ii-assistenty/misis-mojarung/assistent-dlya-sozdaniya-it-ib-daydzhestov</p>
   </div>
-  <p class="src">Предпросмотр работает без языковой модели. examples/change; examples/README.md; docs/TASK-MAP.md, «Что нового в финале».</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>11</span></div>
+  <div class="plate" style="left: 0; top: 640px; grid-template-columns: repeat(3, 1fr);">
+    <div class="browser"><img src="../screenshots/digest.png" alt="Выпуск специалисту"></div>
+    <div class="browser"><img src="../screenshots/company-roles.png" alt="Роли в команде"></div>
+    <div class="browser"><img src="../screenshots/feed.png" alt="Лента «Для вас»"></div>
+  </div>
 </section>
 
-<section class="slide">
-  <div class="kicker">Критерий 2 · Техническая реализация</div>
-  <h2>Весь стек переходит на Yandex AI Studio переменными в .env, код не меняется</h2>
-  <div class="row grow" style="margin-top: 40px; gap: 64px;">
-    <div class="col" style="flex: 0 0 820px; gap: 14px;">
-      <p class="muted" style="font-size: 23px;">Сборка на одном сценарии, секунды</p>
-      <p style="font-size: 24px; font-weight: 650; margin-top: 10px;">Выпуск специалисту</p>
-      <div class="chart" id="chart-yandex-spec"></div>
-      <p style="font-size: 24px; font-weight: 650; margin-top: 10px;">Выпуск руководству</p>
-      <div class="chart" id="chart-yandex-mgmt"></div>
-      <p class="caption">Сквозная проверка на полном стеке Yandex: выпуск за 21,6 с, ролик на 55 с с голосом SpeechKit за 175 с.</p>
-    </div>
-    <div class="col grow">
-      <table>
-        <tr><th>Замер</th><th class="r">Yandex</th><th class="r">Сравнение</th></tr>
-        <tr><td>Признаков руководства из 36</td><td class="r">24</td><td class="r" style="white-space: nowrap;">23 у gpt-oss-120b</td></tr>
-        <tr><td>Точность первых 20 кандидатов</td><td class="r">0,65</td><td class="r" style="white-space: nowrap;">0,40 у embeddinggemma</td></tr>
-        <tr><td>Полнота первых 60 кандидатов</td><td class="r">0,443</td><td class="r" style="white-space: nowrap;">0,426 у embeddinggemma</td></tr>
-      </table>
-      <p style="margin-top: 26px; font-size: 24px;">Тексты пишет Qwen3.6 35B или Alice AI LLM через OpenAI-совместимый API, эмбеддинги считает text-embeddings-v2, ролики и брифинги озвучивает SpeechKit. Видеокарта не нужна.</p>
-    </div>
-  </div>
-  <p class="src">Профиль «Специалист по ИБ АСУ ТП». README, «Модели Яндекса»; docs/INSTALL.md, «Модели Яндекса»; docs/eval/retrieval.md; docs/DECISIONS.md, «Yandex AI Studio».</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>12</span></div>
-</section>
-
-<section class="slide">
-  <div class="kicker">Критерий 2 · Техническая реализация</div>
-  <h2>Сценарий выпуска держится на любой модели и без модели</h2>
-  <div class="row grow" style="margin-top: 40px; gap: 56px;">
-    <div class="col" style="flex: 0 0 1080px;">
-      <p class="muted" style="font-size: 23px; margin-bottom: 10px;">Записей, совпавших с первым прогоном gpt-oss:120b, из 20, и время сборки</p>
-      <div class="chart" id="chart-models"></div>
-    </div>
-    <div class="col grow" style="gap: 20px;">
-      <p>Разделы, карточки, приоритеты и проверка работают на всех моделях: выпуск собирается целиком.</p>
-      <p>Отбор держится на поиске: даже без модели 16 записей из 20 те же. Два прогона одной gpt-oss:120b совпадают в 17.</p>
-      <p>Модель меняется в .env. Примеры собраны на gpt-oss:120b, в стеке по умолчанию пишет локальная Qwen3.6 35B-A3B.</p>
-    </div>
-  </div>
-  <p class="src">Выпуск специалисту по ИБ АСУ ТП за неделю примеров: 60 кандидатов, до 20 записей, пустой кеш, 15 октября 2026 года. examples/models/README.md</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>13</span></div>
-</section>
-
-<section class="slide">
-  <div class="kicker">Критерий 2 · Техническая реализация</div>
-  <h2>Стек работает в закрытом контуре, наружу ходит только загрузчик источников</h2>
-  <div class="row grow" style="margin-top: 44px; gap: 64px;">
-    <div class="col" style="flex: 0 0 760px; gap: 26px;">
-      <div class="chart" id="chart-airgap"></div>
-      <p><code>offline_bundle.sh save</code>: 7 образов ядра 4,7 ГБ и модели 1,6 ГБ за 4 мин 21 с. <code>load</code> в пустой каталог за 3 мин 29 с, копия поднялась без сети и прошла <code>scripts/smoke.py</code> целиком.</p>
-    </div>
-    <div class="col grow">
-      <p class="muted" style="font-size: 23px; margin-bottom: 12px;">Модель финала на своём сервере: аренда и окупаемость</p>
-      <table>
-        <tr><th>Модель и карта</th><th class="r" style="white-space: nowrap;">В месяц</th><th class="r" style="white-space: nowrap;">С предоплатой</th><th class="r">Окупается с читателей</th></tr>
-        <tr><td>Qwen3.6 35B-A3B, 22,6 ГБ; RTX 4090 24 ГБ</td><td class="r">69&nbsp;674&nbsp;₽</td><td class="r">52&nbsp;256&nbsp;₽</td><td class="r">9</td></tr>
-        <tr><td>gpt-oss-120b, 65 ГБ; H100 80 ГБ</td><td class="r">246&nbsp;074&nbsp;₽</td><td class="r">221&nbsp;467&nbsp;₽</td><td class="r">29</td></tr>
-      </table>
-      <p style="font-size: 22px; margin-top: 18px; color: var(--muted);">Стек ассистента ставится на тот же сервер. По опубликованным замерам скорости gpt-oss-120b собирает выпуск специалисту примерно за 45 с на H100 и за 70 с на A100, это около 80 и 50 выпусков в час. Цена с предоплатой указана за 30 дней вперёд, окупаемость посчитана по читателям с недельными выпусками.</p>
-    </div>
-  </div>
-  <p class="src">docs/INSTALL.md, «Закрытый контур» и «Требования к железу»; docs/eval/economics.md, immers.cloud, 14.10.2026; docs/QUALITY.md, «Что проверено».</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>14</span></div>
-</section>
-
-<section class="slide">
-  <div class="kicker">Критерий 2 · Техническая реализация</div>
-  <h2>966 тестов бэкенда и 841 тест фронтенда, одни и те же проверки в GitLab и GitHub Actions</h2>
-  <div class="row grow" style="margin-top: 44px; gap: 56px;">
-    <div class="cards" style="flex: 0 0 820px; grid-template-columns: 1fr 1fr; align-content: start;">
-      <div class="card"><div class="stat">966</div><p>тестов бэкенда на настоящих PostgreSQL, Valkey и ClickHouse, покрытие строк 86%</p></div>
-      <div class="card"><div class="stat">841</div><p>тест фронтенда в 115 файлах, Testing Library и MSW, покрытие строк 98%</p></div>
-      <div class="card"><div class="stat">17 и 15</div><p>заданий GitLab CI и GitHub Actions из одних скриптов <code>ci/</code>; прогон GitHub Actions 15 октября прошёл целиком</p></div>
-      <div class="card"><div class="stat">28</div><p>выпусков примеров проверяет <code>check_examples.py</code>: у каждой уязвимости одна запись</p></div>
-    </div>
-    <div class="col grow">
-      <p class="muted" style="font-size: 23px; margin-bottom: 12px;">На запущенном стеке</p>
-      <table>
-        <tr><th>Проверка</th><th>Результат</th></tr>
-        <tr><td>Нагрузка на чтение, k6, 50 пользователей</td><td>4 реплики api: 615 запр/с, p95 128 мс</td></tr>
-        <tr><td>Остановка одной из четырёх реплик api</td><td>0 неудачных из 15&nbsp;670 запросов</td></tr>
-        <tr><td>Остановка Ollama посреди сборки</td><td>выпуск готов через 2 с, недостающее дописал автономный алгоритм</td></tr>
-        <tr><td><code>scripts/smoke.py</code>, 15 октября</td><td>прошёл каждый шаг пути жюри</td></tr>
-      </table>
-    </div>
-  </div>
-  <p class="src">ruff и mypy --strict, oxlint и tsc без замечаний. docs/QUALITY.md, «Тесты» и «Что проверено»; docs/CI.md.</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>15</span></div>
-</section>
-
-<section class="slide">
-  <div class="kicker">Критерий 2 · Персонализация</div>
-  <h2>Резюме задаёт профиль с первой минуты, и лента сразу подбирается под специалиста</h2>
-  <div class="row grow" style="margin-top: 40px; gap: 48px;">
-    <div class="col grow">
-      <div class="browser fit" style="height: 520px;"><div class="bar"><i></i><i></i><i></i><span>Загрузка резюме</span></div><img src="img/resume-card.png" alt="Резюме"></div>
-      <p class="caption">Должность, навыки и предложенные темы. Имя и контакты вырезаются до анализа, файл удаляется сразу после разбора; сканы читает docling.</p>
-    </div>
-    <div class="col grow">
-      <div class="browser fit" style="height: 520px;"><div class="bar"><i></i><i></i><i></i><span>Для вас</span></div><img src="../screenshots/feed.png" alt="Лента"></div>
-      <p class="caption">У каждой статьи видно, почему она здесь: интерес, опыт из резюме, похожее на то, что читатель отметил; «Причины подбора» раскладывают оценку на части.</p>
-    </div>
-  </div>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>16</span></div>
-</section>
-
-<section class="slide">
-  <div class="kicker">Критерий 2 · Рекомендательная система</div>
-  <h2>Своя рекомендательная модель строит ленту по вкусу читателя и учится на его отметках</h2>
-  <div class="arch" style="margin-top: 30px; gap: 18px;">
-    <div class="node">1. Кандидаты<span>один SQL-запрос: близость статей за две недели к каждой грани вкуса по эмбеддингам pgvector и ключевым словам</span></div>
-    <div class="node">2. Оценка<span>грани с доверием: интерес 0,45, резюме 0,10, выученная по лайкам до 0,35, избегаемая вычитается; плюс свежесть, источник, «нравится коллегам»</span></div>
-    <div class="node">3. Перестановка<span>копии одной истории выбрасываются, серии одного источника разбиваются, каждое седьмое место - «Что-то новое»</span></div>
-    <div class="node">4. Обучение<span>ночью LightGBM LambdaRank на показах и отметках из ClickHouse с поправкой на место в списке</span></div>
-  </div>
-  <div class="row grow" style="margin-top: 30px; gap: 56px;">
-    <div class="col" style="flex: 0 0 860px; gap: 14px;">
-      <p style="font-size: 23px;">Каждая карточка объясняет оценку: какой интерес совпал, что из резюме, на что похоже из отмеченного. Отметки весят по-разному (сохранение 1,2, лайк 1,0, открытие 0,4, скрытие -0,7, дизлайк -1,0) и слабеют вдвое за три недели.</p>
-      <p style="font-size: 23px;">LightGBM заменяет ручные веса, только если на трёх последних днях поднимает nDCG@20 больше чем на 0,01; половина читателей остаётся контрольной группой. Так в выдачу попадает только модель, которая доказала прирост на отметках читателей.</p>
-    </div>
-    <div class="col grow">
-      <p class="muted" style="font-size: 23px; margin-bottom: 10px;">nDCG@20 ленты специалиста по ИБ АСУ ТП до первых отметок</p>
-      <div class="chart" id="chart-recsys"></div>
-      <p class="caption">Интересы дают главный прирост, резюме помогает, пока интересов нет. Неделя из 871 статьи.</p>
-    </div>
-  </div>
-  <p class="src">docs/ARCHITECTURE.md, «Персональная лента»; docs/DECISIONS.md, «Обучаемое ранжирование»; docs/eval/recsys.md, docs/eval/ranker.md.</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>17</span></div>
-</section>
-
-<section class="slide">
-  <div class="kicker">Критерий 2 · Персонализация</div>
-  <h2>Профиль учится на отметках читателя и передаётся коллеге по ссылке</h2>
-  <div class="row grow" style="margin-top: 40px; gap: 48px;">
-    <div class="col grow">
-      <div class="browser fit" style="height: 520px;"><div class="bar"><i></i><i></i><i></i><span>Интересы · Подстройка по отметкам</span></div><img src="../screenshots/adapt-panel.png" alt="Подстройка профиля"></div>
-      <p class="caption">Вес интереса растёт от «больше такого» и падает от «меньше такого», не больше чем на десятую часть; новая тема предлагается по статьям, которые профиль сам не нашёл. Сохранённый профиль при этом не меняется.</p>
-    </div>
-    <div class="col grow">
-      <div class="browser fit" style="height: 520px;"><div class="bar"><i></i><i></i><i></i><span>Профиль по ссылке</span></div><img src="../screenshots/share-accept.png" alt="Профиль по ссылке"></div>
-      <p class="caption">Коллега открывает ссылку и добавляет копию профиля себе. Выпуски, отметки и резюме владельца по ссылке не видны.</p>
-    </div>
-  </div>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>18</span></div>
-</section>
-
-<section class="slide">
-  <div class="kicker">Критерий 2 · Персонализация</div>
-  <h2>Читатель входит одной кнопкой, проходит тур по разделам и читает статьи по-русски</h2>
-  <div class="row grow" style="margin-top: 40px; gap: 52px;">
-    <div class="col" style="flex: 0 0 960px;">
-      <div class="browser fit" style="height: 600px;"><div class="bar"><i></i><i></i><i></i><span>localhost:8080</span></div><img src="../screenshots/login.png" alt="Вход"></div>
-    </div>
-    <div class="col grow" style="gap: 20px;">
-      <div class="card"><h3>Общие аккаунты</h3><p>«Войти как читатель» открывает четыре примера профилей без пароля, «Войти как администратор» добавляет «Аналитику» и инструменты каталога.</p></div>
-      <div class="card"><h3>Знакомство</h3><p>Десять шагов по всем разделам с мини-превью, затем первый профиль интересов по резюме, из шаблона или вручную и первый выпуск.</p></div>
-      <div class="card"><h3>Перевод в читалке</h3><p>Английские и китайские статьи модель переводит на русский. Код, номера CVE и БДУ и числа не меняются, оригинал открывается одной кнопкой.</p></div>
-    </div>
-  </div>
-  <p class="src">docs/TASK-MAP.md, «Что нового в финале»; docs/DECISIONS.md, «Перевод английских и китайских статей».</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>19</span></div>
-</section>
-
-<section class="slide">
-  <div class="kicker">Критерий 3 · Бизнес-ориентированность</div>
-  <h2>Выпуск приходит по расписанию, в Telegram-канал компании и ИИ-ассистенту сотрудника</h2>
-  <div class="row grow" style="margin-top: 40px; gap: 40px;">
-    <div class="col grow" style="flex-basis: 0;">
-      <div class="browser fit" style="height: 470px;"><div class="bar"><i></i><i></i><i></i><span>Расписание</span></div><img src="img/schedule-popup.png" alt="Расписание" style="object-fit: contain; object-position: top; background: #f5f5f5;"></div>
-      <p class="caption">Каждый день, по будням или раз в неделю, в местное время читателя. Кнопка «На почту» шлёт выпуск письмом с DOCX во вложении.</p>
-    </div>
-    <div class="col grow" style="flex-basis: 0;">
-      <div class="browser fit" style="height: 470px;"><div class="bar"><i></i><i></i><i></i><span>Пост в канале</span></div><img src="../screenshots/telegram-mock.png" alt="Пост в Telegram"></div>
-      <p class="caption">Боты публикуют новости по расписанию: у каждого канала своя аудитория, тон и подача ссылок, черновик уходит на проверку.</p>
-    </div>
-    <div class="col grow" style="flex-basis: 0;">
-      <div class="browser fit" style="height: 470px;"><div class="bar"><i></i><i></i><i></i><span>Доступ для ИИ-ассистентов</span></div><img src="img/mcp-keys.png" alt="Ключ MCP" style="object-fit: contain; object-position: top; background: #f5f5f5;"></div>
-      <p class="caption">MCP-сервер отдаёт Claude, Cursor и другим клиентам ленту, сохранённое, выпуски и интересы только этого читателя. Ключ показывается один раз.</p>
-    </div>
-  </div>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>20</span></div>
-</section>
-
-<section class="slide">
-  <div class="kicker">Критерий 3 · Бизнес-ориентированность</div>
-  <h2>Ролик по выпуску и брифинг для руководства озвучивает Yandex SpeechKit без видеокарты</h2>
-  <div class="row grow" style="margin-top: 40px; gap: 48px;">
-    <div class="col" style="flex: 0 0 720px;">
-      <div class="browser fit" style="height: 560px;"><div class="bar"><i></i><i></i><i></i><span>Короткое видео</span></div><img src="../screenshots/shorts-panel.png" alt="Короткое видео"></div>
-      <p class="caption">Двенадцать голосов SpeechKit или четыре голоса Qwen3-TTS в стеке, страница называет движок и голос.</p>
-    </div>
-    <div class="col grow" style="gap: 22px;">
-      <div class="browser"><img src="../screenshots/shorts-frames.png" alt="Кадры ролика"></div>
-      <p style="font-size: 24px;">Вертикальный ролик на полминуты-минуту: картинки статей, крупная цифра новости, QR-код статьи и субтитры по словам. Цифры сценария сверяются с текстом новости.</p>
-      <p style="font-size: 24px;">«Слушать брифинг» пересказывает выпуск руководству голосом за две минуты, без номеров уязвимостей и адресов.</p>
-    </div>
-  </div>
-  <p class="src">docs/ARCHITECTURE.md, «Короткие видео» и «Брифинг голосом»; docs/INSTALL.md, «Модели Яндекса».</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>21</span></div>
-</section>
-
-<section class="slide">
-  <div class="kicker">Критерий 3 · Бизнес-ориентированность</div>
-  <h2>Аналитика показывает, что сотрудники видят, открывают и отмечают</h2>
-  <div class="row grow" style="margin-top: 40px; gap: 48px;">
-    <div class="col grow">
-      <div class="browser fit" style="height: 520px;"><div class="bar"><i></i><i></i><i></i><span>Аналитика</span></div><img src="../screenshots/analytics.png" alt="Аналитика"></div>
-      <p class="caption">Читатели, доли открытий и отметок, путь от показа к отметке и дни. Только числа, без текстов и адресов; раздел видит администратор.</p>
-    </div>
-    <div class="col grow">
-      <div class="browser fit" style="height: 520px;"><div class="bar"><i></i><i></i><i></i><span>Аналитика · ранжирование</span></div><img src="../screenshots/analytics-ranker.png" alt="Ранжирование" style="object-fit: contain; object-position: center; background: #f5f5f5;"></div>
-      <p class="caption">Ручные веса и обученная модель по группам читателей, ночные обучения. Те же события - метрики пилота: открытия и отметки по неделям.</p>
-    </div>
-  </div>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>22</span></div>
-</section>
-
-<section class="slide">
-  <div class="kicker">Критерий 3 · Бизнес-ориентированность</div>
-  <h2>Четырём читателям с недельными выпусками ассистент экономит 27&nbsp;486&nbsp;₽ в месяц</h2>
-  <div class="row grow" style="margin-top: 40px; gap: 64px;">
-    <div class="col" style="flex: 0 0 980px;"><div class="chart" id="chart-cost"></div></div>
-    <div class="col grow" style="gap: 22px; justify-content: center;">
-      <div><div class="big">27&nbsp;486&nbsp;₽</div><p class="muted">экономии в месяц на трёх специалистов и руководство, <b>329&nbsp;832&nbsp;₽</b> в год</p></div>
-      <p>Ассистент окупается, пока ручной выпуск дольше 22 минут. У аналитика он занял 102,5 минуты, в 4,7 раза дольше.</p>
-      <p>Выпуск специалисту: 171&nbsp;753 токена на вход и 17&nbsp;338 на выход, 3,04&nbsp;₽. Руководству 1,96&nbsp;₽.</p>
-    </div>
-  </div>
-  <p class="src">Хабр Карьера, 10.08.2026; тарифы Ollama; курс ЦБ 83,9497 ₽ на 15.10.2026; Selectel. Проверено 14.10.2026. docs/BUSINESS.md, «Экономика».</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>23</span></div>
-</section>
-
-<section class="slide">
-  <div class="kicker">Внедрение</div>
-  <h2>Пилот на 4 недели проверит главное число: полноту выпуска против аналитика</h2>
-  <div class="row grow" style="margin-top: 44px; gap: 64px;">
-    <div class="col" style="flex: 0 0 900px; gap: 22px;">
-      <div class="card"><h3>Установка</h3><p>Закрытый контур: образы, веса модели, корпоративный прокси, проверочный сценарий. 10-20 сотрудников из разных групп, у каждого свой профиль.</p></div>
-      <div class="card"><h3>Что измеряем</h3><p>Время ручной сборки и проверки, полнота «обязательных» по разметке человека, nDCG@20, доля открытых записей и отметок. Шкала, файлы и скрипт разметки готовы.</p></div>
-      <div class="card" style="border-color: var(--accent); background: var(--accent-tint);"><h3>Успех</h3><p style="color: var(--text);">Полнота «обязательных» не ниже 90% и проверка недельного выпуска не дольше 30 минут.</p></div>
-    </div>
-    <div class="col grow">
-      <p class="muted" style="font-size: 23px;">Попробовать</p>
-      <div class="cmd">docker compose up -d --build</div>
-      <p style="font-size: 23px; margin-top: 12px;">Откройте localhost:8080 и нажмите «Войти как читатель».</p>
-      <div class="cmd">docker compose run --rm cli digest</div>
-      <p style="font-size: 23px; margin-top: 12px;">Оба выпуска в Markdown и DOCX в папке out/.</p>
-      <p style="font-size: 23px; margin-top: 30px;">Репозиторий: git.codenrock.com/codenrock/ii-assistenty/misis-mojarung/assistent-dlya-sozdaniya-it-ib-daydzhestov</p>
-    </div>
-  </div>
-  <p class="src">docs/BUSINESS.md, «Пилот»; docs/eval/human; README, «Быстрый запуск».</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>24</span></div>
-</section>
-
-<script>
-// Charts are drawn from the numbers in the documents: each mark comes from a value and one scale.
-const C = { text: '#1d2a30', muted: '#55646a', faint: '#86939a', line: '#d6dbd8', primary: '#2f5f66', soft: '#8fb0b4', accent: '#a8743d', tint: '#e3ebe9' }
-const fmt = (n) => n.toLocaleString('ru-RU')
-const svg = (w, h, body) => `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">${body}</svg>`
-const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
-
-/** Horizontal bars from zero with direct labels; one row may be highlighted. */
-function hbars(id, rows, { width, label = 300, row = 54, max, unit = '', highlight = -1 } = {}) {
-  const top = Math.max(...rows.map((r) => r.value))
-  const scale = (width - label - 170) / (max ?? top)
-  let body = ''
-  rows.forEach((r, i) => {
-    const y = i * row
-    const w = Math.max(2, r.value * scale)
-    const fill = i === highlight ? C.accent : (r.soft ? C.soft : C.primary)
-    body += `<text x="0" y="${y + row / 2 + 8}" font-size="23" fill="${C.text}">${esc(r.label)}</text>`
-    body += `<rect x="${label}" y="${y + 9}" width="${w}" height="${row - 18}" rx="5" fill="${fill}"/>`
-    body += `<text x="${label + w + 14}" y="${y + row / 2 + 8}" font-size="23" font-weight="650" fill="${C.text}">${esc(r.text ?? fmt(r.value) + unit)}</text>`
-    if (r.extra) body += `<text x="${width}" y="${y + row / 2 + 8}" font-size="21" fill="${C.muted}" text-anchor="end">${esc(r.extra)}</text>`
-  })
-  document.getElementById(id).innerHTML = svg(width, rows.length * row + 4, body)
-}
-
-/** Columns from zero with values on top and labels below. */
-function columns(id, cols, { width, height, highlight = -1, unit = '' }) {
-  const top = Math.max(...cols.map((c) => c.value))
-  const base = height - 64
-  const slot = width / cols.length
-  const scale = (base - 60) / top
-  let body = `<line x1="0" y1="${base}" x2="${width}" y2="${base}" stroke="${C.line}" stroke-width="2"/>`
-  cols.forEach((c, i) => {
-    const h = c.value * scale
-    const x = i * slot + slot * 0.2
-    const w = slot * 0.6
-    const fill = i === highlight ? C.accent : C.soft
-    body += `<rect x="${x}" y="${base - h}" width="${w}" height="${h}" rx="6" fill="${fill}"/>`
-    body += `<text x="${x + w / 2}" y="${base - h - 16}" font-size="28" font-weight="700" fill="${i === highlight ? C.accent : C.text}" text-anchor="middle">${fmt(c.value)}${unit}</text>`
-    body += `<text x="${x + w / 2}" y="${base + 40}" font-size="24" fill="${C.muted}" text-anchor="middle">${esc(c.label)}</text>`
-  })
-  document.getElementById(id).innerHTML = svg(width, height, body)
-}
-
-// BUSINESS, «Экономика»: manual assembly per month by readers with a weekly issue.
-columns('chart-manual', [
-  { label: '2 читателя', value: 17499 },
-  { label: '4 читателя', value: 34999 },
-  { label: '10 читателей', value: 87496 },
-  { label: '20 читателей', value: 174993 },
-], { width: 820, height: 470, highlight: 1, unit: ' ₽' })
-
-// DECISIONS, «Источники из датасета».
-hbars('chart-kinds', [
-  { label: 'Ленты RSS и Atom', value: 68 },
-  { label: 'Telegram-каналы', value: 22 },
-  { label: 'Сайты без ленты', value: 12 },
-  { label: 'API сайта', value: 2 },
-], { width: 700, label: 270, row: 50 })
-
-hbars('chart-themes', [
-  { label: 'Безопасность', value: 76 },
-  { label: 'ИТ', value: 9 },
-  { label: 'Энергетика', value: 8 },
-  { label: 'Регуляторы', value: 6 },
-  { label: 'АСУ ТП', value: 5 },
-], { width: 700, label: 270, row: 44 })
-
-// eval/vs-analyst.md.
-hbars('chart-analyst', [
-  { label: 'Аналитик', value: 205, text: '205 мин', soft: true },
-  { label: 'Ассистент', value: 1.4, text: '85 с' },
-], { width: 760, label: 190, row: 96, highlight: 1 })
-
-// README and INSTALL, «Модели Яндекса»: the same scenario, seconds.
-hbars('chart-yandex-spec', [
-  { label: 'Qwen3.6 35B, Yandex', value: 24, text: '24 с' },
-  { label: 'gpt-oss-120b, Ollama', value: 193, text: '193 с', soft: true },
-], { width: 820, label: 290, row: 70, max: 193, highlight: 0 })
-
-hbars('chart-yandex-mgmt', [
-  { label: 'Qwen3.6 35B, Yandex', value: 17, text: '17 с' },
-  { label: 'gpt-oss-120b, Ollama', value: 113, text: '113 с', soft: true },
-], { width: 820, label: 290, row: 70, max: 193, highlight: 0 })
-
-// examples/models/README.md, runs of 15 October 2026.
-hbars('chart-models', [
-  { label: 'gpt-oss:120b, повтор', value: 17, text: '17 из 20', extra: '96 с' },
-  { label: 'gemma4:31b', value: 16, text: '16 из 20', extra: '98 с' },
-  { label: 'без модели', value: 16, text: '16 из 20', extra: '1 с', soft: true },
-  { label: 'gpt-oss:20b', value: 15, text: '15 из 20', extra: '222 с' },
-  { label: 'nemotron-3-nano:30b', value: 14, text: '14 из 20', extra: '201 с' },
-  { label: 'qwen3.5:9b, в стеке', value: 13, text: '13 из 20', extra: '188 с' },
-], { width: 1080, label: 320, row: 92, max: 20, highlight: 0 })
-
-// eval/recsys.md.
-hbars('chart-recsys', [
-  { label: 'Только свежесть', value: 0.120, text: '0,12', soft: true },
-  { label: 'Только резюме', value: 0.277, text: '0,28' },
-  { label: 'Только интересы', value: 0.547, text: '0,55' },
-  { label: 'Интересы и резюме', value: 0.546, text: '0,55' },
-], { width: 760, label: 260, row: 64, max: 0.6, highlight: 2 })
-
-// The closed perimeter as a picture: the stack inside, one proxy out.
-document.getElementById('chart-airgap').innerHTML = svg(760, 300, `
-  <rect x="2" y="2" width="470" height="296" rx="18" fill="${C.tint}" stroke="${C.soft}" stroke-width="2"/>
-  <text x="26" y="44" font-size="22" font-weight="650" fill="${C.primary}">Внутренние сети Docker</text>
-  ${['api и воркеры', 'PostgreSQL, Valkey', 'Ollama или vLLM', 'ClickHouse'].map((t, i) =>
-    `<rect x="${26 + (i % 2) * 220}" y="${70 + Math.floor(i / 2) * 104}" width="200" height="84" rx="12" fill="#fff" stroke="${C.line}"/>
-     <text x="${126 + (i % 2) * 220}" y="${119 + Math.floor(i / 2) * 104}" font-size="20" fill="${C.text}" text-anchor="middle">${t}</text>`).join('')}
-  <rect x="520" y="104" width="230" height="92" rx="12" fill="#fff" stroke="${C.accent}" stroke-width="2"/>
-  <text x="635" y="142" font-size="21" font-weight="650" fill="${C.text}" text-anchor="middle">прокси egress</text>
-  <text x="635" y="172" font-size="18" fill="${C.muted}" text-anchor="middle">порты 80 и 443, журнал</text>
-  <line x1="472" y1="150" x2="518" y2="150" stroke="${C.accent}" stroke-width="3"/>
-  <text x="635" y="236" font-size="18" fill="${C.muted}" text-anchor="middle">→ источники</text>`)
-
-// BUSINESS, «Экономика»: four readers with a weekly issue, manual work against the assistant's costs.
-;(function cost() {
-  const manual = 34999
-  const parts = [
-    { label: 'сервер под стек: 4 ядра, 8 ГБ', value: 3476, fill: C.soft },
-    { label: 'сопровождение, 2 часа администратора', value: 2357, fill: '#b9cdd0' },
-    { label: 'тариф облачной модели, $20', value: 1679, fill: C.accent },
-  ]
-  const W = 980, label = 230, scale = (W - label - 40) / manual
-  let body = `<text x="0" y="74" font-size="25" fill="${C.text}">Вручную</text>
-    <rect x="${label}" y="40" width="${manual * scale}" height="64" rx="6" fill="${C.soft}"/>
-    <text x="${label + manual * scale - 16}" y="82" font-size="27" font-weight="700" fill="#fff" text-anchor="end">34 999 ₽</text>
-    <text x="0" y="214" font-size="25" fill="${C.text}">С ассистентом</text>`
-  let x = label
-  parts.forEach((p) => { body += `<rect x="${x}" y="180" width="${p.value * scale}" height="64" fill="${p.fill}"/>`; x += p.value * scale })
-  body += `<text x="${x + 16}" y="222" font-size="27" font-weight="700" fill="${C.text}">7 513 ₽</text>`
-  parts.forEach((p, i) => {
-    const y = 320 + i * 52
-    body += `<rect x="${label}" y="${y - 20}" width="24" height="24" rx="4" fill="${p.fill}"/>
-      <text x="${label + 40}" y="${y}" font-size="22" fill="${C.muted}">${p.label}</text>
-      <text x="${W - 40}" y="${y}" font-size="22" fill="${C.text}" text-anchor="end">${fmt(p.value)} ₽</text>`
-  })
-  body += `<text x="${label}" y="${320 + parts.length * 52 + 14}" font-size="21" fill="${C.faint}">Ручная сборка: 102,5 минуты на выпуск, 8 750 ₽ в месяц на читателя</text>`
-  document.getElementById('chart-cost').innerHTML = svg(W, 520, body)
-})()
-</script>
 </body>
 </html>
