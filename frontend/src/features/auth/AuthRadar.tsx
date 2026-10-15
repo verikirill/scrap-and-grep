@@ -8,15 +8,22 @@
 const SWEEP_S = 12
 
 // Where the finds are: an angle clockwise from the top and a share of the radius.
+// The radar is far wider than the side; the finds keep to the part in view.
 const BLIPS = [
-  { angle: 28, radius: 0.62 },
-  { angle: 74, radius: 0.34 },
-  { angle: 131, radius: 0.83 },
-  { angle: 168, radius: 0.5 },
-  { angle: 222, radius: 0.71 },
-  { angle: 263, radius: 0.27 },
-  { angle: 301, radius: 0.9 },
-  { angle: 338, radius: 0.46 },
+  { angle: 18, radius: 0.31 },
+  { angle: 47, radius: 0.15 },
+  { angle: 74, radius: 0.42 },
+  { angle: 102, radius: 0.24 },
+  { angle: 131, radius: 0.36 },
+  { angle: 155, radius: 0.12 },
+  { angle: 176, radius: 0.47 },
+  { angle: 199, radius: 0.29 },
+  { angle: 222, radius: 0.4 },
+  { angle: 248, radius: 0.18 },
+  { angle: 271, radius: 0.33 },
+  { angle: 301, radius: 0.44 },
+  { angle: 322, radius: 0.22 },
+  { angle: 344, radius: 0.37 },
 ]
 
 export function AuthRadar() {
