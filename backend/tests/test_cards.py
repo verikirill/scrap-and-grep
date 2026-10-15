@@ -110,6 +110,26 @@ def test_an_update_row_with_a_figure_the_text_lacks_goes_whole_caveat_and_all() 
     assert removed == ["Обновление"]
 
 
+@pytest.mark.parametrize(
+    ("source", "kept"),
+    [
+        # The model took the version of the standard for the score.
+        ("Вектор CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H, оценка не указана.", ""),
+        ("Оценка по CVSS v4.0 не приводится.", ""),
+        # A real score of 4.0 stays, even next to the version.
+        ("Оценка 4.0 по CVSS 3.1: уязвимость средней опасности.", "4.0"),
+    ],
+)
+def test_a_cvss_version_is_no_score(source: str, kept: str) -> None:
+    version = "3.1" if "3.1/" in source else "4.0"
+    claimed = VulnerabilityCard(cvss_score=kept or version)
+
+    checked, removed = check_vulnerability(claimed, source)
+
+    assert checked.cvss_score == kept
+    assert removed == ([] if kept else ["Оценка CVSS"])
+
+
 def test_an_advisory_number_the_text_gives_is_not_reported_as_removed() -> None:
     # The prompt asks for other ids too. A CISA advisory is not one the card
     # keeps, and the text has it: "not in the text" would be false.

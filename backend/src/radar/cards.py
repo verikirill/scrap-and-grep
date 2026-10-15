@@ -259,6 +259,18 @@ def _checked_ids(values: Sequence[str], source: str) -> tuple[list[str], list[st
     return kept, [value for value in claimed if value not in named]
 
 
+def _only_a_cvss_version(score: str, source: str) -> bool:
+    """The score is "3.1" or "4.0" and the text has that figure only as the
+    version of the standard ("CVSS:3.1/...", "CVSS v4.0"): no score at all."""
+    value = score.strip().replace(",", ".")
+    if not re.fullmatch(r"[234]\.[01]", value):
+        return False
+    figure = re.escape(value)
+    anywhere = len(re.findall(rf"(?<![\d.]){figure}(?![\d.]*\d)", source))
+    as_version = len(re.findall(rf"CVSS[\s:]*(?:v|версии\s*)?{figure}", source, re.IGNORECASE))
+    return anywhere > 0 and anywhere == as_version
+
+
 def check_vulnerability(
     card: VulnerabilityCard, source: str
 ) -> tuple[VulnerabilityCard, list[str]]:
@@ -276,7 +288,9 @@ def check_vulnerability(
         ids = known
     updates: dict[str, object] = {"ids": tuple(ids)}
     score = numbers(card.cvss_score)
-    if card.cvss_score and not (score and score <= allowed):
+    if card.cvss_score and not (
+        score and score <= allowed and not _only_a_cvss_version(card.cvss_score, source)
+    ):
         updates["cvss_score"] = ""
         removed.append("Оценка CVSS")
     if card.cvss_vector and _compact(card.cvss_vector) not in _compact(source):
