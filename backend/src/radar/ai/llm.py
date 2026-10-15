@@ -94,16 +94,29 @@ def _json_text(content: str) -> str:
     return text[start : end + 1] if 0 <= start < end else text
 
 
+def _without_nulls(schema: type[BaseModel], data: object) -> object:
+    """An optional field the model wrote as null takes its default. Alice AI
+    LLM marks every empty card field so, a list or a string alike, and each
+    one failed the whole card; a required field stays null and still fails."""
+    if not isinstance(data, dict):
+        return data
+    fields = schema.model_fields
+    return {
+        key: value
+        for key, value in data.items()
+        if value is not None or key not in fields or fields[key].is_required()
+    }
+
+
 def _parsed[T: BaseModel](schema: type[T], answer: str) -> T:
     """The answer checked against its schema. JSON that is only broken, a
     missing comma or an unclosed bracket, is mended first: asking the model
     again costs a call, and measured on the cloud it broke the same way twice."""
     try:
-        return schema.model_validate_json(answer)
-    except ValidationError as error:
-        if not any(problem["type"] == "json_invalid" for problem in error.errors()):
-            raise
-        return schema.model_validate(json_repair.loads(answer, skip_json_loads=True))
+        data = json.loads(answer)
+    except json.JSONDecodeError:
+        data = json_repair.loads(answer, skip_json_loads=True)
+    return schema.model_validate(_without_nulls(schema, data))
 
 
 def _problems(error: ValidationError) -> str:
