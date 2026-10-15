@@ -34,8 +34,8 @@ export type BrandCatPose = 'search' | 'sleep'
 
 /**
  * The cat from the logo, put together from its parts so that they can move:
- * searching, it sways its tail, tilts its head, blinks and glides the
- * magnifier over the paper; asleep, it only breathes. Decorative: the text
+ * searching, it sways its tail, tilts its head and blinks; asleep, it only
+ * breathes. Decorative: the text
  * next to it says what happened. Without motion under "reduce motion".
  */
 export function BrandCat({
@@ -72,7 +72,7 @@ export function BrandCat({
               />
               <Part
                 name="eye-right"
-                box={{ x: 345, y: 150, w: 94, h: 74 }}
+                box={{ x: 345, y: 136, w: 94, h: 74 }}
                 className="brand-cat__eye-open"
               />
             </>
@@ -84,14 +84,14 @@ export function BrandCat({
           />
           <Part
             name="eye-right-closed"
-            box={{ x: 343, y: 169, w: 98, h: 36 }}
+            box={{ x: 343, y: 155, w: 98, h: 36 }}
             className="brand-cat__eye-closed"
           />
         </div>
         <Part name="paper" box={{ x: 170, y: 290, w: 324, h: 288 }} />
-        {/* The magnifier glides on two axes out of step: a slow oval. */}
-        <div className="brand-cat__group brand-cat__glass-x">
-          <div className="brand-cat__group brand-cat__glass-y">
+        {/* The magnifier stays put: the cat moves enough. */}
+        <div className="brand-cat__group">
+          <div className="brand-cat__group">
             <span className="brand-cat__lens" style={place({ x: 407, y: 430, w: 150, h: 150 })} />
             <Part name="glass" box={{ x: 385, y: 410, w: 227, h: 236 }} />
           </div>

@@ -423,13 +423,6 @@
 .brand-cat[data-pose='search'] .brand-cat__eye-closed {
   animation: brand-cat-eye-closed 4s linear infinite;
 }
-/* Two axes a quarter of a cycle apart: the magnifier traces an oval. */
-.brand-cat[data-pose='search'] .brand-cat__glass-x {
-  animation: brand-cat-glide-x 3s ease-in-out infinite alternate;
-}
-.brand-cat[data-pose='search'] .brand-cat__glass-y {
-  animation: brand-cat-glide-y 3s ease-in-out -1.5s infinite alternate;
-}
 .brand-cat[data-pose='sleep'] .brand-cat__breath {
   animation: brand-cat-breathe 6s ease-in-out infinite;
 }
@@ -490,22 +483,6 @@
   95.5%,
   98% {
     opacity: 1;
-  }
-}
-@keyframes brand-cat-glide-x {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-2%);
-  }
-}
-@keyframes brand-cat-glide-y {
-  from {
-    transform: translateY(-0.75%);
-  }
-  to {
-    transform: translateY(0.75%);
   }
 }
 @keyframes brand-cat-breathe {
