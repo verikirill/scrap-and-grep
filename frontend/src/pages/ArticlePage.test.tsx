@@ -273,6 +273,28 @@ describe('ArticlePage in translation', () => {
     expect(screen.getByRole('heading', { level: 1, name: chinese.title })).toBeVisible()
   })
 
+  it.each([
+    [1, 'Переведено с китайского, 1 фрагмент оставлен в оригинале'],
+    [3, 'Переведено с китайского, 3 фрагмента оставлены в оригинале'],
+    [5, 'Переведено с китайского, 5 фрагментов оставлены в оригинале'],
+    [21, 'Переведено с китайского, 21 фрагмент оставлен в оригинале'],
+  ])('says how many fragments the model left in the original: %i', async (kept, note) => {
+    const chinese = makeEnglishArticleRead({
+      id: 504,
+      title: '西门子修复漏洞',
+      text_language: 'zh',
+    })
+    serveArticle(chinese)
+    serveTranslation(
+      makeArticleTranslation({ id: 504, source_language: 'zh', kept_original: kept }),
+    )
+    renderArticle(chinese.id)
+
+    expect(await screen.findByText(note)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: TRANSLATED_TITLE })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Показать оригинал' })).toBeInTheDocument()
+  })
+
   it('leaves a Russian article as it is and asks for no translation', async () => {
     serveArticle()
     const asked = serveTranslation()

@@ -214,6 +214,7 @@ export function makeArticleTranslation(
       }),
       makeCodeBlock(),
     ],
+    kept_original: 0,
     reason: null,
     ...overrides,
   }

@@ -270,6 +270,8 @@ export interface ArticleTranslation {
   language: 'ru'
   title: string | null
   blocks: Block[] | null
+  /** Fragments the model could not translate faithfully, left in the original. */
+  kept_original: number
   reason: string | null
 }
 

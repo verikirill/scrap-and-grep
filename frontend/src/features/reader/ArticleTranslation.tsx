@@ -1,10 +1,16 @@
 import type { ReactNode } from 'react'
 import { Language } from '../../components/icons'
 import { Loading, Skeleton, SkeletonText } from '../../components/loading'
+import { plural } from '../../lib/format'
 import type { ArticleText } from './useArticleText'
 
 const FROM: Record<'en' | 'zh', string> = { en: 'английского', zh: 'китайского' }
 const IN: Record<'en' | 'zh', string> = { en: 'английском', zh: 'китайском' }
+const KEPT: [string, string, string] = [
+  'фрагмент оставлен',
+  'фрагмента оставлены',
+  'фрагментов оставлены',
+]
 
 function Switch({ children, onClick }: { children: string; onClick: () => void }) {
   return (
@@ -18,7 +24,10 @@ function Switch({ children, onClick }: { children: string; onClick: () => void }
   )
 }
 
-/** A quiet line above the article: what language it is shown in, and the way to the other. */
+/**
+ * A quiet line above the article: what language it is shown in, how many
+ * fragments the model left in the original, and the way to the other.
+ */
 export function TranslationBar({
   text,
   onChoose,
@@ -28,6 +37,9 @@ export function TranslationBar({
 }) {
   if (text.state === 'native') return null
   let note = `Переведено с ${FROM[text.source]}`
+  if (text.state === 'translated' && text.keptOriginal > 0) {
+    note += `, ${text.keptOriginal} ${plural(text.keptOriginal, KEPT)} в оригинале`
+  }
   let action = <Switch onClick={() => onChoose(true)}>Показать оригинал</Switch>
   if (text.state === 'translating') note = `Переводим с ${FROM[text.source]}`
   if (text.state === 'original') {
