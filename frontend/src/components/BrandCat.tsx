@@ -61,7 +61,7 @@ export function BrandCat({
         <Part name="body" box={{ x: 70, y: 240, w: 344, h: 374 }} />
         <div className="brand-cat__group brand-cat__head">
           <Part name="ear-left" box={{ x: 170, y: 0, w: 111, h: 130 }} className="brand-cat__ear" />
-          <Part name="ear-right" box={{ x: 345, y: 28, w: 111, h: 129 }} />
+          <Part name="ear-right" box={{ x: 332, y: 14, w: 111, h: 129 }} />
           <Part name="head" box={{ x: 150, y: 60, w: 296, h: 237 }} />
           {!isAsleep && (
             <>
