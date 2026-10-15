@@ -217,7 +217,7 @@ class Settings(BaseSettings):
     # purpose without leaving a new account behind every visit.
     demo_login: bool = False
     # One-click sign-in to the shared accounts (radar.auth.shared): a reader
-    # with the example profiles and an information security analyst.
+    # with the example profiles and an administrator who sees the analytics.
     preset_login: bool = True
     # "off": no sign-in screen. A visitor without a session is entered as a
     # guest of their own at once, as the jury asked; registering stays in the

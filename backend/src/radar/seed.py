@@ -431,6 +431,7 @@ async def ensure_shared_account(session: AsyncSession, account: SharedAccount) -
             display_name=account.display_name,
             avatar_preset=account.avatar,
             onboarded_at=func.now(),
+            is_admin=account.is_admin,
         )
         .on_conflict_do_nothing(index_elements=["email"])
         .returning(User.id)
@@ -438,6 +439,7 @@ async def ensure_shared_account(session: AsyncSession, account: SharedAccount) -
     user = (await session.execute(select(User).where(User.email == account.email))).scalar_one()
     if user.onboarded_at is None:
         user.onboarded_at = datetime.now(UTC)
+    user.is_admin = account.is_admin
     existing = set(await session.scalars(select(Profile.name).where(Profile.user_id == user.id)))
     for spec in DEFAULT_PROFILES:
         if spec.name in existing or (account.profiles and spec.name not in account.profiles):

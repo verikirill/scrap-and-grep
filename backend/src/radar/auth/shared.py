@@ -2,8 +2,9 @@
 
 A visitor who wants to look around without registering presses a button and
 lands in a ready account: a reader with the example profiles, or an
-information security analyst. Everyone who presses the button is in the same
-account, so it has no password, skips the introduction and cannot be deleted.
+administrator who also sees the analytics and the catalog tools. Everyone
+who presses the button is in the same account, so it has no password, skips
+the introduction and cannot be deleted.
 """
 
 from dataclasses import dataclass
@@ -23,6 +24,7 @@ class SharedAccount:
     # Names of the example profiles (radar.seed.DEFAULT_PROFILES) it starts
     # with; empty means all of them.
     profiles: tuple[str, ...] = ()
+    is_admin: bool = False
 
 
 SHARED_ACCOUNTS: dict[str, SharedAccount] = {
@@ -35,14 +37,11 @@ SHARED_ACCOUNTS: dict[str, SharedAccount] = {
             avatar="sky",
         ),
         SharedAccount(
-            key="analyst",
-            email=f"analyst@{SERVICE_DOMAIN}",
-            display_name="Аналитик ИБ",
+            key="admin",
+            email=f"admin@{SERVICE_DOMAIN}",
+            display_name="Администратор",
             avatar="red",
-            profiles=(
-                "Специалист по ИБ АСУ ТП",
-                "Руководство и сотрудники: кибербезопасность",
-            ),
+            is_admin=True,
         ),
     )
 }
