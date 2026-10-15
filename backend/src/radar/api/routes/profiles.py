@@ -18,6 +18,7 @@ from radar.api.schemas import (
     ProfileDefaults,
     ProfileLook,
     ProfileOut,
+    ProfileTemplateOut,
     SharedProfileOut,
 )
 from radar.db.models import Profile
@@ -26,6 +27,7 @@ from radar.events import record
 from radar.logging import get_logger
 from radar.pipeline.sql_store import CachedQueryEmbedder
 from radar.recsys.service import forget_taste
+from radar.seed import DEFAULT_PROFILES, EXAMPLE_LOOKS
 from radar.selection.preview import build_preview
 from radar.store.profiles import lock_profiles
 from radar.worker.tasks import refresh_taste
@@ -103,6 +105,17 @@ async def list_profiles(session: SessionDep, user: CurrentUser) -> list[ProfileO
         select(Profile).where(Profile.user_id == user.id).order_by(Profile.created_at, Profile.id)
     )
     return [profile_out(profile) for profile in rows.scalars()]
+
+
+@router.get("/profile-templates")
+async def profile_templates(user: CurrentUser) -> list[ProfileTemplateOut]:
+    """Ready profiles for typical roles: the examples guests start with, for a
+    new reader to take one as their first profile instead of a blank form."""
+    looks = [EXAMPLE_LOOKS.get(spec.name, (None, None)) for spec in DEFAULT_PROFILES]
+    return [
+        ProfileTemplateOut(spec=spec, icon=icon, color=color)
+        for spec, (icon, color) in zip(DEFAULT_PROFILES, looks, strict=True)
+    ]
 
 
 async def _add(

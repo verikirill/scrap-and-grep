@@ -328,6 +328,9 @@ class User(Base):
     folded_sections: Mapped[list[str]] = mapped_column(
         ARRAY(String(120)), default=list, server_default="{}"
     )
+    # When the reader finished or skipped the first-run introduction; NULL
+    # until then, and the web app offers it once. Guests never get it.
+    onboarded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class ApiKey(Base):
