@@ -18,6 +18,22 @@
   --field-border-width: 1px;
   --field-border: oklch(86% 0.006 286);
   --field-border-hover: oklch(78% 0.008 286);
+  /* The cat (components/Mascot.tsx): the black cat of the logo, plush-shaded. */
+  --mascot-fur: oklch(24% 0.02 268);
+  --mascot-fur-light: oklch(40% 0.03 268);
+  --mascot-rim: transparent;
+  --mascot-eye: oklch(98% 0.008 250);
+  --mascot-pupil: oklch(17% 0.02 268);
+  --mascot-ear: oklch(74% 0.09 10);
+  --mascot-glass: color-mix(in oklab, var(--accent) 18%, white);
+  --mascot-paper: white;
+  --mascot-ink: oklch(82% 0.01 268);
+  /* Page titles sit in a dark pill in both themes. */
+  --title-pill: oklch(22% 0.012 280);
+  --title-pill-foreground: oklch(98% 0 0);
+  /* The one call to action: the accent running into the violet of the tags. */
+  --cta-from: var(--accent);
+  --cta-to: oklch(55% 0.22 285);
 }
 
 .dark {
@@ -26,6 +42,15 @@
   --field-border-hover: oklch(40% 0.01 286);
   /* Secondary text a step lighter than HeroUI's: metadata on dark cards stays above 4.5:1. */
   --muted: oklch(76% 0.012 286);
+  /* A black cat on a near-black page: lighter fur and a faint rim keep its shape. */
+  --mascot-fur: oklch(31% 0.02 268);
+  --mascot-fur-light: oklch(48% 0.03 268);
+  --mascot-rim: oklch(62% 0.03 268 / 0.5);
+  --mascot-glass: color-mix(in oklab, var(--accent) 28%, var(--surface));
+  --mascot-paper: oklch(95% 0.005 268);
+  --mascot-ink: oklch(78% 0.01 268);
+  --title-pill: oklch(24% 0.008 286);
+  --cta-to: oklch(60% 0.2 285);
 }
 
 @theme inline {
@@ -133,6 +158,11 @@
     border-radius: 50%;
     background: var(--snow);
     box-shadow: 0 1px 3px rgb(0 0 0 / 0.2);
+  }
+
+  .mascot-rim {
+    stroke: var(--mascot-rim);
+    stroke-width: 1.2;
   }
 
   .tabular {
