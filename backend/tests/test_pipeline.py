@@ -20,7 +20,9 @@ from radar.domain import (
     GradedCandidate,
     Interest,
     ProfileSpec,
+    SelectedItem,
     Topic,
+    TopicName,
     VulnerabilityReference,
 )
 from radar.pipeline.graph import DigestState, build_graph
@@ -436,6 +438,43 @@ async def test_management_reads_no_identifiers_even_from_an_offline_digest(
         assert len(split_sentences(entry.summary)) <= 2
     overview = store.saved["overview"]
     assert all(technical_tokens(line) == [] for line in overview.highlights)
+
+
+class TechnicalNames(HeuristicIntelligence):
+    """Names a topic and an issue the way the model did for a specialist."""
+
+    async def name_topic(self, items: Sequence[SelectedItem], profile: ProfileSpec) -> TopicName:
+        return TopicName(
+            title="Citrix NetScaler: критические уязвимости CVE-2026-88771 и CVE-2026-88772",
+            overview="В теме обсуждаются новые разъяснения ФСТЭК о порядке и сроках "
+            "представления результатов оценки защищённости ИС, практические аспекты "
+            "аттестации по приказу 117 и методы приоритизации новостей об уязвимостях "
+            "вместо использования только CVSS-балла.",
+        )
+
+    async def overview(self, topics: Sequence[Topic], profile: ProfileSpec) -> DigestOverview:
+        return DigestOverview(
+            title="Cisco Catalyst SD-WAN Manager: критическая уязвимость CVE-2026-76504"
+        )
+
+
+async def test_management_reads_no_identifiers_in_a_topic_or_the_issue_title(
+    profile: ProfileSpec, security_week: list[ArticleRef]
+) -> None:
+    store = FakeStore(security_week)
+    graph = build_graph(_deps(store, TechnicalNames())).compile(checkpointer=InMemorySaver())
+    management = profile.model_copy(update={"max_items": 10, "audience": "management"})
+
+    await graph.ainvoke(_input(management), CONFIG)
+
+    assert store.saved is not None
+    assert store.saved["overview"].title == "Cisco Catalyst SD-WAN Manager: критическая уязвимость"
+    topics: list[Topic] = store.saved["topics"]
+    assert topics
+    assert topics[0].title == "Citrix NetScaler: критические уязвимости"
+    for topic in topics:
+        # Its only sentence names CVSS: the overview goes rather than read half a thought.
+        assert topic.overview == ""
 
 
 async def test_a_vulnerability_the_text_is_quiet_about_is_raised_by_the_catalogue(

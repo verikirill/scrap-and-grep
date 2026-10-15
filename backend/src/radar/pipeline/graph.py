@@ -29,6 +29,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.types import RetryPolicy, Send
 
 from radar.cards import (
+    OTHER_TOPIC,
     PRIORITY_ORDER,
     SECTION_KINDS,
     SECTION_TITLES,
@@ -36,6 +37,8 @@ from radar.cards import (
     check_entry,
     plain_brief,
     plain_lines,
+    plain_prose,
+    plain_title,
     priority,
     section_overview,
     source_text,
@@ -475,6 +478,9 @@ class DigestNodes:
             entry["index"]: TopicName.model_validate(entry["name"])
             for entry in state.get("topic_names", [])
         }
+        if profile.audience == "management":
+            # A topic is named from the articles' titles, which may carry a CVE.
+            names = {index: _plain_name(name) for index, name in names.items()}
         written = [
             item.model_copy(update={"text": texts.get(item.article.id)})
             for item in (SelectedItem.model_validate(raw) for raw in state["selected"])
@@ -493,7 +499,7 @@ class DigestNodes:
                 _section(SECTION_KINDS[kind], [items[article_id] for article_id in group])
                 if kind in SECTION_KINDS
                 else Topic(
-                    title=names[index].title if index in names else "Разное",
+                    title=names[index].title if index in names else OTHER_TOPIC,
                     overview=names[index].overview if index in names else "",
                     items=tuple(items[article_id] for article_id in group),
                 )
@@ -508,11 +514,12 @@ class DigestNodes:
         if topics:
             overview = await self._deps.intelligence.overview(topics, profile)
         else:
-            overview = DigestOverview(title=f"Дайджест для профиля «{profile.name}»")
+            overview = DigestOverview(title=_default_title(profile))
         if profile.audience == "management":
             # The offline overview takes headlines, which may carry a CVE.
             overview = overview.model_copy(
                 update={
+                    "title": plain_title(overview.title) or _default_title(profile),
                     "highlights": plain_lines(overview.highlights, 5),
                     "implications": plain_lines(overview.implications, 3),
                 }
@@ -589,6 +596,20 @@ def _section(kind: RecordKind, items: list[SelectedItem]) -> Topic:
 
 def _references(items: list[SelectedItem]) -> list[VulnerabilityReference]:
     return [reference for item in items if item.text for reference in item.text.references]
+
+
+def _default_title(profile: ProfileSpec) -> str:
+    return f"Дайджест для профиля «{profile.name}»"
+
+
+def _plain_name(name: TopicName) -> TopicName:
+    """A topic's name for management; an overview that is all ids goes."""
+    return name.model_copy(
+        update={
+            "title": plain_title(name.title) or OTHER_TOPIC,
+            "overview": plain_prose(name.overview),
+        }
+    )
 
 
 def _unique_titles(topics: list[Topic]) -> list[Topic]:

@@ -41,6 +41,8 @@ KIND_LABELS: dict[RecordKind, str] = {
 SECTION_TITLES: dict[RecordKind, str] = {"attack": "Атаки", "vulnerability": "Уязвимости"}
 # The same, keyed by the plain strings a graph state carries.
 SECTION_KINDS: dict[str | None, RecordKind] = {"attack": "attack", "vulnerability": "vulnerability"}
+# A topic whose name did not come back, or came back all ids.
+OTHER_TOPIC = "Разное"
 PRIORITY_LABELS: dict[Priority, str] = {"high": "высокий", "medium": "средний", "low": "низкий"}
 PRIORITY_ORDER: dict[Priority | None, int] = {"high": 0, "medium": 1, "low": 2, None: 3}
 EXPLOIT_LABELS: dict[Exploit, str] = {
@@ -418,12 +420,28 @@ def unsupported_figures(text: str, allowed: set[str]) -> set[str]:
 
 # What a manager is not given in the text: identifiers, scores, indicators,
 # addresses and version numbers. The links to the details stay.
+_SCORE = r"(?:от\s+)?\d{1,2}[.,]\d(?:\s*(?:-|до)\s*\d{1,2}[.,]\d)?"
+_NUMBERED = r"\d+(?:\.\d+)+"
 _TECHNICAL = [
     re.compile(r"\bCVE-\d{4}-\d{4,}\b", re.IGNORECASE),
     re.compile(r"\bBDU:\d{4}-\d{5}\b", re.IGNORECASE),
-    re.compile(r"\b(?:CVSS|IoCs?|IOCs?)\b"),
+    # The scale goes out with its version and the score, "CVSS 4.0 от 6,9 до
+    # 9,3 баллов": taking the word alone left management the figures.
+    re.compile(
+        rf"\bCVSS(?:\s*v?\d\.\d)?(?:\s*:?\s*{_SCORE})?(?:\s*балл[а-яё]*)?"
+        rf"|\b{_SCORE}\s*(?:балл[а-яё]*|из\s+10\b)",
+        re.IGNORECASE,
+    ),
+    re.compile(r"\b(?:IoCs?|IOCs?)\b"),
     re.compile(r"\b(?:[a-f0-9]{64}|[a-f0-9]{40}|[a-f0-9]{32})\b", re.IGNORECASE),
     re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b"),
+    # Two numbers are a version when the text calls them one, "«Каскад» версии
+    # 8.3"; bare, they may be a name, "Антифрод 3.0". The word goes with them.
+    re.compile(
+        rf"(?:\bдо\s+)?\b(?:верси[а-яё]*|version)\s+{_NUMBERED}"
+        rf"(?:(?:\s*[,/-]\s*|\s+(?:и|или|до)\s+){_NUMBERED})*",
+        re.IGNORECASE,
+    ),
 ]
 # Three numbers and more through dots; a date has the same shape and is no version.
 _VERSION = re.compile(r"\b\d+(?:\.\d+){2,}\b")
@@ -447,9 +465,24 @@ def technical_tokens(text: str) -> list[str]:
 def _without_tokens(text: str) -> str:
     for token in technical_tokens(text):
         text = text.replace(token, "")
-    text = re.sub(r"\(\s*[,;]?\s*\)", "", text)
+    # What joined the ids is left alone: "(CVE-1 и CVE-2)", "0-day, CVE-1, в".
+    text = re.sub(r"\(\s*(?:[,;]|и|или)?\s*\)", "", text)
+    text = re.sub(r"\s+(?:и|или)(?=\s*(?:[,.;:!?)]|$))", "", text)
     text = re.sub(r"\s+([,.;:!?])", r"\1", text)
+    text = re.sub(r"([,;])(?:\s*[,;])+", r"\1", text)
     return re.sub(r"\s{2,}", " ", text).strip()
+
+
+def plain_title(text: str) -> str:
+    """A title for management: what it says without the technical details."""
+    return _without_tokens(text) if technical_tokens(text) else text
+
+
+def plain_prose(text: str) -> str:
+    """Prose for management: the sentences without technical details."""
+    return " ".join(
+        sentence for sentence in split_sentences(text) if not technical_tokens(sentence)
+    )
 
 
 def plain_brief(text: ItemSummary) -> ItemSummary:
@@ -459,10 +492,9 @@ def plain_brief(text: ItemSummary) -> ItemSummary:
     plain = [sentence for sentence in sentences if not technical_tokens(sentence)]
     if not plain and sentences:
         plain = [_without_tokens(sentences[0])]
-    headline = _without_tokens(text.headline) if technical_tokens(text.headline) else text.headline
     return text.model_copy(
         update={
-            "headline": headline,
+            "headline": plain_title(text.headline),
             "summary": " ".join(plain[:PLAIN_SENTENCES]),
             "why": "" if technical_tokens(text.why) else text.why,
         }
