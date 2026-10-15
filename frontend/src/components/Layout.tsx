@@ -27,6 +27,7 @@ import { UserAvatar } from './UserAvatar'
 import { LogoMark, Wordmark } from './Logo'
 import { DURATION, EASE } from './tokens'
 import { EntranceContext, newEntrance } from './entrance'
+import { Skeleton } from './loading'
 
 type NavItem = {
   to: string
@@ -130,7 +131,14 @@ function StatusLine() {
       </p>
     )
   }
-  if (!meta) return <div className="skeleton skeleton--shimmer rounded-xl h-9 w-full" />
+  if (!meta) {
+    return (
+      <div className="space-y-1.5">
+        <Skeleton className="h-3 w-3/4" />
+        <Skeleton className="h-3 w-1/2" />
+      </div>
+    )
+  }
   const offline = meta.llm_provider !== 'ollama'
   return (
     <div className="space-y-1 text-xs text-muted">

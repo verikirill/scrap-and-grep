@@ -1,7 +1,8 @@
 import clsx from 'clsx'
 import { useRef } from 'react'
 import { useSearchParams } from 'react-router'
-import { ErrorNote, PageHeader } from '../components/ui'
+import { Loading, SkeletonTable } from '../components/loading'
+import { Button, Card, ErrorState, PageHeader } from '../components/ui'
 import { ArticlesList } from '../features/sources/ArticlesList'
 import { SourceHealth } from '../features/sources/SourceHealth'
 import { SourcesTable } from '../features/sources/SourcesTable'
@@ -58,16 +59,25 @@ export function SourcesPage() {
 
       {tab === 'sources' ? (
         <>
-          <ErrorNote error={sources.error} />
           <SourceHealth />
-          {sources.data ? (
+          {sources.error ? (
+            <Card>
+              <ErrorState
+                title="Каталог источников не загрузился"
+                error={sources.error}
+                action={<Button onClick={() => void sources.refetch()}>Повторить</Button>}
+              />
+            </Card>
+          ) : sources.data ? (
             <SourcesTable
               sources={sources.data}
               isAdmin={isAdmin}
               canAdd={isAdmin || Boolean(meta.data?.open_catalog)}
             />
           ) : (
-            <div className="skeleton skeleton--shimmer rounded-xl h-96" />
+            <Loading label="Загружаем источники">
+              <SkeletonTable rows={8} />
+            </Loading>
           )}
         </>
       ) : (

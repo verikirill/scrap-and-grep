@@ -4,7 +4,8 @@ import { motion } from 'motion/react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { EASE, rowMotion } from '../../components/tokens'
-import { Button, Card, Chip, EmptyState, ErrorNote, Spinner } from '../../components/ui'
+import { Loading, Skeleton } from '../../components/loading'
+import { Button, Card, Chip, EmptyState, ErrorNote, ErrorState, Spinner } from '../../components/ui'
 import type { SourceCategory, TimelinePoint } from '../../lib/api'
 import { CATEGORY_LABELS, formatDateTime, formatNumber } from '../../lib/format'
 import { useArticles, useTimeline } from '../../lib/queries'
@@ -123,13 +124,22 @@ export function ArticlesList() {
             {timeline.data ? (
               <Timeline points={timeline.data} />
             ) : (
-              <div className="skeleton skeleton--shimmer rounded-xl h-16" />
+              <Loading label="Рисуем график публикаций" className="flex h-16 items-end gap-1">
+                {[30, 55, 40, 70, 50, 85, 60, 45, 75, 65, 90, 55, 40, 70].map((height, index) => (
+                  <Skeleton
+                    key={index}
+                    className="flex-1 rounded-sm"
+                    style={{ height: `${height}%` }}
+                  />
+                ))}
+              </Loading>
             )}
           </div>
         </div>
       </Card>
 
-      <ErrorNote error={articles.error} />
+      {/* A next page that failed says so above; a list that never came, in its place. */}
+      <ErrorNote error={pages ? articles.error : null} />
 
       {total !== undefined && (
         <p className="px-1 text-xs text-muted" aria-live="polite">
@@ -146,15 +156,23 @@ export function ArticlesList() {
       >
         {pages && items.length === 0 && (
           <EmptyState icon={<FileText size={22} />} title="Ничего не найдено">
-            Поиск учитывает словоформы и смысл, включая запросы на других языках.
+            Кот перерыл архив и вернулся с пустой лупой. Поиск учитывает словоформы и смысл, включая
+            запросы на других языках: попробуйте сказать иначе.
           </EmptyState>
         )}
+        {!pages && articles.error && <ErrorState title="Поиск не ответил" error={articles.error} />}
         {!pages && articles.isLoading && (
-          <div className="space-y-2 p-4">
+          <Loading label="Загружаем публикации" className="divide-y divide-separator">
             {Array.from({ length: 8 }, (_, index) => (
-              <div key={index} className="skeleton skeleton--shimmer rounded-xl h-14" />
+              <div key={index} className="space-y-2 px-5 py-3.5">
+                <Skeleton className="h-4 w-4/5" />
+                <div className="flex gap-2">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-3 w-16" />
+                </div>
+              </div>
             ))}
-          </div>
+          </Loading>
         )}
         <ul className="divide-y divide-separator">
           {items.map((article, index) => (

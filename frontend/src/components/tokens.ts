@@ -25,15 +25,17 @@ export function rowMotion(index: number, isQuiet = false) {
   }
 }
 
-export type ButtonVariant = 'primary' | 'tonal' | 'secondary' | 'ghost' | 'danger'
+export type ButtonVariant = 'primary' | 'tonal' | 'secondary' | 'ghost' | 'danger' | 'cta'
 
-// Our names for HeroUI's button variants: filled accent, soft, outlined, text, and danger.
+// Our names for HeroUI's button variants: filled accent, soft, outlined, text, and danger;
+// cta is the one main action of a screen, a skewed gradient slab (index.css).
 const BUTTON_VARIANTS: Record<ButtonVariant, string> = {
   primary: 'button--primary',
   tonal: 'button--secondary',
   secondary: 'button--outline',
   ghost: 'button--ghost',
   danger: 'button--danger-soft',
+  cta: 'cta',
 }
 
 /** Button look for anything clickable: a real button, a download link, a route link. */

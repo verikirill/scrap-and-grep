@@ -1,21 +1,15 @@
-import { LogoMark } from './Logo'
 import type { ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router'
 import { useMe } from '../lib/queries'
-import { Button, ErrorNote } from './ui'
+import { RotateCw } from './icons'
+import { MascotLoader } from './loading'
+import { Button, ErrorState } from './ui'
 
 /** Where the reader was heading when the sign-in page stopped them. */
 export type AuthRedirect = { from?: string }
 
 function Splash({ children }: { children?: ReactNode }) {
-  return (
-    <div className="grid min-h-dvh place-items-center px-6">
-      <div className="flex flex-col items-center gap-4 text-center">
-        <LogoMark size={56} className="animate-pulse" />
-        {children}
-      </div>
-    </div>
-  )
+  return <div className="grid min-h-dvh place-items-center px-6">{children}</div>
 }
 
 /**
@@ -29,19 +23,26 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   if (me.isPending) {
     return (
       <Splash>
-        <div
-          className="skeleton skeleton--shimmer rounded-xl h-2 w-28"
-          role="status"
-          aria-label="Проверяем вход"
-        />
+        <MascotLoader label="Проверяем вход" size={120} />
       </Splash>
     )
   }
   if (me.isError) {
     return (
       <Splash>
-        <ErrorNote error={me.error} />
-        <Button onClick={() => void me.refetch()}>Повторить попытку</Button>
+        <ErrorState
+          title="Не получилось проверить вход"
+          error={me.error}
+          action={
+            <Button
+              variant="primary"
+              icon={<RotateCw size={15} />}
+              onClick={() => void me.refetch()}
+            >
+              Повторить попытку
+            </Button>
+          }
+        />
       </Splash>
     )
   }

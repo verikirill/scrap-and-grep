@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router'
 import { toast } from '../../lib/toast'
-import { CircleCheck, LibraryAdd, LinkOff } from '../../components/icons'
+import { CircleCheck, LibraryAdd } from '../../components/icons'
+import { Loading as LoadingRegion, Skeleton } from '../../components/loading'
+import { Mascot } from '../../components/Mascot'
 import { Button, ErrorNote } from '../../components/ui'
 import {
   Dialog,
@@ -22,15 +24,17 @@ function Loading() {
       <DialogDescription className="sr-only">
         Загружаем профиль, которым с вами поделились.
       </DialogDescription>
-      <div className="flex items-center gap-3">
-        <div className="skeleton skeleton--shimmer size-14 rounded-full" />
-        <div className="flex-1 space-y-2">
-          <div className="skeleton skeleton--shimmer rounded-xl h-3 w-32" />
-          <div className="skeleton skeleton--shimmer rounded-xl h-5 w-48" />
+      <LoadingRegion label="Загружаем профиль" className="space-y-4">
+        <div className="flex items-center gap-3">
+          <Skeleton className="size-14 rounded-full" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-3 w-32" />
+            <Skeleton className="h-5 w-48" />
+          </div>
         </div>
-      </div>
-      <div className="skeleton skeleton--shimmer rounded-xl h-16" />
-      <div className="skeleton skeleton--shimmer rounded-xl h-10" />
+        <Skeleton className="h-16" />
+        <Skeleton className="h-10" />
+      </LoadingRegion>
     </div>
   )
 }
@@ -39,8 +43,8 @@ function Gone({ error, onClose }: { error: unknown; onClose: () => void }) {
   return (
     <div className="space-y-4">
       <DialogHeader>
-        <span className="grid size-12 place-items-center rounded-full bg-danger-soft text-danger-soft-foreground">
-          <LinkOff size={24} />
+        <span className="mascot-tile mascot-tile--danger grid size-24 place-items-center">
+          <Mascot pose="error" size={88} />
         </span>
         <DialogTitle className="text-lg">Профиль не открылся</DialogTitle>
         <DialogDescription>

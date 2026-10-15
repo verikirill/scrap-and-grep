@@ -40,7 +40,7 @@ export function FeedCard({ item, index, isQuiet, placement, onReact }: FeedCardP
     <motion.article
       ref={seenRef}
       {...rowMotion(index, isQuiet)}
-      className="group rounded-2xl border border-separator bg-surface px-5 py-4 shadow-surface transition-colors duration-200 hover:border-border"
+      className="group lift rounded-2xl border border-separator bg-surface px-5 py-4 shadow-surface hover:border-border"
     >
       <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted">
         <span className="font-medium text-foreground">{item.source_name}</span>

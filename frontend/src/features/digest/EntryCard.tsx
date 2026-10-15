@@ -2,6 +2,7 @@ import { ShieldCheck } from '../../components/icons'
 import { Chip } from '../../components/ui'
 import type { DigestItem, Priority } from '../../lib/api'
 import { inSentence } from '../../lib/format'
+import { verifiedBases } from '../../lib/risk'
 
 const PRIORITY_LABELS: Record<Priority, string> = {
   high: 'Высокий приоритет',
@@ -18,6 +19,21 @@ export function PriorityChip({ item }: { item: DigestItem }) {
     <Chip tone={PRIORITY_TONES[item.priority]} title={item.priority_reason}>
       {PRIORITY_LABELS[item.priority]}
     </Chip>
+  )
+}
+
+/** "Сверено", as the "verified" mark of a profile: a small green stamp with a shield. */
+export function VerifiedBadge({ item }: { item: DigestItem }) {
+  const bases = verifiedBases(item)
+  if (bases.length === 0) return null
+  return (
+    <span
+      title={`Идентификаторы сверены с ${bases.join(' и ')}`}
+      className="inline-flex items-center gap-1 rounded-md bg-success-soft px-1.5 py-0.5 text-[10px] leading-4 font-bold tracking-[0.08em] text-success-soft-foreground uppercase"
+    >
+      <ShieldCheck size={12} aria-hidden />
+      Сверено
+    </span>
   )
 }
 

@@ -5,6 +5,7 @@ import { UserAvatar } from '../components/UserAvatar'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router'
 import { INPUT_CLASS, buttonClass } from '../components/tokens'
+import { Loading, PageSkeleton, Skeleton } from '../components/loading'
 import { Button, Card, Chip, ErrorNote, Field, PageHeader } from '../components/ui'
 import { McpAccess } from '../features/account/McpAccess'
 import { FeedViewSetting } from '../features/account/FeedViewSetting'
@@ -38,7 +39,12 @@ function ResumeSection() {
         Резюме задаёт специализацию, и лента учитывает её наравне с интересами.
       </p>
 
-      {isProcessing ? (
+      {resume.isPending ? (
+        <Loading label="Загружаем резюме" className="space-y-3">
+          <Skeleton className="h-28 rounded-2xl" />
+          <Skeleton className="h-3.5 w-2/3" />
+        </Loading>
+      ) : isProcessing ? (
         <ResumeProcessing
           usesModel={meta.data?.llm_provider === 'ollama'}
           usesDocling={meta.data?.resume_parser === 'docling'}
@@ -264,7 +270,7 @@ export function AccountPage() {
   const { logout } = useSignOut()
   const isWide = useMediaQuery('(min-width: 1024px)')
   const user = me.data
-  if (!user) return null
+  if (!user) return <PageSkeleton label="Открываем аккаунт" />
 
   return (
     <>

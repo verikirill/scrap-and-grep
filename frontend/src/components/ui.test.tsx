@@ -8,6 +8,7 @@ import {
   Chip,
   EmptyState,
   ErrorNote,
+  ErrorState,
   Field,
   PageHeader,
   ReadingTime,
@@ -122,6 +123,36 @@ describe('ErrorNote', () => {
   })
 })
 
+describe('ErrorState', () => {
+  it('is one alert with the upset cat, what failed, why, and the way out', async () => {
+    const onRetry = vi.fn()
+    const user = userEvent.setup()
+    const { container } = render(
+      <ErrorState
+        title="Лента не загрузилась"
+        error={new Error('Сервис недоступен')}
+        action={<Button onClick={onRetry}>Повторить</Button>}
+      >
+        Попробуйте через минуту.
+      </ErrorState>,
+    )
+    const alert = screen.getByRole('alert')
+    expect(alert).toHaveTextContent('Лента не загрузилась')
+    expect(alert).toHaveTextContent('Сервис недоступен')
+    expect(alert).toHaveTextContent('Попробуйте через минуту.')
+    expect(container.querySelector('svg.mascot')).toHaveAttribute('data-pose', 'error')
+    await user.click(screen.getByRole('button', { name: 'Повторить' }))
+    expect(onRetry).toHaveBeenCalledOnce()
+  })
+
+  it('says the error is unknown when it is not an Error, and only the title without one', () => {
+    const { rerender } = render(<ErrorState title="Не открылось" error="boom" />)
+    expect(screen.getByRole('alert')).toHaveTextContent('Неизвестная ошибка')
+    rerender(<ErrorState title="Не открылось" />)
+    expect(screen.getByRole('alert')).toHaveTextContent(/^Не открылось$/)
+  })
+})
+
 describe('ReadingTime', () => {
   it('names the minutes, and stays away while they are not known', () => {
     const { rerender } = render(<ReadingTime minutes={4} />)
@@ -156,6 +187,20 @@ describe('EmptyState and PageHeader', () => {
     expect(screen.getByRole('heading', { name: 'Выпусков пока нет' })).toBeInTheDocument()
     expect(screen.getByText('Соберите первый выпуск.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Собрать выпуск' })).toBeInTheDocument()
+  })
+
+  it('pictures an empty place with the cat, in the pose it is given', () => {
+    const { container, rerender } = render(<EmptyState title="Постов пока нет" />)
+    expect(container.querySelector('svg.mascot')).toHaveAttribute('data-pose', 'empty')
+    rerender(<EmptyState title="Постов пока нет" pose="waiting" />)
+    expect(container.querySelector('svg.mascot')).toHaveAttribute('data-pose', 'waiting')
+  })
+
+  it('gives the main action of a screen an arrow, keeping its name', () => {
+    render(<Button variant="cta">Собрать выпуск</Button>)
+    const button = screen.getByRole('button', { name: 'Собрать выпуск' })
+    expect(button).toHaveClass('cta')
+    expect(button.querySelector('.cta__arrow')).toHaveAttribute('aria-hidden', 'true')
   })
 
   it('heads a page with its title, line and actions', () => {

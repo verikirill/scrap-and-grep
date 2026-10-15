@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { DigestItem, VulnerabilityReference } from './api'
-import { cvssOf, exposureBand, riskCells, severityBand, timelineOf } from './risk'
+import { cvssOf, exposureBand, riskCells, severityBand, timelineOf, verifiedBases } from './risk'
 
 const reference = (extra: Partial<VulnerabilityReference> = {}): VulnerabilityReference => ({
   id: 'CVE-2026-1001',
@@ -27,6 +27,23 @@ const entry = (extra: Partial<DigestItem> = {}): DigestItem =>
     vulnerability: { ids: ['CVE-2026-1001'], name: '', cvss_score: '', exploit: 'unknown' },
     ...extra,
   }) as DigestItem
+
+describe('verifiedBases', () => {
+  it('names the bases any of the entry ids were found in, once each', () => {
+    const item = entry({
+      references: [
+        reference({ kev_added: '2026-10-01' }),
+        reference({ id: 'CVE-2026-1002', kev_added: '2026-10-02', bdu_id: 'BDU:2026-00001' }),
+      ],
+    })
+    expect(verifiedBases(item)).toEqual(['CISA KEV', 'БДУ ФСТЭК'])
+  })
+
+  it('is empty for ids the bases do not know, and for an entry without references', () => {
+    expect(verifiedBases(entry({ references: [reference()] }))).toEqual([])
+    expect(verifiedBases(entry({ references: undefined }))).toEqual([])
+  })
+})
 
 describe('the risk matrix', () => {
   it('takes the highest score the card and the bases give, in either decimal mark', () => {

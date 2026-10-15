@@ -18,6 +18,22 @@
   --field-border-width: 1px;
   --field-border: oklch(86% 0.006 286);
   --field-border-hover: oklch(78% 0.008 286);
+  /* The cat (components/Mascot.tsx): the black cat of the logo, plush-shaded. */
+  --mascot-fur: oklch(24% 0.02 268);
+  --mascot-fur-light: oklch(40% 0.03 268);
+  --mascot-rim: transparent;
+  --mascot-eye: oklch(98% 0.008 250);
+  --mascot-pupil: oklch(17% 0.02 268);
+  --mascot-ear: oklch(74% 0.09 10);
+  --mascot-glass: color-mix(in oklab, var(--accent) 18%, white);
+  --mascot-paper: white;
+  --mascot-ink: oklch(82% 0.01 268);
+  /* Page titles sit in a dark pill in both themes. */
+  --title-pill: oklch(22% 0.012 280);
+  --title-pill-foreground: oklch(98% 0 0);
+  /* The one call to action: the accent running into the violet of the tags. */
+  --cta-from: var(--accent);
+  --cta-to: oklch(55% 0.22 285);
 }
 
 .dark {
@@ -26,6 +42,15 @@
   --field-border-hover: oklch(40% 0.01 286);
   /* Secondary text a step lighter than HeroUI's: metadata on dark cards stays above 4.5:1. */
   --muted: oklch(76% 0.012 286);
+  /* A black cat on a near-black page: lighter fur and a faint rim keep its shape. */
+  --mascot-fur: oklch(31% 0.02 268);
+  --mascot-fur-light: oklch(48% 0.03 268);
+  --mascot-rim: oklch(62% 0.03 268 / 0.5);
+  --mascot-glass: color-mix(in oklab, var(--accent) 28%, var(--surface));
+  --mascot-paper: oklch(95% 0.005 268);
+  --mascot-ink: oklch(78% 0.01 268);
+  --title-pill: oklch(24% 0.008 286);
+  --cta-to: oklch(60% 0.2 285);
 }
 
 @theme inline {
@@ -135,6 +160,130 @@
     box-shadow: 0 1px 3px rgb(0 0 0 / 0.2);
   }
 
+  .mascot-rim {
+    stroke: var(--mascot-rim);
+    stroke-width: 1.2;
+  }
+
+  /* A page title: bold capitals in a dark pill, as a poster headline. */
+  .title-pill {
+    display: inline-block;
+    border-radius: 1.25rem;
+    background: var(--title-pill);
+    color: var(--title-pill-foreground);
+    padding: 0.35rem 1.1rem 0.4rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    box-shadow: 0 6px 18px -10px rgb(0 0 0 / 0.45);
+  }
+
+  /*
+   * The main call to action: a skewed gradient slab with an arrow. Only the
+   * slab behind is skewed (::before), the label stays upright and readable.
+   */
+  .button.cta {
+    position: relative;
+    isolation: isolate;
+    background: transparent;
+    color: white;
+    font-weight: 700;
+    padding-inline: 1.35rem;
+  }
+
+  .button.cta::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: 0.85rem;
+    background: linear-gradient(100deg, var(--cta-from), var(--cta-to));
+    box-shadow: 0 10px 24px -12px color-mix(in oklab, var(--cta-to) 80%, transparent);
+    transform: skewX(-12deg);
+    transition:
+      transform 0.25s var(--ease-out-quint),
+      filter 0.25s var(--ease-out-quint);
+  }
+
+  .button.cta:hover:not(:disabled)::before {
+    filter: brightness(1.08) saturate(1.1);
+    transform: skewX(-12deg) scale(1.03);
+  }
+
+  .button.cta:disabled::before {
+    filter: grayscale(0.6);
+    opacity: 0.55;
+  }
+
+  .button.cta .cta__arrow {
+    transition: transform 0.25s var(--ease-out-quint);
+  }
+
+  .button.cta:hover:not(:disabled) .cta__arrow {
+    transform: translateX(3px);
+  }
+
+  /* The picture tile of an empty or failed place, as the cards of the inspiration. */
+  .mascot-tile {
+    border-radius: 2rem;
+    background:
+      radial-gradient(
+        circle at 30% 20%,
+        color-mix(in oklab, white 55%, transparent),
+        transparent 60%
+      ),
+      linear-gradient(
+        140deg,
+        color-mix(in oklab, var(--accent) 22%, var(--surface)),
+        color-mix(in oklab, var(--cta-to) 18%, var(--surface))
+      );
+  }
+
+  .dark .mascot-tile {
+    background: linear-gradient(
+      140deg,
+      color-mix(in oklab, var(--accent) 24%, var(--surface)),
+      color-mix(in oklab, var(--cta-to) 18%, var(--surface))
+    );
+  }
+
+  .mascot-tile--danger,
+  .dark .mascot-tile--danger {
+    background: linear-gradient(
+      140deg,
+      color-mix(in oklab, var(--danger) 16%, var(--surface)),
+      color-mix(in oklab, var(--warning) 14%, var(--surface))
+    );
+  }
+
+  /* The filled part of a progress bar: the call-to-action gradient with a light running over it. */
+  .progress-fill {
+    background:
+      linear-gradient(100deg, transparent 30%, rgb(255 255 255 / 0.35) 50%, transparent 70%) 0 0 /
+        200% 100%,
+      linear-gradient(90deg, var(--cta-from), var(--cta-to));
+    animation: progress-glint 2.2s linear infinite;
+  }
+
+  /* A card that opens something rises a little under the pointer. */
+  .lift {
+    transition-property: translate, box-shadow, border-color, background-color;
+    transition-duration: 0.25s;
+    transition-timing-function: var(--ease-out-quint);
+  }
+
+  @media (hover: hover) {
+    .lift:hover {
+      translate: 0 -3px;
+      box-shadow: 0 14px 30px -18px rgb(0 0 0 / 0.35);
+    }
+  }
+
+  /* Skeletons carry a breath of the accent, so a loading page is ours too. */
+  .skeleton {
+    background-color: color-mix(in oklab, var(--accent) 7%, var(--surface-tertiary));
+  }
+
   .tabular {
     font-variant-numeric: tabular-nums;
   }
@@ -156,6 +305,19 @@
     border-radius: 3px;
     background: var(--accent);
     animation: progress-slide 1.2s var(--ease-out-quint) infinite;
+  }
+}
+
+@keyframes progress-glint {
+  from {
+    background-position:
+      200% 0,
+      0 0;
+  }
+  to {
+    background-position:
+      -200% 0,
+      0 0;
   }
 }
 

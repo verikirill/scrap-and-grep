@@ -3,7 +3,8 @@ import { useNavigate, useParams } from 'react-router'
 import { ChevronLeft, ExternalLink, FileText } from '../components/icons'
 import { ScrollTopButton } from '../components/ScrollTopButton'
 import { buttonClass } from '../components/tokens'
-import { Button, EmptyState, ErrorNote, ReadingTime, SkeletonBlock } from '../components/ui'
+import { Loading as LoadingRegion, Skeleton } from '../components/loading'
+import { Button, EmptyState, ErrorState, ReadingTime } from '../components/ui'
 import { ArticleBlocks } from '../features/reader/ArticleBlocks'
 import { ApiError } from '../lib/api'
 import type { ArticleRead } from '../lib/api'
@@ -38,26 +39,23 @@ function SourceLink({ article, label, className }: SourceLinkProps) {
 
 function Loading() {
   return (
-    <div aria-busy className="space-y-4">
-      <span className="sr-only" role="status">
-        Загружаем статью
-      </span>
-      <SkeletonBlock className="h-4 w-56" />
-      <SkeletonBlock className="h-9 w-full" />
-      <SkeletonBlock className="h-9 w-2/3" />
-      <SkeletonBlock className="mt-6 h-64 w-full rounded-2xl" />
+    <LoadingRegion label="Загружаем статью" className="space-y-4">
+      <Skeleton className="h-4 w-56" />
+      <Skeleton className="h-9 w-full" />
+      <Skeleton className="h-9 w-2/3" />
+      <Skeleton className="mt-6 h-64 w-full rounded-2xl" />
       {[0, 1, 2, 3].map((line) => (
-        <SkeletonBlock key={line} className="h-4 w-full" />
+        <Skeleton key={line} className="h-4 w-full" />
       ))}
-      <SkeletonBlock className="h-4 w-1/2" />
-    </div>
+      <Skeleton className="h-4 w-1/2" />
+    </LoadingRegion>
   )
 }
 
 function NotFound() {
   return (
-    <EmptyState icon={<FileText size={26} />} title="Статья не найдена">
-      Возможно, источник удалили из каталога.
+    <EmptyState icon={<FileText size={22} />} title="Статья не найдена">
+      Кот обыскал всё, но статьи здесь нет. Возможно, источник удалили из каталога.
     </EmptyState>
   )
 }
@@ -99,7 +97,7 @@ function Article({ article }: { article: ArticleRead }) {
           <ArticleBlocks articleId={article.id} blocks={article.blocks} />
         </div>
       ) : (
-        <EmptyState icon={<FileText size={26} />} title="Текста нет">
+        <EmptyState icon={<FileText size={22} />} title="Текста нет">
           В источнике был только заголовок. Статью можно открыть по ссылке на оригинал.
         </EmptyState>
       )}
@@ -139,7 +137,15 @@ export function ArticlePage() {
   let content = <Loading />
   if (isMissing) content = <NotFound />
   else if (article.data) content = <Article key={article.data.id} article={article.data} />
-  else if (article.error) content = <ErrorNote error={article.error} />
+  else if (article.error) {
+    content = (
+      <ErrorState
+        title="Статья не открылась"
+        error={article.error}
+        action={<Button onClick={() => void article.refetch()}>Повторить</Button>}
+      />
+    )
+  }
 
   return (
     <div className="mx-auto max-w-[720px]">

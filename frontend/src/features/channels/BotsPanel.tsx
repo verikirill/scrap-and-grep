@@ -2,6 +2,7 @@ import { Bot as BotIcon, KeyRound, Trash2 } from '../../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { toast } from '../../lib/toast'
+import { Loading, Skeleton } from '../../components/loading'
 import { Button, Card, Chip, ErrorNote } from '../../components/ui'
 import { INPUT_CLASS, rowMotion } from '../../components/tokens'
 import { useAddBot, useBots, useDeleteBot } from '../../lib/publishingQueries'
@@ -32,7 +33,17 @@ export function BotsPanel() {
       </p>
 
       <ul className="mt-4 space-y-2">
-        {isPending && <li className="skeleton skeleton--shimmer rounded-xl h-14" />}
+        {isPending && (
+          <li>
+            <Loading label="Загружаем ботов" className="flex items-center gap-3 rounded-xl p-2">
+              <Skeleton className="size-10 shrink-0 rounded-full" />
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-3.5 w-32" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+            </Loading>
+          </li>
+        )}
         <AnimatePresence initial={false}>
           {bots?.map((bot, index) => (
             <motion.li

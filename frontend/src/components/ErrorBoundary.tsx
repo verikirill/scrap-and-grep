@@ -1,7 +1,7 @@
-import { RotateCw, TriangleAlert } from './icons'
+import { RotateCw } from './icons'
 import { Component } from 'react'
 import type { ReactNode } from 'react'
-import { Button, Card } from './ui'
+import { Button, Card, ErrorState } from './ui'
 
 type Props = {
   children: ReactNode
@@ -28,27 +28,27 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (!this.state.error) return this.props.children
     return (
-      <Card variant="outlined" className="p-6">
-        <div role="alert" className="flex flex-col items-start gap-3">
-          <TriangleAlert size={22} className="text-danger" />
-          <p className="text-base font-medium">{this.props.title ?? 'Раздел не загрузился'}</p>
-          <p className="text-sm text-muted">
-            Возможно, сервис обновился. Перезагрузите страницу; если ошибка повторится, попробуйте
-            позже.
-          </p>
-          <div className="flex flex-wrap gap-2 pt-1">
-            <Button
-              variant="primary"
-              icon={<RotateCw size={15} />}
-              onClick={() => window.location.reload()}
-            >
-              Обновить страницу
-            </Button>
-            <Button variant="ghost" onClick={this.reset}>
-              Попробовать снова
-            </Button>
-          </div>
-        </div>
+      <Card variant="outlined">
+        <ErrorState
+          title={this.props.title ?? 'Раздел не загрузился'}
+          action={
+            <>
+              <Button
+                variant="primary"
+                icon={<RotateCw size={15} />}
+                onClick={() => window.location.reload()}
+              >
+                Обновить страницу
+              </Button>
+              <Button variant="ghost" onClick={this.reset}>
+                Попробовать снова
+              </Button>
+            </>
+          }
+        >
+          Возможно, сервис обновился. Перезагрузите страницу, а если ошибка повторится, загляните
+          чуть позже.
+        </ErrorState>
       </Card>
     )
   }

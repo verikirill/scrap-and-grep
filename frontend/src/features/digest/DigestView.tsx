@@ -19,7 +19,7 @@ import { AskDigest } from './AskDigest'
 import { CveTimeline } from './CveTimeline'
 import { RiskMatrix } from './RiskMatrix'
 import { BriefingPlayer } from './BriefingPlayer'
-import { EntryDetails, PriorityChip } from './EntryCard'
+import { EntryDetails, PriorityChip, VerifiedBadge } from './EntryCard'
 import { MailButton } from './MailButton'
 import { IssueExtras, ManualWork } from './IssueExtras'
 import { ShortPanel } from './ShortPanel'
@@ -78,7 +78,7 @@ function ItemCard({ item, index, placement, reactions, onReact }: ItemCardProps)
       ref={seenRef}
       id={`entry-${placement.position}`}
       {...rowMotion(index)}
-      className="group scroll-mt-24 rounded-xl border border-transparent px-4 py-4 transition-colors duration-200 hover:border-separator hover:bg-surface"
+      className="group lift scroll-mt-24 rounded-xl border border-transparent px-4 py-4 hover:border-separator hover:bg-surface"
     >
       <div className="flex items-start gap-1">
         <Link
@@ -110,6 +110,7 @@ function ItemCard({ item, index, placement, reactions, onReact }: ItemCardProps)
         <span>{formatDate(item.published_at)}</span>
         <ReadingTime minutes={item.reading_minutes} />
         <PriorityChip item={item} />
+        <VerifiedBadge item={item} />
         <ScoreBar score={item.score} />
         {item.interest_title && <Chip tone="neutral">{item.interest_title}</Chip>}
         {personal !== 0 && (

@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Analytics as AnalyticsIcon } from '../components/icons'
 import { Segmented } from '../components/Segmented'
-import { Card, EmptyState, ErrorNote, PageHeader, SkeletonBlock, Toggle } from '../components/ui'
+import { Loading, Skeleton, SkeletonChart } from '../components/loading'
+import { Card, EmptyState, ErrorState, PageHeader, Toggle } from '../components/ui'
 import {
   Activity,
   Adaptation,
@@ -27,15 +28,18 @@ type Period = (typeof PERIODS)[number]['value']
 
 function Skeletons() {
   return (
-    <div className="space-y-4" role="status" aria-label="Считаем">
+    <Loading label="Считаем" className="space-y-4">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[0, 1, 2, 3].map((index) => (
-          <SkeletonBlock key={index} className="h-24" />
+          <div key={index} className="space-y-3 rounded-3xl bg-surface p-4 shadow-surface">
+            <Skeleton className="h-3 w-20" />
+            <Skeleton className="h-7 w-16" />
+          </div>
         ))}
       </div>
-      <SkeletonBlock className="h-64" />
-      <SkeletonBlock className="h-64" />
-    </div>
+      <SkeletonChart />
+      <SkeletonChart />
+    </Loading>
   )
 }
 
@@ -120,7 +124,13 @@ export function AnalyticsPage() {
   const isAdmin = Boolean(me.data?.is_admin && !me.data.is_demo)
   const analytics = useAnalytics(Number(period), withGuests, isAdmin)
 
-  if (me.isError) return <ErrorNote error={me.error} />
+  if (me.isError) {
+    return (
+      <Card>
+        <ErrorState title="Не удалось проверить доступ" error={me.error} />
+      </Card>
+    )
+  }
   if (me.isSuccess && !isAdmin) {
     return (
       <Card>
@@ -146,8 +156,11 @@ export function AnalyticsPage() {
           </>
         }
       />
-      <ErrorNote error={analytics.error} />
-      {analytics.data && !analytics.data.enabled ? (
+      {analytics.error ? (
+        <Card>
+          <ErrorState title="Аналитика не загрузилась" error={analytics.error} />
+        </Card>
+      ) : analytics.data && !analytics.data.enabled ? (
         <Card>
           <EmptyState icon={<AnalyticsIcon size={22} />} title="События выключены">
             На этом стенде не подключено хранилище событий, поэтому показы и отметки не
@@ -157,7 +170,7 @@ export function AnalyticsPage() {
       ) : analytics.data ? (
         <Overview data={analytics.data} days={Number(period)} />
       ) : (
-        !analytics.error && <Skeletons />
+        <Skeletons />
       )}
     </>
   )

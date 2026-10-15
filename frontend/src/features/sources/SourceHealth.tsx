@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 
 import { Collapsible } from '../../components/Collapsible'
 import { Help } from '../../components/icons'
+import { Loading, Skeleton } from '../../components/loading'
 import { Card, Chip } from '../../components/ui'
 import type { SourceHealth as Health } from '../../lib/api'
 import { formatNumber, formatRelative, pause, plural, shareOfGood } from '../../lib/format'
@@ -87,6 +88,21 @@ function SectionTitle({ title, note }: { title: string; note: string }) {
  */
 export function SourceHealth() {
   const health = useSourceHealth()
+  if (health.isPending) {
+    return (
+      <Loading
+        label="Проверяем источники"
+        className="mb-5 flex items-center gap-4 rounded-3xl bg-surface px-5 py-4 shadow-surface"
+      >
+        <Skeleton className="size-10 shrink-0 rounded-full" />
+        <div className="flex-1 space-y-2">
+          <Skeleton className="h-4 w-48" />
+          <Skeleton className="h-3 w-72 max-w-full" />
+        </div>
+      </Loading>
+    )
+  }
+  // The health is an extra: without it the catalogue below still works.
   if (!health.data) return null
   const { errors, failing, silent, kinds } = health.data
   const kindOf = (kind: string | null) => kinds[kind ?? 'other'] ?? kind ?? kinds.other

@@ -3,7 +3,8 @@ import { ArrowDown, ArrowUp, Minus, Plus } from '../../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
 import type { ReactNode } from 'react'
 import { EASE } from '../../components/tokens'
-import { AnimatedNumber, Card, Chip, Spinner } from '../../components/ui'
+import { Loading, Skeleton } from '../../components/loading'
+import { AnimatedNumber, Card, Chip, EmptyState, ErrorState, Spinner } from '../../components/ui'
 import type { ProfileSpec } from '../../lib/api'
 import { diffPreview } from '../../lib/diff'
 import type { Movement } from '../../lib/diff'
@@ -106,29 +107,29 @@ export function PreviewPanel({ draft, saved, isDirty }: Props) {
           must be measured relative to its scroll offset. */}
       <motion.div layoutScroll className="relative flex-1 overflow-y-auto">
         {!current.isValid && (
-          <p className="px-5 py-8 text-center text-sm text-muted">
+          <EmptyState title="Подборка ждёт названий" pose="waiting">
             Дайте название каждому интересу, и здесь появится подборка.
-          </p>
+          </EmptyState>
         )}
-        {current.isError && (
-          <p className="px-5 py-6 text-sm text-danger">
-            {current.error instanceof Error
-              ? current.error.message
-              : 'Не удалось получить предпросмотр.'}
-          </p>
-        )}
+        {current.isError && <ErrorState title="Предпросмотр не получился" error={current.error} />}
         {!current.data && current.isLoading && (
-          <div className="space-y-2 p-4">
+          <Loading label="Собираем предпросмотр" className="space-y-2 p-4">
             {Array.from({ length: 6 }, (_, index) => (
-              <div key={index} className="skeleton skeleton--shimmer rounded-xl h-12" />
+              <div key={index} className="flex items-center gap-3 px-1 py-1.5">
+                <Skeleton className="size-6 shrink-0 rounded-full" />
+                <div className="flex-1 space-y-1.5">
+                  <Skeleton className="h-3.5 w-11/12" />
+                  <Skeleton className="h-2.5 w-1/3" />
+                </div>
+              </div>
             ))}
-          </div>
+          </Loading>
         )}
         {diff && diff.rows.length === 0 && (
-          <p className="px-5 py-8 text-center text-sm text-muted">
+          <EmptyState title="Подборка пуста">
             Ни одна публикация не проходит порог. Добавьте ключевые слова или снизьте порог
             релевантности.
-          </p>
+          </EmptyState>
         )}
         {diff && (
           <ul className="relative">

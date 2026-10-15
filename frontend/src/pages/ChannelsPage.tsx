@@ -1,5 +1,6 @@
 import { KeyRound, Send } from '../components/icons'
 import { useState } from 'react'
+import { Loading, SkeletonCard } from '../components/loading'
 import { Card, EmptyState, PageHeader } from '../components/ui'
 import { AddChannelDialog } from '../features/channels/AddChannelDialog'
 import { BotsPanel } from '../features/channels/BotsPanel'
@@ -59,7 +60,11 @@ export function ChannelsPage() {
       <div className="grid gap-6 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
         <div className="space-y-4">
           <BotsPanel />
-          {isPending && <div className="skeleton skeleton--shimmer rounded-xl h-56" />}
+          {isPending && (
+            <Loading label="Загружаем каналы">
+              <SkeletonCard className="h-56" />
+            </Loading>
+          )}
           {channels?.length === 0 && (
             <Card variant="outlined">
               <EmptyState icon={<Send size={22} />} title="Каналов пока нет">

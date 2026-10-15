@@ -16,7 +16,8 @@ import { Fragment, useRef, useState } from 'react'
 import { toast } from '../lib/toast'
 import { Link, useSearchParams } from 'react-router'
 import { EASE, buttonClass } from '../components/tokens'
-import { Button, Card, EmptyState, ErrorNote, PageHeader } from '../components/ui'
+import { Loading, Skeleton, SkeletonList } from '../components/loading'
+import { Button, Card, EmptyState, ErrorNote, ErrorState, PageHeader } from '../components/ui'
 import {
   Sheet,
   SheetContent,
@@ -80,22 +81,20 @@ const MARKED: Partial<Record<ReactionKind, string>> = {
 function Skeletons({ view }: { view: FeedView }) {
   if (view === 'telegram') {
     return (
-      <div className="space-y-3" role="status" aria-label="Собираем ленту">
+      <Loading label="Собираем ленту" className="space-y-3">
         {[0, 1, 2].map((row) => (
           <div key={row} className="flex items-end gap-2.5">
-            <div className="skeleton skeleton--shimmer size-10 shrink-0 rounded-full" />
-            <div className="skeleton skeleton--shimmer rounded-xl h-72 flex-1 rounded-2xl rounded-bl-md" />
+            <Skeleton className="size-10 shrink-0 rounded-full" />
+            <Skeleton className="h-72 flex-1 rounded-2xl rounded-bl-md" />
           </div>
         ))}
-      </div>
+      </Loading>
     )
   }
   return (
-    <div className="space-y-3" role="status" aria-label="Собираем ленту">
-      {[0, 1, 2, 3].map((row) => (
-        <div key={row} className="skeleton skeleton--shimmer rounded-xl h-32" />
-      ))}
-    </div>
+    <Loading label="Собираем ленту">
+      <SkeletonList count={4} />
+    </Loading>
   )
 }
 
@@ -204,16 +203,34 @@ export function FeedPage() {
   const tastePanel = (
     <>
       {taste.isError ? (
-        <Card className="space-y-3 p-5">
-          <ErrorNote error={taste.error} />
-          <Button size="sm" onClick={() => void taste.refetch()}>
-            Повторить
-          </Button>
+        <Card>
+          <ErrorState
+            title="Вкусы не загрузились"
+            error={taste.error}
+            className="py-6"
+            action={
+              <Button size="sm" onClick={() => void taste.refetch()}>
+                Повторить
+              </Button>
+            }
+          />
         </Card>
       ) : taste.data ? (
         <TastePanel taste={taste.data} />
       ) : (
-        <div className="skeleton skeleton--shimmer rounded-xl h-72" />
+        <Loading
+          label="Загружаем ваши вкусы"
+          className="space-y-3 rounded-3xl bg-surface p-5 shadow-surface"
+        >
+          <Skeleton className="h-4 w-32" />
+          {[0, 1, 2, 3, 4].map((row) => (
+            <div key={row} className="flex items-center gap-2">
+              <Skeleton className="h-3 flex-1" />
+              <Skeleton className="h-3 w-10" />
+            </div>
+          ))}
+          <Skeleton className="h-8 w-full rounded-full" />
+        </Loading>
       )}
     </>
   )
@@ -334,7 +351,8 @@ export function FeedPage() {
 
       <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_19rem]">
         <div className="min-w-0 space-y-3">
-          <ErrorNote error={list.error ?? markError} />
+          {/* A list that did not load at all says so in its own place, below. */}
+          <ErrorNote error={(items.length > 0 ? list.error : null) ?? markError} />
 
           {/* New articles wait above the list until asked for: nothing moves under the reader. */}
           <AnimatePresence>
@@ -407,8 +425,16 @@ export function FeedPage() {
               <Skeletons view={view} />
             </PostColumn>
           ) : items.length === 0 ? (
-            // A list that did not load is not empty: the error above says why.
-            !list.isError && (
+            // A list that did not load is not empty: it says why, with a way to try again.
+            list.isError ? (
+              <Card>
+                <ErrorState
+                  title="Лента не загрузилась"
+                  error={list.error}
+                  action={<Button onClick={() => void list.refetch()}>Повторить</Button>}
+                />
+              </Card>
+            ) : (
               <Card>
                 {tab === 'saved' ? (
                   <EmptyState

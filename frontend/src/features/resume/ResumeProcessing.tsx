@@ -1,5 +1,4 @@
-import { FileText } from '../../components/icons'
-import { motion } from 'motion/react'
+import { Mascot } from '../../components/Mascot'
 import { Card } from '../../components/ui'
 
 type Props = {
@@ -11,17 +10,14 @@ type Props = {
 export function ResumeProcessing({ usesModel, usesDocling }: Props) {
   return (
     <Card className="flex flex-col items-center px-6 py-12 text-center">
+      {/* The cat reads the resume through its magnifier: no fake percentages. */}
       <div
         role="status"
+        aria-busy="true"
         aria-label="Читаем резюме"
-        className="relative mb-5 grid size-16 place-items-center overflow-hidden rounded-2xl bg-surface-secondary text-accent-soft-foreground"
+        className="mascot-tile mb-5 grid size-28 place-items-center"
       >
-        <FileText size={28} />
-        <motion.span
-          className="absolute inset-x-0 top-0 h-0.5 bg-accent"
-          animate={{ y: [0, 64, 0] }}
-          transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
-        />
+        <Mascot pose="searching" size={104} />
       </div>
       <h2 className="text-base font-semibold">Читаем резюме</h2>
       <p className="mt-1.5 max-w-sm text-sm text-muted">

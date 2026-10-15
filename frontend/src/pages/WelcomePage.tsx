@@ -1,4 +1,5 @@
-import { ArrowRight, ShieldCheck } from '../components/icons'
+import { ShieldCheck } from '../components/icons'
+import { Loading, Skeleton } from '../components/loading'
 import { LogoMark, Wordmark } from '../components/Logo'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
@@ -69,9 +70,8 @@ function Review({ resume, suggestion, onReplace }: ReviewProps) {
         <div className="mt-6 space-y-3">
           <ErrorNote error={save.error} />
           <Button
-            variant="primary"
+            variant="cta"
             className="w-full sm:w-auto"
-            icon={<ArrowRight size={16} />}
             isBusy={save.isPending}
             disabled={kept.length === 0 || spec.name.trim().length < 2}
             onClick={create}
@@ -121,7 +121,14 @@ export function WelcomePage() {
       </p>
 
       <AnimatePresence mode="wait">
-        {isProcessing ? (
+        {resume.isPending ? (
+          <motion.div key="loading" {...STEP_MOTION}>
+            <Loading label="Проверяем, есть ли резюме" className="space-y-4">
+              <Skeleton className="h-44 rounded-3xl" />
+              <Skeleton className="h-4 w-3/4" />
+            </Loading>
+          </motion.div>
+        ) : isProcessing ? (
           <motion.div key="processing" {...STEP_MOTION}>
             <ResumeProcessing
               usesModel={meta.data?.llm_provider === 'ollama'}

@@ -1,7 +1,13 @@
 import { render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { makeAttack, makeAttackItem, makeItem, makeVulnerabilityItem } from '../../test/fixtures'
-import { EntryDetails, PriorityChip } from './EntryCard'
+import {
+  makeAttack,
+  makeAttackItem,
+  makeItem,
+  makeReference,
+  makeVulnerabilityItem,
+} from '../../test/fixtures'
+import { EntryDetails, PriorityChip, VerifiedBadge } from './EntryCard'
 
 /** The card's filled fields as the reader reads them: name, then value. */
 function cardFields() {
@@ -9,6 +15,35 @@ function cardFields() {
   const values = screen.queryAllByRole('definition').map((value) => value.textContent)
   return terms.map((term, index) => [term, values[index]])
 }
+
+describe('VerifiedBadge', () => {
+  it('stamps an entry checked against CISA KEV and the BDU, naming the bases on hover', () => {
+    render(<VerifiedBadge item={makeVulnerabilityItem()} />)
+    expect(screen.getByTitle('Идентификаторы сверены с CISA KEV и БДУ ФСТЭК')).toHaveTextContent(
+      'Сверено',
+    )
+  })
+
+  it('names only the base the ids were found in', () => {
+    render(
+      <VerifiedBadge
+        item={makeVulnerabilityItem({ references: [makeReference({ kev_added: null })] })}
+      />,
+    )
+    expect(screen.getByTitle('Идентификаторы сверены с БДУ ФСТЭК')).toBeInTheDocument()
+  })
+
+  it('stays away from an entry the bases know nothing of', () => {
+    const { container, rerender } = render(<VerifiedBadge item={makeItem({ references: [] })} />)
+    expect(container).toBeEmptyDOMElement()
+    rerender(
+      <VerifiedBadge
+        item={makeItem({ references: [makeReference({ kev_added: null, bdu_id: '' })] })}
+      />,
+    )
+    expect(screen.queryByText('Сверено')).toBeNull()
+  })
+})
 
 describe('PriorityChip', () => {
   it('names the dataset’s priority and gives its reason on hover', () => {

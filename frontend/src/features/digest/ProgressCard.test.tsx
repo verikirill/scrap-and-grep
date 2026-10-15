@@ -20,6 +20,9 @@ function steps(): [string, StepState][] {
 
 const bar = () => screen.getByRole('progressbar', { name: 'Готовность выпуска' })
 
+/** The pose of the cat that walks the track: decoration, so found by its mark. */
+const cat = () => document.querySelector('svg.mascot')?.getAttribute('data-pose')
+
 describe('ProgressCard', () => {
   it('shows an issue waiting in the queue with no step under way', () => {
     renderWithProviders(
@@ -31,6 +34,9 @@ describe('ProgressCard', () => {
     expect(screen.getByRole('heading', { name: 'В очереди' })).toBeInTheDocument()
     // A sliver of the bar is drawn from the start: an empty bar reads as stuck.
     expect(bar()).toHaveAttribute('aria-valuenow', '2')
+    // The cat waits its turn with a clock, hidden from screen readers.
+    expect(cat()).toBe('waiting')
+    expect(document.querySelector('svg.mascot')).toHaveAttribute('aria-hidden', 'true')
     expect(steps()).toEqual([
       ['Подготовка', 'waiting'],
       ['Поиск', 'waiting'],
@@ -51,6 +57,7 @@ describe('ProgressCard', () => {
     expect(screen.getByRole('heading', { name: /^Оцениваем релевантность/ })).toBeInTheDocument()
     expect(screen.getByText('16 из 40')).toBeInTheDocument()
     expect(bar()).toHaveAttribute('aria-valuenow', '40')
+    expect(cat()).toBe('searching')
     expect(steps()).toEqual([
       ['Подготовка', 'done'],
       ['Поиск', 'done'],
@@ -104,6 +111,8 @@ describe('ProgressCard', () => {
     )
     expect(screen.getByRole('heading', { name: 'Сохраняем' })).toBeInTheDocument()
     expect(bar()).toHaveAttribute('aria-valuenow', '99')
+    // Saving: the cat holds up the issue it found.
+    expect(cat()).toBe('found')
     expect(steps().every(([, state]) => state === 'done')).toBe(true)
   })
 })
