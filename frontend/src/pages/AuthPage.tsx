@@ -11,6 +11,7 @@ import { EASE, INPUT_CLASS } from '../components/tokens'
 import { Button, ErrorNote, Field } from '../components/ui'
 import { SharedAccounts } from '../features/auth/SharedAccounts'
 import { AuthRadar } from '../features/auth/AuthRadar'
+import { ScrambleText } from '../features/auth/ScrambleText'
 import { TailVisual } from '../features/auth/TailVisual'
 import { ONBOARDING_PATH } from '../lib/onboarding'
 import { useMe, useMeta, useSignIn } from '../lib/queries'
@@ -23,6 +24,15 @@ const TABS = [
   { mode: 'login', to: '/login', label: 'Вход' },
   { mode: 'register', to: '/register', label: 'Регистрация' },
 ] as const
+
+// The readers the brand side names in turn: the profiles the service ships with.
+const ROLES = [
+  'инженера АСУ ТП',
+  'руководителя ИТ',
+  'дежурного SOC',
+  'директора по цифре',
+  'аналитика ИБ',
+]
 
 type Props = {
   mode: 'login' | 'register'
@@ -90,8 +100,17 @@ export function AuthPage({ mode }: Props) {
           {isWide && <TailVisual />}
         </div>
         <div className="max-w-md">
-          <p className="font-serif text-[28px] leading-tight font-semibold text-balance">
-            Новости ИТ и ИБ под вашу работу
+          {/* The reader the digest is for changes, decoded like a match in
+              the terminal above; a screen reader hears the sentence once. */}
+          <p
+            aria-label="Новости ИТ и ИБ под вашу работу"
+            className="font-serif text-[28px] leading-tight font-semibold"
+          >
+            <span aria-hidden>Новости ИТ и ИБ</span>
+            <span aria-hidden className="mt-1 flex items-baseline gap-2.5">
+              <span>для</span>
+              <ScrambleText words={ROLES} className="auth-role" />
+            </span>
           </p>
           <p className="mt-3 text-sm leading-relaxed text-white/60">
             Сервис читает больше 100 источников по ИТ, информационной безопасности и энергетике,
@@ -101,7 +120,12 @@ export function AuthPage({ mode }: Props) {
         </div>
       </aside>
 
-      <main className="flex items-center justify-center px-5 py-10 lg:px-16">
+      <main className="relative isolate flex items-center justify-center overflow-hidden px-5 py-10 lg:px-16">
+        <div aria-hidden className="auth-ripple hidden lg:block">
+          <span />
+          <span />
+          <span />
+        </div>
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
