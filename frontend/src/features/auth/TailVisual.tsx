@@ -2,6 +2,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { useEffect, useState } from 'react'
 import { ArtTile } from '../../components/ArtTile'
 import { BrandCat } from '../../components/BrandCat'
+import { AuthRadar } from './AuthRadar'
 
 // The product in one picture: news run past like `tail -f`, and the words a
 // reader cares about light up like `grep` matches.
@@ -68,9 +69,12 @@ export function TailVisual() {
     <div aria-hidden className="flex w-full max-w-[460px] flex-col items-center gap-8">
       {/* The logo cat, awake and searching, on the light tile of the logo.
           Still under "reduce motion". */}
-      <ArtTile className="rounded-[1.75rem] p-3 shadow-[0_24px_80px_rgba(125,155,255,0.25)]">
-        <BrandCat size={104} />
-      </ArtTile>
+      <div className="relative">
+        <AuthRadar />
+        <ArtTile className="relative rounded-[1.75rem] p-3 shadow-[0_24px_80px_rgba(125,155,255,0.25)]">
+          <BrandCat size={104} />
+        </ArtTile>
+      </div>
       <div className="w-full overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] font-mono text-[13px] leading-6 shadow-2xl backdrop-blur">
         <div className="flex items-center gap-1.5 border-b border-white/10 px-4 py-2.5">
           <span className="size-2.5 rounded-full bg-white/15" />

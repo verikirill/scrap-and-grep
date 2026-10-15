@@ -56,15 +56,7 @@ function isDark(): boolean {
   return document.documentElement.classList.contains('dark')
 }
 
-/** "light": white dots on black whatever the theme, for a surface that is
- *  always dark, such as the brand side of the sign-in page. */
-export function DottedVeil({
-  className,
-  tone = 'auto',
-}: {
-  className?: string
-  tone?: 'auto' | 'light'
-}) {
+export function DottedVeil({ className }: { className?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -107,7 +99,7 @@ export function DottedVeil({
     const paint = () => {
       // Screen in the dark theme lets white dots through and black vanish;
       // multiply in the light one does the same for black dots on white.
-      if (tone === 'light' || isDark()) {
+      if (isDark()) {
         gl.uniform3f(ground, 0, 0, 0)
         gl.uniform3f(dot, 1, 1, 1)
       } else {
@@ -172,7 +164,7 @@ export function DottedVeil({
       gl.deleteProgram(program)
       gl.getExtension('WEBGL_lose_context')?.loseContext()
     }
-  }, [tone])
+  }, [])
 
   return <canvas ref={canvasRef} aria-hidden="true" className={className} />
 }
