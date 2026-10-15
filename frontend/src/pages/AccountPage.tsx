@@ -203,7 +203,7 @@ function Introduction() {
     <Card className="p-5">
       <h2 className="text-base font-semibold">Знакомство с сервисом</h2>
       <p className="mt-1 text-sm text-muted">
-        Три коротких шага: что умеет сервис, профиль интересов и первый выпуск.
+        Короткий обзор всех разделов, потом профиль интересов и первый выпуск.
       </p>
       <div className="mt-4">
         <Link to={ONBOARDING_PATH} className={buttonClass('secondary', 'sm')}>
