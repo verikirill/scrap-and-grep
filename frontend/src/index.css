@@ -90,7 +90,7 @@
 }
 
 @layer components {
-  /* The backdrop of the feed's Telegram look: a chat's wallpaper, faint dots of the accent. */
+  /* The backdrop of the feed's Telegram look on a phone: a chat's wallpaper, faint dots of the accent. */
   .chat-wallpaper {
     background-color: var(--surface-secondary);
     background-image: radial-gradient(

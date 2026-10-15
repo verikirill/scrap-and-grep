@@ -98,12 +98,16 @@ function Skeletons({ view }: { view: FeedView }) {
   )
 }
 
-/** The Telegram look sits on a chat's wallpaper, in a column of a chat's width. */
+/**
+ * The Telegram look: on a phone the posts sit on a chat's wallpaper from edge
+ * to edge; on a wide screen there is no panel, only a column of reading width
+ * in the middle of the page.
+ */
 function PostColumn({ view, children }: { view: FeedView; children: React.ReactNode }) {
   if (view !== 'telegram') return <div className="space-y-3">{children}</div>
   return (
-    <div className="chat-wallpaper -mx-4 px-2 py-3 sm:mx-0 sm:rounded-3xl sm:px-5 sm:py-5">
-      <div className="mx-auto max-w-[600px] space-y-3">{children}</div>
+    <div className="chat-wallpaper -mx-4 px-2 py-3 sm:mx-0 sm:bg-transparent sm:bg-none sm:p-0 sm:pt-1">
+      <div className="mx-auto max-w-[640px] space-y-3 sm:space-y-5">{children}</div>
     </div>
   )
 }
