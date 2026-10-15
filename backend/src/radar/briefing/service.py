@@ -34,7 +34,7 @@ from radar.shorts.model import (
     STATUS_RUNNING,
 )
 from radar.shorts.service import get_voice
-from radar.shorts.voice import GAP_MS, VoiceClient
+from radar.shorts.voice import GAP_MS, Voice
 from radar.store import digests as digest_store
 from radar.views import digest_view
 from radar.worker.brokers import MEDIA_IDLE_TIMEOUT_MS
@@ -185,7 +185,7 @@ def duration_ms(data: bytes) -> int:
 
 
 async def speak(
-    client: VoiceClient,
+    client: Voice,
     lines: Sequence[str],
     voice: str | None,
     on_part: Callable[[int, int], Awaitable[None]] | None = None,

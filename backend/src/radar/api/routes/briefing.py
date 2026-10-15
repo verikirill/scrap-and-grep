@@ -103,7 +103,7 @@ async def get_briefing(
     """Whether a brief can be voiced here, the voices to pick from and the
     digest's brief with its progress, `null` if none was ordered."""
     await _management_digest(session, user, digest_id)
-    if not settings.tts_url:
+    if not settings.has_voice:
         return BriefingState(available=False)
     briefing = await service.get(session, digest_id, user.id)
     return BriefingState(
@@ -128,7 +128,7 @@ async def create_briefing(
 ) -> BriefingOut:
     """Queue the spoken brief of a finished management digest. A new request
     replaces the previous brief of the same digest."""
-    if not settings.tts_url:
+    if not settings.has_voice:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, detail=service.NO_VOICE)
     digest = await _management_digest(session, user, digest_id)
     if digest.status != digest_store.STATUS_DONE:

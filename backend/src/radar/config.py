@@ -45,12 +45,28 @@ class Settings(BaseSettings):
 
     # AI providers. "hashing" and "heuristic" are the offline stand-ins that
     # keep the pipeline working when no model server is reachable.
-    embedding_provider: Literal["hashing", "ollama"] = "hashing"
+    embedding_provider: Literal["hashing", "ollama", "openai"] = "hashing"
+    # For "openai" the model of the documents; Yandex wants its URI,
+    # emb://<folder>/text-embeddings-v2-doc/latest.
     embedding_model: str = "embeddinggemma:300m"
     # Empty means "use the preset for the model family" (see ai/factory.py).
     embedding_query_prefix: str = ""
     embedding_document_prefix: str = ""
     embedding_batch_size: int = 32
+    # "openai" is any OpenAI-compatible /embeddings server: Yandex AI Studio,
+    # vLLM, text-embeddings-inference. Its base URL is required.
+    embedding_base_url: str = ""
+    embedding_api_key: SecretStr | None = None
+    # Yandex AI Studio wants the folder id as the OpenAI project.
+    embedding_project: str = ""
+    # The model of the search queries; empty means the model of the documents.
+    embedding_query_model: str = ""
+    # Width the server is asked for (Yandex v2: 128, 256, 512 or 768). Empty
+    # means the preset of the model, else the server's own default.
+    embedding_dimensions: int | None = Field(default=None, ge=1)
+    # Yandex answers 10 requests a second per folder, and the api's searches
+    # share them with the ingest worker: a little is left for them.
+    embedding_requests_per_second: float = Field(default=8.0, gt=0)
     # "openai" is any OpenAI-compatible Chat Completions server: Yandex AI
     # Studio, vLLM, Ollama's /v1. Its base URL is required.
     llm_provider: Literal["heuristic", "ollama", "openai"] = "heuristic"
@@ -235,6 +251,12 @@ class Settings(BaseSettings):
     # Empty means the voice service's own default speaker.
     tts_voice: str = ""
     tts_timeout_seconds: float = Field(default=300.0, ge=10)
+    # The voice: our Qwen3-TTS service at tts_url, or Yandex SpeechKit in the
+    # cloud with an API key of the folder (its service account needs the role
+    # ai.speechkit-tts.user). SpeechKit needs no tts_url.
+    tts_provider: Literal["service", "yandex"] = "service"
+    tts_api_key: SecretStr | None = None
+    tts_folder: str = ""
     # Finished videos, one MP4 per digest. Shared by the media worker, which
     # writes, and the api, which serves.
     media_dir: str = "data/media"
@@ -351,10 +373,17 @@ class Settings(BaseSettings):
     def _one_proxy(cls, url: str) -> str:
         return check_proxy_url(url) if url else url
 
-    @field_validator("llm_api_key", "nvd_api_key", mode="before")
+    @field_validator(
+        "llm_api_key",
+        "nvd_api_key",
+        "embedding_api_key",
+        "embedding_dimensions",
+        "tts_api_key",
+        mode="before",
+    )
     @classmethod
-    def _unset_key(cls, value: object) -> object:
-        # Compose passes a key that is not set as an empty string.
+    def _unset(cls, value: object) -> object:
+        # Compose passes a value that is not set as an empty string.
         return value or None
 
     @model_validator(mode="after")
@@ -366,7 +395,18 @@ class Settings(BaseSettings):
             raise ValueError("RADAR_LLM_API_KEY is required for a model in Ollama's cloud")
         if self.llm_provider == "openai" and not self.llm_base_url:
             raise ValueError("RADAR_LLM_BASE_URL is required for an OpenAI-compatible model")
+        if self.embedding_provider == "openai" and not self.embedding_base_url:
+            raise ValueError(
+                "RADAR_EMBEDDING_BASE_URL is required for OpenAI-compatible embeddings"
+            )
+        if self.tts_provider == "yandex" and self.tts_api_key is None:
+            raise ValueError("RADAR_TTS_API_KEY is required for the voice in Yandex SpeechKit")
         return self
+
+    @property
+    def has_voice(self) -> bool:
+        """Videos and briefs can be voiced: our service is reachable or SpeechKit set."""
+        return self.tts_provider == "yandex" or bool(self.tts_url)
 
     @computed_field  # type: ignore[prop-decorator]
     @property

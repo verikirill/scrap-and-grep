@@ -6,6 +6,7 @@ missing or failing voice service costs the sound, not the whole video.
 
 import base64
 from itertools import pairwise
+from typing import Protocol
 
 import httpx
 from pydantic import BaseModel, Field, ValidationError
@@ -44,6 +45,14 @@ class VoiceOption(BaseModel):
     id: str = Field(pattern=VOICE_ID_PATTERN)
     title: str = Field(min_length=1, max_length=40)
     default: bool = False
+
+
+class Voice(Protocol):
+    """What a video or a brief asks of a voice: our service or SpeechKit."""
+
+    async def voices(self) -> list[VoiceOption]: ...
+
+    async def speak(self, lines: list[str], voice: str | None = None) -> Narration: ...
 
 
 def _voice_options(listing: object) -> list[VoiceOption]:
@@ -113,9 +122,7 @@ class VoiceClient:
         return Narration(segments=segments, audio=audio, voice=f"qwen3-tts:{out.voice}")
 
 
-async def narrate(
-    client: VoiceClient | None, lines: list[str], voice: str | None = None
-) -> Narration:
+async def narrate(client: Voice | None, lines: list[str], voice: str | None = None) -> Narration:
     """Speak the lines, or time them for a silent video if the voice fails.
 
     A picked voice the service refuses (it was removed after the reader

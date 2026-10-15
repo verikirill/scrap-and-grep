@@ -5,7 +5,13 @@ from dataclasses import dataclass
 from functools import lru_cache
 from typing import TYPE_CHECKING
 
-from radar.ai.embedder import Embedder, HashingEmbedder, OllamaEmbedder
+from radar.ai.embedder import (
+    Embedder,
+    HashingEmbedder,
+    OllamaEmbedder,
+    OpenAIEmbedder,
+    short_model_name,
+)
 from radar.ai.heuristic import HeuristicIntelligence
 from radar.ai.intelligence import Intelligence
 from radar.ai.resilient import CachedIntelligence, CircuitBreaker, ResilientIntelligence
@@ -53,6 +59,17 @@ _EMBEDDING_PRESETS: dict[str, EmbeddingPreset] = {
         duplicate_threshold=0.76,
         search_floor=0.38,
     ),
+    # Yandex AI Studio, by the name without the folder (ai/embedder.py). Mapped
+    # from embeddinggemma on 1 124 articles of September 23-30: the threshold
+    # passes as many of the 420 816 pairs the rules keep apart as 0.76 does
+    # there (187, 0.044 %) and joins 58 % of the 205 pairs the rules call one
+    # story (embeddinggemma 56 %); at 768 dimensions it is 0.776. The floor
+    # passes as many query-article pairs as 0.38 does there (2.7 % of fifteen
+    # short queries), and "цифровая подстанция МЭК 61850", with no article on
+    # it, peaks at 0.401: 0.41 keeps it out.
+    "text-embeddings-v2": EmbeddingPreset(duplicate_threshold=0.77, search_floor=0.41),
+    # The first generation, 256 dimensions: everything sits closer together.
+    "text-search": EmbeddingPreset(duplicate_threshold=0.84, search_floor=0.39),
     "snowflake-arctic-embed2": EmbeddingPreset(query_prefix="query: "),
     "nomic-embed-text": EmbeddingPreset(
         query_prefix="search_query: ", document_prefix="search_document: "
@@ -70,6 +87,20 @@ def embedding_preset(model: str) -> EmbeddingPreset:
 @lru_cache
 def get_embedder() -> Embedder:
     settings = get_settings()
+    if settings.embedding_provider == "openai":
+        preset = embedding_preset(short_model_name(settings.embedding_model))
+        api_key = settings.embedding_api_key
+        return OpenAIEmbedder(
+            settings.embedding_model,
+            settings.embedding_base_url,
+            query_model=settings.embedding_query_model,
+            api_key=api_key.get_secret_value() if api_key else None,
+            project=settings.embedding_project,
+            dimensions=settings.embedding_dimensions or preset.dimensions,
+            duplicate_threshold=preset.duplicate_threshold,
+            search_floor=preset.search_floor,
+            requests_per_second=settings.embedding_requests_per_second,
+        )
     if settings.embedding_provider == "ollama":
         preset = embedding_preset(settings.embedding_model)
         return OllamaEmbedder(
