@@ -58,7 +58,12 @@ export function ShareProfileButton({ profile }: { profile: Profile }) {
 
   return (
     <>
-      <Button size="sm" variant="ghost" icon={<Share size={15} />} onClick={() => setOpen(true)}>
+      <Button
+        size="sm"
+        variant="secondary"
+        icon={<Share size={15} />}
+        onClick={() => setOpen(true)}
+      >
         Поделиться
       </Button>
       <Dialog

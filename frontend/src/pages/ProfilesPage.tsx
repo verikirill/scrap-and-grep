@@ -1,7 +1,7 @@
 import clsx from 'clsx'
 import { Newspaper, Plus, RotateCcw, Save, Trash2 } from '../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
-import { useMemo, useRef, useState } from 'react'
+import { useContext, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { EASE } from '../components/tokens'
 import { Loading, Skeleton, SkeletonText } from '../components/loading'
@@ -13,7 +13,7 @@ import { ProfileAvatar, ProfileLookPicker } from '../features/profiles/ProfileLo
 import { ShareProfileButton } from '../features/profiles/ShareProfile'
 import type { Profile, ProfileSpec } from '../lib/api'
 import { useDeleteProfile, useProfiles, useSaveProfile } from '../lib/queries'
-import { SlidingPill } from '../components/SlidingPill'
+import { EntranceContext } from '../components/entrance'
 import { useConfirmLeave } from '../lib/useConfirmLeave'
 
 const NEW = 'new'
@@ -51,7 +51,6 @@ type EditorProps = {
  * section, the focus and anything typed while the request was in flight stay.
  */
 function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
-  const tabs = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
   const save = useSaveProfile()
   const remove = useDeleteProfile()
@@ -150,13 +149,8 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
       {/* The tabs sit on a card, as the digest page picks its profile: on the
           dotted page the plain buttons around them blended in. */}
       <Card className="mb-5 p-3 sm:p-4">
-        <div ref={tabs} className="relative isolate flex flex-wrap items-center gap-1.5">
-          <SlidingPill
-            container={tabs}
-            activeKey={activeId}
-            rememberAs="profile-tabs"
-            className="rounded-[1.25rem] bg-accent-soft ring-1 ring-accent/40"
-          />
+        {/* The chosen tab is lit in place: no pill slides or springs between them. */}
+        <div className="flex flex-wrap items-center gap-1.5">
           {profiles.map((profile) => (
             <button
               key={profile.id}
@@ -167,9 +161,9 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
               className={clsx(
                 // Never wider than the row: a long name wraps inside the tab instead of
                 // pushing the page sideways on a phone or hiding behind an ellipsis.
-                'relative isolate flex max-w-full min-w-0 items-center gap-2 rounded-[1.25rem] py-1 pr-3.5 pl-1 text-left text-sm font-medium transition-colors duration-300',
+                'relative isolate flex max-w-full min-w-0 items-center gap-2 rounded-[1.25rem] py-1 pr-3.5 pl-1 text-left text-sm font-medium',
                 profile.id === activeId
-                  ? 'text-foreground'
+                  ? 'bg-accent-soft text-foreground ring-1 ring-accent/40'
                   : 'text-muted hover:bg-default/60 hover:text-foreground',
               )}
             >
@@ -275,6 +269,7 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
 export function ProfilesPage() {
   const profiles = useProfiles()
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const entrance = useContext(EntranceContext)
 
   if (!profiles.data) {
     return (
@@ -322,11 +317,14 @@ export function ProfilesPage() {
   const activeId = selectedId ?? profiles.data[0]?.id ?? NEW
   const stored = profiles.data.find((profile) => profile.id === activeId) ?? null
   return (
-    <ProfileEditor
-      key={stored?.id ?? NEW}
-      profiles={profiles.data}
-      stored={stored}
-      onSelect={setSelectedId}
-    />
+    // Another profile opens in place: its cards rise only on the page's first view.
+    <EntranceContext.Provider value={selectedId === null ? entrance : null}>
+      <ProfileEditor
+        key={stored?.id ?? NEW}
+        profiles={profiles.data}
+        stored={stored}
+        onSelect={setSelectedId}
+      />
+    </EntranceContext.Provider>
   )
 }
