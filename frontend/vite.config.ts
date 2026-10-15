@@ -57,6 +57,8 @@ export default defineConfig({
       ],
       // cobertura: the coverage GitLab draws on merge request diffs.
       reporter: ['text-summary', 'json-summary', 'html', 'cobertura'],
+      // A little under what the suite reaches, so a change that drops tests fails.
+      thresholds: { lines: 95, statements: 94, functions: 93, branches: 90 },
     },
   },
 })
