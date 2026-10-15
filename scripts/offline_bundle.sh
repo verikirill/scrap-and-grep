@@ -18,7 +18,7 @@
 #   bash /path/to/bundle/offline_bundle.sh load /path/to/bundle /srv/radar
 # unpacks the repository to /srv/radar, loads the images and the models and
 # prints the lines for .env. vLLM weights are not in the bundle: copy the
-# Hugging Face cache directory and set VLLM_MODELS_DIR (README).
+# Hugging Face cache directory and set VLLM_MODELS_DIR (docs/INSTALL.md).
 set -euo pipefail
 # Git Bash on Windows would rewrite the container paths below.
 export MSYS_NO_PATHCONV=1
