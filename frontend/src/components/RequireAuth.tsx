@@ -33,6 +33,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
         <ErrorState
           title="Не получилось проверить вход"
           error={me.error}
+          isPage
           action={
             <Button
               variant="primary"

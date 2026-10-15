@@ -2,6 +2,8 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
+import { ApiError } from '../lib/api'
+import { BrandCat } from './BrandCat'
 import {
   AnimatedNumber,
   Button,
@@ -155,6 +157,69 @@ describe('ErrorState', () => {
     rerender(<ErrorState title="Не открылось" />)
     expect(screen.getByRole('alert')).toHaveTextContent(/^Не открылось$/)
   })
+
+  it.each([
+    [0, 'Нет связи с сервером', 'Проверьте подключение к интернету'],
+    [401, 'Нет доступа', 'Войдите заново'],
+    [403, 'Нет доступа', 'Войдите заново'],
+    [404, 'Не нашлось', 'Возможно, это удалили'],
+    [429, 'Слишком много запросов', 'Подождите немного'],
+    [502, 'Сервис временно недоступен', 'Попробуйте ещё раз через минуту'],
+  ])('names a request that failed with %i, and what to do', (status, title, hint) => {
+    render(<ErrorState error={new ApiError(status, `Ошибка ${status}`)} />)
+    expect(screen.getByRole('heading', { level: 3, name: title })).toBeInTheDocument()
+    const alert = screen.getByRole('alert')
+    expect(alert).toHaveTextContent(hint)
+    expect(alert).not.toHaveTextContent(`Ошибка ${status}`)
+    // Inside a page the sign stays a tile, whatever the status.
+    expect(alert.querySelector('.icon-tile')).not.toBeNull()
+    expect(alert.querySelector('img')).toBeNull()
+  })
+
+  it('keeps the caller’s title first and the server’s reason under the kind', () => {
+    render(
+      <ErrorState
+        title="Лента не загрузилась"
+        error={new ApiError(503, 'Индекс публикаций перестраивается')}
+      />,
+    )
+    expect(screen.getByRole('heading', { name: 'Лента не загрузилась' })).toBeInTheDocument()
+    expect(screen.getByText('Сервис временно недоступен')).toBeInTheDocument()
+    expect(screen.getByText('Индекс публикаций перестраивается')).toBeInTheDocument()
+  })
+
+  it('shows any other refusal in the server’s words, under a general title without one', () => {
+    render(<ErrorState error={new ApiError(409, 'Источник уже добавлен.')} />)
+    expect(screen.getByRole('heading', { name: 'Что-то пошло не так' })).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('Источник уже добавлен.')
+  })
+
+  it.each([
+    [503, '/brand/errors/503.webp'],
+    [500, '/brand/errors/503.webp'],
+    [429, '/brand/errors/429.webp'],
+  ])('fills a page that failed with %i with its drawing and a page heading', (status, src) => {
+    render(
+      <ErrorState isPage title="Не получилось проверить вход" error={new ApiError(status, 'x')} />,
+    )
+    const alert = screen.getByRole('alert')
+    const art = alert.querySelector('img')
+    expect(art).toHaveAttribute('src', src)
+    expect(art).toHaveAttribute('alt', '')
+    expect(art).toHaveAttribute('loading', 'lazy')
+    expect(alert.querySelector('.icon-tile')).toBeNull()
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Не получилось проверить вход' }),
+    ).toBeInTheDocument()
+  })
+
+  it('keeps the tile on a page that failed for a reason without a drawing', () => {
+    render(<ErrorState isPage error={new ApiError(0, 'x')} />)
+    const alert = screen.getByRole('alert')
+    expect(alert.querySelector('img')).toBeNull()
+    expect(alert.querySelector('.icon-tile')).not.toBeNull()
+    expect(screen.getByRole('heading', { level: 1, name: 'Нет связи с сервером' })).toBeVisible()
+  })
 })
 
 describe('ReadingTime', () => {
@@ -203,6 +268,15 @@ describe('EmptyState and PageHeader', () => {
     expect(tile).toContainElement(screen.getByTestId('topic'))
     // Only the words are read.
     expect(screen.getByRole('heading')).toHaveAccessibleName('Постов пока нет')
+  })
+
+  it('puts a picture in place of the tile when given one', () => {
+    const { container } = render(
+      <EmptyState art={<BrandCat size={160} />} title="Выпусков пока нет" />,
+    )
+    expect(container.querySelector('.icon-tile')).toBeNull()
+    expect(container.querySelector('.brand-cat')).toHaveAttribute('aria-hidden', 'true')
+    expect(screen.getByRole('heading')).toHaveAccessibleName('Выпусков пока нет')
   })
 
   it('gives the main action of a screen an arrow, keeping its name', () => {

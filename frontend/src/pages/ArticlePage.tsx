@@ -142,6 +142,7 @@ export function ArticlePage() {
       <ErrorState
         title="Статья не открылась"
         error={article.error}
+        isPage
         action={<Button onClick={() => void article.refetch()}>Повторить</Button>}
       />
     )

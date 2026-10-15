@@ -361,3 +361,186 @@
   opacity: 0.06;
   mix-blend-mode: screen;
 }
+
+/* The brand cat (components/BrandCat.tsx): the parts of the logo, placed in
+   percentages of their 640 by 660 scene. Its motion is transform and opacity
+   only, on a 6 s cycle; the eyes blink on a 4 s one, so the two drift apart. */
+.brand-cat {
+  position: relative;
+  max-width: 100%;
+  aspect-ratio: 640 / 660;
+  user-select: none;
+  pointer-events: none;
+}
+.brand-cat__group {
+  position: absolute;
+  inset: 0;
+}
+.brand-cat img {
+  position: absolute;
+  max-width: none;
+}
+/* The light behind the magnifier's glass, the same in both themes. */
+.brand-cat__lens {
+  position: absolute;
+  border-radius: 50%;
+  background: rgb(238 241 246 / 0.92);
+}
+/* Each part turns about where it is attached: the tail at the body, the head
+   at the neck, the ear at its base; the body breathes from the ground. */
+.brand-cat__tail {
+  transform-origin: 92% 88%;
+}
+.brand-cat__head {
+  transform-origin: 47% 43%;
+}
+.brand-cat__ear {
+  transform-origin: 63% 96%;
+}
+.brand-cat__breath {
+  transform-origin: 50% 93%;
+}
+.brand-cat__eye-closed {
+  opacity: 0;
+}
+.brand-cat[data-pose='sleep'] .brand-cat__eye-closed {
+  opacity: 1;
+}
+
+.brand-cat[data-pose='search'] .brand-cat__tail {
+  animation: brand-cat-tail 6s ease-in-out infinite;
+}
+.brand-cat[data-pose='search'] .brand-cat__head {
+  animation: brand-cat-head 6s ease-in-out infinite;
+}
+.brand-cat[data-pose='search'] .brand-cat__ear {
+  animation: brand-cat-ear 6s linear infinite;
+}
+.brand-cat[data-pose='search'] .brand-cat__eye-open {
+  animation: brand-cat-eye-open 4s linear infinite;
+}
+.brand-cat[data-pose='search'] .brand-cat__eye-closed {
+  animation: brand-cat-eye-closed 4s linear infinite;
+}
+/* Two axes a quarter of a cycle apart: the magnifier traces an oval. */
+.brand-cat[data-pose='search'] .brand-cat__glass-x {
+  animation: brand-cat-glide-x 3s ease-in-out infinite alternate;
+}
+.brand-cat[data-pose='search'] .brand-cat__glass-y {
+  animation: brand-cat-glide-y 3s ease-in-out -1.5s infinite alternate;
+}
+.brand-cat[data-pose='sleep'] .brand-cat__breath {
+  animation: brand-cat-breathe 6s ease-in-out infinite;
+}
+
+@keyframes brand-cat-tail {
+  0%,
+  100% {
+    transform: rotate(-4deg);
+  }
+  50% {
+    transform: rotate(4deg);
+  }
+}
+@keyframes brand-cat-head {
+  0%,
+  100% {
+    transform: rotate(-1.5deg);
+  }
+  50% {
+    transform: rotate(1.5deg);
+  }
+}
+/* Once a cycle, for about 400 ms. */
+@keyframes brand-cat-ear {
+  0%,
+  40%,
+  47%,
+  100% {
+    transform: rotate(0);
+  }
+  42% {
+    transform: rotate(-7deg);
+  }
+  44.5% {
+    transform: rotate(3deg);
+  }
+}
+/* Shut for about 120 ms of every 4 s. */
+@keyframes brand-cat-eye-open {
+  0%,
+  95%,
+  98.5%,
+  100% {
+    opacity: 1;
+  }
+  95.5%,
+  98% {
+    opacity: 0;
+  }
+}
+@keyframes brand-cat-eye-closed {
+  0%,
+  95%,
+  98.5%,
+  100% {
+    opacity: 0;
+  }
+  95.5%,
+  98% {
+    opacity: 1;
+  }
+}
+@keyframes brand-cat-glide-x {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-2%);
+  }
+}
+@keyframes brand-cat-glide-y {
+  from {
+    transform: translateY(-0.75%);
+  }
+  to {
+    transform: translateY(0.75%);
+  }
+}
+@keyframes brand-cat-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.015);
+  }
+}
+
+/* Under "reduce motion" the cat holds still: open-eyed, or asleep. */
+@media (prefers-reduced-motion: reduce) {
+  .brand-cat,
+  .brand-cat * {
+    animation: none !important;
+  }
+}
+
+/* The drawings on the error pages (components/ErrorIllustration.tsx) float
+   a few pixels up and down; still under "reduce motion". */
+.error-illustration {
+  animation: error-illustration-float 6s ease-in-out infinite;
+}
+@keyframes error-illustration-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .error-illustration {
+    animation: none !important;
+  }
+}

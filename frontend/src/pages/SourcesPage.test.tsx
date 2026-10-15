@@ -109,6 +109,7 @@ describe('SourcesPage', () => {
     renderWithProviders(<SourcesPage />)
 
     expect(await screen.findByText('Каталог недоступен.')).toBeInTheDocument()
+    expect(screen.getByText('Сервис временно недоступен')).toBeInTheDocument()
     await healthSummary()
   })
 })

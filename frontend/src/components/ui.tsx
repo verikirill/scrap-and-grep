@@ -3,7 +3,10 @@ import { ArrowRight, Help, Schedule, TriangleAlert } from './icons'
 import { animate, motion, useMotionValue, useTransform } from 'motion/react'
 import { useEffect } from 'react'
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import { ApiError } from '../lib/api'
+import { errorArtOf, failureOf, serverDetail } from '../lib/failure'
 import { formatNumber } from '../lib/format'
+import { ErrorIllustration } from './ErrorIllustration'
 import { useEntranceDelay } from './entrance'
 import { DURATION, EASE, buttonClass } from './tokens'
 import type { ButtonVariant } from './tokens'
@@ -295,12 +298,15 @@ export function IconTile({
 /** An empty place: its topic, what is missing and the step that fills it. */
 export function EmptyState({
   icon,
+  art,
   title,
   children,
   action,
 }: {
   /** The topic, shown in a tinted tile above the title. */
-  icon: ReactNode
+  icon?: ReactNode
+  /** A picture in place of the tile. */
+  art?: ReactNode
   title: string
   children?: ReactNode
   /** The step that fills the empty place, as a button under the text. */
@@ -308,12 +314,36 @@ export function EmptyState({
 }) {
   return (
     <div className="flex flex-col items-center px-6 py-12 text-center">
-      <IconTile icon={icon} className="mb-4" />
+      {art ? <div className="mb-4">{art}</div> : <IconTile icon={icon} className="mb-4" />}
       <h3 className="text-base font-semibold">{title}</h3>
       {children && <div className="mt-1.5 max-w-xl text-sm text-muted">{children}</div>}
       {action && <div className="mt-4">{action}</div>}
     </div>
   )
+}
+
+type ErrorWords = {
+  heading: string
+  /** The kind of the failure, under a title that already says what failed. */
+  cause: string | null
+  message: string | null
+}
+
+/**
+ * What to say about a failure. A failed request of a known kind (lib/failure.ts)
+ * is named in plain words, with the server's own explanation when it gave one;
+ * a title the caller passed, saying what did not load, comes first.
+ */
+function describeError(title: string | undefined, error: unknown): ErrorWords {
+  const failure = failureOf(error)
+  if (failure && error instanceof ApiError) {
+    const message = serverDetail(error) ?? failure.hint
+    return title
+      ? { heading: title, cause: failure.title, message }
+      : { heading: failure.title, cause: null, message }
+  }
+  const message = error ? (error instanceof Error ? error.message : 'Неизвестная ошибка') : null
+  return { heading: title ?? 'Что-то пошло не так', cause: null, message }
 }
 
 /**
@@ -323,25 +353,43 @@ export function EmptyState({
 export function ErrorState({
   title,
   error,
+  isPage = false,
   children,
   action,
   className,
 }: {
-  title: string
-  /** The failure; its message is shown under the title. */
+  /** What did not load; without it, the kind of the failure is the title. */
+  title?: string
+  /** The failure; what it means is shown under the title. */
   error?: unknown
+  /**
+   * The failure fills the page: its heading is the page's, and too many
+   * requests or a service that is down get their drawing instead of the tile.
+   */
+  isPage?: boolean
   children?: ReactNode
   action?: ReactNode
   className?: string
 }) {
-  const message = error ? (error instanceof Error ? error.message : 'Неизвестная ошибка') : null
+  const { heading, cause, message } = describeError(title, error)
+  const art = isPage ? errorArtOf(error) : null
+  const Heading = isPage ? 'h1' : 'h3'
   return (
     <div
       role="alert"
       className={clsx('flex flex-col items-center px-6 py-10 text-center', className)}
     >
-      <IconTile icon={<TriangleAlert />} tone="danger" className="mb-4" />
-      <h3 className="text-base font-semibold">{title}</h3>
+      {art ? (
+        <div className="mb-6">
+          <ErrorIllustration status={art} />
+        </div>
+      ) : (
+        <IconTile icon={<TriangleAlert />} tone="danger" className="mb-4" />
+      )}
+      <Heading className={clsx('font-semibold', isPage ? 'text-xl' : 'text-base')}>
+        {heading}
+      </Heading>
+      {cause && <p className="mt-1.5 text-sm font-medium">{cause}</p>}
       {message && <p className="mt-1.5 max-w-md text-sm text-muted">{message}</p>}
       {children && <div className="mt-1.5 max-w-md text-sm text-muted">{children}</div>}
       {action && <div className="mt-4 flex flex-wrap justify-center gap-2">{action}</div>}

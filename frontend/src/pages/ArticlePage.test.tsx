@@ -105,7 +105,7 @@ describe('ArticlePage', () => {
     expect(screen.queryByRole('link', { name: 'Оригинал' })).toBeNull()
   })
 
-  it('shows another failure as it is', async () => {
+  it('shows a server failure in the server’s words, over the whole page', async () => {
     server.use(
       http.get(apiUrl('/articles/:id'), () =>
         HttpResponse.json({ detail: 'Источник не отвечает' }, { status: 502 }),
@@ -113,7 +113,10 @@ describe('ArticlePage', () => {
     )
     renderArticle()
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Источник не отвечает')
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Источник не отвечает')
+    expect(screen.getByRole('heading', { level: 1, name: 'Статья не открылась' })).toBeVisible()
+    expect(alert.querySelector('img')).toHaveAttribute('src', '/brand/errors/503.webp')
   })
 
   it('goes back to the feed when the article was the first page opened', async () => {
