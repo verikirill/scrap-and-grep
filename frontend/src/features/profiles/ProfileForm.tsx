@@ -176,7 +176,7 @@ const AUDIENCES: { id: Audience; title: string; description: string }[] = [
   {
     id: 'specialist',
     title: 'Специалисту',
-    description: 'Карточки атак и уязвимостей с приоритетом, остальные новости — по темам',
+    description: 'Карточки атак и уязвимостей с приоритетом, остальные новости по темам',
   },
   {
     id: 'management',
