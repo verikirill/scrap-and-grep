@@ -281,6 +281,21 @@ describe('AuthPage', () => {
     )
   })
 
+  it('greets with the searching cat on both the sign-in and the registration form', async () => {
+    serveSession()
+    for (const mode of ['login', 'register'] as const) {
+      const { container, unmount } = renderWithProviders(<AuthPage mode={mode} />, {
+        route: `/${mode}`,
+        path: `/${mode}`,
+      })
+      await screen.findByLabelText('Почта')
+      // Decorative: the form is what the page says, not the picture.
+      expect(container.querySelector('.brand-cat')).toHaveAttribute('data-pose', 'search')
+      expect(container.querySelector('.brand-cat')).toHaveAttribute('aria-hidden', 'true')
+      unmount()
+    }
+  })
+
   it('keeps the registration form free of the one-click entries', async () => {
     // The guest button tells that the server's answer is in.
     serveSession({ meta: withGuests() })
