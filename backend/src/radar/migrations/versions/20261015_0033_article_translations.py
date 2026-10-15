@@ -32,6 +32,7 @@ def upgrade() -> None:
         sa.Column("model", sa.String(length=200), nullable=False),
         sa.Column("title", sa.Text(), nullable=False),
         sa.Column("blocks", postgresql.JSONB(), nullable=False),
+        sa.Column("kept_original", sa.Integer(), server_default="0", nullable=False),
         sa.Column("translated_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("article_id", "language"),
     )

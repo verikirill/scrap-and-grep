@@ -304,7 +304,8 @@ class ArticleReadOut(BaseModel):
 class ArticleTranslationOut(BaseModel):
     """An article in the reader's language. "original" when it is in it
     already, "unavailable" with the reason when it could not be translated now:
-    the reader then shows the original."""
+    the reader then shows the original. A translation may keep a few fragments
+    in the original, `kept_original` of them."""
 
     id: int
     status: Literal["translated", "original", "unavailable"]
@@ -312,6 +313,7 @@ class ArticleTranslationOut(BaseModel):
     language: Literal["ru"]
     title: str | None = None
     blocks: list[Annotated[Block, Field(discriminator="type")]] | None = None
+    kept_original: int = 0
     reason: str | None = None
 
 

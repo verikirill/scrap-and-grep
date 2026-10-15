@@ -102,6 +102,7 @@ async def translate_article(
         language=to,
         title=found.title,
         blocks=found.blocks,
+        kept_original=found.kept_original,
     )
 
 

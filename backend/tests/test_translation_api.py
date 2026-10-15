@@ -19,6 +19,7 @@ from tests.test_translate import (
     TITLE,
     FakeChat,
     article_blocks,
+    drop_digits,
     drop_tags,
 )
 
@@ -112,6 +113,7 @@ async def test_an_english_article_is_translated_once_and_read_from_the_database_
     assert translated["source_language"] == "en"
     assert translated["language"] == "ru"
     assert translated["title"] == "Microsoft закрыла CVE-2026-21345 в Exchange Server"
+    assert translated["kept_original"] == 0
     blocks = translated["blocks"]
     assert [block["type"] for block in blocks] == [block["type"] for block in read["blocks"]]
     assert blocks[1]["spans"][3] == {"text": "бюллетень", "href": ADVISORY}
@@ -174,6 +176,7 @@ async def test_a_russian_article_is_not_translated(api: str, model: dict[str, ob
         "language": "ru",
         "title": None,
         "blocks": None,
+        "kept_original": 0,
         "reason": None,
     }
     assert chat.prompts == []
@@ -225,6 +228,37 @@ async def test_a_failed_model_gives_no_partial_translation_and_nothing_is_kept(
         assert await session.scalar(select(func.count()).select_from(ArticleTranslation)) == 1
 
 
+async def test_a_paragraph_the_model_broke_twice_is_shown_in_the_original_and_counted(
+    api: str, model: dict[str, object]
+) -> None:
+    from sqlalchemy import select
+
+    from radar.db import session_scope
+    from radar.db.models import ArticleTranslation
+
+    broken = FakeChat(drop_tags)
+    model["chat"] = broken
+    article_id = await stored_article(TITLE, article_blocks())
+
+    async with register(api) as reader:
+        first = (await reader.get(f"/articles/{article_id}/translation")).json()
+        again = (await reader.get(f"/articles/{article_id}/translation")).json()
+
+    assert first["status"] == "translated"
+    assert first["kept_original"] == 1
+    assert first["title"] == "Microsoft закрыла CVE-2026-21345 в Exchange Server"
+    assert first["blocks"][1] == article_blocks()[1]
+    # Stored with its count: the next reader is told the same without the model.
+    assert again == first
+    assert len(broken.prompts) == 2
+    async with session_scope() as session:
+        row = await session.scalar(
+            select(ArticleTranslation).where(ArticleTranslation.article_id == article_id)
+        )
+    assert row is not None
+    assert row.kept_original == 1
+
+
 async def test_a_translation_the_model_broke_twice_is_not_asked_for_again_at_once(
     api: str, model: dict[str, object]
 ) -> None:
@@ -232,7 +266,7 @@ async def test_a_translation_the_model_broke_twice_is_not_asked_for_again_at_onc
 
     if not await get_cache().ping():
         pytest.skip("Valkey is not reachable")
-    broken = FakeChat(drop_tags)
+    broken = FakeChat(drop_digits)
     model["chat"] = broken
     breaker = model["breaker"]
     assert isinstance(breaker, CircuitBreaker)

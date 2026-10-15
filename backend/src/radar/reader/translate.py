@@ -5,8 +5,10 @@ a headline, a heading, a paragraph, a list item, a quote, a picture's caption
 and a table cell are each a fragment of their own, code is never sent, and
 the links and marks of a paragraph go as numbered tags around its words, their
 addresses staying here. An answer that loses a fragment, a tag, an identifier
-or a number is asked for again once, then refused whole: the reader is shown
-the original rather than half of a translation.
+or a number is asked for again once; a fragment broken twice keeps its original
+words. One such paragraph among many is no reason to show the reader nothing:
+the article is refused whole, and shown in the original, only when more than a
+fifth of its fragments, and at least two, stayed untranslated.
 """
 
 import asyncio
@@ -14,10 +16,11 @@ import json
 import re
 import unicodedata
 from collections.abc import Iterator, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from typing import Protocol, cast
 
+import structlog
 from pydantic import BaseModel
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -49,6 +52,10 @@ MAX_CHARS = 60_000
 REFUSED_RETRY_SECONDS = 3600
 # Two answers per batch: the first and one with its mistakes named.
 _ATTEMPTS = 2
+# Fragments the model broke twice stay in the original; more than this share of
+# them, and at least this many, and the article is not called translated.
+KEPT_SHARE = 0.2
+KEPT_AT_LEAST = 2
 
 _TAG = re.compile(r"<(\d+)>(.*?)</\1>", re.DOTALL)
 _ANY_TAG = re.compile(r"</?\d+>")
@@ -85,6 +92,8 @@ class TooLong(Exception):
 class Translation:
     title: str
     blocks: list[Block]
+    # Fragments left in the original language: the model broke them twice.
+    kept_original: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -101,6 +110,13 @@ class _Piece:
 
 
 type _Done = str | list[Span]
+
+
+@dataclass(frozen=True, slots=True)
+class _Answered:
+    done: dict[int, _Done]
+    # The fragments the model broke twice, with what was wrong the second time.
+    failed: dict[int, str]
 
 
 class _Visitor(Protocol):
@@ -258,33 +274,44 @@ def _batches(wanted: Sequence[tuple[int, _Piece]]) -> list[list[tuple[int, _Piec
     return batches
 
 
-async def _batch(chat: Chat, system: str, batch: list[tuple[int, _Piece]]) -> dict[int, _Done]:
+async def _batch(chat: Chat, system: str, batch: list[tuple[int, _Piece]]) -> _Answered:
+    """What the model translated faithfully, and the fragments it broke twice;
+    a failure of the model itself is raised."""
     done: dict[int, _Done] = {}
     pending = batch
-    problems: list[str] = []
+    failed: dict[int, str] = {}
     for _ in range(_ATTEMPTS):
+        problems = [f"фрагмент {number}: {problem}" for number, problem in failed.items()]
         prompt = translation_prompt([(number, piece.text) for number, piece in pending], problems)
         out = await chat.ask(TranslationOut, system, prompt)
         answers = {item.id: item.text for item in out.items}
-        problems, left = [], []
+        failed, left = {}, []
         for number, piece in pending:
             result, problem = _checked(piece, answers.get(number))
             if problem is None:
                 done[number] = result
             else:
-                problems.append(f"фрагмент {number}: {problem}")
+                failed[number] = problem
                 left.append((number, piece))
         if not left:
-            return done
+            break
         pending = left
-    raise TranslationRefused("; ".join(problems)[:500])
+    return _Answered(done, failed)
+
+
+def _too_many_kept(failed: int, translated: int, wanted: int) -> bool:
+    """Whether the fragments left in the original make the article a half-translation.
+    The headline alone may stay as it was."""
+    if not failed:
+        return False
+    return translated == 0 or (failed >= KEPT_AT_LEAST and failed > KEPT_SHARE * wanted)
 
 
 async def translate(
     chat: Chat, source: Language, title: str, blocks: Sequence[Block]
 ) -> Translation:
-    """The article in Russian, every block where it was; raises when the model
-    did not keep it whole."""
+    """The article in Russian, every block where it was. A fragment the model
+    broke twice keeps its original words; too many of them and it raises."""
     pieces = _pieces(title, blocks)
     wanted = [(number, piece) for number, piece in enumerate(pieces) if _is_worth(piece)]
     if sum(len(piece.text) for _, piece in wanted) > MAX_CHARS:
@@ -294,13 +321,27 @@ async def translate(
     try:
         async with asyncio.TaskGroup() as group:
             tasks = [group.create_task(_batch(chat, system, batch)) for batch in _batches(wanted)]
-    except ExceptionGroup as failed:
-        # The first failure is the answer; the others were cancelled with it.
-        raise failed.exceptions[0] from None
+    except ExceptionGroup as errors:
+        # The first failure of the model is the answer; the others were cancelled with it.
+        raise errors.exceptions[0] from None
+    failed: dict[int, str] = {}
     for task in tasks:
-        done.update(task.result())
+        answered = task.result()
+        done.update(answered.done)
+        failed.update(answered.failed)
+    problems = "; ".join(f"фрагмент {number}: {failed[number]}" for number in sorted(failed))
+    if _too_many_kept(len(failed), len(done), len(wanted)):
+        raise TranslationRefused(problems[:500])
+    if failed:
+        log.info(
+            "reader_translation_kept_original",
+            fragments=sorted(failed),
+            of=len(wanted),
+            problems=problems[:300],
+        )
     originals: list[_Done] = [list(piece.spans) if piece.spans else piece.text for piece in pieces]
-    return _walk(title, blocks, _Replace(iter(done.get(n, o) for n, o in enumerate(originals))))
+    made = _walk(title, blocks, _Replace(iter(done.get(n, o) for n, o in enumerate(originals))))
+    return replace(made, kept_original=len(failed))
 
 
 def fingerprint(source: Language, title: str, blocks: Sequence[Block]) -> str:
@@ -325,7 +366,7 @@ async def for_reader(
     made_from = fingerprint(source, title, blocks)
     row = await session.get(ArticleTranslation, (article_id, TARGET))
     if row is not None and row.fingerprint == made_from:
-        return Translation(row.title, cast(list[Block], row.blocks))
+        return Translation(row.title, cast(list[Block], row.blocks), row.kept_original)
     if chat is None:
         return Unavailable(NO_MODEL)
     refused = f"reader:translation-refused:{article_id}:{made_from}"
@@ -334,7 +375,8 @@ async def for_reader(
     # Nothing waits on the database while the model writes.
     await session.commit()
     try:
-        done = await translate(chat, source, title, blocks)
+        with structlog.contextvars.bound_contextvars(article_id=article_id):
+            done = await translate(chat, source, title, blocks)
     except TooLong:
         return Unavailable(TOO_LONG)
     except TranslationRefused as exc:
@@ -349,7 +391,13 @@ async def for_reader(
         return Unavailable(NOT_NOW)
     breaker.record_success()
     await _store(session, article_id, source, made_from, chat.name, done)
-    log.info("reader_translated", article_id=article_id, source=source, model=chat.name)
+    log.info(
+        "reader_translated",
+        article_id=article_id,
+        source=source,
+        model=chat.name,
+        kept_original=done.kept_original,
+    )
     return done
 
 
@@ -367,6 +415,7 @@ async def _store(
         "model": model[:200],
         "title": done.title,
         "blocks": done.blocks,
+        "kept_original": done.kept_original,
         "translated_at": datetime.now(UTC),
     }
     await session.execute(

@@ -277,6 +277,8 @@ class ArticleTranslation(Base):
     model: Mapped[str] = mapped_column(String(200))
     title: Mapped[str] = mapped_column(Text)
     blocks: Mapped[list[dict[str, Any]]] = mapped_column(JSONB)
+    # Fragments left in the original: the model could not keep them faithfully.
+    kept_original: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     translated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 

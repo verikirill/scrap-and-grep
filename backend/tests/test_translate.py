@@ -3,6 +3,7 @@ Chinese text in Russian with every block, link, code line, identifier and
 number where it was."""
 
 import json
+import re
 from collections.abc import Callable
 
 import pytest
@@ -248,6 +249,10 @@ def lose_identifier(text: str) -> str:
     return to_russian(text).replace("CVE-2026-21345", "уязвимость")
 
 
+def drop_digits(text: str) -> str:
+    return re.sub(r"\d", "", to_russian(text))
+
+
 @pytest.mark.parametrize(
     ("broken", "problem"),
     [
@@ -272,13 +277,42 @@ async def test_an_answer_that_breaks_the_text_is_asked_for_again_with_its_mistak
     assert [span.get("href") for span in done.blocks[1]["spans"]][3] == ADVISORY
 
 
-async def test_an_answer_broken_twice_is_refused_whole() -> None:
+async def test_a_fragment_broken_twice_stays_in_the_original_and_the_rest_is_translated() -> None:
     chat = FakeChat(drop_tags)
 
-    with pytest.raises(TranslationRefused, match="потеряны теги <2>"):
+    done = await translate(chat, "en", TITLE, article_blocks())
+
+    assert len(chat.prompts) == 2
+    assert done.kept_original == 1
+    assert done.blocks[1] == article_blocks()[1]
+    assert done.title == "Microsoft закрыла CVE-2026-21345 в Exchange Server"
+    assert done.blocks[2] == {"type": "h", "level": 2, "text": "Как проверить серверы"}
+    assert done.blocks[6] == {
+        "type": "quote",
+        "spans": [{"text": "Обновитесь сейчас, атаки уже идут.", "i": True}],
+    }
+
+
+async def test_a_headline_broken_twice_alone_keeps_its_original() -> None:
+    done = await translate(FakeChat(lose_identifier), "en", TITLE, article_blocks())
+
+    assert done.title == TITLE
+    assert done.kept_original == 1
+    assert done.blocks[2] == {"type": "h", "level": 2, "text": "Как проверить серверы"}
+
+
+async def test_an_article_with_many_fragments_broken_twice_is_refused_whole() -> None:
+    chat = FakeChat(drop_digits)
+
+    with pytest.raises(TranslationRefused, match="потеряны"):
         await translate(chat, "en", TITLE, article_blocks())
 
     assert len(chat.prompts) == 2
+
+
+async def test_an_article_with_nothing_translated_is_refused() -> None:
+    with pytest.raises(TranslationRefused, match="потеряны CVE-2026-21345"):
+        await translate(FakeChat(lose_identifier), "en", TITLE, [])
 
 
 @pytest.mark.parametrize(
@@ -294,8 +328,10 @@ async def test_a_paragraph_with_wrong_tags_is_not_taken(answer: str) -> None:
     blocks = article_blocks()[1:2]
     chat = FakeChat(lambda text: answer if "<1>" in text else to_russian(text))
 
-    with pytest.raises(TranslationRefused):
-        await translate(chat, "en", TITLE, blocks)
+    done = await translate(chat, "en", TITLE, blocks)
+
+    assert done.blocks == blocks
+    assert done.kept_original == 1
 
 
 async def test_a_long_article_goes_in_several_requests_and_comes_back_in_order() -> None:
