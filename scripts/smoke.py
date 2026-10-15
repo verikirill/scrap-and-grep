@@ -15,9 +15,10 @@ registers, uploads a resume, gets a profile suggested from it and a personal
 feed that reacts to a dislike, and deletes the account. Exit code 0 means every
 step passed.
 
-The digest part runs in a guest account ("try without registering"), so that
-sign-in must be on (RADAR_DEMO_LOGIN=true, the default). The guest is deleted
-at the end.
+The digest part runs in the shared reader account («Войти как читатель»,
+RADAR_PRESET_LOGIN=true, the default) and removes what it made there. With
+that sign-in off it falls back to a throwaway guest (RADAR_DEMO_LOGIN=true),
+deleted at the end.
 """
 
 import json
@@ -97,6 +98,20 @@ def short_video(client: httpx.Client, digest_id: str, voices: list[dict]) -> Non
     )
 
 
+def enter_reader(client: httpx.Client) -> bool:
+    """Sign in to the shared reader account, or as a guest where one-click
+    sign-in is off. True for the shared account: it stays, a guest is deleted."""
+    entered = client.post(f"{API}/auth/preset/reader")
+    if entered.status_code == 404:
+        guest = client.post(f"{API}/auth/demo")
+        if guest.status_code == 404:
+            fail("neither one-click nor guest sign-in is on (RADAR_PRESET_LOGIN, RADAR_DEMO_LOGIN)")
+        guest.raise_for_status()
+        return False
+    entered.raise_for_status()
+    return True
+
+
 def selected_ids(digest: dict) -> set[int]:
     return {item["article_id"] for topic in digest["topics"] for item in topic["items"]}
 
@@ -160,10 +175,16 @@ def main() -> None:
         if ready["articles"] == 0:
             fail("no articles: neither the sample snapshot nor the feeds were loaded")
 
-        step("guest sign-in")
-        guest = client.post(f"{API}/auth/demo").raise_for_status().json()
-        if guest["is_admin"]:
-            fail("a guest must not manage the source catalogue")
+        step("one-click sign-in as the shared reader")
+        is_shared = enter_reader(client)
+        me = client.get(f"{API}/auth/me").raise_for_status().json()
+        if me is None:
+            fail("the session is not recognised")
+        if me["is_admin"]:
+            fail("an account anyone enters must not manage the source catalogue")
+        if is_shared and (not me["is_shared"] or me["onboarded_at"] is None):
+            fail("the shared reader must be marked shared and skip the introduction")
+        print(f"  {me['display_name']}, {me['profiles']} profiles")
 
         step("sources and full-text search")
         sources = client.get(f"{API}/sources").raise_for_status().json()
@@ -226,7 +247,14 @@ def main() -> None:
         finally:
             client.delete(f"{API}/profiles/{temporary['id']}")
             client.delete(f"{API}/digests/{first['id']}")
-        client.post(f"{API}/auth/me/delete", json={"password": ""}).raise_for_status()
+        if is_shared:
+            # Other people use the shared account: it refuses to go, the
+            # session simply ends.
+            if client.post(f"{API}/auth/me/delete", json={"password": ""}).status_code != 403:
+                fail("the shared account must not be deletable")
+            client.post(f"{API}/auth/logout").raise_for_status()
+        else:
+            client.post(f"{API}/auth/me/delete", json={"password": ""}).raise_for_status()
 
     new_reader()
     print("OK")

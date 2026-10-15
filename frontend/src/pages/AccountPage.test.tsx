@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import { HttpResponse, http } from 'msw'
 import { describe, expect, it, vi } from 'vitest'
 import type { Me, Resume } from '../lib/api'
@@ -216,6 +216,82 @@ describe('AccountPage', () => {
 
       expect(await screen.findByRole('alert')).toHaveTextContent('Это не изображение')
     })
+
+    it('offers the nine ready pictures with the current one pressed, and picks another', async () => {
+      serveAccount({ me: makeMe({ avatar_preset: 'teal' }) })
+      const picked: unknown[] = []
+      server.use(
+        http.put(apiUrl('/auth/me/avatar-preset'), async ({ request }) => {
+          picked.push(await request.json())
+          return HttpResponse.json({ avatar_url: null, avatar_preset: 'orange' })
+        }),
+      )
+      const { user } = await renderPage()
+      const pictures = screen.getByRole('group', { name: 'Картинка профиля' })
+      const presets = within(pictures)
+        .getAllByRole('button')
+        .filter((button) => button.hasAttribute('aria-pressed'))
+
+      expect(presets).toHaveLength(9)
+      expect(within(pictures).getByRole('button', { name: 'Бирюзовый' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      )
+      // The chosen one is not sent again.
+      await user.click(within(pictures).getByRole('button', { name: 'Бирюзовый' }))
+      await user.click(within(pictures).getByRole('button', { name: 'Оранжевый' }))
+
+      expect(await screen.findByText('Картинка обновлена')).toBeInTheDocument()
+      expect(picked).toEqual([{ preset: 'orange' }])
+      expect(within(pictures).getByRole('button', { name: 'Оранжевый' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      )
+      expect(within(pictures).getByRole('button', { name: 'Бирюзовый' })).toHaveAttribute(
+        'aria-pressed',
+        'false',
+      )
+    })
+
+    it('keeps an uploaded photo beside the ready pictures until one of them replaces it', async () => {
+      serveAccount({ me: makeMe({ avatar_url: '/api/v1/auth/me/avatar?v=1' }) })
+      server.use(
+        http.put(apiUrl('/auth/me/avatar-preset'), () =>
+          HttpResponse.json({ avatar_url: null, avatar_preset: 'grey' }),
+        ),
+      )
+      const { user } = await renderPage()
+      const pictures = screen.getByRole('group', { name: 'Картинка профиля' })
+
+      // The photo is what is shown: none of the ready pictures is pressed.
+      expect(within(pictures).getByRole('button', { name: 'Сменить фото' })).toBeInTheDocument()
+      expect(within(pictures).queryAllByRole('button', { pressed: true })).toEqual([])
+      expect(screen.getByRole('button', { name: 'Удалить фото' })).toBeInTheDocument()
+
+      await user.click(within(pictures).getByRole('button', { name: 'Серый' }))
+
+      await waitFor(() =>
+        expect(within(pictures).getByRole('button', { name: 'Серый' })).toHaveAttribute(
+          'aria-pressed',
+          'true',
+        ),
+      )
+      expect(within(pictures).getByRole('button', { name: 'Загрузить фото' })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Удалить фото' })).toBeNull()
+    })
+  })
+
+  it('tells who is in a shared account and offers no way to delete it', async () => {
+    serveAccount({
+      me: makeMe({ is_shared: true, email: 'reader@radar.local', display_name: 'Читатель' }),
+    })
+    await renderPage()
+
+    expect(screen.getByText('Общий аккаунт без пароля')).toBeInTheDocument()
+    expect(screen.getByText('общий')).toBeInTheDocument()
+    expect(screen.queryByText('reader@radar.local')).toBeNull()
+    expect(screen.getByRole('heading', { name: 'Общий аккаунт' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Удалить аккаунт' })).toBeNull()
   })
 
   describe('the resume', () => {

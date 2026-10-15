@@ -64,11 +64,13 @@ x-backend: &backend
     RADAR_CANDIDATE_LIMIT: ${RADAR_CANDIDATE_LIMIT:-60}
     RADAR_RATE_LIMIT_PER_MINUTE: ${RADAR_RATE_LIMIT_PER_MINUTE:-120}
     RADAR_DIGEST_TASK_TIMEOUT_SECONDS: ${RADAR_DIGEST_TASK_TIMEOUT_SECONDS:-1200}
-    # Accounts. The demo sign-in is on by default so that the stack can be
-    # looked at without registering; turn it off outside a demonstration.
-    RADAR_DEMO_LOGIN: ${RADAR_DEMO_LOGIN:-true}
-    # No sign-in screen: a visitor is entered as a guest of their own.
-    RADAR_AUTH: ${RADAR_AUTH:-off}
+    # Accounts. The sign-in page enters the shared reader and analyst
+    # accounts with one click, so the stack can be looked at without
+    # registering. The throwaway guest per visit is off; true brings it back.
+    RADAR_PRESET_LOGIN: ${RADAR_PRESET_LOGIN:-true}
+    RADAR_DEMO_LOGIN: ${RADAR_DEMO_LOGIN:-false}
+    # off: no sign-in screen, a visitor is entered as a guest of their own.
+    RADAR_AUTH: ${RADAR_AUTH:-on}
     # Every reader may add a source; its author may change and remove it.
     RADAR_OPEN_CATALOG: ${RADAR_OPEN_CATALOG:-true}
     RADAR_REGISTRATION_OPEN: ${RADAR_REGISTRATION_OPEN:-true}

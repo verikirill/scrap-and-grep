@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator, mod
 
 from radar.ask import QUESTION_MAX, QUESTION_MIN
 from radar.auth.passwords import PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH
+from radar.avatars import AvatarPreset
 from radar.config import check_proxy_url
 from radar.domain import (
     AddableSourceKind,
@@ -51,6 +52,8 @@ class UserOut(BaseModel):
     display_name: str
     is_admin: bool
     is_demo: bool
+    # A shared account entered with one click: it cannot be deleted.
+    is_shared: bool = False
 
 
 # How the feed looks: cards with the reasons in full, or posts as in a
@@ -66,6 +69,8 @@ class MeOut(UserOut):
     resume_status: str | None
     # The reader's picture; the query string changes with every new one.
     avatar_url: str | None = None
+    # The ready picture shown while there is no uploaded one.
+    avatar_preset: AvatarPreset
     feed_view: FeedView = "cards"
     feed_order: FeedOrder = "new"
     folded_sections: list[str] = []
@@ -104,6 +109,11 @@ class SettingsOut(BaseModel):
 
 class AvatarOut(BaseModel):
     avatar_url: str | None
+    avatar_preset: AvatarPreset
+
+
+class AvatarPresetIn(BaseModel):
+    preset: AvatarPreset
 
 
 class FailingSourceOut(BaseModel):
@@ -459,6 +469,8 @@ class MetaOut(BaseModel):
     sources: int
     sources_failing: int
     demo_login: bool
+    # The sign-in page offers one-click entry to the shared accounts.
+    preset_login: bool = False
     registration_open: bool
     # False: the app enters a visitor as a guest instead of showing sign-in.
     sign_in_required: bool = True

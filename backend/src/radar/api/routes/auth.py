@@ -1,11 +1,13 @@
-"""Registration, sign-in, guest access and the current account."""
+"""Registration, sign-in, guest and shared accounts, and the current account."""
 
 import asyncio
+import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from radar.api.deps import (
     CacheDep,
@@ -18,6 +20,7 @@ from radar.api.deps import (
 )
 from radar.api.schemas import (
     AvatarOut,
+    AvatarPresetIn,
     FeedOrder,
     FeedView,
     LoginIn,
@@ -33,13 +36,15 @@ from radar.api.uploads import read_limited
 from radar.auth import service
 from radar.auth import sessions as auth_sessions
 from radar.auth.passwords import verify_password
+from radar.auth.shared import SHARED_ACCOUNTS, is_shared
 from radar.avatars import MAX_BYTES as AVATAR_MAX_BYTES
-from radar.avatars import AvatarError, normalize
+from radar.avatars import AvatarError, AvatarPreset, normalize, preset_for
 from radar.config import Settings
 from radar.db.models import ForgottenReader, Profile, Resume, User, UserAvatar
 from radar.events import enabled as events_enabled
 from radar.logging import get_logger
 from radar.recsys.service import forget_taste
+from radar.seed import ensure_shared_account
 from radar.text import stable_hash
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -93,6 +98,7 @@ def _user_out(user: User) -> UserOut:
         display_name=user.display_name,
         is_admin=user.is_admin,
         is_demo=user.is_demo,
+        is_shared=is_shared(user.email),
     )
 
 
@@ -154,8 +160,8 @@ async def demo_login(response: Response, session: SessionDep, settings: Settings
     """Enter as a guest: a fresh throwaway account with the example profiles.
 
     Lets a reviewer try everything without registering, without seeing or
-    changing what other visitors did. Off when `RADAR_DEMO_LOGIN=false`,
-    unless sign-in is off altogether (`RADAR_AUTH=off`).
+    changing what other visitors did. On only with `RADAR_DEMO_LOGIN=true`
+    or when sign-in is off altogether (`RADAR_AUTH=off`).
     """
     if not settings.demo_login and settings.auth == "on":
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Вход без регистрации отключён.")
@@ -165,6 +171,29 @@ async def demo_login(response: Response, session: SessionDep, settings: Settings
     )
     log.info("guest_created", user_id=str(guest.id))
     return _user_out(guest)
+
+
+@router.post("/preset/{name}", dependencies=[_auth_limit])
+async def preset_login(
+    name: str, response: Response, session: SessionDep, settings: SettingsDep
+) -> UserOut:
+    """Enter a shared account with one click: `reader` (the example profiles)
+    or `analyst` (an information security analyst). Everyone who enters gets
+    the same account. Off when `RADAR_PRESET_LOGIN=false`."""
+    if not settings.preset_login:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Вход в общие аккаунты отключён.")
+    account = SHARED_ACCOUNTS.get(name)
+    if account is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Такого общего аккаунта нет.")
+    user = await session.scalar(select(User).where(User.email == account.email))
+    if user is None:
+        # Normally made by the seeding on start; made here when the seeding is off.
+        user, _ = await ensure_shared_account(session, account)
+    _set_cookie(
+        response, await auth_sessions.start(session, user, settings.session_ttl_days), settings
+    )
+    log.info("shared_account_entered", account=account.key)
+    return _user_out(user)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
@@ -194,9 +223,13 @@ async def me(user: OptionalUser, session: SessionDep) -> MeOut | None:
     )
     looks = (
         await session.execute(
-            select(User.feed_view, User.feed_order, User.folded_sections, User.onboarded_at).where(
-                User.id == user.id
-            )
+            select(
+                User.feed_view,
+                User.feed_order,
+                User.folded_sections,
+                User.onboarded_at,
+                User.avatar_preset,
+            ).where(User.id == user.id)
         )
     ).one_or_none()
     return MeOut(
@@ -205,9 +238,11 @@ async def me(user: OptionalUser, session: SessionDep) -> MeOut | None:
         display_name=user.display_name,
         is_admin=user.is_admin,
         is_demo=user.is_demo,
+        is_shared=is_shared(user.email),
         profiles=int(profiles or 0),
         resume_status=resume_status,
         avatar_url=_avatar_url(avatar_at),
+        avatar_preset=preset_for(user.id, looks.avatar_preset if looks else None),
         feed_view=_feed_view(looks.feed_view if looks else None),
         feed_order=_feed_order(looks.feed_order if looks else None),
         folded_sections=list(looks.folded_sections or []) if looks else [],
@@ -284,7 +319,27 @@ async def set_avatar(request: Request, user: CurrentUser, session: SessionDep) -
         .returning(UserAvatar.updated_at)
     )
     await session.commit()
-    return AvatarOut(avatar_url=_avatar_url(updated_at))
+    return AvatarOut(
+        avatar_url=_avatar_url(updated_at), avatar_preset=await _stored_preset(session, user.id)
+    )
+
+
+async def _stored_preset(session: AsyncSession, user_id: uuid.UUID) -> AvatarPreset:
+    stored = await session.scalar(select(User.avatar_preset).where(User.id == user_id))
+    return preset_for(user_id, stored)
+
+
+@router.put("/me/avatar-preset", dependencies=[_write_limit])
+async def set_avatar_preset(
+    payload: AvatarPresetIn, user: CurrentUser, session: SessionDep
+) -> AvatarOut:
+    """Pick one of the ready pictures. An uploaded photo goes: one picture at a time."""
+    await session.execute(
+        update(User).where(User.id == user.id).values(avatar_preset=payload.preset)
+    )
+    await session.execute(delete(UserAvatar).where(UserAvatar.user_id == user.id))
+    await session.commit()
+    return AvatarOut(avatar_url=None, avatar_preset=payload.preset)
 
 
 @router.delete("/me/avatar", status_code=status.HTTP_204_NO_CONTENT, dependencies=[_avatar_limit])
@@ -323,7 +378,13 @@ async def delete_account(
 ) -> Response:
     """Delete the account with everything it owns: profiles, digests, the
     resume facts, every recorded signal and its events. Asks for the password again; a
-    guest has none and is deleted at once."""
+    guest has none and is deleted at once. A shared account stays: other people
+    enter it too."""
+    if is_shared(user.email):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            detail="Общий аккаунт удалить нельзя: им пользуются и другие.",
+        )
     if not user.is_demo:
         stored = await session.scalar(select(User.password_hash).where(User.id == user.id))
         matches, _ = await verify_password(payload.password, stored)

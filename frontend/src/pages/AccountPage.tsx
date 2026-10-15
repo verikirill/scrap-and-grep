@@ -7,6 +7,7 @@ import { Link } from 'react-router'
 import { INPUT_CLASS, buttonClass } from '../components/tokens'
 import { Loading, PageSkeleton, Skeleton } from '../components/loading'
 import { Button, Card, Chip, ErrorNote, Field, PageHeader } from '../components/ui'
+import { AvatarPicker } from '../features/account/AvatarPicker'
 import { McpAccess } from '../features/account/McpAccess'
 import { ResumeDrop } from '../features/resume/ResumeDrop'
 import { ResumeFactsView } from '../features/resume/ResumeFactsView'
@@ -105,6 +106,21 @@ function DangerZone({ me }: { me: Me }) {
   const [password, setPassword] = useState('')
   const [isOpen, setIsOpen] = useState(false)
 
+  // Everyone who presses the button on the sign-in page lands here: nobody
+  // may take the account away from the others (the server refuses too).
+  if (me.is_shared) {
+    return (
+      <Card className="p-5">
+        <h2 className="text-base font-semibold">Общий аккаунт</h2>
+        <p className="mt-1 text-sm text-muted">
+          В этот аккаунт входят без пароля все, кто нажал кнопку на странице входа, поэтому удалить
+          его нельзя. Изменения в профилях и выпусках увидят и другие. Чтобы настроить всё под себя,
+          выйдите и зарегистрируйтесь.
+        </p>
+      </Card>
+    )
+  }
+
   // A guest has no password to confirm with and nothing worth keeping.
   if (me.is_demo) {
     return (
@@ -201,11 +217,17 @@ function Introduction() {
 const AVATAR_TYPES = 'image/jpeg,image/png,image/webp,image/gif'
 const AVATAR_MAX_BYTES = 5_000_000
 
-/** Who is signed in, with their picture: a click on it picks a new one. */
+/** A guest's and a shared account's addresses are made up: they say nothing to the reader. */
+function accountLine(me: Me): string {
+  if (me.is_shared) return 'Общий аккаунт без пароля'
+  return me.is_demo ? 'Без почты и пароля' : me.email
+}
+
+/** Who is signed in, with their picture: a photo of their own or one of the ready ones. */
 function Identity({ me }: { me: Me }) {
-  const { upload, remove } = useAvatar()
+  const { upload, pick, remove } = useAvatar()
   const input = useRef<HTMLInputElement>(null)
-  const isBusy = upload.isPending || remove.isPending
+  const isBusy = upload.isPending || pick.isPending || remove.isPending
   const take = (file: File | undefined) => {
     if (!file) return
     // The server checks the content; this only saves a pointless upload.
@@ -242,41 +264,39 @@ function Identity({ me }: { me: Me }) {
         }}
       />
       <p className="mt-3 max-w-full truncate text-base font-semibold">{me.display_name}</p>
-      <p className="max-w-full truncate text-sm text-muted">
-        {/* A guest's address is made up: it says nothing to the reader. */}
-        {me.is_demo ? 'Без почты и пароля' : me.email}
-      </p>
-      {(me.is_demo || me.is_admin) && (
+      <p className="max-w-full truncate text-sm text-muted">{accountLine(me)}</p>
+      {(me.is_demo || me.is_shared || me.is_admin) && (
         <div className="mt-2 flex flex-wrap justify-center gap-1.5">
           {me.is_demo && <Chip tone="spark">временный</Chip>}
+          {me.is_shared && <Chip tone="spark">общий</Chip>}
           {me.is_admin && <Chip tone="accent">администратор</Chip>}
         </div>
       )}
-      <div className="mt-3 flex flex-wrap justify-center gap-1">
+      <AvatarPicker
+        me={me}
+        isDisabled={isBusy}
+        onUpload={() => input.current?.click()}
+        onPick={(preset) =>
+          pick.mutate(preset, { onSuccess: () => toast.success('Картинка обновлена') })
+        }
+      />
+      {me.avatar_url && (
         <Button
           size="sm"
           variant="ghost"
-          isBusy={upload.isPending}
-          onClick={() => input.current?.click()}
+          className="mt-2"
+          isBusy={remove.isPending}
+          onClick={() => remove.mutate(undefined, { onSuccess: () => toast('Фото убрано') })}
         >
-          {me.avatar_url ? 'Сменить фото' : 'Загрузить фото'}
+          Удалить фото
         </Button>
-        {me.avatar_url && (
-          <Button
-            size="sm"
-            variant="ghost"
-            isBusy={remove.isPending}
-            onClick={() => remove.mutate(undefined, { onSuccess: () => toast('Фото убрано') })}
-          >
-            Удалить фото
-          </Button>
-        )}
-      </div>
-      <p className="mt-1 text-xs text-muted">
-        JPEG, PNG, WebP или GIF до 5 МБ. Фото кадрируем до квадрата и очистим от метаданных съёмки.
+      )}
+      <p className="mt-2 text-xs text-muted">
+        Своё фото: JPEG, PNG, WebP или GIF до 5 МБ. Кадрируем до квадрата и очистим от метаданных
+        съёмки.
       </p>
       <div className="mt-2 w-full">
-        <ErrorNote error={upload.error ?? remove.error} />
+        <ErrorNote error={upload.error ?? pick.error ?? remove.error} />
       </div>
     </Card>
   )

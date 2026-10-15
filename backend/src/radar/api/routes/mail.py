@@ -7,8 +7,8 @@ from pydantic import BaseModel, Field
 
 from radar import mail
 from radar.api.deps import CurrentUser, SessionDep, SettingsDep, user_rate_limit
-from radar.auth import DEMO_EMAIL, GUEST_DOMAIN
 from radar.auth.sessions import AuthUser
+from radar.auth.shared import is_service_address
 from radar.config import Settings
 from radar.logging import get_logger
 from radar.store import digests as digest_store
@@ -39,8 +39,8 @@ class MailSent(BaseModel):
 
 
 def _own_address(user: AuthUser) -> str | None:
-    """A guest's and the demo account's addresses are not real mailboxes."""
-    if user.email.endswith(f"@{GUEST_DOMAIN}") or user.email == DEMO_EMAIL:
+    """Guest, demo and shared accounts have made-up addresses, not mailboxes."""
+    if is_service_address(user.email):
         return None
     return user.email
 

@@ -32,6 +32,8 @@ import type {
   SourceCreate,
   Video,
   DigestPeriod,
+  AvatarChoice,
+  SharedAccountKey,
 } from './api'
 
 export const keys = {
@@ -569,6 +571,12 @@ export function useSignIn() {
         await enter()
       },
     }),
+    shared: useMutation({
+      mutationFn: async (account: SharedAccountKey) => {
+        await api.sharedLogin(account)
+        await enter()
+      },
+    }),
   }
 }
 
@@ -1003,19 +1011,18 @@ export function useUpdateSettings() {
   })
 }
 
-/** The reader's picture: a new address in the cached "me" at once. */
+/** The reader's picture: what the server answers goes into the cached "me" at once. */
 export function useAvatar() {
   const client = useQueryClient()
-  const put = (avatarUrl: string | null) =>
-    client.setQueryData<Me | null>(keys.me, (me) => (me ? { ...me, avatar_url: avatarUrl } : me))
+  const put = (choice: Partial<AvatarChoice>) =>
+    client.setQueryData<Me | null>(keys.me, (me) => (me ? { ...me, ...choice } : me))
   return {
-    upload: useMutation({
-      mutationFn: api.uploadAvatar,
-      onSuccess: ({ avatar_url }) => put(avatar_url),
-    }),
+    upload: useMutation({ mutationFn: api.uploadAvatar, onSuccess: put }),
+    /** A ready picture; the uploaded photo, if any, is gone. */
+    pick: useMutation({ mutationFn: api.pickAvatar, onSuccess: put }),
     remove: useMutation({
       mutationFn: api.deleteAvatar,
-      onSuccess: () => put(null),
+      onSuccess: () => put({ avatar_url: null }),
     }),
   }
 }

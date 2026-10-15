@@ -71,6 +71,7 @@ async def meta(session: SessionDep, settings: SettingsDep, cache: CacheDep) -> M
         sources=int(sources or 0),
         sources_failing=int(failing or 0),
         demo_login=settings.demo_login or settings.auth == "off",
+        preset_login=settings.preset_login,
         registration_open=settings.registration_open,
         sign_in_required=settings.auth == "on",
         open_catalog=settings.open_catalog,

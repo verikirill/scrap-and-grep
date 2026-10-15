@@ -604,6 +604,8 @@ export interface Meta {
   sources: number
   sources_failing: number
   demo_login: boolean
+  /** The sign-in page enters the shared reader and analyst accounts with one click. */
+  preset_login: boolean
   registration_open: boolean
   /** False: a visitor without a session is entered as a guest, no sign-in screen. */
   sign_in_required: boolean
@@ -656,6 +658,29 @@ export interface User {
   display_name: string
   is_admin: boolean
   is_demo: boolean
+  /** A shared account entered with one click: many people use it, nobody deletes it. */
+  is_shared: boolean
+}
+
+/** The shared accounts behind the one-click buttons of the sign-in page. */
+export type SharedAccountKey = 'reader' | 'analyst'
+
+/** The nine ready pictures, served from /brand/avatars/<name>.webp. */
+export type AvatarPreset =
+  | 'green'
+  | 'blue'
+  | 'yellow'
+  | 'orange'
+  | 'teal'
+  | 'purple'
+  | 'red'
+  | 'sky'
+  | 'grey'
+
+/** What the account shows as its picture: the uploaded photo wins over the preset. */
+export interface AvatarChoice {
+  avatar_url: string | null
+  avatar_preset: AvatarPreset
 }
 
 export interface Me extends User {
@@ -663,6 +688,8 @@ export interface Me extends User {
   resume_status: ResumeStatus | null
   /** The reader's picture; a new one gets a new address. */
   avatar_url: string | null
+  /** The ready picture shown while there is no uploaded one. */
+  avatar_preset: AvatarPreset
   feed_view: FeedView
   feed_order: FeedOrder
   /** Digest sections the reader keeps folded, by title. */
@@ -963,6 +990,9 @@ export const api = {
   register: (email: string, password: string, displayName: string) =>
     request<User>('/auth/register', json('POST', { email, password, display_name: displayName })),
   demoLogin: () => request<User>('/auth/demo', { method: 'POST' }),
+  /** One click into a shared account: no password, the same account for everyone. */
+  sharedLogin: (account: SharedAccountKey) =>
+    request<User>(`/auth/preset/${account}`, { method: 'POST' }),
   logout: () => request<void>('/auth/logout', { method: 'POST' }),
   deleteAccount: (password: string) => request<void>('/auth/me/delete', json('POST', { password })),
   updateSettings: (settings: Partial<Settings>) =>
@@ -973,11 +1003,14 @@ export const api = {
   mcpKeys: () => request<McpKey[]>('/mcp/keys'),
   /** The picture goes as the raw body; the server squares and re-encodes it. */
   uploadAvatar: (file: File) =>
-    request<{ avatar_url: string | null }>('/auth/me/avatar', {
+    request<AvatarChoice>('/auth/me/avatar', {
       method: 'PUT',
       body: file,
       headers: { 'Content-Type': file.type || 'application/octet-stream' },
     }),
+  /** A ready picture instead of a photo: an uploaded photo is removed. */
+  pickAvatar: (preset: AvatarPreset) =>
+    request<AvatarChoice>('/auth/me/avatar-preset', json('PUT', { preset })),
   deleteAvatar: () => request<void>('/auth/me/avatar', { method: 'DELETE' }),
   schedules: () => request<DigestSchedule[]>('/digest-schedules'),
   putSchedule: (profileId: string, schedule: ScheduleInput) =>

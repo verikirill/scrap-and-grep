@@ -27,9 +27,16 @@ function serveSession({ meta = makeMeta() } = {}) {
       isSignedIn = true
       return HttpResponse.json(makeMe({ is_demo: true }))
     }),
+    http.post(apiUrl('/auth/preset/:account'), ({ request }) => {
+      sent.push({ url: new URL(request.url).pathname, body: null })
+      isSignedIn = true
+      return HttpResponse.json(makeMe({ is_shared: true }))
+    }),
   )
   return sent
 }
+
+const withGuests = () => makeMeta({ demo_login: true })
 
 const location = () => screen.getByTestId('location').textContent
 
@@ -131,7 +138,7 @@ describe('AuthPage', () => {
   })
 
   it('enters as a guest without registration and goes where the reader was heading', async () => {
-    const sent = serveSession()
+    const sent = serveSession({ meta: withGuests() })
     const { user } = renderWithProviders(<AuthPage mode="login" />, {
       route: { pathname: '/login', state: { from: '/sources' } },
       path: '/login',
@@ -156,7 +163,7 @@ describe('AuthPage', () => {
     )
     unmount()
 
-    serveSession()
+    serveSession({ meta: withGuests() })
     server.use(
       http.post(apiUrl('/auth/demo'), () =>
         HttpResponse.json({ detail: 'Гостевых мест не осталось' }, { status: 429 }),
@@ -230,6 +237,70 @@ describe('AuthPage', () => {
     renderWithProviders(<AuthPage mode="login" />, { route: '/login', path: '/login' })
     expect(await screen.findByText(/tail -f news/)).toBeInTheDocument()
     expect(screen.getByText('SIMATIC')).toBeInTheDocument()
-    await screen.findByText(/Временный аккаунт/)
+    await screen.findByRole('button', { name: /Войти как читатель/ })
+  })
+
+  it('enters a shared account with one click and skips the introduction', async () => {
+    const sent = serveSession()
+    const { user } = renderWithProviders(<AuthPage mode="login" />, {
+      route: { pathname: '/login', state: { from: '/feed' } },
+      path: '/login',
+    })
+    expect(await screen.findByRole('button', { name: /Войти как читатель/ })).toBeInTheDocument()
+    expect(screen.getByText(/изменения в них видят все/)).toBeInTheDocument()
+    // The guest button is off on a stack with the defaults.
+    expect(screen.queryByRole('button', { name: 'Войти без регистрации' })).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: /Войти как аналитик/ }))
+
+    await waitFor(() => expect(location()).toBe('/feed'))
+    expect(sent).toEqual([{ url: '/api/v1/auth/preset/analyst', body: null }])
+  })
+
+  it('shows why a one-click entry failed, and offers none where the server has it off', async () => {
+    serveSession()
+    server.use(
+      http.post(apiUrl('/auth/preset/:account'), () =>
+        HttpResponse.json({ detail: 'Вход в общие аккаунты отключён.' }, { status: 404 }),
+      ),
+    )
+    const { user, unmount } = renderWithProviders(<AuthPage mode="login" />, {
+      route: '/login',
+      path: '/login',
+    })
+    await user.click(await screen.findByRole('button', { name: /Войти как читатель/ }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Вход в общие аккаунты отключён.')
+    expect(location()).toBe('/login')
+    unmount()
+
+    serveSession({ meta: makeMeta({ preset_login: false }) })
+    renderWithProviders(<AuthPage mode="login" />, { route: '/login', path: '/login' })
+    expect(await screen.findByRole('button', { name: 'Войти' })).toBeInTheDocument()
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: /Войти как читатель/ })).toBeNull(),
+    )
+  })
+
+  it('greets with the searching cat on both the sign-in and the registration form', async () => {
+    serveSession()
+    for (const mode of ['login', 'register'] as const) {
+      const { container, unmount } = renderWithProviders(<AuthPage mode={mode} />, {
+        route: `/${mode}`,
+        path: `/${mode}`,
+      })
+      await screen.findByLabelText('Почта')
+      // Decorative: the form is what the page says, not the picture.
+      expect(container.querySelector('.brand-cat')).toHaveAttribute('data-pose', 'search')
+      expect(container.querySelector('.brand-cat')).toHaveAttribute('aria-hidden', 'true')
+      unmount()
+    }
+  })
+
+  it('keeps the registration form free of the one-click entries', async () => {
+    // The guest button tells that the server's answer is in.
+    serveSession({ meta: withGuests() })
+    renderWithProviders(<AuthPage mode="register" />, { route: '/register', path: '/register' })
+    expect(await screen.findByRole('button', { name: 'Войти без регистрации' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Войти как читатель/ })).toBeNull()
   })
 })

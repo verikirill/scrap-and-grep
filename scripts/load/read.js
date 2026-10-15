@@ -6,7 +6,7 @@
 // It exercises what a reader does most: browse articles, search them, open
 // the digest list, one digest and the personal feed. Writes and digest
 // builds are left out on purpose: their cost is the language model, not this
-// service. Every virtual user signs in to the demo account once.
+// service. All virtual users share one session in the shared reader account.
 
 import http from 'k6/http'
 import { check } from 'k6'
@@ -40,7 +40,7 @@ const QUERIES = ['уязвимость', 'SCADA', 'ФСТЭК', 'ransomware', '�
 export function setup() {
   // The cookie jar of setup() is not shared with the virtual users, so the
   // session is passed on explicitly.
-  const login = http.post(`${BASE}/api/v1/auth/demo`)
+  const login = http.post(`${BASE}/api/v1/auth/preset/reader`)
   const session = login.cookies.radar_session[0].value
   const list = http
     .get(`${BASE}/api/v1/digests?limit=5`, { cookies: { radar_session: session } })
