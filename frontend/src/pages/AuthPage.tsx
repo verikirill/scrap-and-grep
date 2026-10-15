@@ -9,8 +9,6 @@ import { Link, Navigate, useLocation } from 'react-router'
 import type { AuthRedirect } from '../components/RequireAuth'
 import { EASE, INPUT_CLASS } from '../components/tokens'
 import { Button, ErrorNote, Field } from '../components/ui'
-import { ArtTile } from '../components/ArtTile'
-import { BrandCat } from '../components/BrandCat'
 import { SharedAccounts } from '../features/auth/SharedAccounts'
 import { TailVisual } from '../features/auth/TailVisual'
 import { ONBOARDING_PATH } from '../lib/onboarding'
@@ -106,14 +104,9 @@ export function AuthPage({ mode }: Props) {
           transition={{ duration: 0.35, ease: EASE }}
           className="w-full max-w-sm rounded-3xl lg:max-w-md lg:bg-surface lg:p-10 lg:shadow-surface"
         >
-          {/* The logo cat, awake and searching: on a light tile, as under the
-              logo, so that it stays visible in the dark theme. Still under
-              "reduce motion". On a phone the wordmark sits beside it. */}
-          <div className="mb-6 flex items-center gap-4">
-            <ArtTile className="shrink-0 rounded-[1.75rem] p-2.5">
-              <BrandCat size={88} />
-            </ArtTile>
-            <Wordmark className="text-[17px] lg:hidden" />
+          <div className="mb-8 flex items-center gap-2.5 lg:hidden">
+            <LogoMark size={36} />
+            <Wordmark className="text-[17px]" />
           </div>
 
           <h1 className="text-2xl font-semibold tracking-tight">
