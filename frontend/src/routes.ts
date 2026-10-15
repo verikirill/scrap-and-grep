@@ -17,6 +17,8 @@ const loaders = {
   '/start': () => import('./pages/OnboardingPage'),
   '/share': () => import('./pages/SharePage'),
   '/analytics': () => import('./pages/AnalyticsPage'),
+  '/company': () => import('./pages/CompanyPage'),
+  '/invite': () => import('./pages/InvitePage'),
   '/articles': () => import('./pages/ArticlePage'),
 } as const
 
@@ -65,3 +67,7 @@ export const WelcomePage = lazy(() =>
 export const OnboardingPage = lazy(() =>
   loaders['/start']().then((m) => ({ default: m.OnboardingPage })),
 )
+export const CompanyPage = lazy(() =>
+  loaders['/company']().then((m) => ({ default: m.CompanyPage })),
+)
+export const InvitePage = lazy(() => loaders['/invite']().then((m) => ({ default: m.InvitePage })))

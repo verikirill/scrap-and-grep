@@ -12,6 +12,7 @@ import {
   Send,
   SlidersHorizontal,
   Sun,
+  Users,
 } from './icons'
 import type { IconComponent } from './icons'
 import { AnimatePresence, motion } from 'motion/react'
@@ -37,6 +38,8 @@ type NavItem = {
   icon: IconComponent
   also?: string[]
   isAdminOnly?: boolean
+  /** For whoever may manage a company space: not a guest, not a member of one. */
+  isForManagers?: boolean
 }
 
 const NAV: NavItem[] = [
@@ -46,6 +49,7 @@ const NAV: NavItem[] = [
   { to: '/channels', label: 'Каналы', icon: Send },
   { to: '/sources', label: 'Источники', icon: Rss },
   { to: '/compare', label: 'Сравнение', icon: CompareArrows },
+  { to: '/company', label: 'Компания', icon: Users, isForManagers: true },
   { to: '/analytics', label: 'Аналитика', icon: Analytics, isAdminOnly: true },
 ]
 
@@ -378,7 +382,10 @@ export function Layout({ children }: { children: ReactNode }) {
   const [isNarrow, toggleNarrow] = useNarrowSidebar()
   const me = useMe()
   const isAdmin = Boolean(me.data?.is_admin && !me.data.is_demo)
-  const sections = NAV.filter((item) => isAdmin || !item.isAdminOnly)
+  const canManage = Boolean(me.data && !me.data.is_demo && me.data.company?.role !== 'member')
+  const sections = NAV.filter(
+    (item) => (isAdmin || !item.isAdminOnly) && (canManage || !item.isForManagers),
+  )
   const location = useLocation()
   const section = location.pathname.split('/')[1] ?? ''
   const active = activeSection(location.pathname)
@@ -456,6 +463,20 @@ export function Layout({ children }: { children: ReactNode }) {
         >
           <CompareArrows size={21} />
         </NavLink>
+        {canManage && (
+          <NavLink
+            to="/company"
+            aria-label="Компания"
+            className={({ isActive }) =>
+              clsx(
+                'transition-colors hover:bg-default/70 relative grid size-10 shrink-0 place-items-center overflow-hidden rounded-full',
+                isActive ? 'bg-default text-default-foreground' : 'text-muted',
+              )
+            }
+          >
+            <Users size={21} />
+          </NavLink>
+        )}
         {isAdmin && (
           <NavLink
             to="/analytics"

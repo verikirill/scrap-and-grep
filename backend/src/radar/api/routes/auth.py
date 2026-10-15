@@ -3,12 +3,14 @@
 import asyncio
 import uuid
 from datetime import datetime
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from sqlalchemy import delete, func, select, update
+from fastapi import APIRouter, Depends, HTTPException, Path, Request, Response, status
+from sqlalchemy import ScalarResult, delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from radar.api.company_schemas import InviteAcceptIn, InviteOut, MembershipOut
 from radar.api.deps import (
     CacheDep,
     CurrentUser,
@@ -39,8 +41,11 @@ from radar.auth.passwords import verify_password
 from radar.auth.shared import SHARED_ACCOUNTS, is_shared
 from radar.avatars import MAX_BYTES as AVATAR_MAX_BYTES
 from radar.avatars import AvatarError, AvatarPreset, normalize, preset_for
+from radar.company import service as company_service
+from radar.company.roles import audience_for
 from radar.config import Settings
 from radar.db.models import ForgottenReader, Profile, Resume, User, UserAvatar
+from radar.domain import ProfileSpec
 from radar.events import enabled as events_enabled
 from radar.logging import get_logger
 from radar.recsys.service import forget_taste
@@ -247,7 +252,74 @@ async def me(user: OptionalUser, session: SessionDep) -> MeOut | None:
         feed_order=_feed_order(looks.feed_order if looks else None),
         folded_sections=list(looks.folded_sections or []) if looks else [],
         onboarded_at=looks.onboarded_at if looks else None,
+        company=_membership(await company_service.membership(session, user.id)),
     )
+
+
+def _membership(found: company_service.Membership | None) -> MembershipOut | None:
+    if found is None:
+        return None
+    return MembershipOut(
+        company=found.company,
+        team=found.team,
+        role="owner" if found.role == "owner" else "member",
+        job_title=found.job_title,
+        manager=found.manager,
+    )
+
+
+# Tokens are 32 URL-safe characters; anything else is not ours.
+InviteToken = Annotated[str, Path(pattern=r"^[A-Za-z0-9_-]{20,64}$")]
+_BAD_INVITE = "Ссылка устарела или уже использована. Попросите руководителя прислать новую."
+
+
+async def _invited(session: AsyncSession, token: str) -> User:
+    user = await company_service.invited(session, token)
+    if user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=_BAD_INVITE)
+    return user
+
+
+@router.get("/invite/{token}", dependencies=[_auth_limit])
+async def get_invite(token: InviteToken, session: SessionDep) -> InviteOut:
+    """Who the link is for and what waits in the account, before a password is set."""
+    user = await _invited(session, token)
+    found = await company_service.membership(session, user.id)
+    specs: ScalarResult[dict[str, Any]] = await session.scalars(
+        select(Profile.spec).where(Profile.user_id == user.id).order_by(Profile.created_at)
+    )
+    interests = [
+        interest.title for spec in specs for interest in ProfileSpec.model_validate(spec).interests
+    ]
+    return InviteOut(
+        display_name=user.display_name,
+        email=user.email,
+        company=found.company if found else "",
+        team=(found.team or "") if found else "",
+        job_title=user.job_title,
+        manager=found.manager if found else None,
+        audience=audience_for(user.job_title),
+        interests=list(dict.fromkeys(interests)),
+    )
+
+
+@router.post("/invite/{token}", dependencies=[_auth_limit])
+async def accept_invite(
+    token: InviteToken,
+    payload: InviteAcceptIn,
+    response: Response,
+    session: SessionDep,
+    settings: SettingsDep,
+) -> UserOut:
+    """Set the first password and come in. Works while registration is
+    closed: the account was made by the company, not by a visitor."""
+    user = await _invited(session, token)
+    await company_service.accept(session, user, payload.password)
+    _set_cookie(
+        response, await auth_sessions.start(session, user, settings.session_ttl_days), settings
+    )
+    log.info("invite_accepted", user_id=str(user.id))
+    return _user_out(user)
 
 
 def _feed_view(stored: str | None) -> FeedView:

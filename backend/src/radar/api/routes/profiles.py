@@ -64,6 +64,7 @@ def profile_out(profile: Profile) -> ProfileOut:
         color=profile.color,
         share_token=profile.share_token,
         adaptive=profile.adaptive,
+        team_id=profile.team_id,
         defaults=ProfileDefaults(
             period_days=AUDIENCE_PERIOD_DAYS[spec.audience],
             schedule=AUDIENCE_SCHEDULE[spec.audience],
@@ -173,6 +174,8 @@ async def update_profile(
         profile.name = spec.name
         profile.spec = new_spec
         profile.version += 1
+        # The reader's own edit: the team's later changes no longer reach it.
+        profile.team_id = None
         await session.flush()
         await session.refresh(profile)
         await taste_changed(session, cache, user.id)

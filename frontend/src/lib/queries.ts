@@ -8,6 +8,7 @@ import {
 import type { QueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { ApiError, api } from './api'
+import { companyApi } from './company'
 import { toast } from './toast'
 import type {
   Digest,
@@ -574,6 +575,13 @@ export function useSignIn() {
     shared: useMutation({
       mutationFn: async (account: SharedAccountKey) => {
         await api.sharedLogin(account)
+        await enter()
+      },
+    }),
+    /** The first password of an account a company made; the link stops working. */
+    invite: useMutation({
+      mutationFn: async ({ token, password }: { token: string; password: string }) => {
+        await companyApi.acceptInvite(token, password)
         await enter()
       },
     }),

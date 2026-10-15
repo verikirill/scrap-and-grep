@@ -106,6 +106,30 @@ describe('Layout', () => {
     expect(within(sidebar()).queryByRole('link', { name: 'Аналитика' })).toBeNull()
   })
 
+  it('offers the company space to a reader and its manager, not to its members or a guest', async () => {
+    const company = (role: 'owner' | 'member') => ({
+      company: 'Энергосеть',
+      team: role === 'member' ? 'SOC' : null,
+      role,
+      job_title: null,
+      manager: null,
+    })
+    const cases = [
+      [makeMe(), true],
+      [makeMe({ company: company('owner') }), true],
+      [makeMe({ company: company('member') }), false],
+      [makeMe({ is_demo: true }), false],
+    ] as const
+    for (const [me, isShown] of cases) {
+      server.use(http.get(apiUrl('/auth/me'), () => HttpResponse.json(me)))
+      const { unmount } = renderLayout()
+      await accountShown()
+      const link = within(sidebar()).queryByRole('link', { name: 'Компания' })
+      expect(link !== null).toBe(isShown)
+      unmount()
+    }
+  })
+
   it('folds the sidebar to icons named by their sections, and keeps it folded', async () => {
     const { user, unmount } = renderLayout()
     await accountShown()

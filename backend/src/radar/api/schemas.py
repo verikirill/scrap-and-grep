@@ -6,6 +6,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator, model_validator
 
+from radar.api.company_schemas import MembershipOut
 from radar.ask import QUESTION_MAX, QUESTION_MIN
 from radar.auth.passwords import PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH
 from radar.avatars import AvatarPreset
@@ -76,6 +77,8 @@ class MeOut(UserOut):
     folded_sections: list[str] = []
     # When the first-run introduction was finished or skipped; null until then.
     onboarded_at: datetime | None = None
+    # The company space the account manages or was made for; null for neither.
+    company: MembershipOut | None = None
 
 
 class OnboardedOut(BaseModel):
@@ -351,6 +354,9 @@ class ProfileOut(BaseModel):
     share_token: str | None = None
     # Whether the profile follows its reader's marks.
     adaptive: bool = True
+    # The company team the profile follows: the manager's changes reach it
+    # until the reader edits it.
+    team_id: uuid.UUID | None = None
     defaults: ProfileDefaults
     created_at: datetime
     updated_at: datetime

@@ -197,6 +197,59 @@ function DangerZone({ me }: { me: Me }) {
   )
 }
 
+/** The company space the account belongs to: its team, the position and who manages it. */
+function CompanyCard({ me }: { me: Me }) {
+  const company = me.company
+  if (!company) return null
+  if (company.role === 'owner') {
+    return (
+      <Card className="p-5">
+        <h2 className="text-base font-semibold">Компания</h2>
+        <p className="mt-1 text-sm text-muted">
+          Вы управляете пространством «{company.company}»: командами и аккаунтами сотрудников.
+        </p>
+        <div className="mt-4">
+          <Link to="/company" className={buttonClass('secondary', 'sm')}>
+            Открыть пространство
+          </Link>
+        </div>
+      </Card>
+    )
+  }
+  return (
+    <Card className="p-5">
+      <h2 className="text-base font-semibold">Компания</h2>
+      <dl className="mt-2 space-y-1.5 text-sm">
+        <div className="flex flex-wrap gap-x-2">
+          <dt className="text-muted">Компания</dt>
+          <dd className="font-medium">{company.company}</dd>
+        </div>
+        {company.team && (
+          <div className="flex flex-wrap gap-x-2">
+            <dt className="text-muted">Команда</dt>
+            <dd className="font-medium">{company.team}</dd>
+          </div>
+        )}
+        {company.job_title && (
+          <div className="flex flex-wrap gap-x-2">
+            <dt className="text-muted">Должность</dt>
+            <dd className="font-medium">{company.job_title}</dd>
+          </div>
+        )}
+        {company.manager && (
+          <div className="flex flex-wrap gap-x-2">
+            <dt className="text-muted">Руководитель пространства</dt>
+            <dd className="font-medium">{company.manager}</dd>
+          </div>
+        )}
+      </dl>
+      <p className="mt-3 text-xs text-muted">
+        Профиль команды обновляется вместе с командой, пока вы не правите его сами.
+      </p>
+    </Card>
+  )
+}
+
 /** The first-run introduction, again: it changes nothing until a step is taken. */
 function Introduction() {
   return (
@@ -336,6 +389,7 @@ export function AccountPage() {
       <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,19rem)_minmax(0,1fr)] lg:items-start">
         <aside className="space-y-5 lg:sticky lg:top-9">
           <Identity me={user} />
+          <CompanyCard me={user} />
           <Introduction />
           {isWide && <DangerZone me={user} />}
         </aside>
