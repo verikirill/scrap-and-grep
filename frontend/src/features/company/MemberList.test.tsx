@@ -231,9 +231,8 @@ describe('Roles', () => {
         true,
       ),
     )
-    expect((calls.find((call) => call.method === 'PUT')?.body as { name: string }).name).toBe(
-      'Аналитик угроз',
-    )
+    const renamed = calls.find((call) => call.method === 'PUT')
+    expect(renamed?.body).toMatchObject({ name: 'Аналитик угроз' })
     confirm.mockRestore()
   })
 })
