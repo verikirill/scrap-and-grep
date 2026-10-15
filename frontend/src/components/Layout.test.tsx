@@ -133,11 +133,22 @@ describe('Layout', () => {
   })
 })
 
+describe('Layout account', () => {
+  it('names the reader’s picture in the open menu and keeps only the picture when folded', async () => {
+    const { user } = renderLayout()
+    await accountShown()
+    expect(screen.getByText('Профиль')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Свернуть меню' }))
+
+    await waitFor(() => expect(screen.queryByText('Профиль')).toBeNull())
+  })
+})
+
 describe('Layout theme', () => {
   afterEach(() => {
-    document.documentElement.classList.remove('dark', 'theme-fading')
+    document.documentElement.classList.remove('dark', 'theme-fading', 'theme-sweeping')
     Reflect.deleteProperty(document, 'startViewTransition')
-    Reflect.deleteProperty(document.documentElement, 'animate')
   })
 
   it('starts dark where the system is dark, and the reader’s choice is kept', async () => {
@@ -164,16 +175,15 @@ describe('Layout theme', () => {
 
   it('sweeps the new theme over the old from corner to corner where the browser can', async () => {
     setMediaQueries({ '(prefers-reduced-motion: reduce)': false })
-    const animate = vi.fn()
-    Object.defineProperty(document.documentElement, 'animate', {
-      configurable: true,
-      value: animate,
+    let done = () => {}
+    const finished = new Promise<void>((resolve) => {
+      done = resolve
     })
     Object.defineProperty(document, 'startViewTransition', {
       configurable: true,
       value: (update: () => void) => {
         update()
-        return { ready: Promise.resolve() }
+        return { finished }
       },
     })
     const { user } = renderLayout()
@@ -182,18 +192,14 @@ describe('Layout theme', () => {
     const [toggle] = screen.getAllByRole('button', { name: 'Включить тёмную тему' })
     await user.click(toggle)
 
+    // While the transition runs the stylesheet sweeps the new picture in.
     expect(document.documentElement).toHaveClass('dark')
-    await waitFor(() => expect(animate).toHaveBeenCalledOnce())
-    const [keyframes, options] = animate.mock.calls[0]
-    // A circle from the top-left corner grows past the bottom-right one.
-    expect(keyframes).toEqual({ clipPath: ['circle(0% at 0% 0%)', 'circle(150% at 0% 0%)'] })
-    expect(options).toMatchObject({
-      duration: 700,
-      easing: 'ease-in-out',
-      pseudoElement: '::view-transition-new(root)',
-    })
+    expect(document.documentElement).toHaveClass('theme-sweeping')
     // The browser moves the pictures: the elements themselves do not ease.
     expect(document.documentElement).not.toHaveClass('theme-fading')
+
+    done()
+    await waitFor(() => expect(document.documentElement).not.toHaveClass('theme-sweeping'))
   })
 
   it('eases the colours of every element for a moment where view transitions are missing', async () => {

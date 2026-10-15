@@ -344,6 +344,19 @@
   animation: none;
   mix-blend-mode: normal;
 }
+/* The new theme as a circle from the top-left corner over the old one, which
+   stays still underneath. 150% of the radius passes the far corner. */
+.theme-sweeping::view-transition-new(root) {
+  animation: theme-sweep 700ms ease-in-out both;
+}
+@keyframes theme-sweep {
+  from {
+    clip-path: circle(0% at 0% 0%);
+  }
+  to {
+    clip-path: circle(150% at 0% 0%);
+  }
+}
 
 /* The halftone behind the app (components/ui/dotted-veil.tsx): barely there.
    Black dots on white multiply into the light page, white dots on black

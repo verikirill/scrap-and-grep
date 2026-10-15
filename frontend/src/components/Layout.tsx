@@ -51,13 +51,12 @@ const NAV: NavItem[] = [
 const THEME_KEY = 'radar-theme'
 /** How long the colours of one theme take to fade into the other. */
 const THEME_FADE_MS = DURATION.medium * 1000
-/** How long the new theme takes to sweep across the screen, corner to corner. */
-const THEME_SWEEP_MS = 700
 /**
- * The new theme as a circle from the top-left corner. Its radius in percent is
- * of the diagonal over the square root of two: 150% passes the far corner.
+ * On <html> while the new theme sweeps across the screen from corner to corner
+ * (index.css). The sweep is a CSS animation of ::view-transition-new(root):
+ * Firefox does not run element.animate() on that pseudo-element.
  */
-const THEME_SWEEP = ['circle(0% at 0% 0%)', 'circle(150% at 0% 0%)']
+const THEME_SWEEP_CLASS = 'theme-sweeping'
 /** On <html> while the colours fade without view transitions (index.css). */
 const THEME_FADE_CLASS = 'theme-fading'
 
@@ -99,20 +98,13 @@ function useDarkMode(): [boolean, () => void] {
     if (document.startViewTransition) {
       // A picture of the new page is uncovered over a picture of the old one,
       // which stays still underneath: nothing fades, so nothing flickers.
+      const root = document.documentElement
+      root.classList.add(THEME_SWEEP_CLASS)
       document
         .startViewTransition(flip)
-        .ready.then(() => {
-          document.documentElement.animate(
-            { clipPath: THEME_SWEEP },
-            {
-              duration: THEME_SWEEP_MS,
-              easing: 'ease-in-out',
-              pseudoElement: '::view-transition-new(root)',
-            },
-          )
-        })
         // Skipped (another transition began): the theme has changed all the same.
-        .catch(() => {})
+        .finished.catch(() => {})
+        .finally(() => root.classList.remove(THEME_SWEEP_CLASS))
       return
     }
     // Without view transitions every element eases its own colours for a moment.
@@ -282,7 +274,8 @@ function BarItem({ item, active }: { item: NavItem; active: boolean }) {
   )
 }
 
-function AccountButton() {
+/** The reader's picture leading to the account; in the open sidebar it is named. */
+function AccountButton({ hasLabel = false }: { hasLabel?: boolean }) {
   const { data: me } = useMe()
   if (!me) return null
   return (
@@ -291,18 +284,36 @@ function AccountButton() {
       onPointerEnter={() => prefetchRoute('/account')}
       aria-label={`Аккаунт: ${me.display_name}`}
       title={me.is_demo ? 'Временный аккаунт' : me.email}
-      className={({ isActive }) =>
-        clsx(
-          'grid size-9 shrink-0 place-items-center rounded-full transition-shadow',
-          // The picture keeps its colours; the ring says this is the open section.
-          isActive
-            ? 'ring-2 ring-accent ring-offset-2 ring-offset-background'
-            : 'hover:ring-2 hover:ring-border',
-        )
-      }
+      className="group flex shrink-0 items-center gap-2.5 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-focus"
     >
-      {/* The size of the button: a bigger picture pushed the letters off centre. */}
-      <UserAvatar me={me} size={36} />
+      {({ isActive }) => (
+        <>
+          <span
+            className={clsx(
+              'grid size-9 shrink-0 place-items-center rounded-full transition-shadow',
+              // The picture keeps its colours; the ring says this is the open section.
+              isActive
+                ? 'ring-2 ring-accent ring-offset-2 ring-offset-background'
+                : 'group-hover:ring-2 group-hover:ring-border',
+            )}
+          >
+            {/* The size of the button: a bigger picture pushed the letters off centre. */}
+            <UserAvatar me={me} size={36} />
+          </span>
+          {hasLabel && (
+            <span
+              className={clsx(
+                'text-sm',
+                isActive
+                  ? 'font-semibold text-foreground'
+                  : 'font-medium text-muted group-hover:text-foreground',
+              )}
+            >
+              Профиль
+            </span>
+          )}
+        </>
+      )}
     </NavLink>
   )
 }
@@ -411,7 +422,7 @@ export function Layout({ children }: { children: ReactNode }) {
           )}
         >
           <motion.div layout transition={{ duration: 0.3, ease: EASE }}>
-            <AccountButton />
+            <AccountButton hasLabel={!isNarrow} />
           </motion.div>
           <motion.div
             layout
