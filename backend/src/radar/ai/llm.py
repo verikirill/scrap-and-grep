@@ -401,7 +401,10 @@ def openai_chat(
         # A local vLLM takes any key; the client wants one all the same.
         api_key=SecretStr(api_key or "not-needed"),
         temperature=temperature,
-        reasoning_effort=None if reasoning == "off" else reasoning,
+        # Off is said out loud: Yandex AI Studio lets Qwen and DeepSeek reason
+        # unless told "none", and Qwen then wrote 25 times the tokens of an
+        # answer. gpt-oss refuses "none" and takes "low" instead.
+        reasoning_effort="none" if reasoning == "off" else reasoning,
         default_headers={"OpenAI-Project": project} if project else None,
         # Chat Completions, not the Responses API: that is what such servers share.
         use_responses_api=False,
