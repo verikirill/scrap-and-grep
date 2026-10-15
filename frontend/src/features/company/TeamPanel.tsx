@@ -155,7 +155,16 @@ function SelectionBar({
       className="fixed inset-x-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-20 mx-auto flex max-w-2xl flex-wrap items-center gap-2 rounded-2xl bg-background-inverse py-2 pr-2 pl-4 text-sm text-background shadow-overlay md:bottom-6"
     >
       <span className="py-1 font-medium">Выбрано: {selected.length}</span>
-      <div className="ml-auto flex flex-wrap items-center gap-2">
+      {/* On a phone the actions take a row of their own under the count. */}
+      <button
+        type="button"
+        aria-label="Снять выбор"
+        onClick={onClear}
+        className="ml-auto grid size-9 place-items-center rounded-full hover:bg-background/10 sm:order-last sm:ml-0"
+      >
+        <X size={16} />
+      </button>
+      <div className="flex w-full items-center gap-2 sm:ml-auto sm:w-auto">
         <Button
           size="sm"
           variant="primary"
@@ -165,39 +174,32 @@ function SelectionBar({
           Изменить профили
         </Button>
         {others.length > 0 && (
-          <SelectField
-            label="Перевести в команду"
-            className="w-48 text-foreground"
-            value=""
-            disabled={move.isPending}
-            onChange={(teamId) => {
-              const target = teams.find((item) => item.id === teamId)
-              if (!target) return
-              move.mutate(
-                { memberIds: selected, teamId },
-                {
-                  onSuccess: (moved) => {
-                    toast.success(`Переведено в «${target.name}»: ${moved.length}`)
-                    onClear()
+          <div className="min-w-0 flex-1 text-foreground sm:w-48 sm:flex-none">
+            <SelectField
+              label="Перевести в команду"
+              value=""
+              disabled={move.isPending}
+              onChange={(teamId) => {
+                const target = teams.find((item) => item.id === teamId)
+                if (!target) return
+                move.mutate(
+                  { memberIds: selected, teamId },
+                  {
+                    onSuccess: (moved) => {
+                      toast.success(`Переведено в «${target.name}»: ${moved.length}`)
+                      onClear()
+                    },
+                    onError: (error) => toast.error(error.message),
                   },
-                  onError: (error) => toast.error(error.message),
-                },
-              )
-            }}
-            options={[
-              { value: '', label: 'Перевести в…', disabled: true },
-              ...others.map((item) => ({ value: item.id, label: item.name })),
-            ]}
-          />
+                )
+              }}
+              options={[
+                { value: '', label: 'Перевести в…', disabled: true },
+                ...others.map((item) => ({ value: item.id, label: item.name })),
+              ]}
+            />
+          </div>
         )}
-        <button
-          type="button"
-          aria-label="Снять выбор"
-          onClick={onClear}
-          className="grid size-9 place-items-center rounded-full hover:bg-background/10"
-        >
-          <X size={16} />
-        </button>
       </div>
     </motion.div>
   )
