@@ -59,6 +59,17 @@ _EMBEDDING_PRESETS: dict[str, EmbeddingPreset] = {
         duplicate_threshold=0.76,
         search_floor=0.38,
     ),
+    # Yandex AI Studio, by the name without the folder (ai/embedder.py). Mapped
+    # from embeddinggemma on 1 124 articles of September 23-30: the threshold
+    # passes as many of the 420 816 pairs the rules keep apart as 0.76 does
+    # there (187, 0.044 %) and joins 58 % of the 205 pairs the rules call one
+    # story (embeddinggemma 56 %); at 768 dimensions it is 0.776. The floor
+    # passes as many query-article pairs as 0.38 does there (2.7 % of fifteen
+    # short queries), and "цифровая подстанция МЭК 61850", with no article on
+    # it, peaks at 0.401: 0.41 keeps it out.
+    "text-embeddings-v2": EmbeddingPreset(duplicate_threshold=0.77, search_floor=0.41),
+    # The first generation, 256 dimensions: everything sits closer together.
+    "text-search": EmbeddingPreset(duplicate_threshold=0.84, search_floor=0.39),
     "snowflake-arctic-embed2": EmbeddingPreset(query_prefix="query: "),
     "nomic-embed-text": EmbeddingPreset(
         query_prefix="search_query: ", document_prefix="search_document: "

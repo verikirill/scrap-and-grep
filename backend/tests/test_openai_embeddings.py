@@ -177,9 +177,9 @@ def test_the_provider_is_built_from_the_settings(monkeypatch: pytest.MonkeyPatch
     assert built.model_id.startswith("openai:text-embeddings-v2-doc/latest")
     # Compose passes an unset width as an empty string.
     assert settings.embedding_dimensions is None
-    preset = factory.embedding_preset("text-embeddings-v2-doc/latest")
-    assert built.duplicate_threshold == preset.duplicate_threshold
-    assert built.search_floor == preset.search_floor
+    # The thresholds of the Yandex model, found by its name without the folder.
+    assert built.duplicate_threshold == 0.77
+    assert built.search_floor == 0.41
 
 
 def test_openai_embeddings_without_an_address_stop_the_start() -> None:
