@@ -59,7 +59,6 @@ DEFAULT_SOURCES: tuple[tuple[str, str, str, str, str, str, bool], ...] = (
     # Full text comes from the data in each vulnerability's page (radar.ingest.bdu).
     ("bdu-incident", "БДУ ФСТЭК: уязвимости, используемые в атаках", "https://bdu.fstec.ru/ubi/vul/incident/rss", "https://bdu.fstec.ru/vul", "regulator", "ru", True),
     ("bdu-danger", "БДУ ФСТЭК: наиболее опасные уязвимости", "https://bdu.fstec.ru/ubi/vul/danger/rss", "https://bdu.fstec.ru/vul/danger", "regulator", "ru", True),
-    ("pt-trending", "Positive Technologies: трендовые уязвимости", "https://ptsecurity.com/research/trending-vulnerabilities/", "https://ptsecurity.com/research/trending-vulnerabilities/", "security", "ru", False),
     # From the source lists of the organizers' dataset (docs/task), each feed
     # fetched and parsed on 2026-10-02. Sites without a feed are left out:
     # BI.ZONE, PT ESC, Kaspersky press releases, Security Vision, Cybernews.
@@ -96,9 +95,8 @@ DEFAULT_SOURCES: tuple[tuple[str, str, str, str, str, str, bool], ...] = (
     ("tg-threathuntingfather", "Threat Hunting Father", "https://t.me/s/ThreatHuntingFather", "https://t.me/ThreatHuntingFather", "security", "ru", False),
     # The rest of the organizers' lists, checked on 2026-10-03 with ingest/detect.py.
     # Sites without a feed are read as news pages (ingest/listing.py), CISOCLUB,
-    # whose feed answers 403 to everyone, through its WordPress API. dbugs,
-    # Forbes and the ICS BDU are drawn by script and need the browser step.
-    ("dbugs-pt", "dbugs PT: уязвимости", "https://dbugs.ptsecurity.com/vulnerability", "https://dbugs.ptsecurity.com", "security", "en", False),
+    # whose feed answers 403 to everyone, through its WordPress API. Forbes is
+    # drawn by script and needs the browser step.
     ("ctfiot", "CTFIOT", "https://www.ctfiot.com/feed/", "https://www.ctfiot.com/blog", "security", "en", True),
     ("mcafee-labs", "McAfee Labs", "https://www.mcafee.com/blogs/other-blogs/mcafee-labs/", "https://www.mcafee.com/blogs/other-blogs/mcafee-labs/", "security", "en", False),
     ("xlab", "XLab Qianxin", "https://blog.xlab.qianxin.com/rss/", "https://blog.xlab.qianxin.com/", "security", "en", False),
@@ -117,7 +115,6 @@ DEFAULT_SOURCES: tuple[tuple[str, str, str, str, str, str, bool], ...] = (
     ("cisoclub", "CISOCLUB", "https://cisoclub.ru/wp-json/wp/v2/posts?per_page=20&_fields=id%2Clink%2Ctitle%2Cdate_gmt%2Ccontent%2Cexcerpt&categories=2", "https://cisoclub.ru/category/news/", "security", "ru", False),
     ("securitymedia", "SecurityMedia", "https://securitymedia.org/news/", "https://securitymedia.org", "security", "ru", False),
     ("cybernews", "Cybernews", "https://cybernews.com/security/", "https://cybernews.com", "security", "en", False),
-    ("bdu-asutp", "БДУ ФСТЭК: АСУ ТП", "https://bduasutp.fstec.ru/#/news", "https://bduasutp.fstec.ru", "ics", "ru", False),
     ("broadcom-bulletins", "Symantec: Protection Bulletins", "https://www.broadcom.com/api/nocache/mblogs?locale=en-us&limit=20", "https://www.broadcom.com/support/security-center/protection-bulletin", "security", "en", False),
     # Added on 2026-10-04, each read the way the service reads it (ingest/feeds.py,
     # telegram.py, pages.py): parsed, the newest entry no older than 30 days.
@@ -144,12 +141,10 @@ DEFAULT_SOURCES: tuple[tuple[str, str, str, str, str, str, bool], ...] = (
 
 # Sources that are not feeds; the rest are RSS or Atom.
 SOURCE_KINDS = {
-    "pt-trending": "pt_trending",
     "broadcom-bulletins": "broadcom",
     "cisoclub": "wordpress",
     **dict.fromkeys(
         (
-            "dbugs-pt",
             "mcafee-labs",
             "ria-infosec",
             "forbes-infosec",
@@ -159,7 +154,6 @@ SOURCE_KINDS = {
             "kommersant-infosec",
             "securitymedia",
             "cybernews",
-            "bdu-asutp",
             "nozomi-blog",
             "eprussia",
             "bizone-news",

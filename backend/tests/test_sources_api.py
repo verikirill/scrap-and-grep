@@ -121,21 +121,30 @@ async def test_a_channel_is_read_into_articles_and_then_from_where_it_stopped(
     assert source.consecutive_failures == 0
 
 
-async def test_the_trending_page_of_pt_comes_with_the_defaults_and_is_read(
-    api: str, offline: None
-) -> None:
+async def test_a_trending_page_of_pt_added_by_hand_is_read(api: str, offline: None) -> None:
     from radar.cache import get_cache
     from radar.db import session_scope
     from radar.db.models import Article, Source
     from radar.ingest.service import ingest_source
     from tests.test_official_sources import PT_PAGE
 
+    # The page left the defaults when its markup changed; the reader still
+    # adds it by hand, and it is read as before.
     async with session_scope() as session:
-        trending = await session.scalar(select(Source).where(Source.slug == "pt-trending"))
+        trending = Source(
+            slug="pt-trending",
+            name="Positive Technologies: трендовые уязвимости",
+            feed_url="https://ptsecurity.com/research/trending-vulnerabilities/",
+            site_url="https://ptsecurity.com/research/trending-vulnerabilities/",
+            category="security",
+            language="ru",
+            kind="pt_trending",
+        )
+        session.add(trending)
+        await session.flush()
         incident = await session.scalar(select(Source).where(Source.slug == "bdu-incident"))
-    assert trending is not None
     assert incident is not None
-    assert (trending.kind, incident.kind, incident.fetch_full_text) == ("pt_trending", "rss", True)
+    assert (incident.kind, incident.fetch_full_text) == ("rss", True)
 
     page = httpx.MockTransport(lambda _: httpx.Response(200, text=PT_PAGE))
     async with httpx.AsyncClient(transport=page) as client:
