@@ -26,7 +26,7 @@ services:
   egress:
     build:
       context: ./egress
-    image: radar-egress:local
+    image: ${RADAR_IMAGE_PREFIX:-radar-}egress:${RADAR_IMAGE_TAG:-local}
     restart: unless-stopped
     environment:
       EGRESS_UPSTREAM: ${EGRESS_UPSTREAM:-}
