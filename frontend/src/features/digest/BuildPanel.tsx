@@ -22,9 +22,9 @@ import { ScheduleControl } from './ScheduleControl'
 const PERIODS = [
   { value: '1', label: 'Сутки' },
   { value: '3', label: '3 дня' },
-  { value: '7', label: 'Неделя' },
+  { value: '7', label: 'Неделя', short: 'Нед.' },
   { value: '14', label: '2 недели', short: '2 нед.' },
-  { value: '30', label: 'Месяц' },
+  { value: '30', label: 'Месяц', short: 'Мес.' },
 ] as const
 type PeriodValue = (typeof PERIODS)[number]['value'] | 'custom'
 // The backend keeps publications for this long; older dates hold nothing.
@@ -125,9 +125,11 @@ export function BuildPanel({ profiles, initialProfileId, isBuilding = false, onC
   return (
     <Card className="p-5 sm:p-6">
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="text-base font-medium">Для кого выпуск</h2>
-        <Link to="/profiles" className={buttonClass('ghost', 'sm')}>
-          Настроить интересы
+        <h2 className="text-base font-medium whitespace-nowrap">Для кого выпуск</h2>
+        {/* On a phone the link is one word: the heading keeps its line. */}
+        <Link to="/profiles" aria-label="Настроить интересы" className={buttonClass('ghost', 'sm')}>
+          <span className="sm:hidden">Интересы</span>
+          <span className="hidden sm:inline">Настроить интересы</span>
         </Link>
       </div>
       <div
@@ -216,7 +218,8 @@ export function BuildPanel({ profiles, initialProfileId, isBuilding = false, onC
               type="button"
               aria-pressed={period === 'custom'}
               className={clsx(
-                'relative inline-flex h-10 items-center gap-2 overflow-hidden rounded-full px-4 text-[13px] transition-colors duration-200',
+                // A row of its own on a phone, under the periods.
+                'relative inline-flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-full px-4 text-[13px] transition-colors duration-200 sm:w-auto sm:justify-start',
                 period === 'custom'
                   ? 'bg-accent-soft font-semibold text-accent-soft-foreground'
                   : 'bg-default font-medium text-muted hover:bg-default-hover hover:text-foreground',
