@@ -65,16 +65,24 @@ def _vulnerability(article_id: int, headline: str, **extra: Any) -> Any:
     return _item(article_id, headline, kind="vulnerability", **extra)
 
 
-def test_the_handwork_is_counted_by_the_rule_it_states() -> None:
+def test_the_handwork_is_counted_at_the_analysts_measured_pace() -> None:
     work = manual_work({"window_total": 377, "selected": 20, "duration_seconds": 4.2})
 
     assert work is not None
-    # 377 headlines at 5 s and 20 entries at 3 min.
-    assert work.minutes == 91
+    # 377 publications at 1.3 s and 20 entries at 4.6 min, the analyst's journal.
+    assert work.minutes == 100
     line = manual_line(work)
     assert "377 публикаций и написал 20 записей за 4 с" in line
-    assert "около 1,5 ч при 5 с на заголовок и 3 мин на запись" in line
+    assert "около 1,7 ч по журналу аналитика ИБ: 1,3 с на публикацию и 4,6 мин на запись" in line
     assert manual_work({"window_total": 0}) is None
+
+
+def test_an_entry_for_management_takes_the_analyst_longer() -> None:
+    # The week of the comparison: 1 737 publications, 15 entries for management.
+    work = manual_work({"window_total": 1737, "selected": 15}, audience="management")
+
+    assert work is not None
+    assert (work.minutes, work.minutes_per_entry) == (146, 7.2)
     assert [duration_words(minutes) for minutes in (52, 120, 600)] == ["52 мин", "2 ч", "10 ч"]
 
 
@@ -353,7 +361,7 @@ def test_a_specialists_issue_shows_the_plan_and_the_changes_in_markdown_and_docx
     assert "- **CVE-2026-1**, [FortiMail](https://example.org/1): попала в каталог CISA KEV" in (
         markdown
     )
-    assert "manual_minutes: 91" in markdown
+    assert "manual_minutes: 100" in markdown
     for heading in ("План на смену", "Что изменилось с прошлых выпусков", "Вместо ручной работы"):
         assert heading in text
 

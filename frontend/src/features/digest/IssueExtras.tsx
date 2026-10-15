@@ -16,7 +16,9 @@ import { Card, Chip } from '../../components/ui'
 import type { Digest, PlanEntry, TagCount, VulnerabilityChange } from '../../lib/api'
 import { durationWords, externalHref, formatDate, formatNumber, plural } from '../../lib/format'
 
-/** The issue's work as an analyst would do it by hand, by a rule it states. */
+/** The issue's work as an analyst would do it by hand, at the pace measured on one. */
+const decimal = (value: number) => String(value).replace('.', ',')
+
 export function ManualWork({ digest }: { digest: Digest }) {
   const work = digest.manual
   if (!work) return null
@@ -30,8 +32,10 @@ export function ManualWork({ digest }: { digest: Digest }) {
         {work.seconds ? `, ассистенту хватило ${Math.round(work.seconds)} с` : ''}.{' '}
         <span className="text-muted">
           Расчёт: {formatNumber(work.headlines)}{' '}
-          {plural(work.headlines, ['заголовок', 'заголовка', 'заголовков'])} по 5 с и {work.entries}{' '}
-          {plural(work.entries, ['запись', 'записи', 'записей'])} по 3 мин.
+          {plural(work.headlines, ['публикация', 'публикации', 'публикаций'])} по{' '}
+          {decimal(work.seconds_per_headline)} с и {work.entries}{' '}
+          {plural(work.entries, ['запись', 'записи', 'записей'])} по{' '}
+          {decimal(work.minutes_per_entry)} мин, по журналу аналитика ИБ.
         </span>
       </span>
     </p>

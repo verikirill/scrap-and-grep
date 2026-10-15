@@ -43,8 +43,8 @@ def test_the_digest_opens_with_metadata_a_program_can_read(digest: DigestView) -
     assert data["period_start"] == "2026-09-23"
     assert data["publications"] == 800
     assert data["entries"] == 2
-    # 800 headlines at 5 s and 2 entries at 3 min, the rule the issue states.
-    assert data["manual_minutes"] == 73
+    # 800 publications at 1.3 s and 2 entries at 4.6 min, the pace the issue states.
+    assert data["manual_minutes"] == 27
 
 
 def test_a_profile_name_with_quotes_colons_and_a_line_break_stays_valid_yaml(

@@ -471,6 +471,9 @@ export interface ManualWork {
   entries: number
   minutes: number
   seconds: number | null
+  /** The analyst's measured pace the minutes are counted at. */
+  seconds_per_headline: number
+  minutes_per_entry: number
 }
 
 export interface PlanEntry {
