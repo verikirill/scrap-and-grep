@@ -137,7 +137,7 @@ def test_managers_read_the_brief_and_everyone_else_the_cards(
 async def test_a_member_gets_the_team_profile_worded_for_their_position() -> None:
     team = await HeuristicTeamDrafter().draft(SOC)
 
-    engineer = member_spec(team, "Инженер SOC")
+    engineer = member_spec(team, "инженер SOC")
     head = member_spec(team, "Руководитель SOC")
     nobody = member_spec(team, None)
 

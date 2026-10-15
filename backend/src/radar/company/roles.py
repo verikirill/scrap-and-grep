@@ -132,6 +132,8 @@ def member_spec(team: ProfileSpec, job_title: str | None) -> ProfileSpec:
     """The team's profile as one member gets it: their position opens the
     role, and a manager reads the brief instead of the cards."""
     title = (job_title or "").strip()
+    # The position opens a sentence: «ведущий инженер» as typed reads «Ведущий инженер».
+    title = title[:1].upper() + title[1:]
     role = truncate(f"{title}. {team.role}", _ROLE_LIMIT) if title else team.role
     return ProfileSpec.model_validate(
         {**team.model_dump(mode="json"), "role": role, "audience": audience_for(title)}

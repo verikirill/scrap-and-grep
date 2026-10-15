@@ -15,6 +15,8 @@ import { cn } from '../lib/utils'
 
 const PASSWORD_MIN = 10
 
+const capitalized = (text: string) => text.slice(0, 1).toUpperCase() + text.slice(1)
+
 /** "Олег Петров пригласил вас в команду «SOC» компании «Энергосеть»." */
 function inviteLine(invite: Invite): string {
   const where = `в команду «${invite.team}» компании «${invite.company}»`
@@ -39,7 +41,7 @@ function InviteForm({ token, invite }: { token: string; invite: Invite }) {
           Профиль интересов уже настроен
         </p>
         <p className="mt-1 text-xs text-muted">
-          {invite.job_title ? `${invite.job_title}. ` : ''}
+          {invite.job_title ? `${capitalized(invite.job_title)}. ` : ''}
           {invite.audience === 'management'
             ? 'Выпуски придут кратким брифингом для руководителя.'
             : 'Выпуски придут карточками с деталями по каждой новости.'}
