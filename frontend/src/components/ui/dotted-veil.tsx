@@ -40,7 +40,10 @@ void main() {
   float field = 0.5 + 0.5 * sin(p.x * 3.0 + u_time + 2.3) * sin(p.y * 2.4 - u_time * 0.7);
   float r = 0.23 + field * 0.2;
   float dotMask = 1.0 - smoothstep(r - 0.08, r, length(f));
-  vec3 col = mix(u_ground, u_dot, dotMask * (0.35 + 0.65 * field));
+  // As in the preset, a dot takes the ground colour where the wave is low:
+  // it fades out entirely instead of staying faintly on.
+  float glow = smoothstep(0.08, 1.0, field);
+  vec3 col = mix(u_ground, u_dot, dotMask * glow * glow);
   col += (grainHash(gl_FragCoord.xy) - 0.5) * 0.04;
   gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
