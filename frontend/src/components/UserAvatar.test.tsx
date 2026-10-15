@@ -11,6 +11,34 @@ describe('UserAvatar', () => {
     expect(screen.queryByText('АС')).toBeNull()
   })
 
+  it('shows the ready picture of the account while there is no photo, sharp on dense screens', () => {
+    const { container } = render(
+      <UserAvatar
+        me={{ display_name: 'Анна Смирнова', avatar_url: null, avatar_preset: 'purple' }}
+        size={32}
+      />,
+    )
+    const image = container.querySelector('img')
+    expect(image).toHaveAttribute('src', '/brand/avatars/purple.webp')
+    expect(image).toHaveAttribute(
+      'srcset',
+      '/brand/avatars/purple.webp 1x, /brand/avatars/purple@2x.webp 2x',
+    )
+    expect(screen.queryByText('АС')).toBeNull()
+  })
+
+  it('shows the photo over the ready picture, and the ready picture if the photo fails', () => {
+    const { container } = render(
+      <UserAvatar
+        me={{ display_name: 'Гость', avatar_url: '/a/1.png', avatar_preset: 'red', is_demo: true }}
+        size={32}
+      />,
+    )
+    expect(container.querySelector('img')).toHaveAttribute('src', '/a/1.png')
+    fireEvent.error(container.querySelector('img')!)
+    expect(container.querySelector('img')).toHaveAttribute('src', '/brand/avatars/red.webp')
+  })
+
   it('shows initials without a picture', () => {
     render(<UserAvatar me={{ display_name: 'Анна Смирнова', avatar_url: null }} size={32} />)
     expect(screen.getByText('АС')).toBeInTheDocument()

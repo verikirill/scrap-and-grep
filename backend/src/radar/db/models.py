@@ -331,6 +331,10 @@ class User(Base):
     # When the reader finished or skipped the first-run introduction; NULL
     # until then, and the web app offers it once. Guests never get it.
     onboarded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # One of the ready pictures (radar.avatars.AVATAR_PRESETS), shown while
+    # there is no uploaded photo. NULL for accounts from before the pictures:
+    # they get one derived from the id.
+    avatar_preset: Mapped[str | None] = mapped_column(String(16))
 
 
 class ApiKey(Base):

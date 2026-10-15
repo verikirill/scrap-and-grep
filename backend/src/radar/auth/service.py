@@ -10,6 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from radar.auth import DEMO_EMAIL, GUEST_DOMAIN
 from radar.auth.passwords import hash_password, verify_password
+from radar.auth.shared import is_service_address
+from radar.avatars import random_preset
 from radar.db.models import Profile, User
 
 # Deliberately loose: the address is an identifier here, no mail is sent to it.
@@ -26,8 +28,9 @@ def normalize_email(raw: str) -> str | None:
     email = raw.strip().lower()
     if len(email) > EMAIL_MAX_LENGTH or not _EMAIL_RE.fullmatch(email):
         return None
-    # Guest addresses are made up by the service; nobody may register one.
-    if email.endswith(f"@{GUEST_DOMAIN}") or email == DEMO_EMAIL:
+    # Guest and shared addresses are made up by the service; nobody may
+    # register one or sign in to it with a password.
+    if is_service_address(email):
         return None
     return email
 
@@ -43,7 +46,12 @@ async def register(session: AsyncSession, *, email: str, password: str, display_
     row = (
         await session.execute(
             insert(User)
-            .values(email=email, password_hash=password_hash, display_name=display_name)
+            .values(
+                email=email,
+                password_hash=password_hash,
+                display_name=display_name,
+                avatar_preset=random_preset(),
+            )
             .on_conflict_do_nothing(index_elements=["email"])
             .returning(User)
         )
@@ -76,6 +84,7 @@ async def create_guest(session: AsyncSession) -> User:
         email=f"guest-{uuid.uuid4().hex}@{GUEST_DOMAIN}",
         display_name="Гость",
         is_demo=True,
+        avatar_preset=random_preset(),
     )
     session.add(guest)
     await session.flush()

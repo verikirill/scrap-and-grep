@@ -1,15 +1,16 @@
 """Default sources and reader profiles, plus the sample-data importer."""
 
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from radar.auth import DEMO_EMAIL
+from radar.auth.shared import SHARED_ACCOUNTS, SharedAccount
 from radar.db.models import Article, Profile, Source, User
 from radar.domain import Interest, ProfileSpec
 from radar.text import content_hash
@@ -404,7 +405,55 @@ async def seed_defaults(session: AsyncSession) -> dict[str, int]:
                 )
             )
             profiles_added += 1
-    return {"sources": len(inserted.all()), "profiles": profiles_added}
+    accounts_added = 0
+    for account in SHARED_ACCOUNTS.values():
+        _, created = await ensure_shared_account(session, account)
+        accounts_added += created
+    return {
+        "sources": len(inserted.all()),
+        "profiles": profiles_added,
+        "shared_accounts": accounts_added,
+    }
+
+
+async def ensure_shared_account(session: AsyncSession, account: SharedAccount) -> tuple[User, bool]:
+    """The shared account with its example profiles; True when it was created.
+
+    Safe to repeat. A profile someone removed from it comes back on the next
+    start of the stack; a profile someone edited keeps the edit. The account never gets
+    the introduction: it is entered by many people, each already told what
+    the service is on the sign-in page.
+    """
+    created_id = await session.scalar(
+        insert(User)
+        .values(
+            email=account.email,
+            display_name=account.display_name,
+            avatar_preset=account.avatar,
+            onboarded_at=func.now(),
+        )
+        .on_conflict_do_nothing(index_elements=["email"])
+        .returning(User.id)
+    )
+    user = (await session.execute(select(User).where(User.email == account.email))).scalar_one()
+    if user.onboarded_at is None:
+        user.onboarded_at = datetime.now(UTC)
+    existing = set(await session.scalars(select(Profile.name).where(Profile.user_id == user.id)))
+    for spec in DEFAULT_PROFILES:
+        if spec.name in existing or (account.profiles and spec.name not in account.profiles):
+            continue
+        icon, color = EXAMPLE_LOOKS.get(spec.name, (None, None))
+        session.add(
+            Profile(
+                user_id=user.id,
+                name=spec.name,
+                spec=spec.model_dump(mode="json"),
+                icon=icon,
+                color=color,
+            )
+        )
+    await session.flush()
+    return user, created_id is not None
 
 
 async def import_articles(session: AsyncSession, path: Path) -> int:

@@ -23,9 +23,11 @@ export function makeMe(overrides: Partial<Me> = {}): Me {
     display_name: 'Анна Петрова',
     is_admin: false,
     is_demo: false,
+    is_shared: false,
     profiles: 1,
     resume_status: null,
     avatar_url: null,
+    avatar_preset: 'teal',
     feed_view: 'cards',
     feed_order: 'new',
     folded_sections: [],
@@ -49,7 +51,9 @@ export function makeMeta(overrides: Partial<Meta> = {}): Meta {
     newest_article: null,
     sources: 100,
     sources_failing: 0,
-    demo_login: true,
+    // As a stack starts: one-click shared accounts, no throwaway guests.
+    demo_login: false,
+    preset_login: true,
     registration_open: true,
     sign_in_required: true,
     open_catalog: false,
@@ -71,6 +75,7 @@ export function makeUser(overrides: Partial<User> = {}): User {
     display_name: 'Анна Петрова',
     is_admin: false,
     is_demo: false,
+    is_shared: false,
     ...overrides,
   }
 }
@@ -162,5 +167,9 @@ export function makeNewMcpKey(overrides: Partial<NewMcpKey> = {}): NewMcpKey {
 export type Avatar = Awaited<ReturnType<typeof api.uploadAvatar>>
 
 export function makeAvatar(overrides: Partial<Avatar> = {}): Avatar {
-  return { avatar_url: '/api/v1/auth/me/avatar?v=1791966600000000', ...overrides }
+  return {
+    avatar_url: '/api/v1/auth/me/avatar?v=1791966600000000',
+    avatar_preset: 'teal',
+    ...overrides,
+  }
 }

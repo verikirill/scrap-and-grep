@@ -11,6 +11,9 @@ DOCX and JSON. Then it shows how the selection follows the interests: the
 ICS specialist's profile is edited three ways, one at a time, and for each
 edit a second digest is built and every article that came or went is given
 its reason, read from the digest's own record of what was graded and why.
+
+It works in a throwaway guest account, so the stack needs guest sign-in on:
+RADAR_DEMO_LOGIN=true (off by default).
 """
 
 import json
@@ -255,7 +258,10 @@ def write_json(path: Path, value: Any) -> None:
 def main() -> None:
     with httpx.Client(timeout=60) as client:
         # A guest account starts with copies of the example profiles.
-        client.post(f"{API}/auth/demo").raise_for_status()
+        entered = client.post(f"{API}/auth/demo")
+        if entered.status_code == 404:
+            sys.exit("guest sign-in is off: start the stack with RADAR_DEMO_LOGIN=true")
+        entered.raise_for_status()
         profiles = client.get(f"{API}/profiles").raise_for_status().json()
         digests = {}
         print("building one digest per profile", flush=True)

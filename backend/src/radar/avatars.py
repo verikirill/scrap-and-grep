@@ -2,10 +2,14 @@
 
 The upload is decoded and drawn anew, never stored as sent: what comes out
 has no EXIF (no location, no camera), no second payload glued to the file,
-and a size fit for a database row.
+and a size fit for a database row. Without a photo the reader has one of
+the ready pictures.
 """
 
+import secrets
+import uuid
 from io import BytesIO
+from typing import Literal, get_args
 
 from PIL import Image, ImageOps, UnidentifiedImageError
 
@@ -44,3 +48,23 @@ def normalize(data: bytes) -> bytes:
         raise
     except (UnidentifiedImageError, Image.DecompressionBombError, OSError, ValueError) as exc:
         raise AvatarError("Подходят картинки JPEG, PNG, WebP и GIF.") from exc
+
+
+# The ready pictures a reader may pick instead of a photo: fluffy balls of
+# nine colours, served by the web app from /brand/avatars/<name>.webp.
+AvatarPreset = Literal["green", "blue", "yellow", "orange", "teal", "purple", "red", "sky", "grey"]
+AVATAR_PRESETS: tuple[AvatarPreset, ...] = get_args(AvatarPreset)
+
+
+def random_preset() -> AvatarPreset:
+    """A picture for a new account, so that two new readers look apart."""
+    return secrets.choice(AVATAR_PRESETS)
+
+
+def preset_for(user_id: uuid.UUID, stored: str | None) -> AvatarPreset:
+    """The reader's own pick, or one of the nine derived from the account id:
+    an account from before the pictures existed keeps the same one everywhere."""
+    for preset in AVATAR_PRESETS:
+        if preset == stored:
+            return preset
+    return AVATAR_PRESETS[user_id.int % len(AVATAR_PRESETS)]

@@ -82,10 +82,16 @@ def limited(client: httpx.Client, method: str, url: str, **options: Any) -> http
 
 
 def add_examples(client: httpx.Client, api: str) -> dict[str, dict[str, Any]]:
-    """The example profiles a guest starts with, copied into this account."""
+    """The example profiles, copied into this account: read from a fresh guest,
+    or from the shared reader account where guest sign-in is off."""
     profiles = {p["spec"]["name"]: p for p in client.get(f"{api}/profiles").json()}
     with httpx.Client(timeout=60) as guest:
-        guest.post(f"{api}/auth/demo").raise_for_status()
+        entered = guest.post(f"{api}/auth/demo")
+        is_guest = entered.status_code != 404
+        if is_guest:
+            entered.raise_for_status()
+        else:
+            guest.post(f"{api}/auth/preset/reader").raise_for_status()
         try:
             for example in guest.get(f"{api}/profiles").raise_for_status().json():
                 name = example["spec"]["name"]
@@ -100,7 +106,8 @@ def add_examples(client: httpx.Client, api: str) -> dict[str, dict[str, Any]]:
                 profiles[name] = created.json()
                 print(f"added profile {name}")
         finally:
-            guest.post(f"{api}/auth/me/delete", json={"password": ""})
+            if is_guest:
+                guest.post(f"{api}/auth/me/delete", json={"password": ""})
     return profiles
 
 

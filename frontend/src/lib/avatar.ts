@@ -1,6 +1,26 @@
-// What stands in for a reader's picture while there is none: the initials of
-// the name on a hue of its own. Both come from the name, so they stay the same
-// on every visit.
+// What stands in for a reader's picture while there is no photo: one of the
+// nine ready pictures, or, where none is known, the initials of the name on a
+// hue of its own. Both stay the same on every visit.
+import type { AvatarPreset } from './api'
+
+/** The ready pictures in the order the picker shows them, with names for screen readers. */
+export const AVATAR_PRESETS: readonly { key: AvatarPreset; label: string }[] = [
+  { key: 'green', label: 'Зелёный' },
+  { key: 'teal', label: 'Бирюзовый' },
+  { key: 'sky', label: 'Голубой' },
+  { key: 'blue', label: 'Синий' },
+  { key: 'purple', label: 'Фиолетовый' },
+  { key: 'red', label: 'Красный' },
+  { key: 'orange', label: 'Оранжевый' },
+  { key: 'yellow', label: 'Жёлтый' },
+  { key: 'grey', label: 'Серый' },
+]
+
+/** The picture's address and its twice-as-sharp copy for dense screens. */
+export function presetImage(preset: AvatarPreset): { src: string; srcSet: string } {
+  const base = `/brand/avatars/${preset}`
+  return { src: `${base}.webp`, srcSet: `${base}.webp 1x, ${base}@2x.webp 2x` }
+}
 
 /** Up to two letters of a name: «Анна Петрова» -> «АП», «Гость» -> «Г». */
 export function nameInitials(name: string): string {

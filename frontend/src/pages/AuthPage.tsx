@@ -9,6 +9,7 @@ import { Link, Navigate, useLocation } from 'react-router'
 import type { AuthRedirect } from '../components/RequireAuth'
 import { EASE, INPUT_CLASS } from '../components/tokens'
 import { Button, ErrorNote, Field } from '../components/ui'
+import { SharedAccounts } from '../features/auth/SharedAccounts'
 import { TailVisual } from '../features/auth/TailVisual'
 import { ONBOARDING_PATH } from '../lib/onboarding'
 import { useMe, useMeta, useSignIn } from '../lib/queries'
@@ -45,7 +46,7 @@ export function AuthPage({ mode }: Props) {
   const me = useMe()
   const meta = useMeta()
   const location = useLocation()
-  const { login, register, demo } = useSignIn()
+  const { login, register, demo, shared } = useSignIn()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
@@ -54,8 +55,8 @@ export function AuthPage({ mode }: Props) {
 
   const isRegister = mode === 'register'
   const target = safeTarget(location.state)
-  const pending = login.isPending || register.isPending || demo.isPending
-  const error = (isRegister ? register.error : login.error) ?? demo.error
+  const pending = login.isPending || register.isPending || demo.isPending || shared.isPending
+  const error = (isRegister ? register.error : login.error) ?? demo.error ?? shared.error
 
   // Someone sent a profile: after signing in the reader decides about it,
   // even a new one, who otherwise starts with the introduction.
@@ -213,6 +214,14 @@ export function AuthPage({ mode }: Props) {
               {isRegister ? 'Зарегистрироваться' : 'Войти'}
             </Button>
           </form>
+
+          {!isRegister && meta.data?.preset_login && (
+            <SharedAccounts
+              busyKey={shared.isPending ? (shared.variables ?? null) : null}
+              isDisabled={pending}
+              onEnter={(account) => shared.mutate(account)}
+            />
+          )}
 
           {meta.data?.demo_login && (
             <div className="mt-6 border-t border-separator pt-5">

@@ -283,7 +283,7 @@ function AccountButton({ hasLabel = false }: { hasLabel?: boolean }) {
       to="/account"
       onPointerEnter={() => prefetchRoute('/account')}
       aria-label={`Аккаунт: ${me.display_name}`}
-      title={me.is_demo ? 'Временный аккаунт' : me.email}
+      title={me.is_shared ? 'Общий аккаунт' : me.is_demo ? 'Временный аккаунт' : me.email}
       className="group flex shrink-0 items-center gap-2.5 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-focus"
     >
       {({ isActive }) => (

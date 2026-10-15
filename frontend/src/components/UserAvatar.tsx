@@ -1,22 +1,23 @@
 import clsx from 'clsx'
 import { useState } from 'react'
 import type { Me } from '../lib/api'
-import { nameHue, nameInitials } from '../lib/avatar'
+import { nameHue, nameInitials, presetImage } from '../lib/avatar'
 
 type Props = {
-  me: Pick<Me, 'display_name' | 'avatar_url'> & Partial<Pick<Me, 'is_demo'>>
+  me: Pick<Me, 'display_name' | 'avatar_url'> & Partial<Pick<Me, 'is_demo' | 'avatar_preset'>>
   size: number
   className?: string
 }
 
 /**
- * The reader's picture, or their initials on a soft gradient of a hue of
- * their own while there is none: two readers without a picture look apart.
- * A guest without a picture gets the guest character instead of a letter.
+ * The reader's picture: their photo, or else the ready picture of the account.
+ * Where neither is known, a guest gets the guest character and a reader their
+ * initials on a soft gradient of a hue of their own.
  */
 export function UserAvatar({ me, size, className }: Props) {
-  // A picture that failed to load falls back to the initials, until a new one is set.
+  // A picture that failed to load falls back to the next choice, until a new one is set.
   const [broken, setBroken] = useState<string | null>(null)
+  const imageClass = clsx('shrink-0 rounded-full object-cover', className)
   if (me.avatar_url && broken !== me.avatar_url) {
     return (
       <img
@@ -26,22 +27,28 @@ export function UserAvatar({ me, size, className }: Props) {
         height={size}
         decoding="async"
         onError={() => setBroken(me.avatar_url)}
-        className={clsx('shrink-0 rounded-full object-cover', className)}
+        className={imageClass}
         style={{ width: size, height: size }}
       />
     )
   }
-  if (me.is_demo) {
+  const ready = me.avatar_preset
+    ? presetImage(me.avatar_preset)
+    : me.is_demo
+      ? { src: '/brand/guest.webp', srcSet: '/brand/guest.webp 1x, /brand/guest@2x.webp 2x' }
+      : null
+  if (ready) {
     return (
       <img
-        src="/brand/guest.webp"
-        srcSet="/brand/guest.webp 1x, /brand/guest@2x.webp 2x"
+        src={ready.src}
+        srcSet={ready.srcSet}
         alt=""
         width={size}
         height={size}
         decoding="async"
         draggable={false}
-        className={clsx('shrink-0 rounded-full object-cover', className)}
+        // Fluffy balls on a transparent background: no crop, no circle clip needed.
+        className={clsx('shrink-0 object-contain', className)}
         style={{ width: size, height: size }}
       />
     )
