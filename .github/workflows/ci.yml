@@ -1,0 +1,356 @@
+# The checks of .gitlab-ci.yml on GitHub Actions: the same scripts from ci/ in
+# the same images, with the same services. The images are built here without
+# a push; the registry and the stand belong to the GitLab pipeline
+# (docs/CI.md).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UV_LINK_MODE: copy
+  UV_PYTHON_DOWNLOADS: never
+  UV_NO_PROGRESS: "1"
+  npm_config_audit: "false"
+  npm_config_fund: "false"
+
+jobs:
+  # --- static checks ------------------------------------------------------------
+
+  backend-lint:
+    name: backend:lint
+    runs-on: ubuntu-latest
+    container: ghcr.io/astral-sh/uv:0.13.1-python3.14-trixie-slim
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/uv
+          key: uv-backend-${{ hashFiles('backend/uv.lock') }}
+          restore-keys: uv-backend-
+      - run: sh ci/backend-lint.sh
+
+  frontend-lint:
+    name: frontend:lint
+    runs-on: ubuntu-latest
+    container: node:24.21.0-alpine
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      # actions/cache packs the cache with GNU tar.
+      - run: apk add --no-cache tar
+      - uses: actions/cache@v6
+        with:
+          path: ~/.npm
+          key: npm-frontend-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: npm-frontend-
+      - run: sh ci/frontend-lint.sh
+
+  python-services:
+    name: python:services
+    runs-on: ubuntu-latest
+    container: ghcr.io/astral-sh/uv:0.13.1-python3.14-trixie-slim
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - run: sh ci/python-services.sh
+
+  compose-config:
+    name: compose:config
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - run: sh ci/compose-config.sh
+
+  dockerfiles-lint:
+    name: dockerfiles:lint
+    runs-on: ubuntu-latest
+    container: hadolint/hadolint:v2.15.1-alpine
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - run: sh ci/dockerfiles-lint.sh
+
+  shell-lint:
+    name: shell:lint
+    runs-on: ubuntu-latest
+    container: koalaman/shellcheck-alpine:v0.11.0
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - run: sh ci/shell-lint.sh
+
+  secrets-scan:
+    name: secrets:scan
+    runs-on: ubuntu-latest
+    container: zricethezav/gitleaks:v8.30.1
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # The checkout belongs to the runner's user, git in the container runs as root.
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      # A pull request: the commits it brings. Other runs: the whole history.
+      - run: sh ci/secrets-scan.sh
+        env:
+          COMMIT_RANGE: ${{ github.event_name == 'pull_request' && format('{0}..{1}', github.event.pull_request.base.sha, github.event.pull_request.head.sha) || '' }}
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: gitleaks-report
+          path: gitleaks.xml
+          retention-days: 14
+
+  # A warning, not a stop: a fresh advisory leaves an unrelated merge free.
+  deps-audit:
+    name: deps:audit
+    runs-on: ubuntu-latest
+    container: ghcr.io/google/osv-scanner:v2.6.0
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - run: sh ci/deps-audit.sh
+
+  commits-lint:
+    name: commits:lint
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    container: docker:29.9.0-cli
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - run: sh ci/commits-lint.sh
+        env:
+          COMMIT_RANGE: ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}
+
+  # --- tests --------------------------------------------------------------------
+
+  # The services are of the versions in docker-compose.yml and answer by their
+  # names, as in GitLab.
+  backend-test:
+    name: backend:test
+    runs-on: ubuntu-latest
+    container: ghcr.io/astral-sh/uv:0.13.1-python3.14-trixie-slim
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.6-pg18
+        env:
+          POSTGRES_USER: radar
+          POSTGRES_PASSWORD: radar
+          POSTGRES_DB: radar
+      valkey:
+        image: valkey/valkey:9.1-alpine
+      clickhouse:
+        image: clickhouse/clickhouse-server:26.9.8-alpine
+        env:
+          CLICKHOUSE_USER: radar
+          CLICKHOUSE_PASSWORD: radar
+          CLICKHOUSE_DB: radar
+    env:
+      RADAR_TEST_ADMIN_DSN: postgresql://radar:radar@postgres:5432/postgres
+      RADAR_TEST_CACHE_URL: redis://valkey:6379/15
+      RADAR_TEST_BROKER_URL: redis://valkey:6379/15
+      RADAR_TEST_CLICKHOUSE_URL: http://clickhouse:8123
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/uv
+          key: uv-backend-${{ hashFiles('backend/uv.lock') }}
+          restore-keys: uv-backend-
+      - run: sh ci/backend-test.sh
+      - if: ${{ !cancelled() }}
+        run: sh ci/test-summary.sh "Backend" backend/junit.xml backend/coverage.xml
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: backend-reports
+          path: |
+            backend/junit.xml
+            backend/coverage.xml
+          retention-days: 14
+
+  frontend-test:
+    name: frontend:test
+    runs-on: ubuntu-latest
+    container: node:24.21.0-alpine
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - run: apk add --no-cache tar
+      - uses: actions/cache@v6
+        with:
+          path: ~/.npm
+          key: npm-frontend-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: npm-frontend-
+      - run: sh ci/frontend-test.sh
+      - if: ${{ !cancelled() }}
+        run: >-
+          sh ci/test-summary.sh "Web app" frontend/junit.xml
+          frontend/coverage/cobertura-coverage.xml
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: frontend-reports
+          path: |
+            frontend/junit.xml
+            frontend/coverage/cobertura-coverage.xml
+          retention-days: 14
+
+  shorts-test:
+    name: shorts:test
+    runs-on: ubuntu-latest
+    container: node:24.21.0-alpine
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - run: apk add --no-cache tar
+      - uses: actions/cache@v6
+        with:
+          path: ~/.npm
+          key: npm-shorts-${{ hashFiles('shorts/package-lock.json') }}
+          restore-keys: npm-shorts-
+      - run: sh ci/shorts-test.sh
+      - if: ${{ !cancelled() }}
+        run: sh ci/test-summary.sh "Shorts render service" shorts/junit.xml
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: shorts-reports
+          path: shorts/junit.xml
+          retention-days: 14
+
+  browser-test:
+    name: browser:test
+    runs-on: ubuntu-latest
+    container: ghcr.io/astral-sh/uv:0.13.1-python3.14-trixie-slim
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/uv
+          key: uv-browser-${{ hashFiles('browser/uv.lock') }}
+          restore-keys: uv-browser-
+      - run: sh ci/browser-test.sh
+      - if: ${{ !cancelled() }}
+        run: sh ci/test-summary.sh "Headless browser" browser/junit.xml
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: browser-reports
+          path: browser/junit.xml
+          retention-days: 14
+
+  # --- build --------------------------------------------------------------------
+
+  frontend-build:
+    name: frontend:build
+    runs-on: ubuntu-latest
+    container: node:24.21.0-alpine
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - run: apk add --no-cache tar
+      - uses: actions/cache/restore@v6
+        with:
+          path: ~/.npm
+          key: npm-frontend-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: npm-frontend-
+      - run: sh ci/frontend-build.sh
+      - uses: actions/upload-artifact@v7
+        with:
+          name: frontend-dist
+          path: frontend/dist
+          retention-days: 7
+
+  # The images of the stand once the checks and tests are green, built with the
+  # Docker of the virtual machine and kept there. deps-audit only warns, as in
+  # GitLab, so the images do not wait for it.
+  images:
+    name: images
+    needs:
+      - backend-lint
+      - frontend-lint
+      - python-services
+      - compose-config
+      - dockerfiles-lint
+      - shell-lint
+      - secrets-scan
+      - commits-lint
+      - backend-test
+      - frontend-test
+      - shorts-test
+      - browser-test
+    # commits-lint belongs to pull requests; on a push it is skipped, and the
+    # images still build.
+    if: ${{ !cancelled() && !failure() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      # Two commits: the merge commit of a pull request and its base.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      # A pull request builds them when it changes what goes into them, the
+      # paths of the images job in .gitlab-ci.yml.
+      - name: Changes that reach the images
+        id: changes
+        if: github.event_name == 'pull_request'
+        run: |
+          changed=$(git diff --name-only HEAD^1 HEAD)
+          if printf '%s\n' "$changed" | grep -E \
+              -e '^(\.gitlab-ci\.yml|\.github/workflows/ci\.yml|ci/images\.sh)$' \
+              -e '^docker-compose[^/]*\.yml$' -e '(^|/)(Dockerfile|\.dockerignore)$' \
+              -e '^backend/(pyproject\.toml|uv\.lock)$' -e '^(browser|egress)/' \
+              -e '^frontend/(Caddyfile|package[^/]*\.json)$' -e '^shorts/package[^/]*\.json$'
+          then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: github.event_name != 'pull_request' || steps.changes.outputs.build == 'true'
+        run: sh ci/images.sh
