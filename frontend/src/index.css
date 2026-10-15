@@ -343,3 +343,21 @@
   animation: none;
   mix-blend-mode: normal;
 }
+
+/* The halftone behind the app (components/ui/dotted-veil.tsx): barely there.
+   Black dots on white multiply into the light page, white dots on black
+   screen into the dark one, so the page colour shows through untouched. */
+.dotted-veil {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.045;
+  mix-blend-mode: multiply;
+}
+.dark .dotted-veil {
+  opacity: 0.06;
+  mix-blend-mode: screen;
+}
