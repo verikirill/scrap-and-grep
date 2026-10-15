@@ -10,8 +10,8 @@ embedding: "ollama:embeddinggemma:300m"
 sources: 13
 publications: 1737
 candidates: 60
-entries: 20
-manual_minutes: 205
+entries: 19
+manual_minutes: 125
 ---
 
 # Рост целевых атак на критическую инфраструктуру и новые 0-day уязвимости
@@ -20,7 +20,7 @@ manual_minutes: 205
 **Период:** 25.09.2026 - 02.10.2026  
 **Сформирован:** 03.10.2026 02:47 МСК
 
-*Вместо ручной работы: ассистент просмотрел 1 737 публикаций и написал 20 записей за 70 с; вручную это около 3,4 ч при 5 с на заголовок и 3 мин на запись.*
+*Вместо ручной работы: ассистент просмотрел 1 737 публикаций и написал 19 записей за 70 с; вручную это около 2,1 ч по журналу аналитика ИБ: 1,3 с на публикацию и 4,6 мин на запись.*
 
 ## Содержание
 
@@ -49,12 +49,9 @@ manual_minutes: 205
   - Временные меры: Мониторить логи serviceproxy-access.log и vmanage-server.log на предмет запросов с %6a и j_security_check; при подозрении обращаться в Cisco TAC.
   - в каталоге CISA KEV с 30.09.2026; CVSS 9.8; эксплойт: используется в атаках
 - [ ] [FortiMail: критическая уязвимость Path Traversal с удалённым выполнением кода](https://bleepingcomputer.com/news/security/fortinet-warns-of-critical-fortimail-flaw-exploited-in-zero-day-attacks)
-  - Обновление: Обновление до FortiMail 7.4.9, 7.6.7 или 8.0.2 (пока недоступно, ожидается). Для 7.2-версий – переход на ветку 7.4 или новее.
   - Временные меры: Отключить поддержку IBE (config system encryption ibe → set status disable → end) и/или закрыть доступ к управляемому интерфейсу из интернета, ограничив доступ только доверенными сетями.
+  - Обновление: Обновление до FortiMail 7.4.9, 7.6.7 или 8.0.2 (пока недоступно, ожидается). Для 7.2-версий – переход на ветку 7.4 или новее.
   - в каталоге CISA KEV с 01.10.2026; CVSS 9.8; эксплойт: используется в атаках
-- [ ] [Citrix NetScaler ADC и Gateway: две критические уязвимости удалённого выполнения кода](https://thehackernews.com/2026/09/warning-two-unpatched-citrix-netscaler.html)
-  - Обновление: Citrix выпустила исправления для обеих уязвимостей; обновитесь до версий, указанных в официальных бюллетенях.
-  - эксплойт: используется в атаках
 
 ## 1. Атаки
 
@@ -112,7 +109,7 @@ manual_minutes: 205
 
 ## 2. Уязвимости
 
-Высокий приоритет: 5; средний приоритет: 9. Порядок по правилу: уязвимость с эксплойтом выше уязвимости без него.
+Высокий приоритет: 4; средний приоритет: 9. Порядок по правилу: уязвимости с известным эксплойтом показываются первыми.
 
 ### [Citrix NetScaler: две 0-day уязвимости (CVE-2026-88771 и CVE-2026-88772) позволяют удалённое выполнение кода и DoS](https://t.me/true_secator/8662)
 
@@ -141,7 +138,7 @@ manual_minutes: 205
 
 **Почему важно:** Необходимо срочно установить патчи Citrix, иначе инфраструктура подстанций может быть скомпрометирована.
 
-Также об этом: [BleepingComputer](https://bleepingcomputer.com/news/security/hackers-exploit-citrix-netscaler-zero-day-to-deploy-web-shells), [Google Cloud: Threat Intelligence](https://cloud.google.com/blog/topics/threat-intelligence/defending-against-active-exploitation-of-citrix-netscaler-adc-and-gateway-appliances)
+Также об этом: [BleepingComputer](https://bleepingcomputer.com/news/security/hackers-exploit-citrix-netscaler-zero-day-to-deploy-web-shells), [Google Cloud: Threat Intelligence](https://cloud.google.com/blog/topics/threat-intelligence/defending-against-active-exploitation-of-citrix-netscaler-adc-and-gateway-appliances), [The Hacker News](https://thehackernews.com/2026/09/warning-two-unpatched-citrix-netscaler.html)
 
 ### [Сентябрьский дайджест трендовых уязвимостей](https://ptsecurity.com/research/analytics/trending-vulnerability-digest-september-2026/)
 
@@ -193,28 +190,6 @@ manual_minutes: 205
 
 Также об этом: [BleepingComputer](https://bleepingcomputer.com/news/security/cisco-warns-of-new-sd-wan-authentication-bypass-zero-day-exploited-in-attacks), [CNews: Безопасность](https://safe.cnews.ru/news/top/2026-10-02_tainstvennye_zloumyshlenniki)
 
-### [Citrix NetScaler ADC и Gateway: две критические уязвимости удалённого выполнения кода](https://thehackernews.com/2026/09/warning-two-unpatched-citrix-netscaler.html)
-
-*The Hacker News · 27.09.2026 · Уязвимость · приоритет: высокий (эксплойт: используется в атаках) · релевантность 0.70 · интерес: Уязвимости и обновления безопасности*
-
-Оригинал: Warning: Two Unpatched Citrix NetScaler RCE Zero-Days Under Active Exploitation
-
-Уязвимости позволяют злоумышленнику выполнить произвольный код на устройствах Citrix NetScaler ADC и NetScaler Gateway удалённо.
-
-| Поле | Значение |
-| --- | --- |
-| Уязвимость | уязвимость в Citrix NetScaler ADC и NetScaler Gateway |
-| Затронуто | нет данных |
-| Обновление | Citrix выпустила исправления для обеих уязвимостей; обновитесь до версий, указанных в официальных бюллетенях. |
-| Временные меры | нет данных |
-| Эксплойт | используется в атаках |
-| Идентификаторы | нет данных |
-| CVSS | нет данных |
-| CWE | нет данных |
-| Последствия | Удалённое выполнение кода, потенциальный контроль над системой. |
-
-**Почему важно:** Необходимо установить выпущенные патчи, иначе система подвержена активным атакам с удалённым выполнением кода.
-
 ### [FortiMail: критическая уязвимость Path Traversal с удалённым выполнением кода](https://bleepingcomputer.com/news/security/fortinet-warns-of-critical-fortimail-flaw-exploited-in-zero-day-attacks)
 
 *BleepingComputer · 02.10.2026 · Уязвимость · приоритет: высокий (эксплойт: используется в атаках) · релевантность 0.70 · интерес: Уязвимости и обновления безопасности*
@@ -240,7 +215,9 @@ manual_minutes: 205
 | Последствия | Удалённое выполнение произвольного кода, запись файлов, возможный компромисс системы и утечка данных. |
 | Сверено по базам | CVE-2026-104286: CISA KEV с 01.10.2026; BDU:2026-15790, эксплойт существует в открытом доступе, используется в атаках |
 
-**Почему важно:** Необходимо срочно установить патч или применить временные меры, иначе система подвержена активным zero-day атакам.
+**Почему важно:** Исправление ещё не выпущено, до его выхода: отключить поддержку IBE (config system encryption ibe → set status disable → end) и/или закрыть доступ к управляемому интерфейсу из интернета, ограничив доступ только доверенными сетями.
+
+*Нет в тексте статьи, убрано проверкой: совет поставить исправление, которого ещё нет.*
 
 ### [Toptech TMS7 и TopHAT 7.6.3 – критические уязвимости, позволяющие удалённый доступ к данным и выполнение произвольного кода](https://cisa.gov/news-events/ics-advisories/icsa-26-272-02)
 
@@ -336,7 +313,6 @@ manual_minutes: 205
 | CVSS | нет данных |
 | CWE | нет данных |
 | Последствия | Неавторизованный доступ к графическому интерфейсу и исполнительным контроллерам, возможность управления технологическим процессом и кража учетных данных |
-| Сверено по базам | нет в справочных базах: BDU:2026-01678, BDU:2026-01679, BDU:2026-01680, BDU:2026-01681, BDU:2026-01682, BDU:2026-01676 |
 
 **Почему важно:** Необходимо установить обновление 8.3.1 и ограничить сетевой доступ к компонентам KWebVision и KLogic, чтобы предотвратить неавторизованное управление АСУ ТП.
 
@@ -394,7 +370,7 @@ manual_minutes: 205
 | Последствия | Эскалация привилегий до SYSTEM и запись произвольных файлов (Path Traversal) |
 | Сверено по базам | нет в справочных базах: CVE-2026-15952, CVE-2026-15953 |
 
-**Почему важно:** Необходимо проверить конфигурацию службы ABBPCMSchedulerService и обновить PCM600 до версии &gt;2.14, иначе риск компрометации контроллеров повышен.
+**Почему важно:** Необходимо проверить конфигурацию службы ABBPCMSchedulerService и обновить PCM600 до версии \>2.14, иначе риск компрометации контроллеров повышен.
 
 Также об этом: [1275.ru: уязвимости и индикаторы](https://1275.ru/vulnerability/sluzhba-planirovschika-i-obrabotka-arhivov-v-abb-pcm600-pozvolyayut-povysit-privilegii-i-zapisat-fayly-vne-kataloga_42666)
 
@@ -408,7 +384,7 @@ manual_minutes: 205
 | --- | --- |
 | Уязвимость | уязвимости в CODESYS |
 | Затронуто | CODESYS Development System 3, CODESYS Gateway, Edge Gateway for Windows, HMI панель, OPC DA сервер, PLCHandler library, Runtime Toolkit, CODESYS Control for Linux, Linux ARM, Raspberry Pi, промышленные ПК, Beckhoff CX, PFC100, PFC200, PLCnext, WAGO Touch Panels 600, Virtual Control SL, Safety SIL2; версии до 3.5.22.40 (для большинства) и до 4.23.0.0 (Edge Gateway for Linux). |
-| Обновление | Обновление до CODESYS 3.5.22.40 (для большинства компонентов) и до 4.23.0.0 (для Edge Gateway for Linux) доступно через установщик CODESYS, CODESYS Store или сайт codesys.com/download. |
+| Обновление | Обновление до CODESYS 3.5.22.40 (для большинства компонентов) и до 4.23.0.0 (для Edge Gateway for Linux) доступно через установщик CODESYS, CODESYS Store или сайт codesys.com/download. Для части версий исправление ещё не выпущено. |
 | Временные меры | нет данных |
 | Эксплойт | нет |
 | Идентификаторы | CVE-2026-76992, CVE-2026-79625 |
@@ -417,7 +393,7 @@ manual_minutes: 205
 | Последствия | Отказ в обслуживании клиентского приложения и искажение данных мониторинга, возможный сбой контроллера. |
 | Сверено по базам | нет в справочных базах: CVE-2026-76992, CVE-2026-79625 |
 
-**Почему важно:** Необходимо обновить CODESYS до фиксированных версий, иначе под угрозой отказ оборудования и некорректные данные мониторинга.
+**Почему важно:** Необходимо обновить CODESYS до фиксированных версий, иначе под угрозой отказ оборудования и некорректные данные мониторинга. Для части версий исправление ещё не выпущено.
 
 ### [Уязвимость нулевого дня в базе данных TDengine](https://darkreading.com/ics-ot-security/one-packet-crash-servers-tdengine)
 
@@ -555,8 +531,8 @@ manual_minutes: 205
 
 ## Как составлен выпуск
 
-- Публикаций за период: 1737. Кандидатов после поиска по интересам: 60. В выпуске: 20 из 13 источников.
+- Публикаций за период: 1737. Кандидатов после поиска по интересам: 60. В выпуске: 19 из 13 источников.
 - Поиск: ollama:embeddinggemma:300m. Оценка и тексты: ollama:gpt-oss:120b.
-- Пересказов одной новости объединено: 8.
+- Пересказов одной новости объединено: 9.
 - Приоритеты атак и уязвимостей по правилам датасета организаторов: высокий 5, средний 9, низкий 2.
 - Проверка записей по тексту статей: исправлено записей 1, убрано полей и фраз 1.
