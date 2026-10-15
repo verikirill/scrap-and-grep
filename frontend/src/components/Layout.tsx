@@ -51,6 +51,13 @@ const NAV: NavItem[] = [
 const THEME_KEY = 'radar-theme'
 /** How long the colours of one theme take to fade into the other. */
 const THEME_FADE_MS = DURATION.medium * 1000
+/** How long the new theme takes to sweep across the screen, corner to corner. */
+const THEME_SWEEP_MS = 700
+/**
+ * The new theme as a circle from the top-left corner. Its radius in percent is
+ * of the diagonal over the square root of two: 150% passes the far corner.
+ */
+const THEME_SWEEP = ['circle(0% at 0% 0%)', 'circle(150% at 0% 0%)']
 /** On <html> while the colours fade without view transitions (index.css). */
 const THEME_FADE_CLASS = 'theme-fading'
 
@@ -81,8 +88,8 @@ function useDarkMode(): [boolean, () => void] {
     },
     [],
   )
-  // The old theme fades into the new one; nothing moves. The first paint and
-  // a reader who turned motion down get the theme at once.
+  // The new theme sweeps over the old one from corner to corner. The first
+  // paint and a reader who turned motion down get the theme at once.
   const toggle = () => {
     const flip = () => flushSync(() => setDark((value) => !value))
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -90,15 +97,16 @@ function useDarkMode(): [boolean, () => void] {
       return
     }
     if (document.startViewTransition) {
-      // A picture of the new page fades in over a picture of the old one.
+      // A picture of the new page is uncovered over a picture of the old one,
+      // which stays still underneath: nothing fades, so nothing flickers.
       document
         .startViewTransition(flip)
         .ready.then(() => {
           document.documentElement.animate(
-            { opacity: [0, 1] },
+            { clipPath: THEME_SWEEP },
             {
-              duration: THEME_FADE_MS,
-              easing: `cubic-bezier(${EASE.join(', ')})`,
+              duration: THEME_SWEEP_MS,
+              easing: 'ease-in-out',
               pseudoElement: '::view-transition-new(root)',
             },
           )

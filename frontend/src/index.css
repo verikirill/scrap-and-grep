@@ -337,7 +337,8 @@
 
 /* View transitions move only the elements named for them (a digest title
    flowing between the history list and the page header). The rest of the
-   page changes at once instead of cross-fading two snapshots of itself. */
+   page changes at once instead of cross-fading two snapshots of itself; a
+   theme switch sweeps the new snapshot over the old one (Layout.tsx). */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;

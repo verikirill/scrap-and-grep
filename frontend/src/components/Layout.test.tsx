@@ -162,7 +162,7 @@ describe('Layout theme', () => {
     expect(document.documentElement).toHaveClass('dark')
   })
 
-  it('cross-fades a picture of the new theme over the old where the browser can', async () => {
+  it('sweeps the new theme over the old from corner to corner where the browser can', async () => {
     setMediaQueries({ '(prefers-reduced-motion: reduce)': false })
     const animate = vi.fn()
     Object.defineProperty(document.documentElement, 'animate', {
@@ -185,9 +185,14 @@ describe('Layout theme', () => {
     expect(document.documentElement).toHaveClass('dark')
     await waitFor(() => expect(animate).toHaveBeenCalledOnce())
     const [keyframes, options] = animate.mock.calls[0]
-    expect(keyframes).toEqual({ opacity: [0, 1] })
-    expect(options).toMatchObject({ duration: 300, pseudoElement: '::view-transition-new(root)' })
-    // The browser fades the pictures: the elements themselves do not ease.
+    // A circle from the top-left corner grows past the bottom-right one.
+    expect(keyframes).toEqual({ clipPath: ['circle(0% at 0% 0%)', 'circle(150% at 0% 0%)'] })
+    expect(options).toMatchObject({
+      duration: 700,
+      easing: 'ease-in-out',
+      pseudoElement: '::view-transition-new(root)',
+    })
+    // The browser moves the pictures: the elements themselves do not ease.
     expect(document.documentElement).not.toHaveClass('theme-fading')
   })
 
