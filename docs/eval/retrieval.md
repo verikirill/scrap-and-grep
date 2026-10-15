@@ -17,3 +17,14 @@
 | ollama:qwen3-embedding:4b | только векторы | 0.373 | 0.559 | 0.500 | 0.496 |
 | ollama:qwen3-embedding:4b | только полнотекстовый | 0.339 | 0.644 | 0.250 | 0.456 |
 | ollama:qwen3-embedding:4b | как в конвейере | 0.424 | 0.644 | 0.700 | 0.565 |
+
+## Эмбеддинги Yandex AI Studio
+
+Профиль тот же, «Специалист по ИБ АСУ ТП». У Yandex модель `text-embeddings-v2-doc` для статей и `text-embeddings-v2-query` для запросов. Сравнение снимает `backend/scripts/eval_retrieval.py` с ключами `--graded-only` и `--openai`, пример команды стоит в начале скрипта.
+
+| Эмбеддер | Precision@20 | Recall@60 |
+|---|---|---|
+| Yandex text-embeddings-v2 | 0.65 | 0.443 |
+| ollama:embeddinggemma:300m | 0.40 | 0.426 |
+
+Yandex v2 ставит наверх списка больше нужных статей: из первых 20 кандидатов релевантных 13 против 8. Пороги склейки дублей и поиска по смыслу для него подобраны отдельно, они лежат в `backend/src/radar/ai/factory.py`.

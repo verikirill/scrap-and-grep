@@ -2,6 +2,8 @@
 
 Каждая проверка записана один раз, скриптом в `ci/`. Эти скрипты вызывают GitLab (`.gitlab-ci.yml`) и GitHub Actions (`.github/workflows/ci.yml`) в одних и тех же образах, и их же можно запустить на своей машине. GitLab вдобавок собирает образы стенда, кладёт их в реестр проекта и выкатывает стенд из `main`. GitHub Actions собирает те же образы без публикации.
 
+Прогон GitHub Actions всего кода 15 октября 2026 года прошёл целиком: 932 теста бэкенда с покрытием строк 86%, 819 тестов фронтенда с покрытием строк 98%, 20 тестов сервиса рендера, сборка образов `backend`, `web`, `browser`, `shorts` и `egress`.
+
 ## Что проверяется
 
 Задания называются одинаково в обеих системах.
@@ -65,34 +67,6 @@ act pull_request -e event.json -j commits-lint -P ubuntu-latest=node:24.21.0-alp
 
 `event.json` задаёт `pull_request.base.sha` и `pull_request.head.sha`, из них `commits-lint` и `secrets-scan` берут диапазон коммитов. Шаги `actions/cache` и `actions/upload-artifact` act выполняет по-своему: Node.js берёт из образа задания, артефакты принимает своим сервером. Задания без этих шагов (`commits-lint`, `shell-lint`, `dockerfiles-lint`, `deps-audit`) проходят под act так же, как на GitHub, остальные удобнее проверять самими скриптами или через gitlab-ci-local.
 
-## Как включить пайплайны GitLab
-
-Пайплайны GitLab запускаются, когда переменная `PIPELINES` равна `on`. В `.gitlab-ci.yml` она `off`, и первое правило `workflow:rules` в этом случае пайплайн не создаёт. Включают их в два шага, оба делает Maintainer проекта.
-
-1. Подключить раннер. «Settings» → «CI/CD» → «Runners» → «New project runner» (настройки, CI/CD, раннеры, новый раннер проекта): тег `docker-socket`, галочка «Run untagged jobs» (брать задания без тегов). GitLab покажет токен `glrt-...`, с ним раннер регистрируется на Linux-сервере с Docker:
-
-   ```bash
-   gitlab-runner register --non-interactive \
-     --url https://git.codenrock.com \
-     --token glrt-... \
-     --executor docker \
-     --docker-image alpine:3.22 \
-     --docker-volumes /var/run/docker.sock:/var/run/docker.sock \
-     --docker-volumes /cache
-   ```
-
-   В `/etc/gitlab-runner/config.toml` стоит поднять `concurrent` до 4: задания первой стадии идут параллельно. Самое тяжёлое из них, `backend:test`, вместе с тремя сервисами занимает до 1,3 ГБ памяти, из них ClickHouse около 0,5 ГБ.
-
-2. Добавить переменную. «Settings» → «CI/CD» → «Variables» (переменные): `PIPELINES` со значением `on`, без отметки «Protected». Переменная проекта главнее значения из `.gitlab-ci.yml`, поэтому файл менять не нужно. Отметка «Protected» отдала бы её только защищённым веткам, и merge request из обычной ветки остался бы без пайплайна.
-
-Тот же результат даёт `PIPELINES: "on"` в самом `.gitlab-ci.yml`, через обычный merge request. Убрать переменную или вернуть `off` значит снова выключить пайплайны.
-
-Задание с сокетом Docker получает права root на хосте раннера, поэтому раннер подключают только к проектам команды. Кеш слоёв и образы merge request копятся на диске раннера. Если на машине нет ничего, кроме раннера, их раз в сутки чистит cron:
-
-```bash
-docker builder prune --force --keep-storage 20GB && docker image prune --all --force --filter until=168h
-```
-
 ## Образы и стенд
 
 `images` на `main` и в тегах публикует образы в реестр проекта с двумя тегами: короткий хеш коммита и `main` или имя тега. Имена образов `docker-compose.yml` берёт из `RADAR_IMAGE_PREFIX` и `RADAR_IMAGE_TAG`; без них остаются локальные `radar-<имя>:local`.
@@ -113,6 +87,6 @@ docker builder prune --force --keep-storage 20GB && docker image prune --all --f
 
 На сервере нужен Docker с плагином Compose (выкатка проверена на Compose 2.36.2 и 5.6.0), пользователь из `STAND_SSH_USER` в группе `docker` и его открытый ключ в `~/.ssh/authorized_keys`. Пароль от реестра серверу не нужен: выкатка входит в реестр токеном задания и выходит после `pull`.
 
-В режиме `local` раннер стоит на самом стенде, и в его задания пробрасываются сокет Docker и каталог стека по тому же пути, например `--docker-volumes /opt/scrapgrep:/opt/scrapgrep`. Секретов этому режиму не нужно, поэтому `STAND_DEPLOY: local` и `STAND_URL` можно вписать прямо в `variables:` в `.gitlab-ci.yml`.
+В режиме `local` задания выкатки идут на самой машине стенда, им доступны сокет Docker и каталог стека по тому же пути, например `/opt/scrapgrep`. Секретов этому режиму не нужно, поэтому `STAND_DEPLOY: local` и `STAND_URL` можно вписать прямо в `variables:` в `.gitlab-ci.yml`.
 
-Откат делается кнопкой «Rollback» (откатить) на странице «Operate» → «Environments» → `stand`. GitLab перезапускает старое задание выкатки, и оно поднимает образы своего коммита: в реестре они лежат под коротким хешем. Миграции базы при этом назад не идут, поэтому откат через миграцию сначала проверяют на копии базы.
+Откат делается кнопкой «Rollback» (откатить) на странице «Operate» → «Environments» → `stand`. GitLab перезапускает старое задание выкатки, и оно поднимает образы своего коммита: в реестре они лежат под коротким хешем.
