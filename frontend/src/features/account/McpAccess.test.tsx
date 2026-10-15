@@ -7,7 +7,8 @@ import { renderWithProviders } from '../../test/render'
 import { apiUrl, server } from '../../test/server'
 import { McpAccess } from './McpAccess'
 
-const TOKEN = 'sg_live_7f3a9c'
+// A made-up key: the test checks it is shown once and copied.
+const TOKEN = 'sg_live_7f3a9c' // gitleaks:allow
 
 /** The key store on the server: what is created is listed, what is revoked is gone. */
 function serveKeys() {
