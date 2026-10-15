@@ -36,7 +36,7 @@ from radar.recsys.service import FeedItem
 from radar.render.markdown import render_markdown
 from radar.store import digests as digest_store
 from radar.text import content_tokens
-from radar.views import digest_summary, digest_view
+from radar.views import digest_summary, shown_view
 
 SCOPE = "news:read"
 TOO_MANY = "Слишком много запросов. Попробуйте через минуту."
@@ -219,8 +219,8 @@ async def read_digest(digest_id: str = Field(description="id из my_digests")) 
         digest = await digest_store.get(session, wanted, user_id=_reader(), full=True)
         if digest is None or digest.status != digest_store.STATUS_DONE:
             raise ValueError("Такого готового дайджеста нет.")
-        hidden = await digest_store.hidden_card_fields(session, digest)
-        text = render_markdown(digest_view(digest, hidden))
+        current = await digest_store.current_spec(session, digest)
+        text = render_markdown(shown_view(digest, current))
     await record.mcp_called(_reader(), "read_digest", 1)
     return text
 

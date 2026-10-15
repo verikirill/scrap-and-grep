@@ -209,7 +209,7 @@ def _item(item: ItemView) -> list[str]:
 def _left_out(digest: DigestView) -> list[str]:
     """The candidates that did not make it, folded: open them to check the choice.
     The blank line after the summary makes GitLab read the list as Markdown."""
-    if not digest.rejected:
+    if not digest.rejected or not digest.shows("rejected"):
         return []
     lines = [f"<details><summary>Не вошло в выпуск: {len(digest.rejected)}</summary>", ""]
     for item in digest.rejected:
@@ -228,8 +228,24 @@ CHANGES_TITLE = "Что изменилось с прошлых выпусков"
 
 
 def manual_sentence(digest: DigestView) -> str:
-    """The handwork the issue spares, for its head; empty for an issue of nothing."""
-    return f"Вместо ручной работы: {manual_line(digest.manual)}." if digest.manual else ""
+    """The handwork the issue spares, for its head; empty for an issue of
+    nothing and when the reader hides it."""
+    if not digest.manual or not digest.shows("manual"):
+        return ""
+    return f"Вместо ручной работы: {manual_line(digest.manual)}."
+
+
+def shown_extras(digest: DigestView) -> tuple[bool, bool, bool, bool]:
+    """Which of "Что это значит для нас", the plan for the shift, what changed
+    and the period in numbers the report has: there is something to say and
+    the reader keeps the block."""
+    management = digest.profile.audience == "management"
+    return (
+        management and bool(digest.implications) and digest.shows("implications"),
+        bool(digest.plan) and digest.shows("plan"),
+        bool(digest.changes) and digest.shows("changes"),
+        bool(digest.numbers) and digest.shows("numbers"),
+    )
 
 
 def _plan(digest: DigestView) -> list[str]:
@@ -270,7 +286,7 @@ def _numbers(digest: DigestView) -> list[str]:
 def render_markdown(digest: DigestView) -> str:
     title = digest.title or f"Дайджест для профиля «{digest.profile_name}»"
     management = digest.profile.audience == "management"
-    implications = management and bool(digest.implications)
+    implications, plan, changes, numbers = shown_extras(digest)
     # A specialist's digest is long: sections first, so a reader jumps to one.
     contents = not management and bool(digest.topics)
     headings = [f"{number}. {topic.title}" for number, topic in enumerate(digest.topics, 1)]
@@ -281,9 +297,9 @@ def render_markdown(digest: DigestView) -> str:
         ("Содержание", contents),
         ("Что это значит для нас", implications),
         ("Главное", bool(digest.highlights)),
-        (PLAN_TITLE, bool(digest.plan)),
-        (CHANGES_TITLE, bool(digest.changes)),
-        (digest.numbers_title, bool(digest.numbers)),
+        (PLAN_TITLE, plan),
+        (CHANGES_TITLE, changes),
+        (digest.numbers_title, numbers),
     ):
         if present:
             gitlab_anchor(fixed, seen)
@@ -302,8 +318,8 @@ def render_markdown(digest: DigestView) -> str:
         f"**Сформирован:** {format_datetime(digest.finished_at or digest.created_at)} МСК",
         "",
     ]
-    if digest.manual:
-        lines += [f"*{_escape(manual_sentence(digest))}*", ""]
+    if manual := manual_sentence(digest):
+        lines += [f"*{_escape(manual)}*", ""]
     if contents:
         lines += ["## Содержание", ""]
         lines += [
@@ -319,11 +335,11 @@ def render_markdown(digest: DigestView) -> str:
         lines += ["## Главное", ""]
         lines += [f"- {_escape(highlight)}" for highlight in digest.highlights]
         lines.append("")
-    if digest.plan:
+    if plan:
         lines += _plan(digest)
-    if digest.changes:
+    if changes:
         lines += _changes(digest)
-    if digest.numbers:
+    if numbers:
         lines += _numbers(digest)
     if not digest.topics:
         lines += ["За выбранный период публикаций по интересам профиля не найдено.", ""]
@@ -334,7 +350,8 @@ def render_markdown(digest: DigestView) -> str:
         for item in topic.items:
             lines += _item(item)
     lines += _left_out(digest)
-    lines += ["---", "", "## Как составлен выпуск", ""]
-    lines += [f"- {line}" for line in methodology(digest)]
-    lines.append("")
+    if digest.shows("method"):
+        lines += ["---", "", "## Как составлен выпуск", ""]
+        lines += [f"- {line}" for line in methodology(digest)]
+        lines.append("")
     return "\n".join(lines)

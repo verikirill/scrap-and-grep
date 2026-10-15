@@ -21,6 +21,7 @@ from radar.render.markdown import (
     item_meta,
     manual_sentence,
     methodology,
+    shown_extras,
 )
 from radar.views import DigestView, ItemView
 
@@ -103,7 +104,8 @@ def _item(document: Document, item: ItemView) -> None:  # type: ignore[valid-typ
 
 def _extras(document: Document, digest: DigestView) -> None:  # type: ignore[valid-type]
     """The plan for the shift, what changed and the period in numbers, as in Markdown."""
-    if digest.plan:
+    _, plan, changes, numbers = shown_extras(digest)
+    if plan:
         document.add_heading(PLAN_TITLE, level=1)  # type: ignore[attr-defined]
         for entry in digest.plan:
             paragraph = document.add_paragraph("☐ ")  # type: ignore[attr-defined]
@@ -112,14 +114,14 @@ def _extras(document: Document, digest: DigestView) -> None:  # type: ignore[val
                 document.add_paragraph(step, style="List Bullet")  # type: ignore[attr-defined]
             if entry.facts:
                 _muted(document.add_paragraph(), "; ".join(entry.facts))  # type: ignore[attr-defined]
-    if digest.changes:
+    if changes:
         document.add_heading(CHANGES_TITLE, level=1)  # type: ignore[attr-defined]
         for change in digest.changes:
             paragraph = document.add_paragraph(style="List Bullet")  # type: ignore[attr-defined]
             paragraph.add_run(f"{change.id}, ").bold = True
             add_hyperlink(paragraph, change.url, change.headline)
             paragraph.add_run(f": {change_line(change)}")
-    if digest.numbers:
+    if numbers:
         document.add_heading(digest.numbers_title, level=1)  # type: ignore[attr-defined]
         before = any(row.before is not None for row in digest.numbers)
         header = ["Признак", "Записей", *(["В прошлом выпуске"] if before else [])]
@@ -146,10 +148,10 @@ def render_docx(digest: DigestView) -> bytes:
         f"Период: {format_date(digest.period_start)} - {format_date(digest.period_end)} · "
         f"Сформирован: {format_datetime(digest.finished_at or digest.created_at)} МСК",
     )
-    if digest.manual:
-        document.add_paragraph().add_run(manual_sentence(digest)).italic = True
+    if manual := manual_sentence(digest):
+        document.add_paragraph().add_run(manual).italic = True
 
-    if digest.profile.audience == "management" and digest.implications:
+    if shown_extras(digest)[0]:
         document.add_heading("Что это значит для нас", level=1)
         for point in digest.implications:
             document.add_paragraph(point, style="List Bullet")
@@ -168,10 +170,11 @@ def render_docx(digest: DigestView) -> bytes:
         for item in topic.items:
             _item(document, item)
 
-    document.add_paragraph().add_run().add_break(WD_BREAK.LINE)
-    document.add_heading("Как составлен выпуск", level=2)
-    for line in methodology(digest):
-        document.add_paragraph(line, style="List Bullet")
+    if digest.shows("method"):
+        document.add_paragraph().add_run().add_break(WD_BREAK.LINE)
+        document.add_heading("Как составлен выпуск", level=2)
+        for line in methodology(digest):
+            document.add_paragraph(line, style="List Bullet")
 
     buffer = BytesIO()
     document.save(buffer)

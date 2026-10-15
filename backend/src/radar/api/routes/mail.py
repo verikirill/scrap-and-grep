@@ -12,7 +12,7 @@ from radar.auth.sessions import AuthUser
 from radar.config import Settings
 from radar.logging import get_logger
 from radar.store import digests as digest_store
-from radar.views import digest_view
+from radar.views import shown_view
 
 router = APIRouter(tags=["mail"])
 log = get_logger(__name__)
@@ -86,9 +86,9 @@ async def send_mail(
     to = (payload.to if payload is not None else None) or _own_address(user)
     if not to:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Укажите адрес почты.")
-    hidden = await digest_store.hidden_card_fields(session, digest)
+    current = await digest_store.current_spec(session, digest)
     try:
-        message = mail.letter(digest_view(digest, hidden), to, settings)
+        message = mail.letter(shown_view(digest, current), to, settings)
     except mail.MailError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     try:

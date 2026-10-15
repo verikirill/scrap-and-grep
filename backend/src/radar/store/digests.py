@@ -20,7 +20,6 @@ from radar.digest_extras import (
     vulnerability_states,
 )
 from radar.domain import (
-    CardFieldKey,
     DigestOverview,
     GradedCandidate,
     ItemSummary,
@@ -77,19 +76,18 @@ async def get(
     return (await session.execute(statement)).scalar_one_or_none()
 
 
-async def hidden_card_fields(
-    session: AsyncSession, digest: Digest
-) -> tuple[CardFieldKey, ...] | None:
-    """The card rows the reader hides now: an issue built before the reader
-    changed the setting reads by the new one. None when the profile is gone or
-    no longer reads; the issue then keeps the choice it was built with."""
+async def current_spec(session: AsyncSession, digest: Digest) -> ProfileSpec | None:
+    """The digest's profile as the reader keeps it now, for what they hide: an
+    issue built before the reader changed the card rows or the blocks they
+    hide reads by the new choice. None when the profile is gone or no longer
+    reads; the issue then keeps the choice it was built with."""
     if digest.profile_id is None:
         return None
     profile = await session.get(Profile, digest.profile_id)
     if profile is None:
         return None
     try:
-        return ProfileSpec.model_validate(profile.spec).hidden_card_fields
+        return ProfileSpec.model_validate(profile.spec)
     except ValidationError:
         return None
 

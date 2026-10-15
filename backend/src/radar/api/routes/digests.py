@@ -38,7 +38,7 @@ from radar.render.docx import render_docx
 from radar.render.markdown import render_markdown
 from radar.render.threat_intel import render_csv, render_misp, render_stix
 from radar.store import digests as digest_store
-from radar.views import DigestSummaryView, DigestView, digest_summary, digest_view
+from radar.views import DigestSummaryView, DigestView, digest_summary, digest_view, shown_view
 from radar.worker.tasks import build_digest, purge_short_files
 
 router = APIRouter(tags=["digests"])
@@ -70,8 +70,9 @@ async def _load(
 
 
 async def _shown(session: SessionDep, digest: Digest) -> DigestView:
-    """The digest as its reader sees it: without the card rows the profile hides now."""
-    return digest_view(digest, await digest_store.hidden_card_fields(session, digest))
+    """The digest as its reader sees it: without the card rows and blocks the
+    profile hides now."""
+    return shown_view(digest, await digest_store.current_spec(session, digest))
 
 
 async def _load_done(
@@ -82,15 +83,18 @@ async def _load_done(
     digest = await _load(session, user, digest_id, full=True)
     if digest.status != digest_store.STATUS_DONE:
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Выпуск ещё не готов.")
-    return await _shown(session, digest) if as_shown else digest_view(digest, ())
+    return await _shown(session, digest) if as_shown else digest_view(digest, (), blocks=())
 
 
 def _export_key(view: DigestView, kind: str) -> str:
-    """A report's cache key: one copy for each set of hidden card rows."""
+    """A report's cache key: one copy for each set of hidden card rows and blocks."""
     key = f"export:{view.id}:{kind}"
-    if not view.hidden_card_fields:
+    if not view.hidden_card_fields and not view.hidden_digest_blocks:
         return key
+    # Kept as it was for hidden rows alone: copies cached before blocks stay valid.
     hidden = ",".join(sorted(view.hidden_card_fields))
+    if view.hidden_digest_blocks:
+        hidden += "|" + ",".join(sorted(view.hidden_digest_blocks))
     return f"{key}:{hashlib.sha256(hidden.encode()).hexdigest()[:12]}"
 
 
