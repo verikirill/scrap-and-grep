@@ -4,11 +4,13 @@ import base64
 import io
 import json
 import wave
+from typing import Any
 
 import httpx
 import pytest
 from pydantic import SecretStr
 
+from radar.api.routes.system import _voice_engine
 from radar.config import Settings
 from radar.shorts import service
 from radar.shorts.voice import narrate
@@ -131,3 +133,19 @@ def test_speechkit_needs_its_key_and_no_voice_service(monkeypatch: pytest.Monkey
 
     assert settings.has_voice
     assert isinstance(service.get_voice(), YandexVoiceClient)
+
+
+@pytest.mark.parametrize(
+    ("settings", "engine"),
+    [
+        pytest.param(
+            {"tts_provider": "yandex", "tts_api_key": "key", "tts_url": ""}, "yandex", id="yandex"
+        ),
+        pytest.param(
+            {"tts_provider": "service", "tts_url": "http://tts:8000"}, "qwen3-tts", id="service"
+        ),
+        pytest.param({"tts_provider": "service", "tts_url": ""}, None, id="none"),
+    ],
+)
+def test_the_page_is_told_which_engine_speaks(settings: dict[str, Any], engine: str | None) -> None:
+    assert _voice_engine(Settings(**settings)) == engine

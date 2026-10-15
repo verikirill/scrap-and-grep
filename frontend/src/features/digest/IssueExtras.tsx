@@ -14,31 +14,43 @@ import { EASE, rowMotion } from '../../components/tokens'
 import { Card, Chip } from '../../components/ui'
 import type { Digest, PlanEntry, TagCount, VulnerabilityChange } from '../../lib/api'
 import { durationWords, externalHref, formatDate, formatNumber, plural } from '../../lib/format'
+import { isShown } from '../../lib/digestBlocks'
 import { useTickPlan } from '../../lib/queries'
 
 /** The issue's work as an analyst would do it by hand, at the pace measured on one. */
 const decimal = (value: number) => String(value).replace('.', ',')
 
+/**
+ * One short line under the issue's numbers; how it is counted folds under
+ * "как считали", so the line stays one line on a phone.
+ */
 export function ManualWork({ digest }: { digest: Digest }) {
   const work = digest.manual
   if (!work) return null
   return (
-    <p className="mt-3 flex items-start gap-2.5 rounded-lg bg-accent-soft px-3 py-2.5 text-sm">
-      <Schedule size={18} className="mt-0.5 shrink-0 text-accent" />
-      <span>
-        <span className="font-semibold">
-          Вместо ручной работы: около {durationWords(work.minutes)}
-        </span>
-        {work.seconds ? `, ассистенту хватило ${Math.round(work.seconds)} с` : ''}.{' '}
-        <span className="text-muted">
-          Расчёт: {formatNumber(work.headlines)}{' '}
-          {plural(work.headlines, ['публикация', 'публикации', 'публикаций'])} по{' '}
-          {decimal(work.seconds_per_headline)} с и {work.entries}{' '}
-          {plural(work.entries, ['запись', 'записи', 'записей'])} по{' '}
-          {decimal(work.minutes_per_entry)} мин, по журналу аналитика ИБ.
-        </span>
-      </span>
-    </p>
+    <div className="flex items-start gap-1.5 text-xs text-muted">
+      <Schedule size={14} className="mt-px shrink-0 text-accent" aria-hidden />
+      <div className="min-w-0">
+        <p className="inline">
+          <span className="font-medium text-foreground">
+            Вместо ручной работы: около {durationWords(work.minutes)}
+          </span>
+          {work.seconds ? `, ассистенту хватило ${Math.round(work.seconds)} с` : ''}.
+        </p>{' '}
+        <details className="inline [&[open]]:block">
+          <summary className="inline cursor-pointer list-none text-accent underline-offset-2 hover:underline [&::-webkit-details-marker]:hidden">
+            как считали
+          </summary>
+          <p className="mt-1">
+            {formatNumber(work.headlines)}{' '}
+            {plural(work.headlines, ['публикация', 'публикации', 'публикаций'])} по{' '}
+            {decimal(work.seconds_per_headline)} с и {work.entries}{' '}
+            {plural(work.entries, ['запись', 'записи', 'записей'])} по{' '}
+            {decimal(work.minutes_per_entry)} мин, по журналу аналитика ИБ.
+          </p>
+        </details>
+      </div>
+    </div>
   )
 }
 
@@ -259,9 +271,10 @@ function Numbers({ rows, title }: { rows: TagCount[]; title: string }) {
  * issues, management's period in numbers.
  */
 export function IssueExtras({ digest }: { digest: Digest }) {
-  const plan = digest.plan ?? []
-  const changes = digest.changes ?? []
-  const numbers = digest.numbers ?? []
+  // A block the reader's profile hides is not drawn at all.
+  const plan = isShown(digest, 'plan') ? (digest.plan ?? []) : []
+  const changes = isShown(digest, 'changes') ? (digest.changes ?? []) : []
+  const numbers = isShown(digest, 'numbers') ? (digest.numbers ?? []) : []
   if (plan.length + changes.length + numbers.length === 0) return null
   return (
     <div className="space-y-6">

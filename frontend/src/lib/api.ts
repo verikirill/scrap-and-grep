@@ -2,8 +2,10 @@
 // and backend/src/radar/views.py.
 
 import type { CardFieldKey } from './cardFields'
+import type { DigestBlockKey } from './digestBlocks'
 
 export type { CardFieldKey } from './cardFields'
+export type { DigestBlockKey } from './digestBlocks'
 
 export type SourceCategory = 'security' | 'ics' | 'it' | 'energy' | 'regulator'
 
@@ -32,6 +34,8 @@ export interface ProfileSpec {
   systems?: string[]
   /** Card rows the reader does not want to see; none hidden by default. */
   hidden_card_fields?: CardFieldKey[]
+  /** Blocks of the digest page the reader does not want to see; all show by default. */
+  hidden_digest_blocks?: DigestBlockKey[]
 }
 
 export interface Profile {
@@ -502,6 +506,8 @@ export interface Digest extends DigestSummary {
   numbers_title?: string
   topics: Topic[]
   rejected: DigestItem[]
+  /** The blocks around the entries the reader's profile hides now. */
+  hidden_digest_blocks?: DigestBlockKey[]
 }
 
 export interface ManualWork {
@@ -612,7 +618,11 @@ export interface Meta {
   shorts_voice: boolean
   /** Voices a reader can pick; empty when there is no choice to give. */
   short_voices: VoiceOption[]
+  /** What speaks: the voice service (Qwen3-TTS) or Yandex SpeechKit; null without a voice. */
+  voice_engine?: VoiceEngine | null
 }
+
+export type VoiceEngine = 'qwen3-tts' | 'yandex'
 
 export interface VoiceOption {
   id: string
@@ -627,7 +637,7 @@ export interface Video {
   stage: VideoStage | null
   progress: number
   error: string | null
-  /** "qwen3-tts:<speaker>", or null for a silent video with captions. */
+  /** "qwen3-tts:<speaker>" or "yandex:<voice>", or null for a silent video with captions. */
   voice: string | null
   /** The voice the reader picked, one of Meta.short_voices. */
   requested_voice: string | null
@@ -1137,7 +1147,7 @@ export interface Briefing {
   status: DigestStatus
   progress: number
   error: string | null
-  /** "qwen3-tts:<speaker>" once voiced. */
+  /** "qwen3-tts:<speaker>" or "yandex:<voice>" once voiced. */
   voice: string | null
   /** The voice the reader picked, one of BriefingState.voices. */
   requested_voice: string | null

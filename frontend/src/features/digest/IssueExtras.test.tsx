@@ -108,6 +108,19 @@ describe('IssueExtras', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
+  it('leaves out the plan and the changes the reader’s profile hides', () => {
+    const digest = {
+      ...twoLinePlan(),
+      changes: [makeVulnerabilityChange()],
+      hidden_digest_blocks: ['plan' as const],
+    }
+    renderWithProviders(<IssueExtras digest={digest} />)
+    expect(screen.queryByRole('heading', { name: 'План на смену' })).toBeNull()
+    expect(
+      screen.getByRole('heading', { name: 'Что изменилось с прошлых выпусков' }),
+    ).toBeInTheDocument()
+  })
+
   it('lists the shift’s plan with steps and facts, and ticks a line off', async () => {
     const digest = twoLinePlan()
     serveIssue(digest)

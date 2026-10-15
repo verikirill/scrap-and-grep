@@ -6,7 +6,7 @@ missing or failing voice service costs the sound, not the whole video.
 
 import base64
 from itertools import pairwise
-from typing import Protocol
+from typing import Literal, Protocol
 
 import httpx
 from pydantic import BaseModel, Field, ValidationError
@@ -37,6 +37,9 @@ class _SpeechOut(BaseModel):
 
 
 VOICE_ID_PATTERN = r"^[A-Za-z0-9_-]{1,40}$"
+# What speaks: the voice service, Qwen3-TTS on a GPU of the stack, or Yandex
+# SpeechKit; a narration's voice is named "<engine>:<speaker>".
+VoiceEngine = Literal["qwen3-tts", "yandex"]
 
 
 class VoiceOption(BaseModel):

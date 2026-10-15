@@ -97,6 +97,52 @@ CardFieldKey = Literal[
 ]
 CARD_FIELD_KEYS: tuple[CardFieldKey, ...] = get_args(CardFieldKey)
 
+# Blocks of the digest page around its entries a reader may hide. The entries,
+# the title and "Главное" always stay. Hiding is presentation alone: the issue
+# is built and checked the same, the page, the reports and the letter leave
+# the block out where they have it.
+DigestBlockKey = Literal[
+    # Both audiences.
+    "funnel",
+    "manual",
+    "short",
+    "ask",
+    "rejected",
+    "method",
+    # A specialist's issue.
+    "plan",
+    "changes",
+    "risk_matrix",
+    "cve_timeline",
+    "soc_export",
+    # An issue for management.
+    "implications",
+    "numbers",
+    "briefing",
+]
+DIGEST_BLOCK_KEYS: tuple[DigestBlockKey, ...] = get_args(DigestBlockKey)
+_COMMON_BLOCKS: tuple[DigestBlockKey, ...] = (
+    "funnel",
+    "manual",
+    "short",
+    "ask",
+    "rejected",
+    "method",
+)
+# The blocks each audience's issue has; a key of the other one is kept but
+# changes nothing.
+AUDIENCE_BLOCKS: dict[Audience, tuple[DigestBlockKey, ...]] = {
+    "specialist": (
+        "plan",
+        "changes",
+        "risk_matrix",
+        "cve_timeline",
+        "soc_export",
+        *_COMMON_BLOCKS,
+    ),
+    "management": ("implications", "numbers", "briefing", *_COMMON_BLOCKS),
+}
+
 
 class Interest(BaseModel):
     """One thing the reader cares about."""
@@ -144,6 +190,10 @@ class ProfileSpec(BaseModel):
     hidden_card_fields: tuple[CardFieldKey, ...] = Field(
         default=(), max_length=len(CARD_FIELD_KEYS)
     )
+    # Blocks of the digest page the reader does not want to see; all show by default.
+    hidden_digest_blocks: tuple[DigestBlockKey, ...] = Field(
+        default=(), max_length=len(DIGEST_BLOCK_KEYS)
+    )
 
     @field_validator("interests")
     @classmethod
@@ -173,7 +223,7 @@ class ProfileSpec(BaseModel):
             return tuple(unique.values())
         return value
 
-    @field_validator("hidden_card_fields", mode="before")
+    @field_validator("hidden_card_fields", "hidden_digest_blocks", mode="before")
     @classmethod
     def _unique_hidden(cls, value: object) -> object:
         if isinstance(value, (list, tuple)):
@@ -184,9 +234,10 @@ class ProfileSpec(BaseModel):
         """Changes whenever anything that affects grading changes."""
         # The audience changes how an entry is written, not how it is graded;
         # the model never sees the systems, an entry is marked by their words;
-        # a hidden card row changes only what the reader is shown.
+        # a hidden card row or block changes only what the reader is shown.
         presentation = {"name", "max_items", "min_score", "audience", "systems"}
-        return stable_hash(self.model_dump_json(exclude=presentation | {"hidden_card_fields"}))
+        hidden = {"hidden_card_fields", "hidden_digest_blocks"}
+        return stable_hash(self.model_dump_json(exclude=presentation | hidden))
 
     def interest(self, interest_id: str | None) -> Interest | None:
         return next((item for item in self.interests if item.id == interest_id), None)

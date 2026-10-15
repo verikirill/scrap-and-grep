@@ -917,3 +917,36 @@ async def test_a_digest_hides_the_card_rows_its_profile_hides_now(api: str) -> N
     # The report cached with every row is not handed out for the new setting.
     assert "| CVSS |" not in after.text
     assert "| Обновление | прошивка 2.1 |" in after.text
+
+
+async def test_a_digest_leaves_out_the_blocks_its_profile_hides_now(api: str) -> None:
+    from sqlalchemy import select
+
+    from radar.db import session_scope
+    from radar.db.models import Digest
+
+    async with register(api, "blocks") as reader:
+        digest_id = await finished_digest(reader, await seed_articles())
+        async with session_scope() as session:
+            profile_id = await session.scalar(
+                select(Digest.profile_id).where(Digest.id == uuid.UUID(digest_id))
+            )
+        before = await reader.get(f"/digests/{digest_id}/export.md")
+        refused = await reader.put(
+            f"/profiles/{profile_id}",
+            json={**profile_spec(), "hidden_digest_blocks": ["highlights"]},
+        )
+        saved = await reader.put(
+            f"/profiles/{profile_id}",
+            json={**profile_spec(), "hidden_digest_blocks": ["method"]},
+        )
+        page = (await reader.get(f"/digests/{digest_id}")).json()
+        after = await reader.get(f"/digests/{digest_id}/export.md")
+
+    assert refused.status_code == 422
+    assert saved.json()["spec"]["hidden_digest_blocks"] == ["method"]
+    # The issue was built before the change and reads by the profile as it is now.
+    assert page["hidden_digest_blocks"] == ["method"]
+    assert "## Как составлен выпуск" in before.text
+    # The report cached with every block is not handed out for the new setting.
+    assert "Как составлен выпуск" not in after.text

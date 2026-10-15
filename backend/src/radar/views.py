@@ -33,6 +33,7 @@ from radar.domain import (
     AttackCard,
     Audience,
     CardFieldKey,
+    DigestBlockKey,
     ItemSummary,
     ManagementTag,
     Priority,
@@ -164,6 +165,10 @@ class DigestView(DigestSummaryView):
     numbers_title: str = ""
     # The card rows left out of every entry, as the reader set them.
     hidden_card_fields: list[CardFieldKey] = []
+    # The blocks around the entries the reader chose not to see
+    # (ProfileSpec.hidden_digest_blocks); the data stays, the page and the
+    # renderers leave the block out.
+    hidden_digest_blocks: list[DigestBlockKey] = []
     # The addresses of the plan's lines the reader ticked off; shown as each
     # line's `done`, not sent on their own.
     plan_done: list[str] = Field(default=[], exclude=True)
@@ -180,6 +185,10 @@ class DigestView(DigestSummaryView):
             self.plan = shift_plan(selected, set(self.plan_done))
             self.changes = stored_changes(self.stats.get("changes"))
         return self
+
+    def shows(self, block: DigestBlockKey) -> bool:
+        """Whether the reader keeps this block of the issue."""
+        return block not in self.hidden_digest_blocks
 
 
 # The fetch ladder's steps above a plain request, as an entry names them.
@@ -286,14 +295,22 @@ def digest_summary(digest: Digest) -> DigestSummaryView:
     )
 
 
-def digest_view(digest: Digest, hidden: Sequence[CardFieldKey] | None = None) -> DigestView:
+def digest_view(
+    digest: Digest,
+    hidden: Sequence[CardFieldKey] | None = None,
+    *,
+    blocks: Sequence[DigestBlockKey] | None = None,
+) -> DigestView:
     """Build the full view; `digest` must be loaded with topics and items.
 
-    `hidden` are the card rows to leave out, as the reader's profile has them
-    now; without it the profile the issue was built for decides."""
+    `hidden` are the card rows and `blocks` the blocks of the page to leave
+    out, as the reader's profile has them now; without them the profile the
+    issue was built for decides."""
     profile = ProfileSpec.model_validate(digest.profile_spec)
     if hidden is None:
         hidden = profile.hidden_card_fields
+    if blocks is None:
+        blocks = profile.hidden_digest_blocks
     management = profile.audience == "management"
     by_topic: dict[int, list[ItemView]] = {}
     rejected = []
@@ -326,5 +343,15 @@ def digest_view(digest: Digest, hidden: Sequence[CardFieldKey] | None = None) ->
         ],
         rejected=sorted(rejected, key=lambda view: -view.score),
         hidden_card_fields=list(hidden),
+        hidden_digest_blocks=list(blocks),
         plan_done=list(digest.plan_done or []),
     )
+
+
+def shown_view(digest: Digest, current: ProfileSpec | None) -> DigestView:
+    """The digest as its reader sees it: without the card rows and blocks
+    `current`, the profile as it is now, hides; the issue's own choice when
+    the profile is gone."""
+    if current is None:
+        return digest_view(digest)
+    return digest_view(digest, current.hidden_card_fields, blocks=current.hidden_digest_blocks)

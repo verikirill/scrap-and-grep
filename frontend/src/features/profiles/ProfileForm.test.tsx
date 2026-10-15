@@ -290,3 +290,49 @@ describe('ProfileForm card fields', () => {
     expect(screen.queryByRole('button', { name: /^Поля карточек/ })).toBeNull()
   })
 })
+
+describe('ProfileForm digest blocks', () => {
+  it('hides a block of the issue and shows it again, every block shown at first', async () => {
+    const { user, latest } = renderForm(makeSpec())
+    const head = screen.getByRole('button', { name: /^Блоки выпуска/ })
+    expect(head).toHaveTextContent('все показаны')
+
+    await user.click(head)
+    const plan = screen.getByRole('checkbox', { name: 'План на смену' })
+    const matrix = screen.getByRole('checkbox', { name: 'Матрица риска' })
+    expect(plan).toBeChecked()
+
+    await user.click(plan)
+    await user.click(matrix)
+
+    expect(plan).not.toBeChecked()
+    // In the page's order, whatever order they were clicked in.
+    expect(latest()?.hidden_digest_blocks).toEqual(['plan', 'risk_matrix'])
+    expect(head).toHaveTextContent('скрыто 2 блока')
+
+    await user.click(plan)
+
+    expect(latest()?.hidden_digest_blocks).toEqual(['risk_matrix'])
+    expect(head).toHaveTextContent('скрыто 1 блок')
+  })
+
+  it('offers only the blocks the chosen format has', async () => {
+    const { user } = renderForm(makeSpec({ audience: 'management' }))
+
+    await user.click(screen.getByRole('button', { name: /^Блоки выпуска/ }))
+
+    expect(screen.getByRole('checkbox', { name: 'Период в цифрах' })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'Голосовой брифинг' })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'Короткое видео' })).toBeChecked()
+    expect(screen.queryByRole('checkbox', { name: 'План на смену' })).toBeNull()
+    expect(screen.queryByRole('checkbox', { name: 'Матрица риска' })).toBeNull()
+  })
+
+  it('counts only the hidden blocks of the format at hand', () => {
+    renderForm(makeSpec({ audience: 'management', hidden_digest_blocks: ['plan', 'short'] }))
+
+    expect(screen.getByRole('button', { name: /^Блоки выпуска/ })).toHaveTextContent(
+      'скрыто 1 блок',
+    )
+  })
+})

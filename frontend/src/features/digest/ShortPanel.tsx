@@ -7,7 +7,7 @@ import { Button, Card, ErrorNote } from '../../components/ui'
 import type { Video, VideoStage, VoiceOption } from '../../lib/api'
 import { formatDateTime, formatDuration, formatMegabytes } from '../../lib/format'
 import { useCreateShort, useMeta, useShort } from '../../lib/queries'
-import { chosenVoice } from '../../lib/voices'
+import { chosenVoice, ENGINE_NAMES, voiceTitle } from '../../lib/voices'
 
 const STEPS: { stage: VideoStage; name: string; doing: string }[] = [
   { stage: 'script', name: 'Сценарий', doing: 'Пишем сценарий' },
@@ -85,12 +85,11 @@ function Progress({ video }: { video: Video }) {
   )
 }
 
-/** "голос Ведущий" for a picked voice, the speaker's name otherwise. */
+/** "голос «Захар»" for a voice on the list, its engine and id otherwise. */
 function voiceLabel(video: Video, voices: VoiceOption[]): string {
   if (!video.voice) return 'без озвучки'
-  const id = video.voice.replace(/^qwen3-tts:/, '')
-  const title = voices.find((voice) => voice.id === id)?.title
-  return title ? `голос «${title}»` : `голос Qwen3-TTS ${id}`
+  const { title, known } = voiceTitle(video.voice, voices)
+  return known ? `голос «${title}»` : `голос ${title}`
 }
 
 type VoicePickerProps = {
@@ -209,7 +208,7 @@ export function ShortPanel({ digestId }: { digestId: string }) {
           <p className="mt-2 flex items-center gap-1.5 text-xs text-muted">
             {hasVoice ? <Mic size={13} aria-hidden /> : <Captions size={13} aria-hidden />}
             {hasVoice
-              ? 'Озвучка Qwen3-TTS'
+              ? `Озвучка ${ENGINE_NAMES[meta.data?.voice_engine ?? 'qwen3-tts']}`
               : 'Озвучка на этом сервере не подключена, в видео будут только субтитры'}
           </p>
           {!isBusy && voices.length > 0 && (
