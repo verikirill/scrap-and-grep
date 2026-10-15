@@ -24,6 +24,17 @@
   /* The one call to action: the accent running into the violet of the tags. */
   --cta-from: var(--accent);
   --cta-to: oklch(55% 0.22 285);
+  /* HeroUI mixes the soft tones with transparent, and on the dotted page the
+     dots showed through every tinted block. Mixed with the card colour they
+     look the same on a card and stay solid on the page. */
+  --accent-soft: color-mix(in oklab, var(--accent) 15%, var(--surface));
+  --accent-soft-hover: color-mix(in oklab, var(--accent) 20%, var(--surface));
+  --danger-soft: color-mix(in oklab, var(--danger) 15%, var(--surface));
+  --danger-soft-hover: color-mix(in oklab, var(--danger) 20%, var(--surface));
+  --warning-soft: color-mix(in oklab, var(--warning) 15%, var(--surface));
+  --warning-soft-hover: color-mix(in oklab, var(--warning) 20%, var(--surface));
+  --success-soft: color-mix(in oklab, var(--success) 15%, var(--surface));
+  --success-soft-hover: color-mix(in oklab, var(--success) 20%, var(--surface));
 }
 
 .dark {
@@ -34,6 +45,14 @@
   --muted: oklch(76% 0.012 286);
   --title-pill: oklch(24% 0.008 286);
   --cta-to: oklch(60% 0.2 285);
+  --accent-soft: color-mix(in oklab, var(--accent) 12%, var(--surface));
+  --accent-soft-hover: color-mix(in oklab, var(--accent) 16%, var(--surface));
+  --danger-soft: color-mix(in oklab, var(--danger) 15%, var(--surface));
+  --danger-soft-hover: color-mix(in oklab, var(--danger) 20%, var(--surface));
+  --warning-soft: color-mix(in oklab, var(--warning) 12%, var(--surface));
+  --warning-soft-hover: color-mix(in oklab, var(--warning) 16%, var(--surface));
+  --success-soft: color-mix(in oklab, var(--success) 12%, var(--surface));
+  --success-soft-hover: color-mix(in oklab, var(--success) 16%, var(--surface));
 }
 
 @theme inline {

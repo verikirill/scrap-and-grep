@@ -23,7 +23,7 @@ export function ManualWork({ digest }: { digest: Digest }) {
   const work = digest.manual
   if (!work) return null
   return (
-    <p className="mt-3 flex items-start gap-2.5 rounded-lg bg-accent-soft/60 px-3 py-2.5 text-sm">
+    <p className="mt-3 flex items-start gap-2.5 rounded-lg bg-accent-soft px-3 py-2.5 text-sm">
       <Schedule size={18} className="mt-0.5 shrink-0 text-accent" />
       <span>
         <span className="font-semibold">
