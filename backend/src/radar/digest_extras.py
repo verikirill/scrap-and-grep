@@ -20,11 +20,12 @@ from radar.fix_status import row_says_pending
 if TYPE_CHECKING:
     from radar.views import ItemView
 
-# The handwork an issue replaces, by a rule stated wherever the number is
-# shown: a headline glanced at in a feed reader, an entry written with its
-# card and link. Both are assumptions until the analyst comparison is run.
-SECONDS_PER_HEADLINE = 5
-MINUTES_PER_ENTRY = 3
+# The handwork an issue replaces, at the pace an IB analyst kept by hand on
+# the week of 25.09-02.10 (docs/eval/vs-analyst.md): 37.5 min to screen the
+# 1 737 publications of the period, 65 min to write 14 entries for a
+# specialist or 9 for management.
+SECONDS_PER_PUBLICATION = 1.3
+MINUTES_PER_ENTRY = {"specialist": 4.6, "management": 7.2}
 # A checklist a shift gets through, not the whole issue again.
 PLAN_SIZE = 8
 PLAN_INDICATORS = 5
@@ -49,6 +50,8 @@ class ManualWork(BaseModel):
     headlines: int
     entries: int
     minutes: int
+    seconds_per_headline: float = SECONDS_PER_PUBLICATION
+    minutes_per_entry: float = MINUTES_PER_ENTRY["specialist"]
     # How long the assistant took, when the build recorded it.
     seconds: float | None = None
 
@@ -87,15 +90,20 @@ def _count(value: object) -> float:
     return float(value) if isinstance(value, (int, float)) and value > 0 else 0.0
 
 
-def manual_work(stats: Mapping[str, Any]) -> ManualWork | None:
+def manual_work(stats: Mapping[str, Any], audience: str = "specialist") -> ManualWork | None:
     headlines = int(_count(stats.get("window_total")))
     if headlines == 0:
         return None
     entries = int(_count(stats.get("selected")))
-    minutes = round(headlines * SECONDS_PER_HEADLINE / 60 + entries * MINUTES_PER_ENTRY)
+    per_entry = MINUTES_PER_ENTRY.get(audience, MINUTES_PER_ENTRY["specialist"])
+    minutes = round(headlines * SECONDS_PER_PUBLICATION / 60 + entries * per_entry)
     seconds = _count(stats.get("duration_seconds"))
     return ManualWork(
-        headlines=headlines, entries=entries, minutes=minutes, seconds=seconds or None
+        headlines=headlines,
+        entries=entries,
+        minutes=minutes,
+        seconds=seconds or None,
+        minutes_per_entry=per_entry,
     )
 
 
@@ -110,6 +118,10 @@ def _plural(count: int, forms: tuple[str, str, str]) -> str:
 
 def _number(value: int) -> str:
     return f"{value:,}".replace(",", NBSP)
+
+
+def _decimal(value: float) -> str:
+    return f"{value:g}".replace(".", ",")
 
 
 def duration_words(minutes: int) -> str:
@@ -128,8 +140,9 @@ def manual_line(work: ManualWork) -> str:
     took = f" за {round(work.seconds)} с" if work.seconds else ""
     return (
         f"ассистент просмотрел {headlines} и написал {entries}{took}; вручную это около "
-        f"{duration_words(work.minutes)} при {SECONDS_PER_HEADLINE} с на заголовок "
-        f"и {MINUTES_PER_ENTRY} мин на запись"
+        f"{duration_words(work.minutes)} по журналу аналитика ИБ: "
+        f"{_decimal(work.seconds_per_headline)} с на публикацию "
+        f"и {_decimal(work.minutes_per_entry)} мин на запись"
     )
 
 

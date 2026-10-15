@@ -182,5 +182,13 @@ export function makeTagCount(overrides: Partial<TagCount> = {}): TagCount {
 /** What makeSummary()'s issue spares: 300 headlines at 5 s and 12 entries at 3 min,
  * done by the build in 48 s. */
 export function makeManualWork(overrides: Partial<ManualWork> = {}): ManualWork {
-  return { headlines: 300, entries: 12, minutes: 61, seconds: 48, ...overrides }
+  return {
+    headlines: 300,
+    entries: 12,
+    minutes: 61,
+    seconds: 48,
+    seconds_per_headline: 1.3,
+    minutes_per_entry: 4.6,
+    ...overrides,
+  }
 }

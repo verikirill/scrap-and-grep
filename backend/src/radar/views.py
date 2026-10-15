@@ -159,7 +159,7 @@ class DigestView(DigestSummaryView):
     @model_validator(mode="after")
     def _extras(self) -> Self:
         selected = [item for topic in self.topics for item in topic.items]
-        self.manual = manual_work(self.stats)
+        self.manual = manual_work(self.stats, self.profile.audience)
         if self.profile.audience == "management":
             before = self.stats.get("tags_before")
             self.numbers = period_numbers(selected, before if isinstance(before, dict) else None)

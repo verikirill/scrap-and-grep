@@ -29,6 +29,24 @@ describe('ManualWork', () => {
     expect(screen.getByText('Вместо ручной работы: около 2,5 ч')).toBeInTheDocument()
     expect(screen.queryByText(/ассистенту хватило/)).toBeNull()
   })
+
+  it('states the pace it counts by, as the server sends it for the audience', () => {
+    render(
+      <ManualWork
+        digest={makeDigest({
+          manual: makeManualWork({
+            headlines: 1737,
+            entries: 15,
+            seconds_per_headline: 1.3,
+            minutes_per_entry: 7.2,
+          }),
+        })}
+      />,
+    )
+    expect(
+      screen.getByText(/публикаций по 1,3 с и 15 записей по 7,2 мин, по журналу аналитика ИБ/),
+    ).toBeInTheDocument()
+  })
 })
 
 describe('IssueExtras', () => {
