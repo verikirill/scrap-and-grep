@@ -6,7 +6,7 @@ import { DURATION, EASE, buttonClass } from '../../components/tokens'
 import { AnimatedNumber } from '../../components/ui'
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover'
 import { api } from '../../lib/api'
-import type { AttackData, ExportFormat } from '../../lib/api'
+import type { AttackData, CardFieldKey, ExportFormat } from '../../lib/api'
 import { plural } from '../../lib/format'
 import { indicatorKind } from '../../lib/indicators'
 
@@ -49,11 +49,18 @@ function CopyButton({ text, label }: { text: string; label: string }) {
  * What a defender can act on in an attack entry: the indicators the article
  * printed and the ATT&CK techniques it reports, folded under one line with
  * their count. Values stay defanged, so a paste into a chat opens nothing.
+ * A part the reader's profile hides (`hidden`, card row keys) is left out.
  */
-export function IndicatorsBlock({ attack }: { attack: AttackData | null | undefined }) {
+export function IndicatorsBlock({
+  attack,
+  hidden = [],
+}: {
+  attack: AttackData | null | undefined
+  hidden?: readonly CardFieldKey[]
+}) {
   const [isOpen, setOpen] = useState(false)
-  const indicators = attack?.indicators ?? []
-  const techniques = attack?.techniques ?? []
+  const indicators = hidden.includes('attack.indicators') ? [] : (attack?.indicators ?? [])
+  const techniques = hidden.includes('attack.techniques') ? [] : (attack?.techniques ?? [])
   if (indicators.length === 0 && techniques.length === 0) return null
   return (
     <div className="mt-2.5 overflow-hidden rounded-xl border border-separator">

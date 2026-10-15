@@ -1,6 +1,10 @@
 // Typed client for the backend API. Shapes mirror backend/src/radar/api/schemas.py
 // and backend/src/radar/views.py.
 
+import type { CardFieldKey } from './cardFields'
+
+export type { CardFieldKey } from './cardFields'
+
 export type SourceCategory = 'security' | 'ics' | 'it' | 'energy' | 'regulator'
 
 export interface Interest {
@@ -26,6 +30,8 @@ export interface ProfileSpec {
   audience: Audience
   /** Products the company runs: an entry naming one goes first in its topic. */
   systems?: string[]
+  /** Card rows the reader does not want to see; none hidden by default. */
+  hidden_card_fields?: CardFieldKey[]
 }
 
 export interface Profile {
@@ -386,6 +392,8 @@ export interface DigestItem {
   priority_reason: string
   /** The card in the dataset's order; "нет данных" where the article is silent. */
   fields: CardField[]
+  /** The card rows the reader's profile hides; already left out of `fields`. */
+  hidden_fields?: CardFieldKey[]
   /** Management tags, in words. */
   tag_labels: string[]
   /** Addresses a Telegram post cites. */
@@ -460,6 +468,7 @@ export type RecordKind = 'attack' | 'vulnerability' | 'news'
 export type Priority = 'high' | 'medium' | 'low'
 
 export interface CardField {
+  key: CardFieldKey
   label: string
   value: string
 }

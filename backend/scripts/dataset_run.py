@@ -181,7 +181,7 @@ async def run_one(client: Any, example: dict[str, Any], number: int) -> dict[str
             "headline": view.headline,
             "summary": entry.summary,
             "why": entry.why,
-            "fields": [field.model_dump() for field in view.fields],
+            "fields": [field.model_dump(include={"label", "value"}) for field in view.fields],
             "tags": [TAG_LABELS[tag] for tag in entry.tags],
             "tag_ids": list(entry.tags),
             "links": [defang(link) for link in links],

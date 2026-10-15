@@ -13,6 +13,22 @@ describe('IndicatorsBlock', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
+  it('leaves out the indicators or the techniques the reader’s profile hides', () => {
+    const attack = makeAttack()
+    const { container, rerender } = render(
+      <IndicatorsBlock attack={attack} hidden={['attack.indicators']} />,
+    )
+    expect(screen.getByRole('button', { name: /^2 техники ATT&CK$/ })).toBeInTheDocument()
+
+    rerender(<IndicatorsBlock attack={attack} hidden={['attack.techniques']} />)
+    expect(screen.getByRole('button', { name: /^3 индикатора компрометации$/ })).toBeInTheDocument()
+
+    rerender(
+      <IndicatorsBlock attack={attack} hidden={['attack.indicators', 'attack.techniques']} />,
+    )
+    expect(container).toBeEmptyDOMElement()
+  })
+
   it('counts what it holds in its head and lists the indicators by kind once opened', async () => {
     const user = userEvent.setup()
     const attack = makeAttack()

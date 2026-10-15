@@ -138,7 +138,7 @@ function ItemCard({ item, index, placement, reactions, onReact }: ItemCardProps)
       )}
       <EntryDetails item={item} />
       <CveTimeline item={item} />
-      <IndicatorsBlock attack={item.attack} />
+      <IndicatorsBlock attack={item.attack} hidden={item.hidden_fields} />
       {item.why && (
         <p className="mt-2.5 border-l-2 border-warning pl-3 text-sm leading-relaxed text-muted">
           <span className="font-medium text-foreground">Почему это важно. </span>

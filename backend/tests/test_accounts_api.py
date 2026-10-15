@@ -872,3 +872,48 @@ async def test_a_voice_is_taken_on_trust_before_the_worker_lists_them(
 
     assert picked.status_code == 202
     assert picked.json()["requested_voice"] == "anchor-2"
+
+
+async def test_a_digest_hides_the_card_rows_its_profile_hides_now(api: str) -> None:
+    from sqlalchemy import update
+
+    from radar.db import session_scope
+    from radar.db.models import Digest, DigestItem
+
+    async with register(api, "hider") as reader:
+        digest_id = await finished_digest(reader, await seed_articles())
+        async with session_scope() as session:
+            await session.execute(
+                update(DigestItem)
+                .where(DigestItem.digest_id == uuid.UUID(digest_id))
+                .values(
+                    kind="vulnerability",
+                    card={"vulnerability": {"cvss_score": "9.8", "fix": "прошивка 2.1"}},
+                )
+            )
+            profile_id = await session.scalar(
+                select(Digest.profile_id).where(Digest.id == uuid.UUID(digest_id))
+            )
+        before = await reader.get(f"/digests/{digest_id}/export.md")
+        refused = await reader.put(
+            f"/profiles/{profile_id}",
+            json={**profile_spec(), "hidden_card_fields": ["vulnerability.colour"]},
+        )
+        saved = await reader.put(
+            f"/profiles/{profile_id}",
+            json={**profile_spec(), "hidden_card_fields": ["vulnerability.cvss"]},
+        )
+        page = (await reader.get(f"/digests/{digest_id}")).json()
+        after = await reader.get(f"/digests/{digest_id}/export.md")
+
+    assert refused.status_code == 422
+    assert saved.json()["spec"]["hidden_card_fields"] == ["vulnerability.cvss"]
+    # The issue was built before the change and reads by the profile as it is now.
+    labels = [field["label"] for field in page["topics"][0]["items"][0]["fields"]]
+    assert "CVSS" not in labels
+    assert "Обновление" in labels
+    assert page["hidden_card_fields"] == ["vulnerability.cvss"]
+    assert "| CVSS | 9.8 |" in before.text
+    # The report cached with every row is not handed out for the new setting.
+    assert "| CVSS |" not in after.text
+    assert "| Обновление | прошивка 2.1 |" in after.text

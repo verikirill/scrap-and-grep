@@ -9,6 +9,7 @@ import { EASE, INPUT_CLASS, TEXTAREA_CLASS, shortId } from '../../components/tok
 import { Button, Card, Chip, Field } from '../../components/ui'
 import type { Audience, Interest, ProfileSpec, SourceCategory } from '../../lib/api'
 import { CATEGORY_LABELS } from '../../lib/format'
+import { CardFieldsPicker } from './CardFieldsPicker'
 
 const WEIGHT_LABELS: [number, string][] = [
   [0.75, 'второстепенный'],
@@ -175,7 +176,7 @@ const AUDIENCES: { id: Audience; title: string; description: string }[] = [
   {
     id: 'specialist',
     title: 'Специалисту',
-    description: 'Карточки атак и уязвимостей с приоритетом, остальные новости — по темам',
+    description: 'Карточки атак и уязвимостей с приоритетом, остальные новости по темам',
   },
   {
     id: 'management',
@@ -283,6 +284,12 @@ export function ProfileForm({
             })}
           </div>
         </Field>
+        {spec.audience === 'specialist' && (
+          <CardFieldsPicker
+            hidden={spec.hidden_card_fields ?? []}
+            onChange={(hidden_card_fields) => onChange({ ...spec, hidden_card_fields })}
+          />
+        )}
       </Card>
 
       <div>

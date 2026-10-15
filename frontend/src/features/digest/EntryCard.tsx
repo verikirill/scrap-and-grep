@@ -50,15 +50,17 @@ function defang(url: string): string {
 /**
  * The dataset's card: the fields the article fills, then in one line the
  * ones it is silent about. Tags for management, cited links of a channel post,
- * and what the check against the article took out.
+ * and what the check against the article took out. The rows the reader's
+ * profile hides are left out here too, should the page hold them.
  */
 export function EntryDetails({ item }: { item: DigestItem }) {
+  const hidden = new Set<string>(item.hidden_fields ?? [])
   // Indicators and techniques have their own block (ThreatIntel): not twice.
   const ownBlock = new Set([
     ...(item.attack?.indicators.length ? ['Индикаторы компрометации'] : []),
     ...(item.attack?.techniques.length ? ['Техники ATT&CK'] : []),
   ])
-  const fields = item.fields.filter((field) => !ownBlock.has(field.label))
+  const fields = item.fields.filter((field) => !ownBlock.has(field.label) && !hidden.has(field.key))
   const filled = fields.filter((field) => field.value !== NO_DATA)
   const missing = fields.filter((field) => field.value === NO_DATA)
   return (
