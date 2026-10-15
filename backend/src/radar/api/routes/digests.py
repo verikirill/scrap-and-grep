@@ -11,7 +11,7 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.sse import EventSourceResponse, ServerSentEvent
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from radar.ai.factory import get_breaker, get_chat
 from radar.api.deps import CacheDep, CurrentUser, SessionDep, SettingsDep, user_rate_limit
@@ -23,6 +23,8 @@ from radar.api.schemas import (
     CompareOut,
     DigestCreate,
     InterestChange,
+    PlanDoneOut,
+    PlanTickIn,
     ScoreChange,
 )
 from radar.ask import answer as answer_question
@@ -375,6 +377,30 @@ async def export_indicators_csv(
 ) -> Response:
     """The same, one row per value, for a spreadsheet or a firewall's import."""
     return await _threat_intel(digest_id, "csv", session, cache, user)
+
+
+_write_limit = Depends(user_rate_limit("write", lambda settings: settings.rate_limit_per_minute))
+
+
+@router.put("/digests/{digest_id}/plan", dependencies=[_write_limit])
+async def tick_plan(
+    digest_id: uuid.UUID, body: PlanTickIn, session: SessionDep, user: CurrentUser
+) -> PlanDoneOut:
+    """Tick a line of the shift plan off, or untick it. The ticks stay with the
+    issue: the reader finds them after a reload and on another device."""
+    view = await _load_done(session, user, digest_id)
+    if body.url not in {entry.url for entry in view.plan}:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Пункта нет в плане выпуска.")
+    # Two ticks sent at once: the lock makes the second read what the first wrote.
+    stored = await session.scalar(
+        select(Digest.plan_done).where(Digest.id == digest_id).with_for_update()
+    )
+    ticked = set(stored or []) - {body.url}
+    if body.done:
+        ticked.add(body.url)
+    done = [entry.url for entry in view.plan if entry.url in ticked]
+    await session.execute(update(Digest).where(Digest.id == digest_id).values(plan_done=done))
+    return PlanDoneOut(done=done)
 
 
 _ask_limit = Depends(user_rate_limit("ask", lambda settings: settings.ask_rate_limit_per_minute))

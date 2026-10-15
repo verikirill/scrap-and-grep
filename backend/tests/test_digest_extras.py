@@ -35,7 +35,12 @@ from tests.test_render import _item
 WEEK = (datetime(2026, 9, 26, tzinfo=UTC), datetime(2026, 10, 3, tzinfo=UTC))
 
 
-def _digest(audience: str, items: list[Any], stats: dict[str, Any] | None = None) -> DigestView:
+def _digest(
+    audience: str,
+    items: list[Any],
+    stats: dict[str, Any] | None = None,
+    plan_done: list[str] | None = None,
+) -> DigestView:
     profile = ProfileSpec(
         name="Профиль", interests=(Interest(id="ics", title="АСУ ТП"),), audience=audience
     )
@@ -58,6 +63,7 @@ def _digest(audience: str, items: list[Any], stats: dict[str, Any] | None = None
         highlights=[],
         topics=[TopicView(title="Уязвимости", overview="", items=items)],
         rejected=[],
+        plan_done=plan_done or [],
     )
 
 
@@ -142,6 +148,34 @@ def _state(**extra: Any) -> VulnerabilityState:
         "exploit": "unknown",
     }
     return VulnerabilityState.model_validate({**fields, **extra})
+
+
+def test_the_plan_shows_the_lines_its_reader_ticked_off() -> None:
+    """A tick is kept by the entry's address: the plan is worked out again at
+    every show, so its lines have no other name that lasts. An address the
+    plan no longer has ticks nothing."""
+    items = [
+        _vulnerability(
+            1,
+            "FortiMail",
+            priority="high",
+            vulnerability=VulnerabilityCard(fix="Обновить до 7.4.9"),
+        ),
+        _vulnerability(
+            2, "Cisco", priority="high", vulnerability=VulnerabilityCard(fix="Обновить до 20.12.5")
+        ),
+    ]
+
+    digest = _digest(
+        "specialist", items, plan_done=["https://example.org/a/2", "https://example.org/gone"]
+    )
+
+    assert [(entry.headline, entry.done) for entry in digest.plan] == [
+        ("FortiMail", False),
+        ("Cisco", True),
+    ]
+    # The reader's ticks are not part of the issue itself.
+    assert "plan_done" not in digest.model_dump()
 
 
 def test_a_known_vulnerability_reports_the_catalogue_the_exploit_and_the_update() -> None:
