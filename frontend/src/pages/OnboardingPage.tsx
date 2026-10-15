@@ -1,82 +1,37 @@
-import clsx from 'clsx'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
-import { FileText, Layers, PenLine } from '../components/icons'
+import { ArtTile } from '../components/ArtTile'
+import { BrandCat } from '../components/BrandCat'
 import { DottedPage } from '../components/DottedPage'
+import { AutoAwesome, ChevronLeft, ChevronRight, Compass, Target } from '../components/icons'
 import { LogoMark, Wordmark } from '../components/Logo'
-import { EASE } from '../components/tokens'
 import { Button, Card, ErrorNote } from '../components/ui'
-import { useRadioKeys } from '../components/useRadioKeys'
-import { ChoiceCard } from '../features/onboarding/ChoiceCard'
-import { TemplatePicker } from '../features/onboarding/TemplatePicker'
+import { IntroStep } from '../features/onboarding/IntroStep'
+import { ProfileStep } from '../features/onboarding/ProfileStep'
+import { SectionStep } from '../features/onboarding/SectionStep'
+import { SECTIONS } from '../features/onboarding/sections'
+import { FocusStepContext } from '../features/onboarding/focus'
+import { StepHeading } from '../features/onboarding/StepHeading'
+import { TourStepper } from '../features/onboarding/TourStepper'
+import type { StepMark } from '../features/onboarding/TourStepper'
+import { SLIDE } from '../features/onboarding/motion'
+import { useTourKeys } from '../features/onboarding/useTourKeys'
 import { ProfileAvatar } from '../features/profiles/ProfileLook'
-import { ResumeFlow } from '../features/resume/ResumeFlow'
 import type { Profile } from '../lib/api'
 import { plural } from '../lib/format'
 import { needsOnboarding } from '../lib/onboarding'
 import { useCreateDigest, useFinishOnboarding, useMe, useProfiles } from '../lib/queries'
 
-const STEPS = [
-  { key: 'intro', label: 'Знакомство' },
-  { key: 'profile', label: 'Профиль интересов' },
-  { key: 'digest', label: 'Первый выпуск' },
-] as const
-type Step = (typeof STEPS)[number]['key']
-
-const METHODS = [
-  {
-    key: 'resume',
-    icon: FileText,
-    title: 'По резюме',
-    text: 'Загрузите файл, и сервис сам предложит темы под вашу работу.',
-  },
-  {
-    key: 'template',
-    icon: Layers,
-    title: 'Готовый шаблон',
-    text: 'Профиль для типичной роли в энергетике, ИТ или ИБ.',
-  },
-  {
-    key: 'manual',
-    icon: PenLine,
-    title: 'Вручную',
-    text: 'Темы, ключевые слова и исключения задаёте сами.',
-  },
-] as const
-type Method = (typeof METHODS)[number]['key']
-
-const STEP_MOTION = {
-  initial: { opacity: 0, y: 12 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -8 },
-  transition: { duration: 0.3, ease: EASE },
-}
-
-function StepBar({ step }: { step: Step }) {
-  const current = STEPS.findIndex((item) => item.key === step)
-  return (
-    <div className="mb-8">
-      <ol aria-label="Шаги знакомства" className="flex gap-1.5">
-        {STEPS.map((item, index) => (
-          <li
-            key={item.key}
-            aria-current={index === current ? 'step' : undefined}
-            className={clsx(
-              'h-1 flex-1 rounded-full transition-colors duration-300',
-              index <= current ? 'bg-accent' : 'bg-surface-secondary',
-            )}
-          >
-            <span className="sr-only">{item.label}</span>
-          </li>
-        ))}
-      </ol>
-      <p className="mt-2 text-xs text-muted">
-        Шаг {current + 1} из {STEPS.length}: {STEPS[current].label.toLowerCase()}
-      </p>
-    </div>
-  )
-}
+/** The greeting, every section in the order of the sidebar, then the two working steps. */
+const STEPS: readonly StepMark[] = [
+  { key: 'intro', label: 'Знакомство', icon: Compass },
+  ...SECTIONS.map(({ key, label, icon }) => ({ key, label, icon })),
+  { key: 'profile', label: 'Профиль', icon: Target },
+  { key: 'first-digest', label: 'Первый выпуск', icon: AutoAwesome },
+]
+const PROFILE_STEP = STEPS.length - 2
+const DIGEST_STEP = STEPS.length - 1
 
 const DEFAULT_DAYS = 7
 
@@ -86,92 +41,22 @@ const periodText = (days: number) =>
     ? 'за последние сутки'
     : `за последние ${days} ${plural(days, ['день', 'дня', 'дней'])}`
 
-type MethodProps = {
-  profiles: Profile[]
-  onProfile: (profile: Profile) => void
-  onManual: () => void
-  isLeaving: boolean
-}
-
-/** The second step: a profile from the resume, from a template, or by hand. */
-function ProfileStep({ profiles, onProfile, onManual, isLeaving }: MethodProps) {
-  const [method, setMethod] = useState<Method | null>(null)
-  const chosen = METHODS.findIndex((item) => item.key === method)
-  const keys = useRadioKeys(METHODS.length, chosen, (index) => setMethod(METHODS[index].key))
-  const existing = profiles[0]
-
+function KeyHint() {
+  const key = 'rounded-md bg-default px-1.5 py-0.5 font-sans text-[11px] text-foreground'
   return (
-    <>
-      <h1 className="font-serif text-[30px] leading-tight font-semibold tracking-tight text-balance">
-        Первый профиль интересов
-      </h1>
-      <p className="mt-2 mb-6 text-sm text-muted">
-        Профиль подсказывает сервису, какие темы важны в вашей работе. Потом его можно поправить в
-        разделе «Интересы».
-      </p>
-
-      {existing && (
-        <Card variant="filled" className="mb-5 flex flex-wrap items-center gap-3 p-4">
-          <ProfileAvatar profile={existing} size={36} />
-          <p className="min-w-0 flex-1 text-sm">У вас уже есть профиль «{existing.spec.name}».</p>
-          <Button size="sm" variant="tonal" onClick={() => onProfile(existing)}>
-            Продолжить с ним
-          </Button>
-        </Card>
-      )}
-
-      <div
-        role="radiogroup"
-        aria-label="Как создать профиль"
-        onKeyDown={keys.onKeyDown}
-        className="grid gap-2 sm:grid-cols-3"
-      >
-        {METHODS.map((item, index) => (
-          <ChoiceCard
-            key={item.key}
-            {...keys.itemProps(index)}
-            isChosen={item.key === method}
-            onChoose={() => setMethod(item.key)}
-            leading={
-              <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent-soft-foreground">
-                <item.icon size={18} />
-              </span>
-            }
-            title={item.title}
-          >
-            {item.text}
-          </ChoiceCard>
-        ))}
-      </div>
-
-      <AnimatePresence mode="wait">
-        {method && (
-          <motion.div key={method} {...STEP_MOTION} className="mt-6">
-            {method === 'resume' && <ResumeFlow saveLabel="Создать профиль" onSaved={onProfile} />}
-            {method === 'template' && <TemplatePicker onCreated={onProfile} />}
-            {method === 'manual' && (
-              <Card className="p-5 sm:p-6">
-                <p className="text-sm text-muted">
-                  В редакторе сразу видно, какие публикации попадут в выпуск. Когда профиль будет
-                  готов, нажмите там «Собрать выпуск».
-                </p>
-                <Button variant="primary" className="mt-4" isBusy={isLeaving} onClick={onManual}>
-                  Открыть редактор
-                </Button>
-              </Card>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>
+    <p className="mx-auto hidden items-center gap-1.5 text-xs text-muted lg:flex">
+      <kbd className={key}>←</kbd>
+      <kbd className={key}>→</kbd>
+      листают шаги, <kbd className={key}>Esc</kbd> пропускает
+    </p>
   )
 }
 
 /**
- * The first-run introduction: what the service does, the first profile of
- * interests, the first digest. Shown once to a newly registered reader; once
- * finished or skipped it is marked on the server and does not come back by
- * itself. The account page opens it again on demand.
+ * The first-run introduction: a greeting, a short tour of every section of the
+ * app, the first profile of interests and the first digest. Shown once to a
+ * newly registered reader; once finished or skipped it is marked on the server
+ * and does not come back by itself. The account page opens it again on demand.
  */
 export function OnboardingPage() {
   const navigate = useNavigate()
@@ -179,18 +64,43 @@ export function OnboardingPage() {
   const profiles = useProfiles()
   const finish = useFinishOnboarding()
   const build = useCreateDigest()
-  const [step, setStep] = useState<Step>('intro')
+  const [[index, direction], setPlace] = useState<[number, number]>([0, 1])
+  const [hasMoved, setHasMoved] = useState(false)
   const [profile, setProfile] = useState<Profile | null>(null)
+  const isBusy = finish.isPending || build.isPending
 
   /** Leave for a page of the app; the first time, the introduction is marked as done. */
   const leave = (to: string) => {
     if (needsOnboarding(me.data)) finish.mutate(undefined, { onSuccess: () => navigate(to) })
     else navigate(to)
   }
+  const skip = () => {
+    if (!isBusy) leave('/')
+  }
+
+  // The first digest needs a profile: until one is chosen its step stays closed.
+  const canOpen = (target: number) =>
+    target <= PROFILE_STEP || (target === DIGEST_STEP && profile !== null)
+
+  const goTo = (target: number) => {
+    if (target === index || !canOpen(target)) return
+    setPlace([target, Math.sign(target - index)])
+    setHasMoved(true)
+    // On a phone the reader pressed «Далее» at the bottom: the new step starts at its top.
+    if (window.scrollY > 0) {
+      const isCalm = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      window.scrollTo({ top: 0, behavior: isCalm ? 'auto' : 'smooth' })
+    }
+  }
+
+  const next = index < DIGEST_STEP && canOpen(index + 1) ? () => goTo(index + 1) : undefined
+  const back = index > 0 ? () => goTo(index - 1) : undefined
+  useTourKeys({ onNext: next, onBack: back, onSkip: skip })
 
   const toDigest = (made: Profile) => {
     setProfile(made)
-    setStep('digest')
+    setPlace([DIGEST_STEP, 1])
+    setHasMoved(true)
   }
 
   // Marked first: a retry after a failed build must not start a second issue.
@@ -207,119 +117,124 @@ export function OnboardingPage() {
     }
   }
 
+  const step = STEPS[index]
+  const section = SECTIONS.find((item) => item.key === step.key)
   const days = profile?.defaults.period_days ?? DEFAULT_DAYS
+
   return (
     <DottedPage>
-      <div className="mx-auto max-w-2xl px-4 py-8 sm:px-5 sm:py-12">
-        <header className="mb-8 flex items-center justify-between gap-3">
-          <span className="flex items-center gap-2.5">
-            <LogoMark size={36} />
-            <Wordmark className="text-[17px]" />
-          </span>
-          <Button
-            size="sm"
-            variant="secondary"
-            disabled={finish.isPending}
-            onClick={() => leave('/')}
-          >
-            Пропустить
-          </Button>
-        </header>
-
-        <StepBar step={step} />
-        <div className="mb-4">
-          <ErrorNote error={finish.error} />
-        </div>
-
-        <AnimatePresence mode="wait">
-          {step === 'intro' && (
-            <motion.section key="intro" {...STEP_MOTION} aria-labelledby="onboarding-title">
-              <h1
-                id="onboarding-title"
-                className="font-serif text-[30px] leading-tight font-semibold tracking-tight text-balance"
-              >
-                {me.data ? `Здравствуйте, ${me.data.display_name}` : 'Здравствуйте'}
-              </h1>
-              <p className="mt-3 text-base text-pretty">
-                Scrap&Grep читает больше 100 источников по ИТ, информационной безопасности и
-                энергетике и собирает из них короткие выпуски под ваши задачи.
-              </p>
-              <Card variant="filled" className="mt-6 p-5">
-                <p className="text-sm font-semibold">За пару минут настроим главное</p>
-                <ol className="mt-3 space-y-2 text-sm text-muted">
-                  <li>1. Профиль интересов: какие темы важны в работе.</li>
-                  <li>2. Первый выпуск: главное по вашим темам со ссылками на источники.</li>
-                </ol>
-                <p className="mt-3 text-xs text-muted">Всё это можно поменять позже.</p>
-              </Card>
-              <Button
-                variant="cta"
-                className="mt-7 w-full sm:w-auto"
-                onClick={() => setStep('profile')}
-              >
-                Начать
+      <div className="mx-auto max-w-5xl px-4 py-4 sm:px-6 sm:py-10">
+        <div className="rounded-[2rem] bg-surface shadow-surface">
+          <div className="px-5 pt-5 sm:px-8 sm:pt-7">
+            <header className="mb-5 flex items-center justify-between gap-3">
+              <span className="flex items-center gap-2.5">
+                <LogoMark size={36} />
+                <Wordmark className="text-[17px]" />
+              </span>
+              <Button size="sm" variant="secondary" disabled={isBusy} onClick={skip}>
+                Пропустить
               </Button>
-            </motion.section>
-          )}
+            </header>
+            <TourStepper steps={STEPS} current={index} canOpen={canOpen} onOpen={goTo} />
+            <div className="mt-3">
+              <ErrorNote error={finish.error} />
+            </div>
+          </div>
 
-          {step === 'profile' && (
-            <motion.section key="profile" {...STEP_MOTION}>
-              <ProfileStep
-                profiles={profiles.data ?? []}
-                onProfile={toDigest}
-                onManual={() => leave('/profiles')}
-                isLeaving={finish.isPending}
-              />
-              <Button variant="secondary" className="mt-6" onClick={() => setStep('intro')}>
+          <div className="overflow-x-clip px-5 pt-4 pb-6 sm:px-8 sm:pb-8 md:min-h-[27rem]">
+            <FocusStepContext value={hasMoved}>
+              <AnimatePresence mode="wait" custom={direction} initial={false}>
+                <motion.section key={step.key} custom={direction} {...SLIDE}>
+                  {step.key === 'intro' && (
+                    <IntroStep
+                      name={me.data?.display_name}
+                      onStart={() => goTo(1)}
+                      onSetup={() => goTo(PROFILE_STEP)}
+                    />
+                  )}
+
+                  {section && <SectionStep section={section} me={me.data} />}
+
+                  {step.key === 'profile' && (
+                    <ProfileStep
+                      profiles={profiles.data ?? []}
+                      onProfile={toDigest}
+                      onManual={() => leave('/profiles')}
+                      isLeaving={finish.isPending}
+                    />
+                  )}
+
+                  {step.key === 'first-digest' && profile && (
+                    <div className="grid grid-cols-[minmax(0,1fr)] items-center gap-8 md:grid-cols-[minmax(0,1fr)_auto]">
+                      <div>
+                        <StepHeading kicker="Настройка">Первый выпуск</StepHeading>
+                        <p className="mt-2 mb-6 max-w-xl text-sm text-muted">
+                          Ассистент найдёт публикации по вашим темам {periodText(days)}, уберёт
+                          повторы и напишет короткие выжимки со ссылками на источники. Это занимает
+                          от нескольких секунд до пары минут.
+                        </p>
+                        <Card variant="filled" className="flex items-center gap-3 p-4">
+                          <ProfileAvatar profile={profile} size={44} />
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold break-words">{profile.spec.name}</p>
+                            <p className="text-sm text-muted">
+                              {profile.spec.interests.length}{' '}
+                              {plural(profile.spec.interests.length, ['тема', 'темы', 'тем'])}
+                            </p>
+                          </div>
+                        </Card>
+                        <div className="mt-4">
+                          <ErrorNote error={build.error} />
+                        </div>
+                        <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+                          <Button
+                            variant="cta"
+                            className="w-full sm:w-auto"
+                            isBusy={isBusy}
+                            onClick={() => void startDigest(profile)}
+                          >
+                            Собрать выпуск
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            className="w-full sm:w-auto"
+                            disabled={isBusy}
+                            onClick={() => leave('/feed')}
+                          >
+                            Позже, открыть ленту
+                          </Button>
+                        </div>
+                      </div>
+                      <ArtTile className="hidden w-52 grid-cols-[minmax(0,1fr)] p-4 md:grid">
+                        <BrandCat size={176} />
+                      </ArtTile>
+                    </div>
+                  )}
+                </motion.section>
+              </AnimatePresence>
+            </FocusStepContext>
+          </div>
+
+          {index > 0 && (
+            <footer className="sticky bottom-0 z-10 flex items-center gap-3 rounded-b-[2rem] border-t border-separator bg-surface px-5 py-3.5 sm:px-8">
+              <Button
+                variant="secondary"
+                icon={<ChevronLeft size={16} />}
+                disabled={isBusy}
+                onClick={back}
+              >
                 Назад
               </Button>
-            </motion.section>
-          )}
-
-          {step === 'digest' && profile && (
-            <motion.section key="digest" {...STEP_MOTION}>
-              <h1 className="font-serif text-[30px] leading-tight font-semibold tracking-tight text-balance">
-                Первый выпуск
-              </h1>
-              <p className="mt-2 mb-6 text-sm text-muted">
-                Ассистент найдёт публикации по вашим темам {periodText(days)}, уберёт повторы и
-                напишет короткие выжимки со ссылками на источники. Это занимает от нескольких секунд
-                до пары минут.
-              </p>
-              <Card className="flex items-center gap-3 p-5">
-                <ProfileAvatar profile={profile} size={44} />
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold break-words">{profile.spec.name}</p>
-                  <p className="text-sm text-muted">
-                    {profile.spec.interests.length}{' '}
-                    {plural(profile.spec.interests.length, ['тема', 'темы', 'тем'])}
-                  </p>
-                </div>
-              </Card>
-              <div className="mt-4">
-                <ErrorNote error={build.error} />
-              </div>
-              <div className="mt-6 flex flex-wrap gap-2">
-                <Button
-                  variant="cta"
-                  className="w-full sm:w-auto"
-                  isBusy={build.isPending || finish.isPending}
-                  onClick={() => void startDigest(profile)}
-                >
-                  Собрать выпуск
+              <KeyHint />
+              {next && (
+                <Button variant="primary" className="ml-auto" onClick={next}>
+                  Далее
+                  <ChevronRight size={16} aria-hidden />
                 </Button>
-                <Button
-                  variant="ghost"
-                  className="w-full sm:w-auto"
-                  disabled={build.isPending || finish.isPending}
-                  onClick={() => leave('/feed')}
-                >
-                  Позже, открыть ленту
-                </Button>
-              </div>
-            </motion.section>
+              )}
+            </footer>
           )}
-        </AnimatePresence>
+        </div>
       </div>
     </DottedPage>
   )

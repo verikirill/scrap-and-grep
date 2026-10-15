@@ -23,6 +23,7 @@ import { formatNumber, modelLabel } from '../lib/format'
 import { useMe, useMeta } from '../lib/queries'
 import { prefetchRoute } from '../routes'
 import { readOpen, writeOpen } from '../lib/remembered'
+import { THEME_KEY, prefersDark } from '../lib/theme'
 import { UserAvatar } from './UserAvatar'
 import { LogoMark, Wordmark } from './Logo'
 import { DURATION, EASE } from './tokens'
@@ -48,7 +49,6 @@ const NAV: NavItem[] = [
   { to: '/analytics', label: 'Аналитика', icon: Analytics, isAdminOnly: true },
 ]
 
-const THEME_KEY = 'radar-theme'
 /** How long the colours of one theme take to fade into the other. */
 const THEME_FADE_MS = DURATION.medium * 1000
 /**
@@ -60,14 +60,8 @@ const THEME_SWEEP_CLASS = 'theme-sweeping'
 /** On <html> while the colours fade without view transitions (index.css). */
 const THEME_FADE_CLASS = 'theme-fading'
 
-function initialTheme(): boolean {
-  const stored = localStorage.getItem(THEME_KEY)
-  if (stored) return stored === 'dark'
-  return window.matchMedia('(prefers-color-scheme: dark)').matches
-}
-
 function useDarkMode(): [boolean, () => void] {
-  const [dark, setDark] = useState(initialTheme)
+  const [dark, setDark] = useState(prefersDark)
   const fadeTimer = useRef<number | undefined>(undefined)
   useLayoutEffect(() => {
     const root = document.documentElement
