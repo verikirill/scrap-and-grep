@@ -2,7 +2,7 @@
 
 Scrap&Grep собирает новости ИТ и ИБ для энергокомпании и пишет по ним два выпуска: специалисту ИБ подробно за сутки, руководству тезисно за неделю. Новости приходят из 104 источников, включая сайты без ленты, защищённые от ботов, и Telegram-каналы, отбираются по интересам читателя, получают приоритет по правилу датасета организаторов и сверяются с текстом статей, CISA KEV и БДУ ФСТЭК. Аналитик ИБ собрал те же два выпуска за ту же неделю вручную: по его журналу 205 минут против 85 секунд у ассистента ([сравнение](docs/eval/vs-analyst.md)).
 
-Решение хакатона «ИИ-ассистенты для энергетики» ([задание](docs/task/TASK.md)). [Видео](https://git.codenrock.com/codenrock/ii-assistenty/misis-mojarung/assistent-dlya-sozdaniya-it-ib-daydzhestov/uploads/36d3943d5863dd953afaaeee3f1b9afe/scrapgrep-demo.mp4), 5,5 минуты, без голоса, с субтитрами. [Презентация](docs/presentation/scrapgrep.pdf), 22 слайда, и её [редактируемая версия в PPTX](docs/presentation/scrapgrep.pptx). Примеры: [выпуск специалисту за сутки](examples/specialist-daily.md), [выпуск руководству за неделю](examples/management-weekly.md).
+Решение хакатона «ИИ-ассистенты для энергетики» ([задание](docs/task/TASK.md)). [Видео](https://git.codenrock.com/codenrock/ii-assistenty/misis-mojarung/assistent-dlya-sozdaniya-it-ib-daydzhestov/uploads/36d3943d5863dd953afaaeee3f1b9afe/scrapgrep-demo.mp4), 5,5 минуты, без голоса, с субтитрами. [Презентация](docs/presentation/scrapgrep.pdf), 24 слайда, и её [редактируемая версия в PPTX](docs/presentation/scrapgrep.pptx). Примеры: [выпуск специалисту за сутки](examples/specialist-daily.md), [выпуск руководству за неделю](examples/management-weekly.md).
 
 ![Выпуск специалисту по ИБ АСУ ТП: «Главное», цифры периода, строка «Вместо ручной работы», история выпусков справа](docs/screenshots/digest.png)
 
@@ -118,7 +118,7 @@ RADAR_SHORTS_URL=http://shorts:3000
 | [docs/CI.md](docs/CI.md) | задания GitLab CI/CD и GitHub Actions, запуск проверок у себя, выкатка стенда |
 | [docs/eval/](docs/eval/) | сравнение с аналитиком, поиск, лента, подстройка профиля, ранжирование, склейка дублей, стоимость контура |
 | [examples/](examples/README.md) | готовые выпуски в Markdown и DOCX, резюме, смена интересов, датасет организаторов, тот же выпуск на пяти моделях |
-| [docs/presentation/](docs/presentation/README.md) | презентация на 22 слайда в PDF и PPTX |
+| [docs/presentation/](docs/presentation/README.md) | презентация на 24 слайда в PDF и PPTX |
 
 ## Тесты
 
