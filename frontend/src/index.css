@@ -195,14 +195,14 @@
 
   /*
    * HeroUI halves a disabled button, and on the dotted page an outlined one
-   * all but vanished. It stays solid instead: a plain grey fill and muted
+   * all but vanished. It stays solid instead: white with an edge and muted
    * text say "not now" while the label still reads.
    */
   .button:not(.cta):not([aria-busy='true']):disabled,
   .button:not(.cta)[aria-disabled='true'] {
     opacity: 1;
-    background: var(--default);
-    border-color: transparent;
+    background: var(--surface);
+    border: 1px solid var(--border);
     color: var(--muted);
     box-shadow: none;
   }
@@ -274,20 +274,6 @@
 
   .progress-marker[data-state='queued'] .progress-marker__dot {
     box-shadow: inset 0 0 0 3px color-mix(in oklab, var(--muted) 60%, transparent);
-  }
-
-  /* A card that opens something rises a little under the pointer. */
-  .lift {
-    transition-property: translate, box-shadow, border-color, background-color;
-    transition-duration: 0.25s;
-    transition-timing-function: var(--ease-out-quint);
-  }
-
-  @media (hover: hover) {
-    .lift:hover {
-      translate: 0 -3px;
-      box-shadow: 0 14px 30px -18px rgb(0 0 0 / 0.35);
-    }
   }
 
   /* Skeletons carry a breath of the accent, so a loading page is ours too. */
