@@ -253,6 +253,15 @@ async def get_refs(session: AsyncSession, ids: Sequence[int]) -> dict[int, Artic
     return {article.id: to_ref(article) for article in result.scalars().all()}
 
 
+async def load_contents(session: AsyncSession, ids: Sequence[int]) -> dict[int, str]:
+    if not ids:
+        return {}
+    result = await session.execute(
+        select(Article.id, Article.content).where(Article.id.in_(ids), Article.content.is_not(None))
+    )
+    return {row.id: row.content for row in result.all() if row.content}
+
+
 async def pending_embeddings(
     session: AsyncSession,
     model: str,

@@ -26,6 +26,10 @@ class PipelineStore(Protocol):
         """What CISA KEV and the BDU say of these CVE and BDU ids."""
         ...
 
+    async def article_texts(self, article_ids: Sequence[int]) -> dict[int, str]:
+        """The stored text of these articles, whole; the state keeps it trimmed."""
+        ...
+
     async def attack_techniques(self, ids: Sequence[str]) -> dict[str, str]:
         """The ATT&CK names of those of these technique ids that exist."""
         ...

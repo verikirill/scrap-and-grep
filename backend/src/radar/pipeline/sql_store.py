@@ -61,6 +61,10 @@ class SqlPipelineStore:
         async with session_scope() as session:
             return await vulnerability_lookup(session, ids)
 
+    async def article_texts(self, article_ids: Sequence[int]) -> dict[int, str]:
+        async with session_scope() as session:
+            return await article_store.load_contents(session, article_ids)
+
     async def attack_techniques(self, ids: Sequence[str]) -> dict[str, str]:
         async with session_scope() as session:
             return await attack_lookup(session, ids)

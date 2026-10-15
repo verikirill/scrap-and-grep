@@ -86,6 +86,13 @@ class FakeStore:
         known = {"T1566": "Phishing"}
         return {value: known[value] for value in ids if value in known}
 
+    async def article_texts(self, article_ids: Sequence[int]) -> dict[int, str]:
+        return {
+            article.id: article.content
+            for article in self.articles
+            if article.id in article_ids and article.content
+        }
+
     async def vulnerability_facts(self, ids: Sequence[str]) -> list[VulnerabilityReference]:
         # One CVE in the CISA catalogue; the rest unknown.
         return [
@@ -624,6 +631,47 @@ async def test_advice_to_patch_gives_way_to_the_workaround_when_the_fix_is_not_o
     assert (
         entry.text.vulnerability.fix == "Обновить до FortiMail 7.4.9. Исправление ещё не выпущено."
     )
+
+
+class ScoresFromTheEnd(HeuristicIntelligence):
+    """A card with the score a long report gives far down; what the model read is kept."""
+
+    def __init__(self) -> None:
+        self.read: list[int] = []
+
+    async def summarize(self, item: Any, profile: ProfileSpec, interest: Interest | None) -> Any:
+        from radar.domain import ItemSummary, VulnerabilityCard
+
+        self.read.append(len(item.article.content or ""))
+        return ItemSummary(
+            headline=item.article.title,
+            summary="Обход пути позволяет записывать файлы.",
+            by_model=True,
+            vulnerability=VulnerabilityCard(ids=("CVE-2026-104286",), cvss_score="9.8"),
+        )
+
+
+async def test_the_card_is_checked_against_the_whole_stored_article(
+    profile: ProfileSpec, make_article: ArticleFactory
+) -> None:
+    from radar.pipeline.graph import STATE_CONTENT_LIMIT
+
+    content = "Разбор цепочки эксплуатации по шагам. " * 200 + "Оценка CVSS 9.8."
+    article = make_article(
+        "Уязвимость CVE-2026-104286 в SCADA-шлюзе FortiMail", "Обход пути.", content=content
+    )
+    model = ScoresFromTheEnd()
+    store = FakeStore([article])
+    graph = build_graph(_deps(store, model)).compile(checkpointer=InMemorySaver())
+
+    await graph.ainvoke(_input(profile), CONFIG)
+
+    assert store.saved is not None
+    [entry] = [item for topic in store.saved["topics"] for item in topic.items]
+    assert entry.text.vulnerability.cvss_score == "9.8"
+    assert "Оценка CVSS" not in entry.text.unsupported
+    # The model still reads the trimmed text the state keeps.
+    assert model.read == [STATE_CONTENT_LIMIT]
 
 
 class ModelGrades(CountingIntelligence):

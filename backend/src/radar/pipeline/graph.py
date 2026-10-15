@@ -45,6 +45,7 @@ from radar.cards import (
     technique_ids,
 )
 from radar.domain import (
+    ArticleRef,
     Candidate,
     DigestOverview,
     Grade,
@@ -73,7 +74,8 @@ from radar.selection.scoring import (
 
 log = get_logger(__name__)
 
-# Enough for the summary prompt; keeps checkpoints small.
+# Enough for the summary prompt; keeps checkpoints small. The card check
+# reads the whole stored text (DigestNodes._full_text).
 STATE_CONTENT_LIMIT = 4000
 # Backstop only. A slow model call times out on its own (llm_timeout_seconds)
 # and falls back to the heuristic; this bounds a node that hangs elsewhere.
@@ -384,7 +386,7 @@ class DigestNodes:
         interest = profile.interest(item.graded.interest_id)
         written = await self._deps.intelligence.summarize(item, profile, interest)
         article = item.article
-        source = source_text(article.title, article.summary, article.content)
+        source = source_text(article.title, article.summary, await self._full_text(article))
         written = await self._with_references(written, source)
         # Checked here, past the answer cache: a better check applies to answers
         # cached before it without paying for them again. What the reference
@@ -403,6 +405,16 @@ class DigestNodes:
             text = plain_brief(text)
         _emit("summarize", done=1)
         return {"summaries": [{"article_id": item.article.id, "text": text.model_dump()}]}
+
+    async def _full_text(self, article: ArticleRef) -> str | None:
+        """The article as stored: a fact far down a long report stays on the
+        card. The trimmed text of the state when the store cannot tell."""
+        try:
+            texts = await self._deps.store.article_texts([article.id])
+        except Exception as exc:
+            log.warning("article_text_unavailable", error=f"{type(exc).__name__}: {exc}"[:300])
+            return article.content
+        return texts.get(article.id) or article.content
 
     async def _techniques(self, text: ItemSummary, source: str) -> dict[str, str] | None:
         """The ATT&CK reference for the card's techniques and for the ids the
