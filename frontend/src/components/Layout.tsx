@@ -161,7 +161,9 @@ function StatusLine() {
       </div>
     )
   }
-  const offline = meta.llm_provider !== 'ollama'
+  // Offline means no language model at all; a model in Ollama or behind an
+  // OpenAI-compatible API (Yandex AI Studio, vLLM) is named instead.
+  const offline = meta.llm_provider === 'heuristic'
   return (
     <div className="space-y-1 text-xs text-muted">
       <p className="flex items-center gap-2">
