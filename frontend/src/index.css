@@ -425,23 +425,20 @@
   top: 50%;
   left: 50%;
   z-index: -1;
-  width: 40rem;
-  height: 40rem;
+  /* Wide enough to reach every corner of the dark side from the cat. */
+  width: 96rem;
+  height: 96rem;
   translate: -50% -50%;
   pointer-events: none;
   border-radius: 9999px;
-  mask-image: radial-gradient(circle, black 55%, transparent 71%);
+  mask-image: radial-gradient(circle, black 45%, transparent 70%);
 }
 .auth-radar__rings {
   position: absolute;
   inset: 0;
   border-radius: 9999px;
   background:
-    repeating-radial-gradient(
-      circle,
-      transparent 0 calc(12.5% - 1px),
-      rgb(255 255 255 / 0.07) calc(12.5% - 1px) 12.5%
-    ),
+    repeating-radial-gradient(circle, transparent 0 71px, rgb(255 255 255 / 0.07) 71px 72px),
     linear-gradient(
       transparent calc(50% - 0.5px),
       rgb(255 255 255 / 0.05) 0 calc(50% + 0.5px),
