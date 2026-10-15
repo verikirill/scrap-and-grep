@@ -1,4 +1,4 @@
-import { fireEvent, screen, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { HttpResponse, http } from 'msw'
 import { describe, expect, it } from 'vitest'
 import type { ProfileSpec, Resume } from '../lib/api'
@@ -83,7 +83,7 @@ describe('WelcomePage', () => {
     expect(screen.getByText('до 12 публикаций')).toBeInTheDocument()
     await user.click(create())
 
-    expect(await screen.findByTestId('location')).toHaveTextContent('/feed')
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/feed'))
     expect(saved).toEqual([
       {
         ...SUGGESTION,
