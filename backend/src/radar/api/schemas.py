@@ -18,6 +18,7 @@ from radar.domain import (
 )
 from radar.ingest.net import proxy_name
 from radar.reader.blocks import Block
+from radar.reader.language import Language
 from radar.shorts.voice import VoiceOption
 from radar.views import ItemView
 
@@ -294,7 +295,24 @@ class ArticleReadOut(BaseModel):
     reading_minutes: int | None
     # The whole text, or only what the feed carried when the page could not be read.
     complete: bool
+    # The language of the text itself, told by its letters (radar.reader.language):
+    # an English or Chinese one is offered in translation.
+    text_language: Language
     blocks: list[Annotated[Block, Field(discriminator="type")]]
+
+
+class ArticleTranslationOut(BaseModel):
+    """An article in the reader's language. "original" when it is in it
+    already, "unavailable" with the reason when it could not be translated now:
+    the reader then shows the original."""
+
+    id: int
+    status: Literal["translated", "original", "unavailable"]
+    source_language: Language
+    language: Literal["ru"]
+    title: str | None = None
+    blocks: list[Annotated[Block, Field(discriminator="type")]] | None = None
+    reason: str | None = None
 
 
 class ProfileDefaults(BaseModel):
