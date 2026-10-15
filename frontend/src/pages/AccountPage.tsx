@@ -8,7 +8,6 @@ import { INPUT_CLASS, buttonClass } from '../components/tokens'
 import { Loading, PageSkeleton, Skeleton } from '../components/loading'
 import { Button, Card, Chip, ErrorNote, Field, PageHeader } from '../components/ui'
 import { McpAccess } from '../features/account/McpAccess'
-import { FeedViewSetting } from '../features/account/FeedViewSetting'
 import { ResumeDrop } from '../features/resume/ResumeDrop'
 import { ResumeFactsView } from '../features/resume/ResumeFactsView'
 import { ResumeProcessing } from '../features/resume/ResumeProcessing'
@@ -302,7 +301,6 @@ export function AccountPage() {
           {isWide && <DangerZone me={user} />}
         </aside>
         <div className="min-w-0 space-y-5">
-          <FeedViewSetting me={user} />
           <ResumeSection />
           <McpAccess />
           {/* On a phone the column order is the reading order: removal comes last. */}

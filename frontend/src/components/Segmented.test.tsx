@@ -2,6 +2,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
+import { Layers, List } from './icons'
 import { Segmented } from './Segmented'
 
 const PERIODS = [
@@ -94,6 +95,26 @@ describe('Segmented', () => {
     expect(within(option).getByText('2 недели')).toBeInTheDocument()
     await user.click(option)
     expect(onChange).toHaveBeenCalledWith('14')
+  })
+
+  it('names an option drawn as an icon, so hiding its words keeps it readable', () => {
+    render(
+      <Segmented
+        label="Вид"
+        value="list"
+        options={[
+          { value: 'list', label: 'Список', icon: List },
+          { value: 'grid', label: 'Плитка', icon: Layers },
+        ]}
+        onChange={() => {}}
+        labelClassName="hidden"
+      />,
+    )
+
+    const grid = screen.getByRole('radio', { name: 'Плитка' })
+    expect(grid).toHaveAttribute('title', 'Плитка')
+    expect(grid.querySelector('svg')).not.toBeNull()
+    expect(screen.getByRole('radio', { name: 'Список' })).toBeChecked()
   })
 
   it('keeps a scrolling row of many options one group the keyboard reaches across', async () => {

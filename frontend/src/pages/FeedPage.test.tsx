@@ -884,4 +884,61 @@ describe('FeedPage in the look of a Telegram channel', () => {
     expect(within(post).getByText(items[0].source_name)).toBeInTheDocument()
     expect(screen.getByRole('article', { name: items[1].title })).toBeInTheDocument()
   })
+
+  it('switches the look beside the tabs at once and keeps it with the account', async () => {
+    const items = makeFeedItems(2)
+    const sent = serveFeed({ feed: () => makeFeedPage({ items }) })
+    const answer = gate()
+    server.use(
+      http.get(apiUrl('/sources/avatars'), () => HttpResponse.json({})),
+      // Held back, then handed on to the account above: the look comes first.
+      http.patch(apiUrl('/auth/me/settings'), () => answer.closed),
+    )
+    const { user } = renderFeed()
+    await screen.findByRole('link', { name: items[0].title })
+    expect(screen.getByRole('radio', { name: 'Карточки' })).toBeChecked()
+    expect(screen.queryByRole('article', { name: items[0].title })).toBeNull()
+
+    await user.click(screen.getByRole('radio', { name: 'Как в Telegram' }))
+
+    expect(screen.getByRole('radio', { name: 'Как в Telegram' })).toBeChecked()
+    expect(await screen.findByRole('article', { name: items[0].title })).toBeInTheDocument()
+    expect(sent.settings).toEqual([])
+    answer.open()
+    await waitFor(() => expect(sent.settings).toEqual([{ feed_view: 'telegram' }]))
+    expect(screen.getByRole('radio', { name: 'Как в Telegram' })).toBeChecked()
+  })
+
+  it('puts the look back and says why when the server refuses it', async () => {
+    const items = makeFeedItems(2)
+    serveFeed({ feed: () => makeFeedPage({ items }) })
+    // The account asked again after the refusal waits: only the rollback can
+    // bring the cards back.
+    const reread = gate()
+    let isHeld = false
+    let isReread = false
+    server.use(
+      http.get(apiUrl('/sources/avatars'), () => HttpResponse.json({})),
+      http.get(apiUrl('/auth/me'), async () => {
+        if (!isHeld) return
+        isReread = true
+        await reread.closed
+      }),
+      http.patch(apiUrl('/auth/me/settings'), () =>
+        HttpResponse.json({ detail: 'Настройки сейчас не сохраняются' }, { status: 503 }),
+      ),
+    )
+    const { user } = renderFeed()
+    await screen.findByRole('link', { name: items[0].title })
+    isHeld = true
+
+    await user.click(screen.getByRole('radio', { name: 'Как в Telegram' }))
+
+    await waitFor(() => expect(isReread).toBe(true))
+    expect(screen.getByRole('radio', { name: 'Карточки' })).toBeChecked()
+    expect(screen.queryByRole('article', { name: items[0].title })).toBeNull()
+    reread.open()
+    expect(await screen.findByText('Вид ленты не сохранился')).toBeInTheDocument()
+    expect(screen.getByText('Настройки сейчас не сохраняются')).toBeInTheDocument()
+  })
 })

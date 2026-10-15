@@ -27,6 +27,7 @@ import {
   SheetTrigger,
 } from '../components/ui/sheet'
 import { FeedCard } from '../features/feed/FeedCard'
+import { FeedViewSwitch } from '../features/feed/FeedViewSwitch'
 import { PostCard } from '../features/feed/PostCard'
 import { TastePanel } from '../features/feed/TastePanel'
 import type { FeedItem, FeedOrder, FeedView, Placement, ReactionKind } from '../lib/api'
@@ -149,7 +150,7 @@ export function FeedPage() {
   const feed = useFeed(order)
   const saved = useSaved(tab === 'saved')
   const taste = useTaste()
-  // Chosen on the account page; the cards until the account says otherwise.
+  // Chosen beside the tabs and kept with the account; the cards until it says otherwise.
   const view: FeedView = me?.feed_view ?? 'cards'
   const Item = view === 'telegram' ? PostCard : FeedCard
   const feedback = useFeedback()
@@ -283,7 +284,10 @@ export function FeedPage() {
         }
       />
 
-      <div className="mb-5 flex items-center gap-2">
+      {/* The row's own width decides what keeps its words: with the side menu
+          open a desktop row is as narrow as a tablet's. Too narrow for all
+          (the smallest phones), the controls move under the tabs. */}
+      <div className="@container mb-5 flex flex-wrap items-center gap-1.5 @md:gap-2">
         <div
           ref={tabRow}
           className="relative isolate inline-flex gap-1 rounded-xl bg-surface-secondary p-1"
@@ -301,23 +305,24 @@ export function FeedPage() {
               type="button"
               aria-pressed={tab === id}
               data-active={tab === id}
-              // On a phone the third tab is its icon: three words and two buttons do not fit.
+              // In a narrow row the third tab is its icon: three words and the controls do not fit.
               aria-label={id === 'saved' ? label : undefined}
               title={id === 'saved' ? label : undefined}
               onClick={() => selectTab(id)}
               className={clsx(
-                'relative inline-flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors sm:px-4',
+                'relative inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors @md:px-3 @lg:px-4',
                 tab === id ? 'text-foreground' : 'text-muted hover:text-foreground',
               )}
             >
-              <Icon size={15} className={clsx('relative', id !== 'saved' && 'hidden sm:block')} />
-              <span className={clsx('relative', id === 'saved' && 'hidden sm:inline')}>
+              <Icon size={15} className={clsx('relative', id !== 'saved' && 'hidden @lg:block')} />
+              <span className={clsx('relative', id === 'saved' && 'hidden @md:inline')}>
                 {label}
               </span>
             </button>
           ))}
         </div>
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ml-auto flex items-center gap-0.5 @md:gap-1">
+          <FeedViewSwitch view={view} />
           {!isWide && (
             <Sheet>
               <SheetTrigger asChild>
@@ -325,10 +330,10 @@ export function FeedPage() {
                   type="button"
                   aria-label="Из чего собрана лента"
                   title="Из чего собрана лента"
-                  className="transition-colors hover:bg-default/70 relative inline-flex h-10 items-center gap-2 overflow-hidden rounded-full px-2.5 text-sm font-medium text-accent sm:px-4"
+                  className="transition-colors hover:bg-default/70 relative inline-flex h-9 items-center gap-2 overflow-hidden rounded-full px-2 text-sm font-medium text-accent @3xl:h-10 @3xl:px-4"
                 >
                   <Layers size={19} />
-                  <span className="hidden sm:inline">Из чего собрана лента</span>
+                  <span className="hidden @3xl:inline">Из чего собрана лента</span>
                 </button>
               </SheetTrigger>
               <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto rounded-t-3xl">
@@ -346,7 +351,7 @@ export function FeedPage() {
             disabled={tab === 'saved' || feed.isRefetching}
             aria-label={`${refreshLabel} ленту`}
             title={`${refreshLabel} ленту`}
-            className="transition-colors hover:bg-default/70 relative grid size-10 place-items-center overflow-hidden rounded-full text-accent disabled:opacity-40 sm:hidden"
+            className="transition-colors hover:bg-default/70 relative grid size-9 place-items-center overflow-hidden rounded-full text-accent disabled:opacity-40 sm:hidden"
           >
             <RefreshCw size={19} className={clsx(feed.isRefetching && 'animate-spin')} />
           </button>

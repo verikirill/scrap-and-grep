@@ -56,6 +56,14 @@ const avatarInput = (container: HTMLElement) =>
   container.querySelector('input[accept^="image/"]') as HTMLInputElement
 
 describe('AccountPage', () => {
+  it('leaves the look of the feed to the feed page, beside its tabs', async () => {
+    serveAccount()
+    await renderPage()
+
+    expect(screen.queryByRole('radiogroup', { name: 'Вид ленты' })).toBeNull()
+    expect(screen.queryByRole('radio', { name: /Как в Telegram/ })).toBeNull()
+  })
+
   describe('signing out', () => {
     it('signs a reader with a password out at once and remembers it was on purpose', async () => {
       serveAccount()
