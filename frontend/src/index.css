@@ -60,6 +60,7 @@
      an issue reads like an edited publication. */
   --font-sans: 'Inter Variable', ui-sans-serif, system-ui, 'Segoe UI', Arial, sans-serif;
   --font-serif: 'Source Serif 4 Variable', Georgia, 'Times New Roman', serif;
+  --font-code: 'JetBrains Mono Variable', ui-monospace, Consolas, monospace;
 
   --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -503,6 +504,67 @@
   }
   .auth-radar__blip {
     opacity: 0.35;
+  }
+}
+
+/* The reader on the sign-in page's headline (features/auth/ScrambleText.tsx):
+   monospaced, in the call-to-action colours. */
+.auth-role {
+  font-family: var(--font-code);
+  font-size: 0.86em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  background: linear-gradient(
+    100deg,
+    color-mix(in oklab, var(--cta-from) 70%, white),
+    var(--cta-to)
+  );
+  background-clip: text;
+  color: transparent;
+}
+
+/* Rings that leave the sign-in form now and then, an echo of the radar on the
+   dark side (pages/AuthPage.tsx). Transform and opacity only. */
+.auth-ripple {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: -1;
+  pointer-events: none;
+}
+.auth-ripple span {
+  position: absolute;
+  width: 34rem;
+  height: 34rem;
+  margin: -17rem 0 0 -17rem;
+  border: 1px solid color-mix(in oklab, var(--accent) 45%, transparent);
+  border-radius: 9999px;
+  opacity: 0;
+  animation: auth-ripple 12s ease-out infinite;
+}
+.auth-ripple span:nth-child(2) {
+  animation-delay: 4s;
+}
+.auth-ripple span:nth-child(3) {
+  animation-delay: 8s;
+}
+@keyframes auth-ripple {
+  0% {
+    opacity: 0;
+    scale: 0.75;
+  }
+  12% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0;
+    scale: 1.9;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-ripple span {
+    animation: none;
   }
 }
 
