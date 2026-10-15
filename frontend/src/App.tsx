@@ -1,18 +1,12 @@
-import {
-  MutationCache,
-  QueryCache,
-  QueryClient,
-  QueryClientProvider,
-  keepPreviousData,
-} from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
+import type { QueryClient } from '@tanstack/react-query'
 import { MotionConfig } from 'motion/react'
 import { Suspense, useEffect } from 'react'
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from 'react-router'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { Layout } from './components/Layout'
 import { RequireAuth } from './components/RequireAuth'
-import { ApiError } from './lib/api'
-import { keys } from './lib/queries'
+import { createQueryClient } from './lib/queryClient'
 import { Toast } from '@heroui/react'
 import { AuthPage } from './pages/AuthPage'
 import { DigestPage } from './pages/DigestPage'
@@ -30,31 +24,8 @@ import {
   prefetchAllRoutes,
 } from './routes'
 
-/**
- * A 401 from any request means the session ended (expired, signed out in
- * another tab, account deleted). Forget who was signed in; the route guard
- * then shows the sign-in page.
- */
-function signOutOnUnauthorized(error: unknown): void {
-  if (error instanceof ApiError && error.status === 401) queryClient.setQueryData(keys.me, null)
-}
-
-const queryClient: QueryClient = new QueryClient({
-  queryCache: new QueryCache({ onError: signOutOnUnauthorized }),
-  mutationCache: new MutationCache({ onError: signOutOnUnauthorized }),
-  defaultOptions: {
-    queries: {
-      // Data stays fresh for half a minute and the previous answer stays on
-      // screen while the next loads: switching tabs and filters never blanks a page.
-      staleTime: 30_000,
-      placeholderData: keepPreviousData,
-      refetchOnWindowFocus: false,
-      // A 4xx will not get better on retry; network errors and 5xx might.
-      retry: (failures, error) =>
-        failures < 2 && !(error instanceof ApiError && error.status >= 400 && error.status < 500),
-    },
-  },
-})
+/** The client of the running app; a test passes one of its own. */
+const queryClient = createQueryClient()
 
 const fallback = (
   <div className="space-y-4" aria-hidden>
@@ -81,10 +52,10 @@ function Shell() {
   )
 }
 
-export default function App() {
+export default function App({ client = queryClient }: { client?: QueryClient }) {
   useEffect(prefetchAllRoutes, [])
   return (
-    <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={client}>
       {/* Honour the OS "reduce motion" setting for every animation at once. */}
       <MotionConfig reducedMotion="user">
         <BrowserRouter>

@@ -64,7 +64,9 @@ export function ShareProfileButton({ profile }: { profile: Profile }) {
       <Dialog
         open={isOpen}
         onOpenChange={(next) => {
-          if (next) link.reset()
+          // Only closing comes through here (the button opens the dialog by
+          // itself), so the last visit's error is forgotten on the way out.
+          if (!next) link.reset()
           setCopied(false)
           setOpen(next)
         }}

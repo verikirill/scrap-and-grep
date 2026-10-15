@@ -28,7 +28,37 @@ export default defineConfig({
     sourcemap: false,
   },
   test: {
-    environment: 'node',
-    include: ['src/**/*.test.ts'],
+    // One clock everywhere: a laptop and a CI runner in UTC format dates alike.
+    env: { TZ: 'Europe/Moscow' },
+    // Projects inherit the plugins and aliases above (Vitest 5 default).
+    projects: [
+      // Pure functions: Node, no DOM.
+      { test: { name: 'unit', environment: 'node', include: ['src/**/*.test.ts'] } },
+      // Components and hooks: jsdom, the API answered by MSW.
+      {
+        test: {
+          name: 'dom',
+          environment: 'jsdom',
+          include: ['src/**/*.test.tsx'],
+          setupFiles: ['./src/test/setup.ts'],
+          // vi.spyOn(window, 'confirm') and the like end with their test.
+          restoreMocks: true,
+        },
+      },
+    ],
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: [
+        'src/**/*.test.{ts,tsx}',
+        'src/test/**',
+        'src/main.tsx',
+        'src/components/icons.tsx',
+      ],
+      // cobertura: the coverage GitLab draws on merge request diffs.
+      reporter: ['text-summary', 'json-summary', 'html', 'cobertura'],
+      // A little under what the suite reaches, so a change that drops tests fails.
+      thresholds: { lines: 95, statements: 94, functions: 93, branches: 90 },
+    },
   },
 })

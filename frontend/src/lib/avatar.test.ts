@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { nameHue, nameInitials } from './UserAvatar'
+import { nameHue, nameInitials } from './avatar'
 
 describe('the default avatar', () => {
   it('takes up to two initials of a name', () => {

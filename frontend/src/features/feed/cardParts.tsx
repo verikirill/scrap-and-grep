@@ -105,7 +105,7 @@ export function RejectedRow({ item, onReact, look = 'card' }: RejectedProps) {
       )}
     >
       <span role="status" className="min-w-0 truncate">
-        {isDisliked ? 'Меньше похожих:' : 'Скрыто: '}
+        {isDisliked ? 'Меньше похожих: ' : 'Скрыто: '}
         {item.title}
       </span>
       <button

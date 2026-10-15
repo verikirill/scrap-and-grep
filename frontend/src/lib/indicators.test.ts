@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { indicatorKind } from './ThreatIntel'
+import { indicatorKind } from './indicators'
 
 describe('indicatorKind', () => {
   it('reads the kind through the defanged form an article prints', () => {

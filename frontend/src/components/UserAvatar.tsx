@@ -1,30 +1,12 @@
 import clsx from 'clsx'
 import { useState } from 'react'
 import type { Me } from '../lib/api'
+import { nameHue, nameInitials } from '../lib/avatar'
 
 type Props = {
   me: Pick<Me, 'display_name' | 'avatar_url'>
   size: number
   className?: string
-}
-
-/** Up to two letters of a name: «Анна Петрова» -> «АП», «Гость» -> «Г». */
-export function nameInitials(name: string): string {
-  const words = name.split(/[^\p{L}\p{N}]+/u).filter(Boolean)
-  return (
-    words
-      .slice(0, 2)
-      .map((word) => word[0])
-      .join('')
-      .toUpperCase() || '?'
-  )
-}
-
-/** A hue of the reader's own, the same on every visit: from the name, not at random. */
-export function nameHue(name: string): number {
-  let seed = 7
-  for (const char of name) seed = (seed * 31 + char.charCodeAt(0)) % 3600
-  return seed % 360
 }
 
 /**

@@ -60,9 +60,13 @@ function SettingSwitch({
       aria-describedby={describedBy}
       aria-busy={isBusy || undefined}
     >
-      <Switch.Control>
-        <Switch.Thumb />
-      </Switch.Control>
+      {/* Since HeroUI 3.2 the input and the click live in Switch.Content:
+          without it the switch is drawn but cannot be turned. */}
+      <Switch.Content>
+        <Switch.Control>
+          <Switch.Thumb />
+        </Switch.Control>
+      </Switch.Content>
     </Switch>
   )
 }
@@ -119,7 +123,7 @@ function InterestRow({ item }: { item: InterestLearning }) {
       <span className="col-span-2 text-xs text-muted">
         {marks.length > 0 ? marks.join(' · ') : 'отметок пока нет'}
         {item.drift >= 0.005 &&
-          `· фокус сдвинут к понравившемуся на ${Math.round(item.drift * 100)}%`}
+          ` · фокус сдвинут к понравившемуся на ${Math.round(item.drift * 100)}%`}
       </span>
     </li>
   )

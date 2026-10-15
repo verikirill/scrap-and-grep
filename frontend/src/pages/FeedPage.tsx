@@ -64,6 +64,11 @@ const isTab = (value: string | null): value is Tab => TABS.some((tab) => tab.id 
 // order left longer ago than this is ranked anew.
 const TAB_REUSE_MS = 5 * 60_000
 
+/** Whether a list was ranked longer ago than a look at the other order lasts. */
+function isOutdated(updatedAt: number | undefined): boolean {
+  return Date.now() - (updatedAt ?? 0) > TAB_REUSE_MS
+}
+
 // Signals that change what the next feed looks like.
 const TEACHING: ReactionKind[] = ['like', 'dislike', 'save', 'hide']
 // What a mark does, said where the reader is; a hidden card says it in its own place.
@@ -173,23 +178,24 @@ export function FeedPage() {
   const freshCount = fresh.data?.fresh ?? 0
   const knowsReader = Boolean(taste.data?.facets.some((facet) => facet.kind !== 'avoid'))
 
+  // Each mark's own outcome: with marks queued one after another, the
+  // mutation's callbacks and its error follow only the last one made.
+  const [markError, setMarkError] = useState<unknown>(null)
   const react = (item: FeedItem, kind: ReactionKind, isActive: boolean) => {
-    feedback.mutate(
-      {
+    setMarkError(null)
+    feedback
+      .mutateAsync({
         articleId: item.article_id,
         kind,
         isActive,
         context: 'feed',
         placement: placementOf(item),
-      },
-      {
-        onSuccess: () => {
-          if (TEACHING.includes(kind)) setPendingSignals((count) => count + 1)
-          const said = MARKED[kind]
-          if (isActive && said) toast.success(said)
-        },
-      },
-    )
+      })
+      .then(() => {
+        if (TEACHING.includes(kind)) setPendingSignals((count) => count + 1)
+        const said = MARKED[kind]
+        if (isActive && said) toast.success(said)
+      }, setMarkError)
   }
 
   // On a desktop it stands beside the feed; narrower, it opens from a button
@@ -227,8 +233,8 @@ export function FeedPage() {
 
   const selectTab = (id: Tab) => {
     const queryKey = [...keys.feed, id]
-    const age = Date.now() - (client.getQueryState(queryKey)?.dataUpdatedAt ?? 0)
-    if (id !== 'saved' && id !== tab && age > TAB_REUSE_MS) void client.resetQueries({ queryKey })
+    const isOld = isOutdated(client.getQueryState(queryKey)?.dataUpdatedAt)
+    if (id !== 'saved' && id !== tab && isOld) void client.resetQueries({ queryKey })
     setIsQuiet(true)
     setSearch({ tab: id })
     if (id !== 'saved' && me && me.feed_order !== id) settings.mutate({ feed_order: id })
@@ -328,7 +334,7 @@ export function FeedPage() {
 
       <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_19rem]">
         <div className="min-w-0 space-y-3">
-          <ErrorNote error={list.error ?? feedback.error} />
+          <ErrorNote error={list.error ?? markError} />
 
           {/* New articles wait above the list until asked for: nothing moves under the reader. */}
           <AnimatePresence>
@@ -401,33 +407,36 @@ export function FeedPage() {
               <Skeletons view={view} />
             </PostColumn>
           ) : items.length === 0 ? (
-            <Card>
-              {tab === 'saved' ? (
-                <EmptyState
-                  icon={<Bookmark size={22} />}
-                  title="Сохранённого пока нет"
-                  action={
-                    <Button variant="tonal" onClick={() => selectTab('new')}>
-                      Открыть новое
-                    </Button>
-                  }
-                >
-                  Здесь будут публикации, отложенные кнопкой «Сохранить».
-                </EmptyState>
-              ) : (
-                <EmptyState
-                  icon={<Search size={22} />}
-                  title="Подходящих публикаций не нашлось"
-                  action={
-                    <Link to="/profiles" className={buttonClass('tonal')}>
-                      Настроить интересы
-                    </Link>
-                  }
-                >
-                  За две недели публикаций по вашим интересам не нашлось.
-                </EmptyState>
-              )}
-            </Card>
+            // A list that did not load is not empty: the error above says why.
+            !list.isError && (
+              <Card>
+                {tab === 'saved' ? (
+                  <EmptyState
+                    icon={<Bookmark size={22} />}
+                    title="Сохранённого пока нет"
+                    action={
+                      <Button variant="tonal" onClick={() => selectTab('new')}>
+                        Открыть новое
+                      </Button>
+                    }
+                  >
+                    Здесь будут публикации, отложенные кнопкой «Сохранить».
+                  </EmptyState>
+                ) : (
+                  <EmptyState
+                    icon={<Search size={22} />}
+                    title="Подходящих публикаций не нашлось"
+                    action={
+                      <Link to="/profiles" className={buttonClass('tonal')}>
+                        Настроить интересы
+                      </Link>
+                    }
+                  >
+                    За две недели публикаций по вашим интересам не нашлось.
+                  </EmptyState>
+                )}
+              </Card>
+            )
           ) : (
             <PostColumn view={view}>
               {items.map((item, index) => (
