@@ -250,7 +250,27 @@ export interface ArticleRead {
   reading_minutes: number | null
   /** False when the page could not be read and the feed's text stands in. */
   complete: boolean
+  /** The language of the text itself, told by its letters: en and zh are offered in Russian. */
+  text_language: TextLanguage
   blocks: Block[]
+}
+
+/** The language an article is written in; other is one the reader does not translate. */
+export type TextLanguage = 'ru' | 'en' | 'zh' | 'other'
+
+/**
+ * An article in Russian. "original" when it is in Russian already,
+ * "unavailable" with the reason when it cannot be translated now: the reader
+ * then shows the original.
+ */
+export interface ArticleTranslation {
+  id: number
+  status: 'translated' | 'original' | 'unavailable'
+  source_language: TextLanguage
+  language: 'ru'
+  title: string | null
+  blocks: Block[] | null
+  reason: string | null
 }
 
 export interface Page<T> {
@@ -1040,6 +1060,9 @@ export const api = {
   }) => request<Page<Article>>(`/articles${query(params)}`),
   timeline: (days: number) => request<TimelinePoint[]>(`/articles/timeline${query({ days })}`),
   article: (id: number) => request<ArticleRead>(`/articles/${id}`),
+  /** The article in Russian, translated by the model once and kept for every reader. */
+  articleTranslation: (id: number) =>
+    request<ArticleTranslation>(`/articles/${id}/translation${query({ to: 'ru' })}`),
   /** The article's own picture, the one a post in the feed shows. */
   articlePictureUrl: (articleId: number) => `${API_BASE}/articles/${articleId}/picture`,
   /** A picture of an opened article, fetched by the API from the address the page gave. */

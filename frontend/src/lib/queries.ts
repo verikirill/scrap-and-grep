@@ -47,6 +47,7 @@ export const keys = {
   digests: ['digests'] as const,
   digest: (id: string) => ['digest', id] as const,
   article: (id: number) => ['article', id] as const,
+  articleTranslation: (id: number) => ['article-translation', id] as const,
   short: (digestId: string) => ['short', digestId] as const,
 }
 
@@ -272,6 +273,21 @@ export const useArticle = (id: number, isEnabled: boolean) =>
     // is asked for again: the API reads the page again after a while.
     staleTime: (query) => (query.state.data?.complete ? Infinity : 60_000),
     // Another article is never shown in place of this one.
+    placeholderData: undefined,
+  })
+
+/**
+ * The article in Russian. A translation is kept by the API for good; one that
+ * could not be made now is asked for again on the next visit, not on a retry:
+ * the reader already has the original in front of them.
+ */
+export const useArticleTranslation = (id: number, isEnabled: boolean) =>
+  useQuery({
+    queryKey: keys.articleTranslation(id),
+    queryFn: () => api.articleTranslation(id),
+    enabled: isEnabled,
+    staleTime: (query) => (query.state.data?.status === 'translated' ? Infinity : 60_000),
+    retry: false,
     placeholderData: undefined,
   })
 

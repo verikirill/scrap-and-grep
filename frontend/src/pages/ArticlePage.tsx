@@ -6,8 +6,10 @@ import { buttonClass } from '../components/tokens'
 import { Loading as LoadingRegion, Skeleton } from '../components/loading'
 import { Button, EmptyState, ErrorState, ReadingTime } from '../components/ui'
 import { ArticleBlocks } from '../features/reader/ArticleBlocks'
+import { TranslatingSkeleton, TranslationBar } from '../features/reader/ArticleTranslation'
+import { useArticleText } from '../features/reader/useArticleText'
 import { ApiError } from '../lib/api'
-import type { ArticleRead } from '../lib/api'
+import type { ArticleRead, Block } from '../lib/api'
 import { CATEGORY_LABELS, externalHref, formatDateTime } from '../lib/format'
 import { useArticle } from '../lib/queries'
 
@@ -60,14 +62,41 @@ function NotFound() {
   )
 }
 
+function ArticleBody({ articleId, blocks }: { articleId: number; blocks: Block[] }) {
+  if (blocks.length === 0) {
+    return (
+      <EmptyState icon={<FileText size={22} />} title="Текста нет">
+        В источнике был только заголовок. Статью можно открыть по ссылке на оригинал.
+      </EmptyState>
+    )
+  }
+  return (
+    <div className="mt-6">
+      <ArticleBlocks articleId={articleId} blocks={blocks} />
+    </div>
+  )
+}
+
 function Article({ article }: { article: ArticleRead }) {
   const host = hostOf(article.url)
   const heading = useRef<HTMLHeadingElement>(null)
+  const hasFocused = useRef(false)
+  const { text, choose } = useArticleText(article)
+  const isTranslating = text.state === 'translating'
+  const isTranslated = text.state === 'translated'
+  const title = isTranslated ? text.title : article.title
+  const blocks = isTranslated ? text.blocks : article.blocks
+  const shownLanguage = text.state === 'native' ? article.language : article.text_language
   // The list it was opened from is gone: reading starts at the headline, and
-  // a screen reader says where the reader is now.
-  useEffect(() => heading.current?.focus({ preventScroll: true }), [])
+  // a screen reader says where the reader is now. A translation shows it once written.
+  useEffect(() => {
+    if (isTranslating || hasFocused.current) return
+    hasFocused.current = true
+    heading.current?.focus({ preventScroll: true })
+  }, [isTranslating])
   return (
-    <article lang={article.language}>
+    <article lang={isTranslated ? 'ru' : shownLanguage}>
+      <TranslationBar text={text} onChoose={choose} />
       <header>
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-muted">
           <span className="font-medium text-foreground">{article.source_name}</span>
@@ -75,13 +104,17 @@ function Article({ article }: { article: ArticleRead }) {
           <time dateTime={article.published_at}>{formatDateTime(article.published_at)}</time>
           <ReadingTime minutes={article.reading_minutes} />
         </div>
-        <h1
-          ref={heading}
-          tabIndex={-1}
-          className="mt-3 font-serif text-[28px] leading-[1.2] font-semibold tracking-tight text-balance text-foreground outline-none sm:text-[34px]"
-        >
-          {article.title}
-        </h1>
+        {isTranslating ? (
+          <TranslatingSkeleton />
+        ) : (
+          <h1
+            ref={heading}
+            tabIndex={-1}
+            className="mt-3 font-serif text-[28px] leading-[1.2] font-semibold tracking-tight text-balance text-foreground outline-none sm:text-[34px]"
+          >
+            {title}
+          </h1>
+        )}
         {article.author && <p className="mt-2.5 text-sm text-muted">{article.author}</p>}
       </header>
 
@@ -92,15 +125,7 @@ function Article({ article }: { article: ArticleRead }) {
         </p>
       )}
 
-      {article.blocks.length > 0 ? (
-        <div className="mt-6">
-          <ArticleBlocks articleId={article.id} blocks={article.blocks} />
-        </div>
-      ) : (
-        <EmptyState icon={<FileText size={22} />} title="Текста нет">
-          В источнике был только заголовок. Статью можно открыть по ссылке на оригинал.
-        </EmptyState>
-      )}
+      {!isTranslating && <ArticleBody articleId={article.id} blocks={blocks} />}
 
       <footer className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-separator pt-5 text-sm text-muted">
         <p className="max-w-md">Текст и картинки со страницы {host}; права на них у источника.</p>

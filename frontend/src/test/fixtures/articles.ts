@@ -1,6 +1,14 @@
 // Articles: a search hit and a page of them, arrivals per day for the chart, and
 // an article opened in the reader with its text as blocks.
-import type { Article, ArticleRead, Block, Page, Span, TimelinePoint } from '../../lib/api'
+import type {
+  Article,
+  ArticleRead,
+  ArticleTranslation,
+  Block,
+  Page,
+  Span,
+  TimelinePoint,
+} from '../../lib/api'
 import { NEWS, daysBefore, nth, sourceOf } from './catalog'
 import { nextArticleId } from './ids'
 
@@ -138,6 +146,7 @@ export function makeArticleRead(overrides: Partial<ArticleRead> = {}): ArticleRe
     published_at: news.published_at,
     reading_minutes: 4,
     complete: true,
+    text_language: 'ru',
     blocks: [
       makeParagraphBlock(),
       makeImageBlock(),
@@ -159,6 +168,53 @@ export function makeArticleRead(overrides: Partial<ArticleRead> = {}): ArticleRe
         ],
       }),
     ],
+    ...overrides,
+  }
+}
+
+/** An English bulletin as the reader opens it, before it is translated. */
+export function makeEnglishArticleRead(overrides: Partial<ArticleRead> = {}): ArticleRead {
+  return makeArticleRead({
+    url: 'https://www.bleepingcomputer.com/news/security/siemens-fixes-s7-1500-flaw/',
+    title: 'Siemens fixes a flaw that lets attackers restart S7-1500 PLCs',
+    author: null,
+    language: 'en',
+    text_language: 'en',
+    blocks: [
+      makeParagraphBlock({
+        spans: [
+          makeSpan({ text: 'The vendor released firmware ' }),
+          makeSpan({ text: 'V3.1.5', b: true }),
+          makeSpan({ text: ' for the affected controllers.' }),
+        ],
+      }),
+      makeCodeBlock(),
+    ],
+    ...overrides,
+  })
+}
+
+/** The same bulletin in Russian, as the API translated it. */
+export function makeArticleTranslation(
+  overrides: Partial<ArticleTranslation> = {},
+): ArticleTranslation {
+  return {
+    id: 0,
+    status: 'translated',
+    source_language: 'en',
+    language: 'ru',
+    title: 'Siemens закрыла уязвимость, которая позволяет перезагрузить ПЛК S7-1500',
+    blocks: [
+      makeParagraphBlock({
+        spans: [
+          makeSpan({ text: 'Производитель выпустил прошивку ' }),
+          makeSpan({ text: 'V3.1.5', b: true }),
+          makeSpan({ text: ' для уязвимых контроллеров.' }),
+        ],
+      }),
+      makeCodeBlock(),
+    ],
+    reason: null,
     ...overrides,
   }
 }
