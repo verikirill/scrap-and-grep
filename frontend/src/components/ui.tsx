@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { Help, Schedule } from './icons'
+import { ArrowRight, Help, Schedule } from './icons'
 import { animate, motion, useMotionValue, useTransform } from 'motion/react'
 import { useEffect } from 'react'
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
@@ -37,6 +37,8 @@ export function Button({
     >
       {isBusy ? <Spinner /> : icon}
       {children}
+      {/* The call to action points where it leads. */}
+      {variant === 'cta' && <ArrowRight size={16} aria-hidden className="cta__arrow" />}
     </button>
   )
 }
@@ -393,12 +395,10 @@ export function PageHeader({
   return (
     <header className="mb-5 flex flex-wrap items-end justify-between gap-4 sm:mb-7">
       <div className="min-w-0">
-        <h1 className="text-[28px] leading-9 font-semibold tracking-tight text-foreground">
-          {title}
-        </h1>
+        <h1 className="title-pill text-[22px] leading-8 sm:text-[26px] sm:leading-9">{title}</h1>
         {/* Two lines on a phone: the page itself should start on the first screen. */}
         {subtitle && (
-          <p className="mt-1.5 line-clamp-2 max-w-2xl text-sm text-muted sm:line-clamp-none">
+          <p className="mt-3 line-clamp-2 max-w-2xl text-sm text-muted sm:line-clamp-none">
             {subtitle}
           </p>
         )}

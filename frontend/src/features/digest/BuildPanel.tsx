@@ -5,13 +5,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { Suspense, lazy, useState } from 'react'
 import type { DateRange } from '../../components/ui/calendar'
 import { Link } from 'react-router'
-import {
-  CalendarMonth,
-  CircleCheck,
-  DynamicFeed,
-  EventRepeat,
-  Newspaper,
-} from '../../components/icons'
+import { CalendarMonth, CircleCheck, DynamicFeed, EventRepeat } from '../../components/icons'
 import { Segmented } from '../../components/Segmented'
 import { useRadioKeys } from '../../components/useRadioKeys'
 import { ProfileAvatar } from '../profiles/ProfileLook'
@@ -279,8 +273,7 @@ export function BuildPanel({ profiles, initialProfileId, isBuilding = false, onC
             Специалисту и руководству
           </Button>
           <Button
-            variant="primary"
-            icon={<Newspaper size={18} />}
+            variant="cta"
             isBusy={create.isPending || isBuilding}
             disabled={!selectedId || !chosen || createBoth.isPending}
             onClick={submit}

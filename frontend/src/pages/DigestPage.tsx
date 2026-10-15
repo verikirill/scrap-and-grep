@@ -1,4 +1,4 @@
-import { FileText, Newspaper, RotateCcw } from '../components/icons'
+import { FileText, RotateCcw } from '../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
@@ -111,8 +111,7 @@ export function DigestPage() {
           )}
           {profiles.data && !showBuilder && (
             <Button
-              variant="tonal"
-              icon={<Newspaper size={18} />}
+              variant="cta"
               isBusy={isBuilding}
               onClick={() => setIsBuilderOpen(true)}
               className="w-full"

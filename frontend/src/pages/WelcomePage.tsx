@@ -1,4 +1,4 @@
-import { ArrowRight, ShieldCheck } from '../components/icons'
+import { ShieldCheck } from '../components/icons'
 import { Loading, Skeleton } from '../components/loading'
 import { LogoMark, Wordmark } from '../components/Logo'
 import { AnimatePresence, motion } from 'motion/react'
@@ -70,9 +70,8 @@ function Review({ resume, suggestion, onReplace }: ReviewProps) {
         <div className="mt-6 space-y-3">
           <ErrorNote error={save.error} />
           <Button
-            variant="primary"
+            variant="cta"
             className="w-full sm:w-auto"
-            icon={<ArrowRight size={16} />}
             isBusy={save.isPending}
             disabled={kept.length === 0 || spec.name.trim().length < 2}
             onClick={create}

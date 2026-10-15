@@ -196,6 +196,12 @@ describe('EmptyState and PageHeader', () => {
     expect(container.querySelector('svg.mascot')).toHaveAttribute('data-pose', 'waiting')
   })
 
+  it('gives the main action of a screen an arrow, keeping its name', () => {
+    render(<Button variant="cta">Собрать выпуск</Button>)
+    const button = screen.getByRole('button', { name: 'Собрать выпуск' })
+    expect(button).toHaveClass('cta')
+    expect(button.querySelector('.cta__arrow')).toHaveAttribute('aria-hidden', 'true')
+  })
 
   it('heads a page with its title, line and actions', () => {
     render(

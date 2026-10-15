@@ -1,6 +1,6 @@
 import { cn } from '../lib/utils'
 import clsx from 'clsx'
-import { Eye, EyeOff, LogIn, UserPlus } from '../components/icons'
+import { Eye, EyeOff } from '../components/icons'
 import { LogoMark, Wordmark } from '../components/Logo'
 import { motion } from 'motion/react'
 import { useRef, useState } from 'react'
@@ -202,11 +202,10 @@ export function AuthPage({ mode }: Props) {
 
             <Button
               type="submit"
-              variant="primary"
+              variant="cta"
               className="w-full"
               isBusy={login.isPending || register.isPending}
               disabled={pending || (isRegister && meta.data?.registration_open === false)}
-              icon={isRegister ? <UserPlus size={16} /> : <LogIn size={16} />}
             >
               {isRegister ? 'Зарегистрироваться' : 'Войти'}
             </Button>
