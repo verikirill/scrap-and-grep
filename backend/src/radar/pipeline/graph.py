@@ -29,6 +29,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.types import RetryPolicy, Send
 
 from radar.cards import (
+    OTHER_TOPIC,
     PRIORITY_ORDER,
     SECTION_KINDS,
     SECTION_TITLES,
@@ -36,12 +37,15 @@ from radar.cards import (
     check_entry,
     plain_brief,
     plain_lines,
+    plain_prose,
+    plain_title,
     priority,
     section_overview,
     source_text,
     technique_ids,
 )
 from radar.domain import (
+    ArticleRef,
     Candidate,
     DigestOverview,
     Grade,
@@ -54,16 +58,24 @@ from radar.domain import (
     TopicName,
     VulnerabilityReference,
 )
+from radar.fix_status import reconcile_fix
 from radar.logging import get_logger
 from radar.pipeline.ports import PipelineDeps
 from radar.recsys.model import Learned, adapted_weight
 from radar.selection.clustering import cluster_items
 from radar.selection.retrieval import Window
-from radar.selection.scoring import final_score, rank_candidates, select
+from radar.selection.scoring import (
+    REJECT_DUPLICATE,
+    final_score,
+    merge_written,
+    rank_candidates,
+    select,
+)
 
 log = get_logger(__name__)
 
-# Enough for the summary prompt; keeps checkpoints small.
+# Enough for the summary prompt; keeps checkpoints small. The card check
+# reads the whole stored text (DigestNodes._full_text).
 STATE_CONTENT_LIMIT = 4000
 # Backstop only. A slow model call times out on its own (llm_timeout_seconds)
 # and falls back to the heuristic; this bounds a node that hangs elsewhere.
@@ -374,7 +386,7 @@ class DigestNodes:
         interest = profile.interest(item.graded.interest_id)
         written = await self._deps.intelligence.summarize(item, profile, interest)
         article = item.article
-        source = source_text(article.title, article.summary, article.content)
+        source = source_text(article.title, article.summary, await self._full_text(article))
         written = await self._with_references(written, source)
         # Checked here, past the answer cache: a better check applies to answers
         # cached before it without paying for them again. What the reference
@@ -384,11 +396,25 @@ class DigestNodes:
         )
         techniques = await self._techniques(written, evidence)
         text = check_entry(written, evidence, techniques)
+        # The update row and the advice agree on whether the fix is out. The
+        # article decides, not the bases: BDU names "обновление программного
+        # обеспечения" as the way to fix before any fixed build exists.
+        text = reconcile_fix(text, source)
         # Past the cache as well: a brief written before the rule keeps to it.
         if profile.audience == "management":
             text = plain_brief(text)
         _emit("summarize", done=1)
         return {"summaries": [{"article_id": item.article.id, "text": text.model_dump()}]}
+
+    async def _full_text(self, article: ArticleRef) -> str | None:
+        """The article as stored: a fact far down a long report stays on the
+        card. The trimmed text of the state when the store cannot tell."""
+        try:
+            texts = await self._deps.store.article_texts([article.id])
+        except Exception as exc:
+            log.warning("article_text_unavailable", error=f"{type(exc).__name__}: {exc}"[:300])
+            return article.content
+        return texts.get(article.id) or article.content
 
     async def _techniques(self, text: ItemSummary, source: str) -> dict[str, str] | None:
         """The ATT&CK reference for the card's techniques and for the ids the
@@ -464,32 +490,48 @@ class DigestNodes:
             entry["index"]: TopicName.model_validate(entry["name"])
             for entry in state.get("topic_names", [])
         }
-        items = {
-            item.article.id: item.model_copy(update={"text": texts.get(item.article.id)})
+        if profile.audience == "management":
+            # A topic is named from the articles' titles, which may carry a CVE.
+            names = {index: _plain_name(name) for index, name in names.items()}
+        written = [
+            item.model_copy(update={"text": texts.get(item.article.id)})
             for item in (SelectedItem.model_validate(raw) for raw in state["selected"])
-        }
-        groups = state.get("groups", [])
+        ]
+        # Cards may tie two entries to one vulnerability that their articles
+        # did not (a BDU id the bases give a CVE): one entry, the other a retelling.
+        merged, absorbed = merge_written(written)
+        items = {item.article.id: item for item in merged}
+        groups = [
+            [article_id for article_id in group if article_id in items]
+            for group in state.get("groups", [])
+        ]
         kinds = state.get("group_kinds") or [None] * len(groups)
         topics = _unique_titles(
             [
                 _section(SECTION_KINDS[kind], [items[article_id] for article_id in group])
                 if kind in SECTION_KINDS
                 else Topic(
-                    title=names[index].title if index in names else "Разное",
+                    title=names[index].title if index in names else OTHER_TOPIC,
                     overview=names[index].overview if index in names else "",
                     items=tuple(items[article_id] for article_id in group),
                 )
                 for index, (group, kind) in enumerate(zip(groups, kinds, strict=True))
+                if group
             ]
         )
+        rejected = {
+            **state.get("rejected", {}),
+            **{str(item.article.id): REJECT_DUPLICATE for item in absorbed},
+        }
         if topics:
             overview = await self._deps.intelligence.overview(topics, profile)
         else:
-            overview = DigestOverview(title=f"Дайджест для профиля «{profile.name}»")
+            overview = DigestOverview(title=_default_title(profile))
         if profile.audience == "management":
             # The offline overview takes headlines, which may carry a CVE.
             overview = overview.model_copy(
                 update={
+                    "title": plain_title(overview.title) or _default_title(profile),
                     "highlights": plain_lines(overview.highlights, 5),
                     "implications": plain_lines(overview.implications, 3),
                 }
@@ -497,6 +539,7 @@ class DigestNodes:
         return {
             "overview": overview.model_dump(mode="json"),
             "topics": [topic.model_dump(mode="json") for topic in topics],
+            "rejected": rejected,
         }
 
     async def persist(self, state: DigestState) -> dict[str, Any]:
@@ -565,6 +608,20 @@ def _section(kind: RecordKind, items: list[SelectedItem]) -> Topic:
 
 def _references(items: list[SelectedItem]) -> list[VulnerabilityReference]:
     return [reference for item in items if item.text for reference in item.text.references]
+
+
+def _default_title(profile: ProfileSpec) -> str:
+    return f"Дайджест для профиля «{profile.name}»"
+
+
+def _plain_name(name: TopicName) -> TopicName:
+    """A topic's name for management; an overview that is all ids goes."""
+    return name.model_copy(
+        update={
+            "title": plain_title(name.title) or OTHER_TOPIC,
+            "overview": plain_prose(name.overview),
+        }
+    )
 
 
 def _unique_titles(topics: list[Topic]) -> list[Topic]:

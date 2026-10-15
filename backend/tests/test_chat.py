@@ -371,3 +371,42 @@ async def test_an_openai_compatible_server_reports_tokens_but_not_the_time_of_wr
     assert model.usage.output_tokens == 10
     # The server does not say how long it wrote: no speed rather than a made-up one.
     assert model.usage.tokens_per_second is None
+
+
+@pytest.mark.parametrize(
+    ("written", "read"),
+    [
+        # gpt-oss wrote "кражe" with a Latin "e"; a search for "краже" missed it.
+        ("Риск кражe данных", "Риск краже данных"),
+        ("Новая уязвимоcть в ПЛК", "Новая уязвимость в ПЛК"),
+        ("Pоссийские компании", "Российские компании"),
+        ("Атака на TЭЦ", "Атака на ТЭЦ"),
+        # An escaped line break stays one: its "n" does not join the word.
+        ("Итог:\nкражe", "Итог:\nкраже"),
+    ],
+)
+async def test_a_russian_word_keeps_cyrillic_letters_only(written: str, read: str) -> None:
+    assert written != read
+    server = Server(json.dumps({"relevance": 2, "reason": written}, ensure_ascii=False))
+
+    verdict = await chat(server).ask(Verdict, "Оцени.", "Статья")
+
+    assert verdict.reason == read
+
+
+@pytest.mark.parametrize(
+    "written",
+    [
+        "Wi-Fi-сеть, IoT-устройства и CVE-2026-88772",
+        "Microsoft и Cisco закрыли уязвимости",
+        "COPY, TOP и ACE",
+        "x86-серверы и T1059",
+        "Подробности: https://example.ru/novosti/кражe",
+    ],
+)
+async def test_latin_words_identifiers_and_addresses_stay_as_written(written: str) -> None:
+    server = Server(json.dumps({"relevance": 2, "reason": written}, ensure_ascii=False))
+
+    verdict = await chat(server).ask(Verdict, "Оцени.", "Статья")
+
+    assert verdict.reason == written

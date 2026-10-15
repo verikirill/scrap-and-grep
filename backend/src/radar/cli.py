@@ -22,6 +22,8 @@ from radar.console import (
     Target,
     addresses,
     file_stem,
+    moment,
+    period_text,
     progress_line,
     targets,
 )
@@ -229,8 +231,8 @@ async def _add_sources(path: Path) -> None:
     await embed_pending(get_embedder())
 
 
-async def _register(target: Target, email: str | None) -> tuple[uuid.UUID, int]:
-    """The digest's row for this target, and the period it covers in days."""
+async def _register(target: Target, email: str | None) -> tuple[uuid.UUID, datetime, datetime]:
+    """The digest's row for this target, and the start and end of its period."""
     from radar.auth import DEMO_EMAIL
     from radar.db import session_scope
     from radar.db.models import Profile, User
@@ -255,17 +257,17 @@ async def _register(target: Target, email: str | None) -> tuple[uuid.UUID, int]:
                 raise typer.BadParameter(f"unknown profile: {target.profile_name}")
             user_id, profile_id, version = row.user_id, row.id, row.version
             spec = ProfileSpec.model_validate(row.spec)
-        days = target.period(spec.audience)
+        start, end = target.bounds(spec.audience, now)
         created = await digest_store.create(
             session,
             user_id=user_id,
             profile_id=profile_id,
             profile=spec,
             profile_version=version,
-            period_start=now - timedelta(days=days),
-            period_end=now,
+            period_start=start,
+            period_end=end,
         )
-        return created.id, days
+        return created.id, start, end
 
 
 async def _show_progress(digest_id: uuid.UUID) -> None:
@@ -312,8 +314,8 @@ async def _build(target: Target, email: str | None, out: Path, mail_to: str | No
     from radar.store import digests as digest_store
     from radar.views import digest_view
 
-    digest_id, days = await _register(target, email)
-    typer.echo(f"\n{target.label}: выпуск за {days} дн.")
+    digest_id, start, end = await _register(target, email)
+    typer.echo(f"\n{target.label}: выпуск за {period_text(start, end)}")
     watcher = asyncio.create_task(_show_progress(digest_id))
     try:
         await run_digest(digest_id)
@@ -328,7 +330,7 @@ async def _build(target: Target, email: str | None, out: Path, mail_to: str | No
         if loaded is None:
             raise typer.Exit(code=1)
         view = digest_view(loaded)
-    stem = file_stem(target.label, days, datetime.now().astimezone())
+    stem = file_stem(target.label, start, end, datetime.now().astimezone())
     markdown = await asyncio.to_thread(_write, out, stem, render_markdown(view), render_docx(view))
     stats = view.stats
     typer.echo(
@@ -338,6 +340,15 @@ async def _build(target: Target, email: str | None, out: Path, mail_to: str | No
     if mail_to:
         await _mail(view, mail_to)
     return markdown
+
+
+def _moment(text: str) -> datetime:
+    """`moment` for an option: typer shows a ValueError as the value alone,
+    without the words that say what is wrong with it."""
+    try:
+        return moment(text)
+    except ConsoleError as exc:
+        raise typer.BadParameter(str(exc)) from exc
 
 
 async def _mail(view: DigestView, to: str) -> None:
@@ -373,7 +384,30 @@ def digest(
     ] = None,
     days: Annotated[
         int | None,
-        typer.Option(min=1, max=90, help="Period; a day for specialists, a week for management."),
+        typer.Option(
+            min=1,
+            max=90,
+            help="Days of the period, counted back from its end; a day for specialists, "
+            "a week for management.",
+        ),
+    ] = None,
+    period_end: Annotated[
+        datetime | None,
+        typer.Option(
+            parser=_moment,
+            metavar="<datetime>",
+            help="End of the period in ISO 8601, such as 2026-10-03T04:27, Moscow time unless "
+            "an offset is given. Now if omitted; a past moment rebuilds a digest of that time "
+            "from the stored articles.",
+        ),
+    ] = None,
+    period_start: Annotated[
+        datetime | None,
+        typer.Option(
+            parser=_moment,
+            metavar="<datetime>",
+            help="Start of the period, written the same way, instead of --days.",
+        ),
     ] = None,
     fresh: Annotated[bool, typer.Option(help="Fetch every source before building.")] = False,
     source_file: Annotated[
@@ -397,7 +431,7 @@ def digest(
     management over the last week, from the example profiles.
     """
     try:
-        wanted = targets(audience, profile, profile_file, days)
+        wanted = targets(audience, profile, profile_file, days, start=period_start, end=period_end)
     except ConsoleError as exc:
         raise typer.BadParameter(str(exc)) from exc
 

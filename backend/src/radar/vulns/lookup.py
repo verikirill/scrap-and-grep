@@ -11,7 +11,7 @@ copies the ingest worker keeps fresh: nothing is asked outside here.
 
 import re
 from collections.abc import Sequence
-from datetime import date
+from datetime import date, datetime
 
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,8 +29,11 @@ from radar.domain import VulnerabilityReference
 from radar.text import truncate
 from radar.vulns.nvd import ABSENT
 
-# Enough for one card: a roundup of thirty CVEs is not looked up whole.
-MAX_IDS = 6
+# Every id of a card is looked up, a roundup of dozens of CVEs too; the bound
+# only keeps a list pasted whole from a catalogue from turning into one query.
+MAX_IDS = 200
+# The BDU entries are searched by text, one pattern per id: this many at a time.
+BDU_BATCH = 25
 _BDU_PAGE_RE = re.compile(r"bdu\.fstec\.ru/vul/(\d{4}-\d{5})")
 _EXPLOIT_RE = re.compile(r"^Эксплойт: (.+?)\.$", re.MULTILINE)
 _SCORE_RE = re.compile(r"базовая оценка CVSS 3\.\d составляет (\d+(?:[.,]\d+)?)")
@@ -59,6 +62,30 @@ def bdu_reference(identifier: str, url: str, text: str) -> VulnerabilityReferenc
         bdu_vector=vector.group(1) if vector else "",
         bdu_fix=truncate(fix.group(1), 120) if fix else "",
     )
+
+
+async def _bdu_entries(session: AsyncSession, ids: Sequence[str]) -> list[tuple[str, str]]:
+    """The BDU entries that name these ids, newest first, as (url, text)."""
+    found: list[tuple[datetime, str, str]] = []
+    for start in range(0, len(ids), BDU_BATCH):
+        batch = ids[start : start + BDU_BATCH]
+        # A BDU entry names its CVEs in its text; a BDU id is in its address.
+        wanted = [
+            Article.url.contains(value.removeprefix("BDU:"))
+            if value.startswith("BDU:")
+            else Article.content.contains(value)
+            for value in batch
+        ]
+        rows = await session.execute(
+            select(Article.published_at, Article.url, Article.content)
+            .join(Source, Source.id == Article.source_id)
+            .where(Source.feed_url.contains("bdu.fstec.ru"), or_(*wanted))
+            .order_by(Article.published_at.desc())
+            .limit(len(batch) * 4)
+        )
+        found += [(published, url, content or "") for published, url, content in rows.all()]
+    newest = sorted(dict.fromkeys(found), key=lambda row: row[0], reverse=True)
+    return [(url, content) for _, url, content in newest]
 
 
 async def lookup(session: AsyncSession, values: Sequence[str]) -> list[VulnerabilityReference]:
@@ -97,28 +124,14 @@ async def lookup(session: AsyncSession, values: Sequence[str]) -> list[Vulnerabi
             row.cve_id not in first_exploit or row.published < first_exploit[row.cve_id]
         ):
             first_exploit[row.cve_id] = row.published
-    # A BDU entry names its CVEs in its text; a BDU id is in its address.
-    wanted = [Article.content.contains(value) for value in cves] + [
-        Article.url.contains(value.removeprefix("BDU:"))
-        for value in ids
-        if value.startswith("BDU:")
-    ]
-    entries = (
-        await session.execute(
-            select(Article.url, Article.content)
-            .join(Source, Source.id == Article.source_id)
-            .where(Source.feed_url.contains("bdu.fstec.ru"), or_(*wanted))
-            .order_by(Article.published_at.desc())
-            .limit(MAX_IDS * 4)
-        )
-    ).all()
+    entries = await _bdu_entries(session, ids)
     references = []
     for value in ids:
         bdu = next(
             (
-                bdu_reference(value, url, content or "")
+                bdu_reference(value, url, content)
                 for url, content in entries
-                if _names(content or "", value) or _names(url, value.removeprefix("BDU:"))
+                if _names(content, value) or _names(url, value.removeprefix("BDU:"))
             ),
             VulnerabilityReference(id=value),
         )

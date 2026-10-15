@@ -20,7 +20,9 @@ from radar.domain import (
     GradedCandidate,
     Interest,
     ProfileSpec,
+    SelectedItem,
     Topic,
+    TopicName,
     VulnerabilityReference,
 )
 from radar.pipeline.graph import DigestState, build_graph
@@ -83,6 +85,13 @@ class FakeStore:
     async def attack_techniques(self, ids: Sequence[str]) -> dict[str, str]:
         known = {"T1566": "Phishing"}
         return {value: known[value] for value in ids if value in known}
+
+    async def article_texts(self, article_ids: Sequence[int]) -> dict[int, str]:
+        return {
+            article.id: article.content
+            for article in self.articles
+            if article.id in article_ids and article.content
+        }
 
     async def vulnerability_facts(self, ids: Sequence[str]) -> list[VulnerabilityReference]:
         # One CVE in the CISA catalogue; the rest unknown.
@@ -438,6 +447,43 @@ async def test_management_reads_no_identifiers_even_from_an_offline_digest(
     assert all(technical_tokens(line) == [] for line in overview.highlights)
 
 
+class TechnicalNames(HeuristicIntelligence):
+    """Names a topic and an issue the way the model did for a specialist."""
+
+    async def name_topic(self, items: Sequence[SelectedItem], profile: ProfileSpec) -> TopicName:
+        return TopicName(
+            title="Citrix NetScaler: критические уязвимости CVE-2026-88771 и CVE-2026-88772",
+            overview="В теме обсуждаются новые разъяснения ФСТЭК о порядке и сроках "
+            "представления результатов оценки защищённости ИС, практические аспекты "
+            "аттестации по приказу 117 и методы приоритизации новостей об уязвимостях "
+            "вместо использования только CVSS-балла.",
+        )
+
+    async def overview(self, topics: Sequence[Topic], profile: ProfileSpec) -> DigestOverview:
+        return DigestOverview(
+            title="Cisco Catalyst SD-WAN Manager: критическая уязвимость CVE-2026-76504"
+        )
+
+
+async def test_management_reads_no_identifiers_in_a_topic_or_the_issue_title(
+    profile: ProfileSpec, security_week: list[ArticleRef]
+) -> None:
+    store = FakeStore(security_week)
+    graph = build_graph(_deps(store, TechnicalNames())).compile(checkpointer=InMemorySaver())
+    management = profile.model_copy(update={"max_items": 10, "audience": "management"})
+
+    await graph.ainvoke(_input(management), CONFIG)
+
+    assert store.saved is not None
+    assert store.saved["overview"].title == "Cisco Catalyst SD-WAN Manager: критическая уязвимость"
+    topics: list[Topic] = store.saved["topics"]
+    assert topics
+    assert topics[0].title == "Citrix NetScaler: критические уязвимости"
+    for topic in topics:
+        # Its only sentence names CVSS: the overview goes rather than read half a thought.
+        assert topic.overview == ""
+
+
 async def test_a_vulnerability_the_text_is_quiet_about_is_raised_by_the_catalogue(
     profile: ProfileSpec, make_article: ArticleFactory
 ) -> None:
@@ -507,6 +553,125 @@ async def test_a_reference_from_the_answer_cache_is_looked_up_again() -> None:
     [reference] = (await nodes._with_references(card, "CVE-2026-2222")).references
 
     assert (reference.epss, reference.exploits, reference.via) == (0.42, ("EDB-1",), "model")
+
+
+class TiedByBdu(FakeStore):
+    """The bases know CVE-2026-104286 as BDU:2026-15790, as the BDU of FSTEC does."""
+
+    async def vulnerability_facts(self, ids: Sequence[str]) -> list[VulnerabilityReference]:
+        return [
+            VulnerabilityReference(id=value, bdu_id="BDU:2026-15790", bdu_in_attacks=True)
+            if value in ("CVE-2026-104286", "BDU:2026-15790")
+            else VulnerabilityReference(id=value)
+            for value in ids
+        ]
+
+
+async def test_two_entries_the_bases_tie_to_one_vulnerability_are_saved_as_one(
+    profile: ProfileSpec, make_article: ArticleFactory
+) -> None:
+    """Selection merges by the ids an article prints; one post names the CVE,
+    the other only its BDU entry, and the cards meet them."""
+    english = make_article(
+        "Уязвимость CVE-2026-104286 в SCADA-шлюзе FortiMail", "Обход пути и запись файлов."
+    )
+    russian = make_article(
+        "Уязвимость BDU:2026-15790 в почтовом шлюзе", "Нарушитель записывает произвольные файлы."
+    )
+    store = TiedByBdu([english, russian])
+    graph = build_graph(_deps(store, HeuristicIntelligence())).compile(checkpointer=InMemorySaver())
+
+    await graph.ainvoke(_input(profile), CONFIG)
+
+    assert store.saved is not None
+    [section] = [topic for topic in store.saved["topics"] if topic.title == "Уязвимости"]
+    [entry] = section.items
+    assert entry.article.id == english.id
+    assert [dup.url for dup in entry.duplicates] == [russian.url]
+    assert store.saved["rejected"][russian.id] == "duplicate"
+    assert store.saved["stats"]["duplicates_merged"] == 1
+
+
+class AdvisesThePatch(HeuristicIntelligence):
+    """A model answer like the one the jury read: the row knows the update is
+    not out, the advice says to install it."""
+
+    async def summarize(self, item: Any, profile: ProfileSpec, interest: Interest | None) -> Any:
+        from radar.domain import ItemSummary, VulnerabilityCard
+
+        return ItemSummary(
+            headline=item.article.title,
+            summary="Неавторизованный злоумышленник записывает произвольные файлы.",
+            why="Срочно установите патч.",
+            by_model=True,
+            vulnerability=VulnerabilityCard(
+                ids=("CVE-2026-104286",),
+                fix="Обновить до FortiMail 7.4.9",
+                workaround="Отключить IBE",
+                exploit="in_the_wild",
+            ),
+        )
+
+
+async def test_advice_to_patch_gives_way_to_the_workaround_when_the_fix_is_not_out(
+    profile: ProfileSpec, make_article: ArticleFactory
+) -> None:
+    article = make_article(
+        "Уязвимость CVE-2026-104286 в SCADA-шлюзе FortiMail",
+        "Обновления пока недоступны, Fortinet называет версию 7.4.9. Пока их нет, отключите IBE.",
+    )
+    store = FakeStore([article])
+    graph = build_graph(_deps(store, AdvisesThePatch())).compile(checkpointer=InMemorySaver())
+
+    await graph.ainvoke(_input(profile), CONFIG)
+
+    assert store.saved is not None
+    [entry] = [item for topic in store.saved["topics"] for item in topic.items]
+    assert entry.text.why == "Исправление ещё не выпущено, до его выхода: отключить IBE."
+    assert (
+        entry.text.vulnerability.fix == "Обновить до FortiMail 7.4.9. Исправление ещё не выпущено."
+    )
+
+
+class ScoresFromTheEnd(HeuristicIntelligence):
+    """A card with the score a long report gives far down; what the model read is kept."""
+
+    def __init__(self) -> None:
+        self.read: list[int] = []
+
+    async def summarize(self, item: Any, profile: ProfileSpec, interest: Interest | None) -> Any:
+        from radar.domain import ItemSummary, VulnerabilityCard
+
+        self.read.append(len(item.article.content or ""))
+        return ItemSummary(
+            headline=item.article.title,
+            summary="Обход пути позволяет записывать файлы.",
+            by_model=True,
+            vulnerability=VulnerabilityCard(ids=("CVE-2026-104286",), cvss_score="9.8"),
+        )
+
+
+async def test_the_card_is_checked_against_the_whole_stored_article(
+    profile: ProfileSpec, make_article: ArticleFactory
+) -> None:
+    from radar.pipeline.graph import STATE_CONTENT_LIMIT
+
+    content = "Разбор цепочки эксплуатации по шагам. " * 200 + "Оценка CVSS 9.8."
+    article = make_article(
+        "Уязвимость CVE-2026-104286 в SCADA-шлюзе FortiMail", "Обход пути.", content=content
+    )
+    model = ScoresFromTheEnd()
+    store = FakeStore([article])
+    graph = build_graph(_deps(store, model)).compile(checkpointer=InMemorySaver())
+
+    await graph.ainvoke(_input(profile), CONFIG)
+
+    assert store.saved is not None
+    [entry] = [item for topic in store.saved["topics"] for item in topic.items]
+    assert entry.text.vulnerability.cvss_score == "9.8"
+    assert "Оценка CVSS" not in entry.text.unsupported
+    # The model still reads the trimmed text the state keeps.
+    assert model.read == [STATE_CONTENT_LIMIT]
 
 
 class ModelGrades(CountingIntelligence):

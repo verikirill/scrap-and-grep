@@ -320,6 +320,12 @@ class VulnerabilityReference(BaseModel):
             or bool(self.exploits)
         )
 
+    @property
+    def partial_source(self) -> bool:
+        """A BDU id is looked up in a copy of two BDU feeds, not the whole
+        BDU: its absence there says nothing of the id."""
+        return self.id.startswith("BDU:")
+
     def text(self) -> str:
         """The facts in words, for the model and for the check of a card."""
         parts = []
@@ -374,7 +380,11 @@ class VulnerabilityReference(BaseModel):
             parts.append(f"EPSS {chance}: вероятность эксплуатации за 30 дней{percentile}")
         if self.exploits:
             parts.append("Exploit-DB: публичный эксплойт " + ", ".join(self.exploits))
-        return f"{self.id}: " + ("; ".join(parts) if parts else "нет в справочных базах")
+        if parts:
+            return f"{self.id}: " + "; ".join(parts)
+        if self.partial_source:
+            return f"{self.id}: в локальной копии БДУ не найдено, копия неполная"
+        return f"{self.id}: нет в справочных базах"
 
 
 class ItemSummary(BaseModel):
@@ -385,7 +395,8 @@ class ItemSummary(BaseModel):
     attack: AttackCard | None = None
     vulnerability: VulnerabilityCard | None = None
     tags: tuple[ManagementTag, ...] = ()
-    # Card fields and claims the check against the article's text took out.
+    # Card fields and claims the check against the article's text took out;
+    # ids it took out are named by number, "CVE-2026-1234, BDU:2026-01679".
     unsupported: tuple[str, ...] = ()
     # The bases the card was checked against, id by id.
     references: tuple[VulnerabilityReference, ...] = ()

@@ -8,6 +8,7 @@ from io import BytesIO
 import pytest
 from docx import Document
 from docx.opc.constants import RELATIONSHIP_TYPE
+from markdown_it import MarkdownIt
 
 from radar.domain import Interest, ProfileSpec
 from radar.render.docx import render_docx
@@ -15,6 +16,10 @@ from radar.render.markdown import render_markdown
 from radar.views import DigestView, DuplicateView, ItemView, TopicView, read_via
 
 PUBLISHED = datetime(2026, 9, 29, 21, 30, tzinfo=UTC)
+
+# GitLab renders Markdown by CommonMark and lets raw HTML through, so the
+# export is checked as such a renderer reads it, not as a string.
+COMMONMARK = MarkdownIt("commonmark", {"html": True}).enable("table")
 
 
 def _item(article_id: int, headline: str, **extra: object) -> ItemView:
@@ -107,10 +112,26 @@ def test_text_from_articles_and_the_model_cannot_add_links_or_html(digest: Diges
 
     # A closing bracket that is not escaped would end the link text early.
     assert re.search(r"(?<!\\)\]\(https://evil", text) is None
-    assert "<img" not in text
-    assert "<script>" not in text
-    assert "<b>" not in text
+    html = COMMONMARK.render(text)
+    assert "<img" not in html
+    assert "<script>" not in html
+    assert "<b>" not in html
     assert "(https://example.org/a/3)" in text
+
+
+def test_a_tag_in_a_title_reads_as_text_and_never_becomes_html(digest: DigestView) -> None:
+    hostile = _item(4, "<script>alert(1)</script> в SCADA", title="<script>alert(2)</script>")
+    topic = TopicView(title="АСУ ТП", overview="", items=[hostile])
+
+    text = render_markdown(digest.model_copy(update={"topics": [topic]}))
+    html = COMMONMARK.render(text)
+
+    # Escaped by a backslash, not by an entity: the raw file reads as written.
+    assert "\\<script\\>alert(1)\\</script\\> в SCADA" in text
+    assert "&lt;" not in text
+    assert "<script" not in html
+    assert "&lt;script&gt;alert(1)&lt;/script&gt; в SCADA</a>" in html
+    assert "Оригинал: &lt;script&gt;alert(2)&lt;/script&gt;" in html
 
 
 def test_markdown_shows_dates_in_moscow_time(digest: DigestView) -> None:

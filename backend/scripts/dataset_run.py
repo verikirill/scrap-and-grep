@@ -132,8 +132,9 @@ async def run_one(client: Any, example: dict[str, Any], number: int) -> dict[str
     grade = await intelligence.grade(candidate, profile)
     item = SelectedItem(graded=GradedCandidate(candidate=candidate, grade=grade, score=0.8))
     written = await intelligence.summarize(item, profile, profile.interest(grade.interest_id))
-    # The graph's own steps after the model: references for the card's ids, the check.
-    source = source_text(article.title, article.summary, article.content)
+    # The graph's own steps after the model: references for the card's ids, the
+    # check against the whole text, as the graph does with the stored article.
+    source = source_text(article.title, article.summary, text)
     ids = card_ids(written, source)
     kept = [r for r in written.references if r.found and (r.id in ids or r.bdu_id in ids)]
     covered = {r.id for r in kept} | {r.bdu_id for r in kept}

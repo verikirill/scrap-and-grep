@@ -11,6 +11,7 @@ from radar.cards import (
     check_attack,
     check_vulnerability,
     extract_indicators,
+    normal_cvss_vector,
     parse_cvss_vector,
     reference_rows,
     vulnerability_rows,
@@ -79,6 +80,40 @@ def test_a_cvss_2_vector_reads_its_access_and_complexity() -> None:
 
 def test_a_vector_that_is_not_one_reads_as_nothing() -> None:
     assert parse_cvss_vector("высокий") == []
+
+
+V3 = "AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+
+
+@pytest.mark.parametrize(
+    ("vector", "context", "shown"),
+    [
+        # The version from the vector, from the score text, or from CVSS 4 metrics.
+        (f"CVSS:3.1/{V3}", "", f"CVSS:3.1/{V3}"),
+        (V3, "9.8 (CVSS v3.1)", f"CVSS:3.1/{V3}"),
+        (
+            "AV:L/AC:L/AT:N/PR:L/UI:A/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
+            "",
+            "CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:A/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
+        ),
+        # CVSS 2 has no prefix; a version nothing tells is not made up.
+        ("AV:N/AC:M/Au:N/C:P/I:P/A:P", "CVSS 3.1", "AV:N/AC:M/Au:N/C:P/I:P/A:P"),
+        (V3, "9.8", V3),
+        ("Vendor Equipment Vulnerabilities v3 3.5", "3.5", ""),
+    ],
+)
+def test_a_cvss_vector_is_shown_in_one_form(vector: str, context: str, shown: str) -> None:
+    assert normal_cvss_vector(vector, context) == shown
+
+
+def test_the_check_takes_the_vector_version_from_the_text() -> None:
+    card = VulnerabilityCard(ids=("CVE-2026-88772",), cvss_score="9.8", cvss_vector=V3)
+    source = f"CVE-2026-88772, базовая оценка CVSS 3.1 составляет 9.8.\nCVSS 3.1: {V3}"
+
+    checked, removed = check_vulnerability(card, source)
+
+    assert checked.cvss_vector == f"CVSS:3.1/{V3}"
+    assert removed == []
 
 
 KNOWN = {"T1566": "Phishing", "T1190": "Exploit Public-Facing Application"}
@@ -170,6 +205,22 @@ def test_the_due_date_is_in_the_reference_text_and_row() -> None:
     assert "устранить до 18.10.2026" in reference.text()
     assert "CWE-787" in reference.text()
     assert "устранить до 18.10.2026" in reference_rows([reference])[0][1]
+
+
+def test_a_bdu_id_the_partial_copy_lacks_is_not_called_missing() -> None:
+    """The local BDU holds the entries of two feeds only: an id it lacks may
+    well exist. A CVE that no base knows is still named."""
+    known = VulnerabilityReference(id="BDU:2026-15497", bdu_id="BDU:2026-15497")
+    lacking = VulnerabilityReference(id="BDU:2026-01678")
+    unknown = VulnerabilityReference(id="CVE-2026-11111")
+
+    [(_, row)] = reference_rows([known, lacking, unknown])
+
+    assert "BDU:2026-01678" not in row
+    assert row.startswith("BDU:2026-15497: BDU:2026-15497")
+    assert row.endswith("нет в справочных базах: CVE-2026-11111")
+    assert reference_rows([lacking]) == []
+    assert "нет в справочных базах" not in lacking.text()
 
 
 def test_the_attack_card_lists_the_new_rows() -> None:

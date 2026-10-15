@@ -107,6 +107,9 @@ def export(client: httpx.Client, digest: dict[str, Any], stem: Path) -> None:
             f"{API}/digests/{digest['id']}/export.{extension}"
         ).raise_for_status()
         stem.with_suffix(f".{extension}").write_bytes(body.content)
+    # The view both exports are rendered from: after a rule of the digest
+    # changes, a committed issue can be rendered and checked again without a model.
+    write_json(stem.with_suffix(".json"), digest)
     stats = digest["stats"]
     print(
         f"  {stem}: {stats['selected']} items, {len(digest['topics'])} topics, "

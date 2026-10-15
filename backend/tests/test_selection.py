@@ -1,10 +1,22 @@
 """The rules that decide what a reader sees."""
 
+from datetime import UTC, datetime
+
 import numpy as np
 import pytest
 
 from radar.ai.embedder import HashingEmbedder, fit_dimension
-from radar.domain import Candidate, Grade, GradedCandidate, ProfileSpec
+from radar.domain import (
+    Candidate,
+    DuplicateRef,
+    Grade,
+    GradedCandidate,
+    ItemSummary,
+    ProfileSpec,
+    SelectedItem,
+    VulnerabilityCard,
+    VulnerabilityReference,
+)
 from radar.selection.clustering import cluster_items
 from radar.selection.retrieval import _excluded_by, exclusion_query, keyword_query
 from radar.selection.scoring import (
@@ -16,6 +28,7 @@ from radar.selection.scoring import (
     final_score,
     lexical_score,
     mentions,
+    merge_written,
     rank_candidates,
     retrieval_score,
     same_vulnerability,
@@ -297,3 +310,160 @@ def test_names_leave_the_ids_out_and_come_from_the_text_when_the_title_has_none(
     assert printed.names == {"citrix", "netscaler"}
     assert printed.ids == {"CVE-2026-88772"}
     assert untitled.names == {"divd", "zammad"}
+
+
+def _written(
+    make_article: ArticleFactory,
+    title: str,
+    score: float,
+    ids: tuple[str, ...],
+    references: tuple[VulnerabilityReference, ...] = (),
+) -> SelectedItem:
+    graded = _graded(make_article, title, "", score)
+    return SelectedItem(
+        graded=graded.model_copy(
+            update={"grade": graded.grade.model_copy(update={"kind": "vulnerability"})}
+        ),
+        text=ItemSummary(
+            summary="",
+            vulnerability=VulnerabilityCard(ids=ids),
+            references=references,
+        ),
+    )
+
+
+def test_entries_the_bases_tie_to_one_vulnerability_become_one_after_the_cards(
+    make_article: ArticleFactory,
+) -> None:
+    """A Russian post names only BDU:2026-15790, an English one only
+    CVE-2026-104286: selection cannot tie them, the BDU entry of the CVE can."""
+    english = _written(
+        make_article,
+        "Fortinet warns of critical FortiMail flaw",
+        0.9,
+        ("CVE-2026-104286",),
+        (VulnerabilityReference(id="CVE-2026-104286", bdu_id="BDU:2026-15790"),),
+    )
+    russian = _written(make_article, "Уязвимость графического интерфейса", 0.7, ("BDU:2026-15790",))
+    other = _written(make_article, "Cisco SD-WAN Manager", 0.8, ("CVE-2026-76504",))
+
+    merged, absorbed = merge_written([russian, other, english])
+
+    assert [item.article.id for item in merged] == [other.article.id, english.article.id]
+    assert [dup.url for dup in merged[1].duplicates] == [russian.article.url]
+    assert absorbed == [russian]
+
+
+def test_entries_without_ids_are_never_merged_after_the_cards(
+    make_article: ArticleFactory,
+) -> None:
+    first = _written(make_article, "Citrix NetScaler: две 0-day", 0.9, ())
+    second = _written(make_article, "Citrix NetScaler ADC и Gateway", 0.8, ())
+
+    merged, absorbed = merge_written([first, second])
+
+    assert merged == [first, second]
+    assert absorbed == []
+
+
+def test_a_retelling_merged_after_the_cards_brings_its_own_retellings_along(
+    make_article: ArticleFactory,
+) -> None:
+    kept = _written(make_article, "FortiMail CVE-2026-104286", 0.9, ("CVE-2026-104286",))
+    twin = _written(make_article, "FortiMail ещё раз", 0.7, ("CVE-2026-104286",))
+    twin = twin.model_copy(
+        update={
+            "duplicates": (
+                DuplicateRef(title="Пересказ", url="https://example.org/r", source_name="1275"),
+            )
+        }
+    )
+
+    [merged], _ = merge_written([kept, twin])
+
+    assert [dup.url for dup in merged.duplicates] == [twin.article.url, "https://example.org/r"]
+
+
+def _exploited(
+    make_article: ArticleFactory,
+    name: str,
+    score: float,
+    ids: tuple[str, ...],
+    day: int,
+    exploit: str = "in_the_wild",
+) -> SelectedItem:
+    item = _written(make_article, name, score, ids)
+    article = item.graded.candidate.article.model_copy(
+        update={"published_at": datetime(2026, 9, day, 8, 0, tzinfo=UTC)}
+    )
+    graded = item.graded.model_copy(
+        update={"candidate": item.graded.candidate.model_copy(update={"article": article})}
+    )
+    card = VulnerabilityCard(name=name, ids=ids, exploit=exploit)  # type: ignore[arg-type]
+    return item.model_copy(
+        update={"graded": graded, "text": ItemSummary(summary="", vulnerability=card)}
+    )
+
+
+def test_an_exploited_zero_day_retold_without_ids_joins_the_entry_that_has_them(
+    make_article: ArticleFactory,
+) -> None:
+    """examples/vs-analyst/assistant-ics-security-engineer.md:117 and :196:
+    SecAtor names CVE-2026-88771 and CVE-2026-88772, The Hacker News in the
+    snapshot names none."""
+    secator = _exploited(
+        make_article,
+        "уязвимость в Citrix NetScaler",
+        0.73,
+        ("CVE-2026-88771", "CVE-2026-88772"),
+        day=30,
+    )
+    hacker_news = _exploited(
+        make_article, "уязвимость в Citrix NetScaler ADC и NetScaler Gateway", 0.71, (), day=27
+    )
+
+    merged, absorbed = merge_written([secator, hacker_news])
+
+    assert [item.article.id for item in merged] == [secator.article.id]
+    assert absorbed == [hacker_news]
+
+
+@pytest.mark.parametrize(
+    ("other_name", "other_ids", "day", "exploit"),
+    [
+        # Two zero-days of one product, each with its own ids: the ids decide.
+        ("уязвимость в Citrix NetScaler", ("CVE-2026-90001",), 29, "in_the_wild"),
+        # Not exploited: a product name alone is no story.
+        ("уязвимость в Citrix NetScaler", (), 29, "unknown"),
+        # More than a week apart.
+        ("уязвимость в Citrix NetScaler", (), 20, "in_the_wild"),
+        # One shared name is not enough, and a platform is no product.
+        ("уязвимость в Citrix ShareFile", (), 29, "in_the_wild"),
+    ],
+)
+def test_a_product_name_merges_only_an_exploited_retelling_without_ids_within_a_week(
+    make_article: ArticleFactory,
+    other_name: str,
+    other_ids: tuple[str, ...],
+    day: int,
+    exploit: str,
+) -> None:
+    secator = _exploited(
+        make_article, "уязвимость в Citrix NetScaler", 0.73, ("CVE-2026-88771",), day=30
+    )
+    other = _exploited(make_article, other_name, 0.7, other_ids, day=day, exploit=exploit)
+
+    _, absorbed = merge_written([secator, other])
+
+    assert absorbed == []
+
+
+def test_two_zero_days_of_a_broad_platform_without_ids_stay_apart(
+    make_article: ArticleFactory,
+) -> None:
+    first = _exploited(make_article, "уязвимость в Microsoft Windows", 0.9, (), day=29)
+    second = _exploited(make_article, "уязвимость в Microsoft Windows", 0.8, (), day=30)
+
+    _, absorbed = merge_written([first, second])
+
+    assert absorbed == []

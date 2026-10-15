@@ -96,15 +96,55 @@ _PRIVILEGES = {"N": "не нужны", "L": "низкие", "H": "высокие
 _INTERACTION = {"N": "не нужны", "R": "нужны", "P": "нужны", "A": "нужны"}
 
 
+# "CVSS 3.1", "CVSS v3.1", "CVSS:3.1/", "CVSS версии 3.1".
+_CVSS_VERSION_RE = re.compile(r"CVSS[\s:]*(?:v|версии\s*)?([34]\.[01])\b", re.IGNORECASE)
+# Metrics only CVSS 4 has.
+_CVSS4_METRICS = {"AT", "VC", "VI", "VA"}
+
+
+def _metrics(vector: str) -> list[str]:
+    return [
+        part
+        for part in re.sub(r"\s", "", vector).split("/")
+        if ":" in part and not part.upper().startswith("CVSS")
+    ]
+
+
+def cvss_version(text: str) -> str:
+    """The one CVSS 3 or 4 version a text names; nothing when it names none or several."""
+    versions = set(_CVSS_VERSION_RE.findall(text))
+    return versions.pop() if len(versions) == 1 else ""
+
+
+def normal_cvss_vector(vector: str, context: str = "") -> str:
+    """The vector in one form: "CVSS:3.1/AV:N/..." when its version is known
+    from the vector itself or from `context` (the score, the article), bare
+    metrics when it is not; a CVSS 2 vector has no prefix. A string with no
+    access metric is no vector."""
+    metrics = _metrics(vector)
+    keys = {part.split(":", 1)[0].upper() for part in metrics}
+    if "AV" not in keys:
+        return ""
+    body = "/".join(metrics)
+    if "AU" in keys:
+        return body
+    own = re.match(r"\s*CVSS:\s*(\d\.\d)", vector, re.IGNORECASE)
+    if own:
+        version = own.group(1)
+    elif keys & _CVSS4_METRICS:
+        version = "4.0"
+    else:
+        version = cvss_version(context)
+        if version.startswith("4"):
+            version = ""
+    return f"CVSS:{version}/{body}" if version else body
+
+
 def parse_cvss_vector(vector: str) -> list[tuple[str, str]]:
     """Network or local access, the complexity, the privileges and the user's
     part, in words; nothing for a string that is no vector. CVSS 2 has a
     medium complexity and neither privileges nor the user."""
-    metrics = dict(
-        part.split(":", 1)
-        for part in re.sub(r"\s", "", vector).split("/")
-        if ":" in part and not part.upper().startswith("CVSS")
-    )
+    metrics = dict(part.split(":", 1) for part in _metrics(vector))
     if metrics.get("AV") not in _ACCESS:
         return []
     rows = [("Доступ", _ACCESS[metrics["AV"]])]

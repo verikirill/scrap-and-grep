@@ -6,7 +6,18 @@ from typing import Any, Self
 
 from pydantic import BaseModel, model_validator
 
-from radar.cards import TAG_LABELS, attack_rows, priority_reason, reference_rows, vulnerability_rows
+from radar.cards import (
+    OTHER_TOPIC,
+    TAG_LABELS,
+    attack_rows,
+    plain_brief,
+    plain_lines,
+    plain_prose,
+    plain_title,
+    priority_reason,
+    reference_rows,
+    vulnerability_rows,
+)
 from radar.db.models import Digest, DigestItem
 from radar.digest_extras import (
     Change,
@@ -187,11 +198,19 @@ def _item_view(item: DigestItem, profile: ProfileSpec) -> ItemView:
     interest = profile.interest(item.interest_id)
     card = ItemSummary.model_validate({"summary": item.summary, **(item.card or {})})
     kind = _KINDS.get(item.kind, "news")
+    text = ItemSummary(headline=item.headline, summary=item.summary, why=item.why)
+    title, reason = article.title, item.reason
+    if profile.audience == "management":
+        # An issue saved before the rules reads by them too; the source's own
+        # title and the grade's reason show under a headline and in what was
+        # left out, so they lose ids, scores and versions as well.
+        text = plain_brief(text)
+        title, reason = plain_title(title), plain_title(reason)
     return ItemView(
         article_id=article.id,
         url=article.url,
-        title=article.title,
-        headline=item.headline or article.title,
+        title=title,
+        headline=text.headline or title,
         source_name=article.source.name,
         source_category=article.source.category,
         source_read_via=read_via(article.source.fetch_method, article.source.fetch_via_proxy),
@@ -210,9 +229,9 @@ def _item_view(item: DigestItem, profile: ProfileSpec) -> ItemView:
         relevance=item.relevance,
         interest_id=item.interest_id,
         interest_title=interest.title if interest else None,
-        reason=item.reason,
-        summary=item.summary,
-        why=item.why,
+        reason=reason,
+        summary=text.summary,
+        why=text.why,
         duplicates=[DuplicateView.model_validate(dup) for dup in item.duplicates],
         reject_reason=item.reject_reason,
         reading_minutes=reading_minutes(article.word_count, article.language),
@@ -241,7 +260,12 @@ def digest_summary(digest: Digest) -> DigestSummaryView:
         stage=digest.stage,
         progress=digest.progress,
         error=digest.error,
-        title=digest.title,
+        # An issue for management saved before the rules may name a CVE here.
+        title=(
+            plain_title(digest.title) or None
+            if digest.title and digest.profile_spec.get("audience") == "management"
+            else digest.title
+        ),
         stats=digest.stats,
         origin=digest.origin,
         created_at=digest.created_at,
@@ -252,6 +276,7 @@ def digest_summary(digest: Digest) -> DigestSummaryView:
 def digest_view(digest: Digest) -> DigestView:
     """Build the full view; `digest` must be loaded with topics and items."""
     profile = ProfileSpec.model_validate(digest.profile_spec)
+    management = profile.audience == "management"
     by_topic: dict[int, list[ItemView]] = {}
     rejected = []
     for item in digest.items:
@@ -264,13 +289,21 @@ def digest_view(digest: Digest) -> DigestView:
         # What names the reader's own systems first; the sort keeps the order
         # within both groups.
         views.sort(key=lambda view: not view.ours)
+    highlights, implications = list(digest.highlights), list(digest.implications)
+    if management:
+        highlights = list(plain_lines(highlights, len(highlights)))
+        implications = list(plain_lines(implications, len(implications)))
     return DigestView(
         **digest_summary(digest).model_dump(),
         profile=profile,
-        highlights=list(digest.highlights),
-        implications=list(digest.implications),
+        highlights=highlights,
+        implications=implications,
         topics=[
-            TopicView(title=topic.title, overview=topic.overview, items=by_topic.get(topic.id, []))
+            TopicView(
+                title=(plain_title(topic.title) or OTHER_TOPIC) if management else topic.title,
+                overview=plain_prose(topic.overview) if management else topic.overview,
+                items=by_topic.get(topic.id, []),
+            )
             for topic in digest.topics
         ],
         rejected=sorted(rejected, key=lambda view: -view.score),

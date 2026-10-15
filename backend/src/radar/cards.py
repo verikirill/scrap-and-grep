@@ -27,10 +27,16 @@ from radar.domain import (
     VulnerabilityCard,
     VulnerabilityReference,
 )
-from radar.indicators import extract_indicators, parse_cvss_vector, refang
+from radar.indicators import (
+    cvss_version,
+    extract_indicators,
+    normal_cvss_vector,
+    parse_cvss_vector,
+    refang,
+)
 from radar.text import numbers, split_sentences
 
-__all__ = ["extract_indicators", "parse_cvss_vector"]
+__all__ = ["extract_indicators", "normal_cvss_vector", "parse_cvss_vector"]
 
 KIND_LABELS: dict[RecordKind, str] = {
     "attack": "Атака",
@@ -41,6 +47,8 @@ KIND_LABELS: dict[RecordKind, str] = {
 SECTION_TITLES: dict[RecordKind, str] = {"attack": "Атаки", "vulnerability": "Уязвимости"}
 # The same, keyed by the plain strings a graph state carries.
 SECTION_KINDS: dict[str | None, RecordKind] = {"attack": "attack", "vulnerability": "vulnerability"}
+# A topic whose name did not come back, or came back all ids.
+OTHER_TOPIC = "Разное"
 PRIORITY_LABELS: dict[Priority, str] = {"high": "высокий", "medium": "средний", "low": "низкий"}
 PRIORITY_ORDER: dict[Priority | None, int] = {"high": 0, "medium": 1, "low": 2, None: 3}
 EXPLOIT_LABELS: dict[Exploit, str] = {
@@ -112,13 +120,39 @@ _ATTACK_RE = re.compile(
 )
 
 
+def _plain_hyphens(text: str) -> str:
+    return text.replace("\u2011", "-").replace("\u2010", "-")
+
+
+def _one_way(value: str) -> str:
+    return re.sub(r"\s", "", value).upper().replace("БДУ:", "BDU:")
+
+
 def identifiers(text: str) -> list[str]:
     """CVE, BDU, GHSA and PT ids in the text, written one way: "BDU:2025-10116"."""
-    found = []
-    for match in _ID_RE.findall(text.replace("\u2011", "-").replace("\u2010", "-")):
-        value = re.sub(r"\s", "", match).upper().replace("БДУ:", "BDU:")
-        found.append(value)
+    found = [_one_way(match) for match in _ID_RE.findall(_plain_hyphens(text))]
     return list(dict.fromkeys(found))
+
+
+# A run of entries an article gives by its ends: "BDU:2026-01678–BDU:2026-01682".
+_ID_RUN_RE = re.compile(
+    r"\b(CVE-\d{4}-|(?:BDU|БДУ):\s?\d{4}-)(\d{4,7})\s?[-\u2013\u2014]\s?\1(\d{4,7})\b",
+    re.IGNORECASE,
+)
+# A longer run is a typo, not a list of flaws.
+MAX_ID_RUN = 100
+
+
+def _named_ids(text: str) -> set[str]:
+    """The ids a text names: those it prints and each one inside a run it
+    gives by its ends."""
+    named = set(identifiers(text))
+    for prefix, first, last in _ID_RUN_RE.findall(_plain_hyphens(text)):
+        start, end = int(first), int(last)
+        if 0 < end - start <= MAX_ID_RUN:
+            head = _one_way(prefix)
+            named.update(f"{head}{number:0{len(first)}d}" for number in range(start, end + 1))
+    return named
 
 
 def guess_kind(title: str, body: str) -> RecordKind:
@@ -215,6 +249,28 @@ def _figures_supported(value: str, allowed: set[str]) -> bool:
     return numbers(value) <= allowed
 
 
+def _checked_ids(values: Sequence[str], source: str) -> tuple[list[str], list[str]]:
+    """The card's ids the text names, and those it does not. A value of
+    another kind ("ICSA-26-274-03") is no id the card keeps, and the text may
+    well name it: it is not among the missing."""
+    named = _named_ids(source)
+    claimed = identifiers(" ".join(values))
+    kept = [value for value in claimed if value in named]
+    return kept, [value for value in claimed if value not in named]
+
+
+def _only_a_cvss_version(score: str, source: str) -> bool:
+    """The score is "3.1" or "4.0" and the text has that figure only as the
+    version of the standard ("CVSS:3.1/...", "CVSS v4.0"): no score at all."""
+    value = score.strip().replace(",", ".")
+    if not re.fullmatch(r"[234]\.[01]", value):
+        return False
+    figure = re.escape(value)
+    anywhere = len(re.findall(rf"(?<![\d.]){figure}(?![\d.]*\d)", source))
+    as_version = len(re.findall(rf"CVSS[\s:]*(?:v|версии\s*)?{figure}", source, re.IGNORECASE))
+    return anywhere > 0 and anywhere == as_version
+
+
 def check_vulnerability(
     card: VulnerabilityCard, source: str
 ) -> tuple[VulnerabilityCard, list[str]]:
@@ -223,20 +279,27 @@ def check_vulnerability(
     removed: list[str] = []
     allowed = numbers(source)
     known = identifiers(source)
-    ids = [value for value in identifiers(" ".join(card.ids)) if value in known]
-    if len(ids) < len(card.ids):
-        removed.append("Идентификаторы")
+    ids, missing = _checked_ids(card.ids, source)
+    if missing:
+        # By number, not "Идентификаторы": the ids that stayed are still on the card.
+        removed.append(", ".join(missing))
     if not ids and len(known) <= 3:
         # The model left them out; the publication names them.
         ids = known
     updates: dict[str, object] = {"ids": tuple(ids)}
     score = numbers(card.cvss_score)
-    if card.cvss_score and not (score and score <= allowed):
+    if card.cvss_score and not (
+        score and score <= allowed and not _only_a_cvss_version(card.cvss_score, source)
+    ):
         updates["cvss_score"] = ""
         removed.append("Оценка CVSS")
     if card.cvss_vector and _compact(card.cvss_vector) not in _compact(source):
         updates["cvss_vector"] = ""
         removed.append("Вектор CVSS")
+    elif card.cvss_vector:
+        # One form whatever the text printed: the version from the score or the text.
+        context = card.cvss_score if cvss_version(card.cvss_score) else source
+        updates["cvss_vector"] = normal_cvss_vector(card.cvss_vector, context)
     for field, label in (
         ("name", "Название"),
         ("affected", "Затронутые версии"),
@@ -345,11 +408,10 @@ def check_attack(
     if len(tools) < len(card.tools):
         updates["tools"] = tools
         removed.append("Инструменты")
-    known = identifiers(source)
-    ids = tuple(value for value in identifiers(" ".join(card.vulnerabilities)) if value in known)
-    if len(ids) < len(card.vulnerabilities):
-        removed.append("Уязвимости")
-    updates["vulnerabilities"] = ids
+    ids, missing = _checked_ids(card.vulnerabilities, source)
+    if missing:
+        removed.append(", ".join(missing))
+    updates["vulnerabilities"] = tuple(ids)
     allowed = numbers(source)
     if card.attack_date and not _figures_supported(card.attack_date, allowed):
         updates["attack_date"] = ""
@@ -382,12 +444,28 @@ def unsupported_figures(text: str, allowed: set[str]) -> set[str]:
 
 # What a manager is not given in the text: identifiers, scores, indicators,
 # addresses and version numbers. The links to the details stay.
+_SCORE = r"(?:от\s+)?\d{1,2}[.,]\d(?:\s*(?:-|до)\s*\d{1,2}[.,]\d)?"
+_NUMBERED = r"\d+(?:\.\d+)+"
 _TECHNICAL = [
     re.compile(r"\bCVE-\d{4}-\d{4,}\b", re.IGNORECASE),
     re.compile(r"\bBDU:\d{4}-\d{5}\b", re.IGNORECASE),
-    re.compile(r"\b(?:CVSS|IoCs?|IOCs?)\b"),
+    # The scale goes out with its version and the score, "CVSS 4.0 от 6,9 до
+    # 9,3 баллов": taking the word alone left management the figures.
+    re.compile(
+        rf"\bCVSS(?:\s*v?\d\.\d)?(?:\s*:?\s*{_SCORE})?(?:\s*балл[а-яё]*)?"
+        rf"|\b{_SCORE}\s*(?:балл[а-яё]*|из\s+10\b)",
+        re.IGNORECASE,
+    ),
+    re.compile(r"\b(?:IoCs?|IOCs?)\b"),
     re.compile(r"\b(?:[a-f0-9]{64}|[a-f0-9]{40}|[a-f0-9]{32})\b", re.IGNORECASE),
     re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b"),
+    # Two numbers are a version when the text calls them one, "«Каскад» версии
+    # 8.3"; bare, they may be a name, "Антифрод 3.0". The word goes with them.
+    re.compile(
+        rf"(?:\bдо\s+)?\b(?:верси[а-яё]*|version)\s+{_NUMBERED}"
+        rf"(?:(?:\s*[,/-]\s*|\s+(?:и|или|до)\s+){_NUMBERED})*",
+        re.IGNORECASE,
+    ),
 ]
 # Three numbers and more through dots; a date has the same shape and is no version.
 _VERSION = re.compile(r"\b\d+(?:\.\d+){2,}\b")
@@ -411,9 +489,24 @@ def technical_tokens(text: str) -> list[str]:
 def _without_tokens(text: str) -> str:
     for token in technical_tokens(text):
         text = text.replace(token, "")
-    text = re.sub(r"\(\s*[,;]?\s*\)", "", text)
+    # What joined the ids is left alone: "(CVE-1 и CVE-2)", "0-day, CVE-1, в".
+    text = re.sub(r"\(\s*(?:[,;]|и|или)?\s*\)", "", text)
+    text = re.sub(r"\s+(?:и|или)(?=\s*(?:[,.;:!?)]|$))", "", text)
     text = re.sub(r"\s+([,.;:!?])", r"\1", text)
+    text = re.sub(r"([,;])(?:\s*[,;])+", r"\1", text)
     return re.sub(r"\s{2,}", " ", text).strip()
+
+
+def plain_title(text: str) -> str:
+    """A title for management: what it says without the technical details."""
+    return _without_tokens(text) if technical_tokens(text) else text
+
+
+def plain_prose(text: str) -> str:
+    """Prose for management: the sentences without technical details."""
+    return " ".join(
+        sentence for sentence in split_sentences(text) if not technical_tokens(sentence)
+    )
 
 
 def plain_brief(text: ItemSummary) -> ItemSummary:
@@ -423,10 +516,9 @@ def plain_brief(text: ItemSummary) -> ItemSummary:
     plain = [sentence for sentence in sentences if not technical_tokens(sentence)]
     if not plain and sentences:
         plain = [_without_tokens(sentences[0])]
-    headline = _without_tokens(text.headline) if technical_tokens(text.headline) else text.headline
     return text.model_copy(
         update={
-            "headline": headline,
+            "headline": plain_title(text.headline),
             "summary": " ".join(plain[:PLAIN_SENTENCES]),
             "why": "" if technical_tokens(text.why) else text.why,
         }
@@ -543,7 +635,7 @@ def offline_vulnerability(source: str) -> VulnerabilityCard:
     return VulnerabilityCard(
         ids=tuple(identifiers(source)[:5]),
         cvss_score=score.group(1).replace(",", ".") if score else "",
-        cvss_vector=vector.group(0) if vector else "",
+        cvss_vector=normal_cvss_vector(vector.group(0), source) if vector else "",
         exploit=exploit_evidence(source),
         cwe=tuple(dict.fromkeys(value.upper() for value in _CWE_RE.findall(source)))[:3],
     )
@@ -607,9 +699,9 @@ def attack_rows(card: AttackCard) -> list[tuple[str, str]]:
 
 def vulnerability_rows(card: VulnerabilityCard) -> list[tuple[str, str]]:
     score = card.cvss_score
-    cvss = (
-        f"{score} ({card.cvss_vector})" if score and card.cvss_vector else score or card.cvss_vector
-    )
+    # Saved issues hold the vector as the text printed it, prefixed or not.
+    vector = normal_cvss_vector(card.cvss_vector, score)
+    cvss = f"{score} ({vector})" if score and vector else score or vector
     rows = [
         ("Уязвимость", card.name or NO_DATA),
         ("Затронуто", card.affected or NO_DATA),
@@ -619,7 +711,7 @@ def vulnerability_rows(card: VulnerabilityCard) -> list[tuple[str, str]]:
         ("Идентификаторы", ", ".join(card.ids) or NO_DATA),
         ("CVSS", cvss or NO_DATA),
         # The vector in words: from the network, with which rights, with a click.
-        *parse_cvss_vector(card.cvss_vector),
+        *parse_cvss_vector(vector),
         ("CWE", ", ".join(card.cwe) or NO_DATA),
         ("Последствия", card.impact or NO_DATA),
     ]
@@ -636,7 +728,12 @@ def reference_rows(references: Sequence[VulnerabilityReference]) -> list[tuple[s
     if not references:
         return []
     parts = []
-    unknown = [reference.id for reference in references if not reference.found]
+    # Only absence from complete bases is news: a BDU id the partial copy lacks is not named.
+    unknown = [
+        reference.id
+        for reference in references
+        if not reference.found and not reference.partial_source
+    ]
     for reference in (reference for reference in references if reference.found):
         facts = []
         if reference.kev_added is not None:
@@ -664,4 +761,4 @@ def reference_rows(references: Sequence[VulnerabilityReference]) -> list[tuple[s
         parts.append(f"{reference.id}: {'; '.join(facts)}")
     if unknown:
         parts.append(f"нет в справочных базах: {', '.join(unknown)}")
-    return [("Сверено по базам", "; ".join(parts))]
+    return [("Сверено по базам", "; ".join(parts))] if parts else []

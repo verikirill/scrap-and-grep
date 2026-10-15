@@ -204,6 +204,96 @@ def test_a_thinner_card_later_does_not_take_back_the_catalogue_or_the_exploit() 
     assert changes(earlier, now) == []
 
 
+def test_a_roundup_with_nothing_to_do_stays_out_of_the_shift_plan() -> None:
+    """examples/vs-analyst/assistant-ics-security-engineer.md:45 put a digest of
+    trending vulnerabilities in the plan with a KEV date and a score, no step."""
+    ids = [f"CVE-2026-{number}" for number in range(10, 16)]
+    listed = [VulnerabilityReference(id=value, kev_added=date(2026, 8, 5)) for value in ids]
+    roundup = _vulnerability(
+        1,
+        "Сентябрьский дайджест трендовых уязвимостей",
+        priority="high",
+        vulnerability=VulnerabilityCard(ids=tuple(ids), cvss_score="9.8", exploit="in_the_wild"),
+        references=listed,
+    )
+    single = _vulnerability(
+        2,
+        "Уязвимость из KEV без исправления",
+        priority="high",
+        vulnerability=VulnerabilityCard(ids=(ids[0],), exploit="in_the_wild"),
+        references=listed[:1],
+    )
+    with_steps = _vulnerability(
+        3,
+        "Обзор с исправлениями",
+        priority="high",
+        vulnerability=VulnerabilityCard(ids=tuple(ids), fix="Обновить до 2.1"),
+        references=listed,
+    )
+
+    plan = shift_plan([roundup, single, with_steps])
+
+    assert [entry.headline for entry in plan] == [
+        "Уязвимость из KEV без исправления",
+        "Обзор с исправлениями",
+    ]
+
+
+def test_the_shift_plan_puts_the_workaround_first_while_the_fix_is_not_out() -> None:
+    """examples/vs-analyst/assistant-ics-security-engineer.md:52 listed the
+    unreleased FortiMail update as the first thing to do."""
+    fortimail = _vulnerability(
+        1,
+        "FortiMail",
+        priority="high",
+        vulnerability=VulnerabilityCard(
+            fix="Обновление до FortiMail 7.4.9, 7.6.7 или 8.0.2 (пока недоступно, ожидается).",
+            workaround="Отключить поддержку IBE.",
+            exploit="in_the_wild",
+        ),
+    )
+    released = _vulnerability(
+        2,
+        "Cisco",
+        priority="high",
+        vulnerability=VulnerabilityCard(fix="Обновить до 20.12.5", workaround="Смотреть журналы"),
+    )
+
+    plan = {entry.headline: entry.steps for entry in shift_plan([fortimail, released])}
+
+    assert plan["FortiMail"] == [
+        "Временные меры: Отключить поддержку IBE.",
+        "Обновление: Обновление до FortiMail 7.4.9, 7.6.7 или 8.0.2 (пока недоступно, ожидается).",
+    ]
+    assert plan["Cisco"] == ["Обновление: Обновить до 20.12.5", "Временные меры: Смотреть журналы"]
+
+
+def test_an_update_not_out_yet_is_no_fix_and_its_release_later_is_reported() -> None:
+    def entry(fix: str, references: tuple[VulnerabilityReference, ...] = ()) -> ItemSummary:
+        card = VulnerabilityCard(ids=("CVE-2026-104286",), fix=fix, exploit="in_the_wild")
+        return ItemSummary(summary="", vulnerability=card, references=references)
+
+    # BDU names "обновление программного обеспечения" as the way to fix from day one.
+    bdu = VulnerabilityReference(
+        id="CVE-2026-104286",
+        bdu_id="BDU:2026-15790",
+        bdu_fix="обновление программного обеспечения",
+        nvd_patch=True,
+    )
+    waiting = entry("Обновление до 7.4.9 (пока недоступно, ожидается).", (bdu,))
+    out = entry("Обновить до FortiMail 7.4.9.", (bdu,))
+    day = datetime(2026, 10, 2, tzinfo=UTC)
+
+    earlier = vulnerability_states([(waiting, "FortiMail", "https://example.org/1", day)])
+    now = vulnerability_states(
+        [(out, "FortiMail", "https://example.org/2", datetime(2026, 10, 9, tzinfo=UTC))]
+    )
+
+    assert earlier["CVE-2026-104286"].fixed is False
+    [change] = changes(earlier, now)
+    assert change.what == ["вышло обновление или мера устранения"]
+
+
 def test_stats_a_build_did_not_write_do_not_break_the_issue() -> None:
     digest = _digest("specialist", [], {"changes": None, "window_total": "много"})
     garbled = _digest("specialist", [], {"changes": [{"id": "CVE-2026-1"}]})

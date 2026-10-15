@@ -37,8 +37,10 @@ def format_datetime(value: datetime) -> str:
     return value.astimezone(MOSCOW).strftime("%d.%m.%Y %H:%M")
 
 
+# Angle brackets take a backslash, not an entity: CommonMark still reads
+# no tag behind it, and the raw file says "<4.7.2" as the article does.
 _MARKDOWN_SPECIALS = str.maketrans(
-    {"\\": "\\\\", "[": "\\[", "]": "\\]", "<": "&lt;", ">": "&gt;", "`": "\\`", "\n": " "}
+    {"\\": "\\\\", "[": "\\[", "]": "\\]", "<": "\\<", ">": "\\>", "`": "\\`", "\n": " "}
 )
 _URL_UNSAFE = str.maketrans(
     {"(": "%28", ")": "%29", " ": "%20", "<": "%3C", ">": "%3E", '"': "%22", "\\": "%5C"}

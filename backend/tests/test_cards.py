@@ -86,7 +86,78 @@ def test_a_vulnerability_card_keeps_only_what_the_text_says() -> None:
     assert checked.affected == ""
     # The text says it is used in attacks, whatever the model answered.
     assert checked.exploit == "in_the_wild"
-    assert removed == ["Идентификаторы", "Оценка CVSS", "Затронутые версии"]
+    # The id that went is named: the card still shows the other one.
+    assert removed == ["CVE-2026-11111", "Оценка CVSS", "Затронутые версии"]
+
+
+def test_an_update_row_with_a_figure_the_text_lacks_goes_whole_caveat_and_all() -> None:
+    # CODESYS: the article gives the quarter in words. Taking out only the
+    # clause with the "4" would leave "Обновление до 3.5.22.40 ...", as if
+    # every platform had its fix. The clause with the figure may be the very
+    # caveat that the fix is not out, so the row goes whole.
+    source = (
+        "Разработчик CODESYS GmbH исправляет обе в версиях 3.5.22.40 и 4.23.0.0. "
+        "Вторая выйдет только в четвёртом квартале 2026 года."
+    )
+    claimed = VulnerabilityCard(
+        fix="Обновление до 3.5.22.40 для большинства компонентов; "
+        "4.23.0.0 для Linux выйдет в 4 квартале 2026 года."
+    )
+
+    checked, removed = check_vulnerability(claimed, source)
+
+    assert checked.fix == ""
+    assert removed == ["Обновление"]
+
+
+@pytest.mark.parametrize(
+    ("source", "kept"),
+    [
+        # The model took the version of the standard for the score.
+        ("Вектор CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H, оценка не указана.", ""),
+        ("Оценка по CVSS v4.0 не приводится.", ""),
+        # A real score of 4.0 stays, even next to the version.
+        ("Оценка 4.0 по CVSS 3.1: уязвимость средней опасности.", "4.0"),
+    ],
+)
+def test_a_cvss_version_is_no_score(source: str, kept: str) -> None:
+    version = "3.1" if "3.1/" in source else "4.0"
+    claimed = VulnerabilityCard(cvss_score=kept or version)
+
+    checked, removed = check_vulnerability(claimed, source)
+
+    assert checked.cvss_score == kept
+    assert removed == ([] if kept else ["Оценка CVSS"])
+
+
+def test_an_advisory_number_the_text_gives_is_not_reported_as_removed() -> None:
+    # The prompt asks for other ids too. A CISA advisory is not one the card
+    # keeps, and the text has it: "not in the text" would be false.
+    source = "CISA опубликовала бюллетень ICSA-26-274-03 об уязвимости CVE-2026-1234."
+    claimed = VulnerabilityCard(ids=("CVE-2026-1234", "ICSA-26-274-03"))
+
+    _, removed = check_vulnerability(claimed, source)
+
+    assert removed == []
+
+
+def test_ids_inside_a_run_the_article_gives_by_its_ends_stay_on_the_card() -> None:
+    # SCADA «Каскад»: the article gives KWebVision's five BDU entries by the
+    # ends of their run, the model writes out each of them.
+    source = "Уязвимости KWebVision (BDU:2026-01678–BDU:2026-01682) исправлены в версии 8.3.1."
+    run = tuple(f"BDU:2026-{number:05d}" for number in range(1678, 1683))
+
+    checked, _ = check_vulnerability(VulnerabilityCard(ids=(*run, "BDU:2026-01683")), source)
+
+    assert checked.ids == run
+
+
+def test_a_run_of_thousands_of_ids_is_a_typo_and_names_only_its_ends() -> None:
+    claimed = VulnerabilityCard(ids=("CVE-2026-1000", "CVE-2026-5000"))
+
+    checked, _ = check_vulnerability(claimed, "Затронуты CVE-2026-1000–CVE-2026-9000.")
+
+    assert checked.ids == ("CVE-2026-1000",)
 
 
 def test_an_exploit_the_text_does_not_mention_does_not_raise_the_priority() -> None:
@@ -108,6 +179,17 @@ def test_an_attack_card_drops_tools_and_indicators_the_text_does_not_name() -> N
     assert checked.tools == ("KermitRAT",)
     assert checked.iocs is None
     assert removed == ["Инструменты", "Индикаторы компрометации"]
+
+
+def test_an_attack_card_names_the_vulnerabilities_the_text_does_not() -> None:
+    # Both ids in one value: one is the post's, the other the model made up.
+    source = "CyberAv3ngers атакует ПЛК Unitronics через CVE-2023-6448."
+    claimed = AttackCard(vulnerabilities=("CVE-2023-6448, CVE-2023-12345",))
+
+    checked, removed = check_attack(claimed, source)
+
+    assert checked.vulnerabilities == ("CVE-2023-6448",)
+    assert removed == ["CVE-2023-12345"]
 
 
 class Scripted:
