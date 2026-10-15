@@ -41,7 +41,7 @@ describe('AnalyticsPage', () => {
     const asked = serveAnalytics()
     renderWithProviders(<AnalyticsPage />)
 
-    expect(await screen.findByText('Стрелки: изменение к предыдущим 30 дням.')).toBeInTheDocument()
+    expect(await screen.findAllByText('к предыдущим 30 дням')).toHaveLength(4)
     expect(asked).toEqual(['?days=30&guests=true'])
     for (const title of [
       'От показа к отметке',
@@ -51,8 +51,9 @@ describe('AnalyticsPage', () => {
       'Категории',
       'Подстройка профилей',
       'Ранжирование ленты',
+      'Что ещё происходило',
     ]) {
-      expect(screen.getByRole('heading', { name: title })).toBeInTheDocument()
+      expect(screen.getByRole('region', { name: title })).toBeInTheDocument()
     }
     expect(screen.getByText(/^События: последнее событие .*, ждут записи 0\.$/)).toBeInTheDocument()
   })
@@ -60,10 +61,10 @@ describe('AnalyticsPage', () => {
   it('asks again for another period and without guests', async () => {
     const asked = serveAnalytics()
     const { user } = renderWithProviders(<AnalyticsPage />)
-    await screen.findByText('Стрелки: изменение к предыдущим 30 дням.')
+    await screen.findAllByText('к предыдущим 30 дням')
 
     await user.click(screen.getByRole('radio', { name: /7 дней/ }))
-    expect(await screen.findByText('Стрелки: изменение к предыдущим 7 дням.')).toBeInTheDocument()
+    expect(await screen.findAllByText('к предыдущим 7 дням')).toHaveLength(4)
     await user.click(screen.getByRole('switch', { name: 'Учитывать гостей' }))
 
     await waitFor(() =>

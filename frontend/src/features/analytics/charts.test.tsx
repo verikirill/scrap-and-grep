@@ -28,10 +28,16 @@ describe('DayBars', () => {
     expect(screen.getAllByText('12 окт.')).toHaveLength(2)
   })
 
-  it('does not divide by zero on a period without views', () => {
+  it('says the period had no views instead of drawing an empty scale', () => {
     render(<DayBars days={DAYS} values={[0, 0, 0]} label="Показы" />)
 
-    expect(screen.getByText('до 1')).toBeInTheDocument()
+    expect(screen.getByText('За период показов не было')).toBeInTheDocument()
+    expect(screen.queryByText(/^до /)).toBeNull()
+    expect(rows('Показы')).toEqual([
+      ['11 окт.', '0'],
+      ['12 окт.', '0'],
+      ['13 окт.', '0'],
+    ])
   })
 })
 
@@ -79,18 +85,34 @@ describe('RateLines', () => {
     // getByText compares with the text's spaces collapsed: a no-break space reads as one.
     expect(screen.getByText('до 23 %')).toBeInTheDocument()
   })
+
+  it('says there are too few views when no day has a rate, and shows its note', () => {
+    render(
+      <RateLines
+        days={DAYS}
+        label="Доля открытий"
+        note="Дни, где меньше 30 показов, пропущены."
+        series={[{ label: 'открывают', tone: 'text-accent', values: [null, null, null] }]}
+      />,
+    )
+
+    expect(screen.getByText('Мало показов, чтобы считать долю по дням')).toBeInTheDocument()
+    expect(screen.queryByText(/^до /)).toBeNull()
+    expect(screen.getByText('Дни, где меньше 30 показов, пропущены.')).toBeInTheDocument()
+  })
 })
 
 describe('RateBar', () => {
   it('tells the interval of a rate on hover', () => {
-    const { container } = render(<RateBar rate={0.15} low={0.13} high={0.17} scale={0.2} />)
+    render(<RateBar rate={0.15} low={0.13} high={0.17} scale={0.2} />)
 
-    expect(container.querySelector('[title]')).toHaveAttribute('title', 'от 13\u00a0% до 17\u00a0%')
+    // getByTitle reads a no-break space as a space.
+    expect(screen.getByTitle('от 13 % до 17 %')).toBeInTheDocument()
   })
 
   it('draws no interval for a rate without one', () => {
-    const { container } = render(<RateBar rate={0.15} scale={1} />)
+    render(<RateBar rate={0.15} scale={1} tone="danger" />)
 
-    expect(container.querySelector('[title]')).toBeNull()
+    expect(screen.queryByTitle(/^от /)).toBeNull()
   })
 })
