@@ -51,6 +51,13 @@ export interface Profile {
   updated_at: string
 }
 
+/** A ready profile for a typical role, to start from instead of a blank one. */
+export interface ProfileTemplate {
+  spec: ProfileSpec
+  icon: string | null
+  color: string | null
+}
+
 export interface ScheduleDefault {
   cadence: Cadence
   /** Monday is 0; weekly schedules only. */
@@ -650,6 +657,8 @@ export interface Me extends User {
   feed_order: FeedOrder
   /** Digest sections the reader keeps folded, by title. */
   folded_sections?: string[]
+  /** When the first-run introduction was finished or skipped; null until then. */
+  onboarded_at: string | null
 }
 
 /** How the feed looks: cards with the reasons in full, or posts as in a Telegram channel. */
@@ -948,6 +957,9 @@ export const api = {
   deleteAccount: (password: string) => request<void>('/auth/me/delete', json('POST', { password })),
   updateSettings: (settings: Partial<Settings>) =>
     request<Settings>('/auth/me/settings', json('PATCH', settings)),
+  /** The first-run introduction is done (or skipped): it is not offered again. */
+  finishOnboarding: () =>
+    request<{ onboarded_at: string }>('/auth/me/onboarded', { method: 'POST' }),
   mcpKeys: () => request<McpKey[]>('/mcp/keys'),
   /** The picture goes as the raw body; the server squares and re-encodes it. */
   uploadAvatar: (file: File) =>
@@ -1009,6 +1021,7 @@ export const api = {
     }),
 
   profiles: () => request<Profile[]>('/profiles'),
+  profileTemplates: () => request<ProfileTemplate[]>('/profile-templates'),
   createProfile: (spec: ProfileSpec) => request<Profile>('/profiles', json('POST', spec)),
   updateProfile: (id: string, spec: ProfileSpec) =>
     request<Profile>(`/profiles/${id}`, json('PUT', spec)),

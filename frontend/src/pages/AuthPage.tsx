@@ -10,6 +10,7 @@ import type { AuthRedirect } from '../components/RequireAuth'
 import { EASE, INPUT_CLASS } from '../components/tokens'
 import { Button, ErrorNote, Field } from '../components/ui'
 import { TailVisual } from '../features/auth/TailVisual'
+import { ONBOARDING_PATH } from '../lib/onboarding'
 import { useMe, useMeta, useSignIn } from '../lib/queries'
 import { SlidingPill } from '../components/SlidingPill'
 import { useMediaQuery } from '../lib/useMediaQuery'
@@ -57,10 +58,12 @@ export function AuthPage({ mode }: Props) {
   const error = (isRegister ? register.error : login.error) ?? demo.error
 
   // Someone sent a profile: after signing in the reader decides about it,
-  // even a new one, who otherwise starts with the resume step.
+  // even a new one, who otherwise starts with the introduction.
   const isSharedProfile = target.startsWith('/share/')
   if (me.data && !pending) {
-    return <Navigate to={register.isSuccess && !isSharedProfile ? '/welcome' : target} replace />
+    return (
+      <Navigate to={register.isSuccess && !isSharedProfile ? ONBOARDING_PATH : target} replace />
+    )
   }
 
   const submit = (event: FormEvent) => {

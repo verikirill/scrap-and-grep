@@ -21,6 +21,7 @@ import type {
   Placement,
   Profile,
   ProfileSpec,
+  ProfileTemplate,
   ProgressEvent,
   ReactionKind,
   SharedProfile,
@@ -167,20 +168,47 @@ function putProfile(client: QueryClient, profile: Profile): void {
   )
 }
 
+function profileSaved(client: QueryClient, profile: Profile) {
+  // Put the saved version into the cache at once: the editor compares its
+  // draft with it, and must not look "unsaved" until a refetch arrives.
+  putProfile(client, profile)
+  // Interests are part of the reader's taste.
+  void client.invalidateQueries({ queryKey: keys.feed })
+  void client.invalidateQueries({ queryKey: keys.taste })
+  return client.invalidateQueries({ queryKey: keys.profiles })
+}
+
 export function useSaveProfile() {
   const client = useQueryClient()
   return useMutation({
     mutationFn: ({ id, spec }: { id: string | null; spec: ProfileSpec }) =>
       id ? api.updateProfile(id, spec) : api.createProfile(spec),
-    onSuccess: (profile) => {
-      // Put the saved version into the cache at once: the editor compares its
-      // draft with it, and must not look "unsaved" until a refetch arrives.
-      putProfile(client, profile)
-      // Interests are part of the reader's taste.
-      void client.invalidateQueries({ queryKey: keys.feed })
-      void client.invalidateQueries({ queryKey: keys.taste })
-      return client.invalidateQueries({ queryKey: keys.profiles })
+    onSuccess: (profile) => profileSaved(client, profile),
+  })
+}
+
+/** Ready profiles for typical roles; they change only with a new release. */
+export const useProfileTemplates = (isEnabled = true) =>
+  useQuery({
+    queryKey: ['profile-templates'],
+    queryFn: api.profileTemplates,
+    staleTime: Infinity,
+    enabled: isEnabled,
+  })
+
+/**
+ * A template becomes the reader's own profile, with the template's icon and
+ * colour. The look is a nicety: if it does not take, the profile stays as made.
+ */
+export function useAddTemplate() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ spec, icon, color }: ProfileTemplate) => {
+      const created = await api.createProfile(spec)
+      if (!icon && !color) return created
+      return api.setProfileLook(created.id, { icon, color }).catch(() => created)
     },
+    onSuccess: (profile) => profileSaved(client, profile),
   })
 }
 
@@ -930,6 +958,16 @@ export function useDecideSuggestion() {
       // Not awaited: the caller's onSuccess (the editor's draft) must run at once.
       void client.invalidateQueries({ queryKey: adaptationKey(profileId) })
     },
+  })
+}
+
+/** The first-run introduction is over: the route guard stops offering it at once. */
+export function useFinishOnboarding() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: api.finishOnboarding,
+    onSuccess: ({ onboarded_at }) =>
+      client.setQueryData<Me | null>(keys.me, (me) => (me ? { ...me, onboarded_at } : me)),
   })
 }
 

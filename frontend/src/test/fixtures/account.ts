@@ -29,6 +29,8 @@ export function makeMe(overrides: Partial<Me> = {}): Me {
     feed_view: 'cards',
     feed_order: 'new',
     folded_sections: [],
+    // Readers in tests know the app already: the introduction is a test of its own.
+    onboarded_at: '2026-10-01T09:00:00Z',
     ...overrides,
   }
 }
