@@ -114,6 +114,60 @@ async def test_a_cve_is_found_in_the_catalogue_and_in_the_bdu(api: str) -> None:
     assert unknown.found is False
 
 
+@pytest.mark.integration
+async def test_every_id_of_a_roundup_is_looked_up(api: str) -> None:
+    """A "trending vulnerabilities" post names dozens of CVEs; the last one is
+    checked like the first, in the catalogue and in the BDU."""
+    from radar.db import session_scope
+    from radar.db.models import KnownExploitedVulnerability, Source
+    from radar.store.articles import NewArticle, insert_new
+    from radar.text import content_hash
+    from radar.vulns.lookup import lookup
+
+    ids = [f"CVE-2026-{70000 + number}" for number in range(40)]
+    last = ids[-1]
+    text = BDU_TEXT.replace("CVE-2026-88772", last)
+    async with session_scope() as session:
+        await session.merge(
+            KnownExploitedVulnerability(
+                cve_id=last, date_added=date(2026, 9, 27), ransomware=False, cwes=[]
+            )
+        )
+        source = Source(
+            slug="bdu-roundup-test",
+            name="БДУ ФСТЭК",
+            feed_url="https://bdu.fstec.ru/ubi/vul/roundup/rss",
+            category="regulator",
+        )
+        session.add(source)
+        await session.flush()
+        await insert_new(
+            session,
+            source.id,
+            [
+                NewArticle(
+                    url="https://bdu.fstec.ru/vul/2026-15498",
+                    title="Уязвимость Citrix NetScaler ADC",
+                    summary="Уязвимость Citrix NetScaler ADC.",
+                    content=text,
+                    author=None,
+                    tags=(),
+                    language="ru",
+                    published_at=datetime(2026, 9, 28, tzinfo=UTC),
+                    content_hash=content_hash("bdu", text),
+                )
+            ],
+        )
+
+    async with session_scope() as session:
+        references = await lookup(session, ids)
+
+    assert [reference.id for reference in references] == ids
+    assert references[-1].kev_added == date(2026, 9, 27)
+    assert references[-1].bdu_id == "BDU:2026-15498"
+    assert not any(reference.found for reference in references[:-1])
+
+
 def test_a_cve_is_not_found_inside_a_longer_one() -> None:
     assert _names("Идентификаторы: CVE: CVE-2024-1234.", "CVE-2024-1234")
     assert not _names("Идентификаторы: CVE: CVE-2024-12345.", "CVE-2024-1234")
