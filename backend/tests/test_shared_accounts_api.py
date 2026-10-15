@@ -156,27 +156,31 @@ async def test_one_click_makes_the_shared_account_where_the_seeding_did_not(api:
     from radar.db.models import User
 
     async with session_scope() as session:
-        await session.execute(delete(User).where(User.email == SHARED_ACCOUNTS["analyst"].email))
+        await session.execute(delete(User).where(User.email == SHARED_ACCOUNTS["admin"].email))
     async with client(api) as visitor:
-        entered = await visitor.post("/auth/preset/analyst")
+        entered = await visitor.post("/auth/preset/admin")
         profiles = (await visitor.get("/profiles")).json()
 
     assert entered.status_code == 200
-    assert len(profiles) == len(SHARED_ACCOUNTS["analyst"].profiles)
+    assert len(profiles) == len(DEFAULT_PROFILES)
 
 
-async def test_the_analyst_starts_with_the_security_profiles(api: str) -> None:
-    async with client(api) as visitor:
-        await visitor.post("/auth/preset/analyst")
-        me = (await visitor.get("/auth/me")).json()
-        profiles = (await visitor.get("/profiles")).json()
-        unknown = await visitor.post("/auth/preset/admin")
+async def test_the_administrator_sees_the_analytics_and_the_reader_does_not(api: str) -> None:
+    async with client(api) as admin:
+        await admin.post("/auth/preset/admin")
+        me = (await admin.get("/auth/me")).json()
+        analytics = await admin.get("/analytics/overview")
+        unknown = await admin.post("/auth/preset/analyst")
+    async with client(api) as reader:
+        await reader.post("/auth/preset/reader")
+        reader_me = (await reader.get("/auth/me")).json()
+        refused = await reader.get("/analytics/overview")
 
-    assert me["display_name"] == "Аналитик ИБ"
-    assert sorted(p["spec"]["name"] for p in profiles) == sorted(
-        SHARED_ACCOUNTS["analyst"].profiles
-    )
+    assert (me["display_name"], me["is_admin"]) == ("Администратор", True)
+    assert analytics.status_code == 200
     assert unknown.status_code == 404
+    assert reader_me["is_admin"] is False
+    assert refused.status_code == 403
 
 
 @pytest.mark.parametrize(("value", "expected"), [("true", 200), ("false", 404)])

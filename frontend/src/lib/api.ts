@@ -604,7 +604,7 @@ export interface Meta {
   sources: number
   sources_failing: number
   demo_login: boolean
-  /** The sign-in page enters the shared reader and analyst accounts with one click. */
+  /** The sign-in page enters the shared reader and administrator accounts with one click. */
   preset_login: boolean
   registration_open: boolean
   /** False: a visitor without a session is entered as a guest, no sign-in screen. */
@@ -663,7 +663,7 @@ export interface User {
 }
 
 /** The shared accounts behind the one-click buttons of the sign-in page. */
-export type SharedAccountKey = 'reader' | 'analyst'
+export type SharedAccountKey = 'reader' | 'admin'
 
 /** The nine ready pictures, served from /brand/avatars/<name>.webp. */
 export type AvatarPreset =

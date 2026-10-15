@@ -178,7 +178,7 @@ async def preset_login(
     name: str, response: Response, session: SessionDep, settings: SettingsDep
 ) -> UserOut:
     """Enter a shared account with one click: `reader` (the example profiles)
-    or `analyst` (an information security analyst). Everyone who enters gets
+    or `admin` (an administrator with the analytics and the catalog tools). Everyone who enters gets
     the same account. Off when `RADAR_PRESET_LOGIN=false`."""
     if not settings.preset_login:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Вход в общие аккаунты отключён.")

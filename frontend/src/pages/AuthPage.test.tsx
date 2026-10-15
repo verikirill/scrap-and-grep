@@ -252,10 +252,10 @@ describe('AuthPage', () => {
     // The guest button is off on a stack with the defaults.
     expect(screen.queryByRole('button', { name: 'Войти без регистрации' })).toBeNull()
 
-    await user.click(screen.getByRole('button', { name: /Войти как аналитик/ }))
+    await user.click(screen.getByRole('button', { name: /Войти как администратор/ }))
 
     await waitFor(() => expect(location()).toBe('/feed'))
-    expect(sent).toEqual([{ url: '/api/v1/auth/preset/analyst', body: null }])
+    expect(sent).toEqual([{ url: '/api/v1/auth/preset/admin', body: null }])
   })
 
   it('shows why a one-click entry failed, and offers none where the server has it off', async () => {
