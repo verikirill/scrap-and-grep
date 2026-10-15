@@ -899,14 +899,14 @@ describe('FeedPage in the look of a Telegram channel', () => {
     expect(screen.getByRole('radio', { name: 'Карточки' })).toBeChecked()
     expect(screen.queryByRole('article', { name: items[0].title })).toBeNull()
 
-    await user.click(screen.getByRole('radio', { name: 'Как в Telegram' }))
+    await user.click(screen.getByRole('radio', { name: 'Посты' }))
 
-    expect(screen.getByRole('radio', { name: 'Как в Telegram' })).toBeChecked()
+    expect(screen.getByRole('radio', { name: 'Посты' })).toBeChecked()
     expect(await screen.findByRole('article', { name: items[0].title })).toBeInTheDocument()
     expect(sent.settings).toEqual([])
     answer.open()
     await waitFor(() => expect(sent.settings).toEqual([{ feed_view: 'telegram' }]))
-    expect(screen.getByRole('radio', { name: 'Как в Telegram' })).toBeChecked()
+    expect(screen.getByRole('radio', { name: 'Посты' })).toBeChecked()
   })
 
   it('puts the look back and says why when the server refuses it', async () => {
@@ -932,7 +932,7 @@ describe('FeedPage in the look of a Telegram channel', () => {
     await screen.findByRole('link', { name: items[0].title })
     isHeld = true
 
-    await user.click(screen.getByRole('radio', { name: 'Как в Telegram' }))
+    await user.click(screen.getByRole('radio', { name: 'Посты' }))
 
     await waitFor(() => expect(isReread).toBe(true))
     expect(screen.getByRole('radio', { name: 'Карточки' })).toBeChecked()

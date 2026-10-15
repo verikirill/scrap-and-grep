@@ -61,7 +61,7 @@ describe('AccountPage', () => {
     await renderPage()
 
     expect(screen.queryByRole('radiogroup', { name: 'Вид ленты' })).toBeNull()
-    expect(screen.queryByRole('radio', { name: /Как в Telegram/ })).toBeNull()
+    expect(screen.queryByRole('radio', { name: /Посты/ })).toBeNull()
   })
 
   it('opens the introduction again on demand, for a reader and a guest alike', async () => {
