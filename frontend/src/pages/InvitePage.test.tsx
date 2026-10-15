@@ -69,3 +69,20 @@ describe('InvitePage', () => {
     expect(screen.getByRole('link', { name: 'Ко входу' })).toHaveAttribute('href', '/login')
   })
 })
+
+describe('InvitePage quotes', () => {
+  it('adds no second pair of quotes to a name that has its own', async () => {
+    server.use(
+      http.get(apiUrl(`/auth/invite/${TOKEN}`), () =>
+        HttpResponse.json(makeInvite({ company: 'АО «Энергосеть»' })),
+      ),
+    )
+    renderPage()
+
+    expect(
+      await screen.findByText(
+        'Анна Петрова приглашает вас в команду «SOC» компании АО «Энергосеть».',
+      ),
+    ).toBeInTheDocument()
+  })
+})

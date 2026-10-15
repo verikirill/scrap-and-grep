@@ -19,7 +19,9 @@ const capitalized = (text: string) => text.slice(0, 1).toUpperCase() + text.slic
 
 /** "Олег Петров пригласил вас в команду «SOC» компании «Энергосеть»." */
 function inviteLine(invite: Invite): string {
-  const where = `в команду «${invite.team}» компании «${invite.company}»`
+  // A name that brings its own quotes («АО «Энергосеть»») gets no second pair.
+  const quoted = (name: string) => (name.includes('«') ? name : `«${name}»`)
+  const where = `в команду ${quoted(invite.team)} компании ${quoted(invite.company)}`
   return invite.manager ? `${invite.manager} приглашает вас ${where}.` : `Вас приглашают ${where}.`
 }
 
