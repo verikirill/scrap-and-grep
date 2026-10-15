@@ -14,7 +14,9 @@ import pytest
 from radar.fix_status import PARTIAL_NOTE
 
 ROOT = Path(__file__).resolve().parents[2]
-JURY_CASE = ROOT / "examples" / "change" / "02-exclusion" / "after.md"
+# The issue the jury of the qualifying stage read, as it was saved on 02.10:
+# FortiMail twice and advice to install a fix that was not out.
+JURY_CASE = Path(__file__).with_name("fixtures") / "jury-fortimail-issue.md"
 
 
 def _script() -> ModuleType:

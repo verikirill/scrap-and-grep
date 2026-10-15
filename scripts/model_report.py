@@ -59,7 +59,9 @@ def load(folder: Path, slug: str) -> dict[str, Any]:
             moved = True
     if moved:
         path.write_text(
-            json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8", newline="\n"
+            json.dumps(data, ensure_ascii=False, indent=1),
+            encoding="utf-8",
+            newline="\n",
         )
     return data
 
@@ -74,19 +76,41 @@ def fallbacks(stats: dict[str, Any]) -> str:
     candidates, selected = stats.get("candidates") or 0, stats.get("selected") or 0
     grades = candidates - (stats.get("graded_by_model") or 0)
     texts = selected - (stats.get("written_by_model") or 0)
-    parts = [f"{grades} оценок из {candidates}"] if grades else []
-    parts += [f"{texts} текстов из {selected}"] if texts else []
+    parts = (
+        [f"{grades} {plural(grades, ('оценка', 'оценки', 'оценок'))} из {candidates}"]
+        if grades
+        else []
+    )
+    parts += (
+        [f"{texts} {plural(texts, ('текст', 'текста', 'текстов'))} из {selected}"]
+        if texts
+        else []
+    )
     return ", ".join(parts) or "0"
+
+
+def plural(count: int, forms: tuple[str, str, str]) -> str:
+    """'текст', 'текста' or 'текстов' after a count."""
+    if 11 <= count % 100 <= 14:
+        return forms[2]
+    if count % 10 == 1:
+        return forms[0]
+    return forms[1] if 2 <= count % 10 <= 4 else forms[2]
 
 
 def ids(run: dict[str, Any]) -> set[int]:
     return {item["article_id"] for item in run["items"]}
 
 
-def specialist_row(name: str, place: str, run: dict[str, Any], base: dict[str, Any]) -> str:
+def specialist_row(
+    name: str, place: str, run: dict[str, Any], base: dict[str, Any]
+) -> str:
     stats = run["stats"]
     kinds = stats.get("kinds", {})
-    lookups = (stats.get("lookups_by_model") or 0, stats.get("lookups_by_pipeline") or 0)
+    lookups = (
+        stats.get("lookups_by_model") or 0,
+        stats.get("lookups_by_pipeline") or 0,
+    )
     return (
         f"| {name} | {place} | {run['seconds']:.0f} | {fallbacks(stats)} "
         f"| {kinds.get('attack', 0)} / {kinds.get('vulnerability', 0)} / {kinds.get('news', 0)} "
@@ -120,7 +144,11 @@ def main() -> None:
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
     folder = Path(sys.argv[1] if len(sys.argv) > 1 else "examples/models")
     scores = dataset_scores()
-    runs = {slug: load(folder, slug) for slug in MODELS if (folder / f"{slug}.json").exists()}
+    runs = {
+        slug: load(folder, slug)
+        for slug in MODELS
+        if (folder / f"{slug}.json").exists()
+    }
     base = {run["profile"]: run for run in runs[BASELINE]["runs"]}
     ics, management = SLUGS
 
@@ -151,7 +179,11 @@ def main() -> None:
     for slug in runs:
         path = folder / f"{slug}.dataset.json"
         if path.exists():
-            print(dataset_row(MODELS[slug][0], scores(json.loads(path.read_text("utf-8")))))
+            print(
+                dataset_row(
+                    MODELS[slug][0], scores(json.loads(path.read_text("utf-8")))
+                )
+            )
 
 
 if __name__ == "__main__":

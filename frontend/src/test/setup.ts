@@ -4,7 +4,7 @@ import { toast } from '@heroui/react'
 import { cleanup } from '@testing-library/react'
 import { MotionGlobalConfig } from 'motion/react'
 import { afterAll, afterEach, beforeAll, vi } from 'vitest'
-import { installBrowserFakes, resetBrowserFakes } from './browser'
+import { installBrowserFakes, resetBrowserFakes, setMediaQueries } from './browser'
 import { server, settleRequests, unhandled } from './server'
 
 // Every motion animation lands on its last frame at once: exits unmount
@@ -21,6 +21,9 @@ afterEach(async () => {
   // Fake timers never outlive their test; the wait below needs real ones.
   vi.useRealTimers()
   await settleRequests()
+  // HeroUI keeps a closed toast on screen for its exit animation unless motion
+  // is reduced; the next test would find it there.
+  setMediaQueries({ '(prefers-reduced-motion: reduce)': true })
   toast.clear()
   server.resetHandlers()
   resetBrowserFakes()
