@@ -60,7 +60,8 @@ export function PostCard({ item, index, isQuiet, placement, onReact }: FeedCardP
           className="size-10 text-sm"
         />
       </span>
-      <div className="min-w-0 flex-1 overflow-hidden rounded-2xl rounded-bl-md bg-background shadow-[0_1px_2px_rgb(0_0_0/0.13)] dark:bg-surface-tertiary">
+      {/* Without the wallpaper of a phone, a light bubble is a white card on the grey page. */}
+      <div className="min-w-0 flex-1 overflow-hidden rounded-2xl rounded-bl-md bg-background shadow-[0_1px_2px_rgb(0_0_0/0.13)] sm:not-dark:bg-surface sm:not-dark:shadow-surface dark:bg-surface-tertiary">
         {hasPicture && (
           // The headline below is the link a screen reader and the keyboard use.
           <Link

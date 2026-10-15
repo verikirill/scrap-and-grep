@@ -1,7 +1,9 @@
-import { FileText, RotateCcw } from '../components/icons'
+import { RotateCcw } from '../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
+import { ArtTile } from '../components/ArtTile'
+import { BrandCat } from '../components/BrandCat'
 import { EASE } from '../components/tokens'
 import { Loading, Skeleton, SkeletonList, SkeletonText } from '../components/loading'
 import { Button, Card, EmptyState, ErrorNote, ErrorState, PageHeader } from '../components/ui'
@@ -215,10 +217,16 @@ export function DigestPage() {
             {!activeId && digests.isSuccess && (
               <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <Card>
-                  <EmptyState icon={<FileText size={22} />} title="Выпусков пока нет">
-                    Кот с лупой ждёт команды. Выберите профиль и нажмите «Собрать выпуск»: за неделю
-                    новостей это несколько секунд в автономном режиме и пара минут с языковой
-                    моделью.
+                  <EmptyState
+                    art={
+                      <ArtTile>
+                        <BrandCat size={160} />
+                      </ArtTile>
+                    }
+                    title="Выпусков пока нет"
+                  >
+                    Выберите профиль и нажмите «Собрать выпуск»: за неделю новостей это несколько
+                    секунд в автономном режиме и пара минут с языковой моделью.
                   </EmptyState>
                 </Card>
               </motion.div>

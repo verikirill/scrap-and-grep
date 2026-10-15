@@ -39,6 +39,30 @@ describe('ErrorBoundary', () => {
     expect(alert).toHaveTextContent('Возможно, сервис обновился')
   })
 
+  it('stands for the whole page without a title: the cat by a pulled plug, and the ways out', () => {
+    const { container } = render(
+      <ErrorBoundary>
+        <Fragile />
+      </ErrorBoundary>,
+    )
+    const alert = screen.getByRole('alert')
+    expect(screen.getByRole('heading', { level: 1, name: 'Что-то сломалось' })).toBeVisible()
+    expect(alert).toHaveTextContent('Возможно, сервис обновился')
+    expect(container.querySelector('img')).toHaveAttribute('src', '/brand/errors/500.webp')
+    expect(screen.getByRole('link', { name: 'На главную' })).toHaveAttribute('href', '/')
+    expect(screen.getByRole('button', { name: 'Обновить страницу' })).toBeInTheDocument()
+  })
+
+  it('keeps a part that failed inside its page, without the cat', () => {
+    const { container } = render(
+      <ErrorBoundary title="Редактор не загрузился">
+        <Fragile />
+      </ErrorBoundary>,
+    )
+    expect(container.querySelector('img')).toBeNull()
+    expect(screen.queryByRole('link', { name: 'На главную' })).toBeNull()
+  })
+
   it('draws the part again on «Попробовать снова»', async () => {
     const user = userEvent.setup()
     render(
@@ -46,7 +70,7 @@ describe('ErrorBoundary', () => {
         <Fragile />
       </ErrorBoundary>,
     )
-    expect(screen.getByRole('alert')).toHaveTextContent('Раздел не загрузился')
+    expect(screen.getByRole('alert')).toHaveTextContent('Что-то сломалось')
 
     shouldFail = false
     await user.click(screen.getByRole('button', { name: 'Попробовать снова' }))

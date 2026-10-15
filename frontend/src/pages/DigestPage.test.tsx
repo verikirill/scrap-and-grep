@@ -67,10 +67,11 @@ const failed = (overrides: Partial<Digest> = {}) =>
   makeDigest({ status: 'failed', error: 'Модель не ответила', ...overrides })
 
 describe('DigestPage', () => {
-  it('says there are no issues yet', async () => {
+  it('says there are no issues yet, with the cat searching for them', async () => {
     serveDigests([])
-    renderPage()
+    const { container } = renderPage()
     expect(await screen.findByText('Выпусков пока нет')).toBeInTheDocument()
+    expect(container.querySelector('.brand-cat')).toHaveAttribute('data-pose', 'search')
     expect(screen.getByText('Здесь появятся собранные выпуски.')).toBeInTheDocument()
     await loaded()
   })
@@ -100,6 +101,7 @@ describe('DigestPage', () => {
     const { user } = renderPage('/digests/digest-404')
 
     expect(await screen.findByRole('heading', { name: 'Не удалось открыть выпуск' })).toBeVisible()
+    expect(screen.getByText('Не нашлось')).toBeInTheDocument()
     expect(screen.getByText('Выпуск не найден')).toBeInTheDocument()
     await loaded()
 

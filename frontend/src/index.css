@@ -18,16 +18,6 @@
   --field-border-width: 1px;
   --field-border: oklch(86% 0.006 286);
   --field-border-hover: oklch(78% 0.008 286);
-  /* The cat (components/Mascot.tsx): the black cat of the logo, plush-shaded. */
-  --mascot-fur: oklch(24% 0.02 268);
-  --mascot-fur-light: oklch(40% 0.03 268);
-  --mascot-rim: transparent;
-  --mascot-eye: oklch(98% 0.008 250);
-  --mascot-pupil: oklch(17% 0.02 268);
-  --mascot-ear: oklch(74% 0.09 10);
-  --mascot-glass: color-mix(in oklab, var(--accent) 18%, white);
-  --mascot-paper: white;
-  --mascot-ink: oklch(82% 0.01 268);
   /* Page titles sit in a dark pill in both themes. */
   --title-pill: oklch(22% 0.012 280);
   --title-pill-foreground: oklch(98% 0 0);
@@ -42,13 +32,6 @@
   --field-border-hover: oklch(40% 0.01 286);
   /* Secondary text a step lighter than HeroUI's: metadata on dark cards stays above 4.5:1. */
   --muted: oklch(76% 0.012 286);
-  /* A black cat on a near-black page: lighter fur and a faint rim keep its shape. */
-  --mascot-fur: oklch(31% 0.02 268);
-  --mascot-fur-light: oklch(48% 0.03 268);
-  --mascot-rim: oklch(62% 0.03 268 / 0.5);
-  --mascot-glass: color-mix(in oklab, var(--accent) 28%, var(--surface));
-  --mascot-paper: oklch(95% 0.005 268);
-  --mascot-ink: oklch(78% 0.01 268);
   --title-pill: oklch(24% 0.008 286);
   --cta-to: oklch(60% 0.2 285);
 }
@@ -107,7 +90,7 @@
 }
 
 @layer components {
-  /* The backdrop of the feed's Telegram look: a chat's wallpaper, faint dots of the accent. */
+  /* The backdrop of the feed's Telegram look on a phone: a chat's wallpaper, faint dots of the accent. */
   .chat-wallpaper {
     background-color: var(--surface-secondary);
     background-image: radial-gradient(
@@ -158,11 +141,6 @@
     border-radius: 50%;
     background: var(--snow);
     box-shadow: 0 1px 3px rgb(0 0 0 / 0.2);
-  }
-
-  .mascot-rim {
-    stroke: var(--mascot-rim);
-    stroke-width: 1.2;
   }
 
   /* A page title: bold capitals in a dark pill, as a poster headline. */
@@ -223,37 +201,22 @@
     transform: translateX(3px);
   }
 
-  /* The picture tile of an empty or failed place, as the cards of the inspiration. */
-  .mascot-tile {
-    border-radius: 2rem;
-    background:
-      radial-gradient(
-        circle at 30% 20%,
-        color-mix(in oklab, white 55%, transparent),
-        transparent 60%
-      ),
-      linear-gradient(
-        140deg,
-        color-mix(in oklab, var(--accent) 22%, var(--surface)),
-        color-mix(in oklab, var(--cta-to) 18%, var(--surface))
-      );
-  }
-
-  .dark .mascot-tile {
+  /* The tile of an empty or failed place: the topic's icon on a soft tint. */
+  .icon-tile {
+    border-radius: 1.25rem;
     background: linear-gradient(
       140deg,
-      color-mix(in oklab, var(--accent) 24%, var(--surface)),
-      color-mix(in oklab, var(--cta-to) 18%, var(--surface))
+      color-mix(in oklab, var(--accent) 14%, var(--surface)),
+      color-mix(in oklab, var(--cta-to) 9%, var(--surface))
     );
+    color: var(--accent-soft-foreground);
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 16%, transparent);
   }
 
-  .mascot-tile--danger,
-  .dark .mascot-tile--danger {
-    background: linear-gradient(
-      140deg,
-      color-mix(in oklab, var(--danger) 16%, var(--surface)),
-      color-mix(in oklab, var(--warning) 14%, var(--surface))
-    );
+  .icon-tile--danger {
+    background: color-mix(in oklab, var(--danger) 12%, var(--surface));
+    color: var(--danger);
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--danger) 20%, transparent);
   }
 
   /* The filled part of a progress bar: the call-to-action gradient with a light running over it. */
@@ -263,6 +226,18 @@
         200% 100%,
       linear-gradient(90deg, var(--cta-from), var(--cta-to));
     animation: progress-glint 2.2s linear infinite;
+  }
+
+  /* The front of the build progress: a light dot with a glow of the accent. */
+  .progress-marker__dot {
+    background: var(--surface);
+    box-shadow:
+      inset 0 0 0 3px var(--cta-to),
+      0 0 12px 1px color-mix(in oklab, var(--cta-to) 55%, transparent);
+  }
+
+  .progress-marker[data-state='queued'] .progress-marker__dot {
+    box-shadow: inset 0 0 0 3px color-mix(in oklab, var(--muted) 60%, transparent);
   }
 
   /* A card that opens something rises a little under the pointer. */
@@ -337,6 +312,20 @@
   transition: none !important;
 }
 
+/* Set while the theme fades where view transitions are missing (Layout.tsx):
+   every element eases only its colours, all for the same 300 ms. */
+.theme-fading,
+.theme-fading *,
+.theme-fading *::before,
+.theme-fading *::after {
+  transition-property:
+    background-color, color, border-color, outline-color, text-decoration-color, fill, stroke,
+    box-shadow !important;
+  transition-duration: 300ms !important;
+  transition-timing-function: var(--ease-out-quint) !important;
+  transition-delay: 0s !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -348,9 +337,201 @@
 
 /* View transitions move only the elements named for them (a digest title
    flowing between the history list and the page header). The rest of the
-   page changes at once instead of cross-fading two snapshots of itself. */
+   page changes at once instead of cross-fading two snapshots of itself; a
+   theme switch sweeps the new snapshot over the old one (Layout.tsx). */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;
   mix-blend-mode: normal;
+}
+/* The new theme as a circle from the top-left corner over the old one, which
+   stays still underneath. 150% of the radius passes the far corner. */
+.theme-sweeping::view-transition-new(root) {
+  animation: theme-sweep 700ms ease-in-out both;
+}
+@keyframes theme-sweep {
+  from {
+    clip-path: circle(0% at 0% 0%);
+  }
+  to {
+    clip-path: circle(150% at 0% 0%);
+  }
+}
+
+/* The halftone behind the app (components/ui/dotted-veil.tsx): barely there.
+   Black dots on white multiply into the light page, white dots on black
+   screen into the dark one, so the page colour shows through untouched. */
+.dotted-veil {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.045;
+  mix-blend-mode: multiply;
+}
+.dark .dotted-veil {
+  opacity: 0.06;
+  mix-blend-mode: screen;
+}
+
+/* The brand cat (components/BrandCat.tsx): the parts of the logo, placed in
+   percentages of their 640 by 660 scene. Its motion is transform and opacity
+   only, on a 6 s cycle; the eyes blink on a 4 s one, so the two drift apart. */
+.brand-cat {
+  position: relative;
+  max-width: 100%;
+  aspect-ratio: 640 / 660;
+  user-select: none;
+  pointer-events: none;
+}
+.brand-cat__group {
+  position: absolute;
+  inset: 0;
+}
+.brand-cat img {
+  position: absolute;
+  max-width: none;
+}
+/* The light behind the magnifier's glass, the same in both themes. */
+.brand-cat__lens {
+  position: absolute;
+  border-radius: 50%;
+  background: rgb(238 241 246 / 0.92);
+}
+/* Each part turns about where it is attached: the tail at the body, the head
+   at the neck, the ear at its base; the body breathes from the ground. */
+.brand-cat__tail {
+  transform-origin: 92% 88%;
+}
+.brand-cat__head {
+  transform-origin: 47% 43%;
+}
+.brand-cat__ear {
+  transform-origin: 63% 96%;
+}
+.brand-cat__breath {
+  transform-origin: 50% 93%;
+}
+.brand-cat__eye-closed {
+  opacity: 0;
+}
+.brand-cat[data-pose='sleep'] .brand-cat__eye-closed {
+  opacity: 1;
+}
+
+.brand-cat[data-pose='search'] .brand-cat__tail {
+  animation: brand-cat-tail 6s ease-in-out infinite;
+}
+.brand-cat[data-pose='search'] .brand-cat__head {
+  animation: brand-cat-head 6s ease-in-out infinite;
+}
+.brand-cat[data-pose='search'] .brand-cat__ear {
+  animation: brand-cat-ear 6s linear infinite;
+}
+.brand-cat[data-pose='search'] .brand-cat__eye-open {
+  animation: brand-cat-eye-open 4s linear infinite;
+}
+.brand-cat[data-pose='search'] .brand-cat__eye-closed {
+  animation: brand-cat-eye-closed 4s linear infinite;
+}
+.brand-cat[data-pose='sleep'] .brand-cat__breath {
+  animation: brand-cat-breathe 6s ease-in-out infinite;
+}
+
+@keyframes brand-cat-tail {
+  0%,
+  100% {
+    transform: rotate(-4deg);
+  }
+  50% {
+    transform: rotate(4deg);
+  }
+}
+@keyframes brand-cat-head {
+  0%,
+  100% {
+    transform: rotate(-1.5deg);
+  }
+  50% {
+    transform: rotate(1.5deg);
+  }
+}
+/* Once a cycle, for about 400 ms. */
+@keyframes brand-cat-ear {
+  0%,
+  40%,
+  47%,
+  100% {
+    transform: rotate(0);
+  }
+  42% {
+    transform: rotate(-7deg);
+  }
+  44.5% {
+    transform: rotate(3deg);
+  }
+}
+/* Shut for about 120 ms of every 4 s. */
+@keyframes brand-cat-eye-open {
+  0%,
+  95%,
+  98.5%,
+  100% {
+    opacity: 1;
+  }
+  95.5%,
+  98% {
+    opacity: 0;
+  }
+}
+@keyframes brand-cat-eye-closed {
+  0%,
+  95%,
+  98.5%,
+  100% {
+    opacity: 0;
+  }
+  95.5%,
+  98% {
+    opacity: 1;
+  }
+}
+@keyframes brand-cat-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.015);
+  }
+}
+
+/* Under "reduce motion" the cat holds still: open-eyed, or asleep. */
+@media (prefers-reduced-motion: reduce) {
+  .brand-cat,
+  .brand-cat * {
+    animation: none !important;
+  }
+}
+
+/* The drawings on the error pages (components/ErrorIllustration.tsx) float
+   a few pixels up and down; still under "reduce motion". */
+.error-illustration {
+  animation: error-illustration-float 6s ease-in-out infinite;
+}
+@keyframes error-illustration-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .error-illustration {
+    animation: none !important;
+  }
 }

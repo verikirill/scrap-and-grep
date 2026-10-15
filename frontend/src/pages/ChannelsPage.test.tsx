@@ -169,7 +169,7 @@ describe('ChannelsPage', () => {
     await user.click(within(channelSwitch()).getByRole('radio', { name: 'Новости SOC' }))
 
     expect(await screen.findByRole('link', storyLink(SOC_POST))).toBeInTheDocument()
-    expect(screen.queryByRole('link', storyLink(ENERGY_POST))).toBeNull()
+    await waitFor(() => expect(screen.queryByRole('link', storyLink(ENERGY_POST))).toBeNull())
     expect(screen.getByRole('button', { name: /Новости SOC/ })).toHaveAttribute(
       'aria-pressed',
       'true',
@@ -178,7 +178,7 @@ describe('ChannelsPage', () => {
     await user.click(screen.getByRole('button', { name: /Энергетика и ИБ/ }))
 
     expect(await screen.findByRole('link', storyLink(ENERGY_POST))).toBeInTheDocument()
-    expect(screen.queryByRole('link', storyLink(SOC_POST))).toBeNull()
+    await waitFor(() => expect(screen.queryByRole('link', storyLink(SOC_POST))).toBeNull())
     expect(within(channelSwitch()).getByRole('radio', { name: 'Энергетика и ИБ' })).toBeChecked()
 
     // The pressed card lets go of the filter.
@@ -242,7 +242,7 @@ describe('ChannelsPage', () => {
     const { user } = renderPage()
     await user.click(await screen.findByRole('radio', { name: 'Сетевые тревоги' }))
     expect(await screen.findByRole('link', storyLink(GRID_POST))).toBeInTheDocument()
-    expect(screen.queryByRole('link', storyLink(ENERGY_POST))).toBeNull()
+    await waitFor(() => expect(screen.queryByRole('link', storyLink(ENERGY_POST))).toBeNull())
 
     // The cards come in the order of the channels: the third is the one chosen.
     await user.click(screen.getAllByRole('button', { name: 'Отключить канал' })[2])
@@ -251,6 +251,6 @@ describe('ChannelsPage', () => {
     expect(within(channelSwitch()).getByRole('radio', { name: 'Все' })).toBeChecked()
     expect(await screen.findByRole('link', storyLink(ENERGY_POST))).toBeInTheDocument()
     expect(await screen.findByRole('link', storyLink(SOC_POST))).toBeInTheDocument()
-    expect(screen.queryByRole('link', storyLink(GRID_POST))).toBeNull()
+    await waitFor(() => expect(screen.queryByRole('link', storyLink(GRID_POST))).toBeNull())
   })
 })

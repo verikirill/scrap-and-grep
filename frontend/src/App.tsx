@@ -2,7 +2,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import type { QueryClient } from '@tanstack/react-query'
 import { MotionConfig } from 'motion/react'
 import { Suspense, useEffect } from 'react'
-import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from 'react-router'
+import { BrowserRouter, Outlet, Route, Routes, useLocation } from 'react-router'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { Layout } from './components/Layout'
 import { RequireAuth } from './components/RequireAuth'
@@ -11,6 +11,7 @@ import { createQueryClient } from './lib/queryClient'
 import { Toast } from '@heroui/react'
 import { AuthPage } from './pages/AuthPage'
 import { DigestPage } from './pages/DigestPage'
+import { NotFoundPage } from './pages/NotFoundPage'
 import {
   AccountPage,
   AnalyticsPage,
@@ -82,7 +83,7 @@ export default function App({ client = queryClient }: { client?: QueryClient }) 
               <Route path="/account" element={<AccountPage />} />
               <Route path="/analytics" element={<AnalyticsPage />} />
               <Route path="/share/:token" element={<SharePage />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="*" element={<NotFoundPage />} />
             </Route>
           </Routes>
         </BrowserRouter>

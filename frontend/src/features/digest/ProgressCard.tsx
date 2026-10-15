@@ -1,8 +1,6 @@
 import clsx from 'clsx'
 import { Check } from '../../components/icons'
 import { motion } from 'motion/react'
-import { Mascot } from '../../components/Mascot'
-import type { MascotPose } from '../../components/Mascot'
 import { Card } from '../../components/ui'
 import type { DigestSummary, ProgressEvent } from '../../lib/api'
 import { STAGE_LABELS } from '../../lib/format'
@@ -28,10 +26,12 @@ function stepIndex(stage: string | null | undefined): number {
   return index === -1 ? 0 : index
 }
 
-/** The cat waits in the queue, searches while the steps run and holds up the issue at the end. */
-function poseOf(isQueued: boolean, current: number): MascotPose {
-  if (isQueued) return 'waiting'
-  return current >= STEPS.length ? 'found' : 'searching'
+type TrackState = 'queued' | 'running' | 'saving'
+
+/** The marker rests in the queue, glows while the steps run and settles once they are all done. */
+function trackStateOf(isQueued: boolean, current: number): TrackState {
+  if (isQueued) return 'queued'
+  return current >= STEPS.length ? 'saving' : 'running'
 }
 
 type Props = {
@@ -50,6 +50,7 @@ export function ProgressCard({ digest, event }: Props) {
       ? `${event.done} из ${event.total}`
       : null
   const percent = Math.round(progress * 100)
+  const trackState = trackStateOf(isQueued, current)
 
   return (
     <Card className="overflow-hidden p-6">
@@ -71,26 +72,8 @@ export function ProgressCard({ digest, event }: Props) {
         </span>
       </div>
 
-      {/* The track: the cat walks along the bar as the issue gets ready. */}
-      <div className="relative mx-4 mt-4 pt-16 sm:mx-6">
-        <motion.div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0"
-          initial={false}
-          animate={{ x: `${progress * 100}%` }}
-          transition={{ type: 'spring', stiffness: 60, damping: 18 }}
-        >
-          {/* Keyed by the step: the cat hops each time a step is done. */}
-          <motion.div
-            key={current}
-            className="w-fit -translate-x-1/2"
-            initial={{ y: -8 }}
-            animate={{ y: 0 }}
-            transition={{ type: 'spring', stiffness: 500, damping: 14 }}
-          >
-            <Mascot pose={poseOf(isQueued, current)} size={64} />
-          </motion.div>
-        </motion.div>
+      {/* The track: a glowing marker rides the front of the bar as the issue gets ready. */}
+      <div className="relative mt-5">
         <div
           role="progressbar"
           aria-label="Готовность выпуска"
@@ -106,6 +89,29 @@ export function ProgressCard({ digest, event }: Props) {
             transition={{ type: 'spring', stiffness: 60, damping: 18 }}
           />
         </div>
+        {/* A full-width layer moved by a share of its own width: the marker
+            travels with the fill on the compositor, without layout. */}
+        <motion.div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-1/2 h-0"
+          initial={false}
+          animate={{ x: `${progress * 100}%` }}
+          transition={{ type: 'spring', stiffness: 60, damping: 18 }}
+        >
+          <span
+            data-state={trackState}
+            className="progress-marker absolute top-0 left-0 grid size-4 -translate-x-1/2 -translate-y-1/2 place-items-center"
+          >
+            {trackState === 'running' && (
+              <motion.span
+                className="absolute inset-0 rounded-full bg-accent"
+                animate={{ scale: [1, 2.4], opacity: [0.45, 0] }}
+                transition={{ duration: 1.6, repeat: Infinity, ease: 'easeOut' }}
+              />
+            )}
+            <span className="progress-marker__dot size-full rounded-full" />
+          </span>
+        </motion.div>
       </div>
 
       <ol className="mt-4 grid grid-cols-6 gap-x-1 sm:mx-2">

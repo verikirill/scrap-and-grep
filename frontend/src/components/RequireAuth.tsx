@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router'
 import { useMe } from '../lib/queries'
 import { RotateCw } from './icons'
-import { MascotLoader } from './loading'
+import { PulseLoader } from './loading'
 import { Button, ErrorState } from './ui'
 
 /** Where the reader was heading when the sign-in page stopped them. */
@@ -23,7 +23,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   if (me.isPending) {
     return (
       <Splash>
-        <MascotLoader label="Проверяем вход" size={120} />
+        <PulseLoader label="Проверяем вход" />
       </Splash>
     )
   }
@@ -33,6 +33,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
         <ErrorState
           title="Не получилось проверить вход"
           error={me.error}
+          isPage
           action={
             <Button
               variant="primary"

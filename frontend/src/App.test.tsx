@@ -167,9 +167,19 @@ describe('App', { timeout: 15_000 }, () => {
     )
   })
 
-  it('sends an unknown address to the digest page', async () => {
+  it('says an unknown address has no page, inside the shell, and leads home', async () => {
     serveNoDigests()
-    openApp('/no-such-section')
+    const { user } = openApp('/no-such-section')
+
+    const main = await screen.findByRole('main', {}, { timeout: 5000 })
+    expect(
+      await within(main).findByRole('heading', { level: 1, name: 'Такой страницы нет' }),
+    ).toBeInTheDocument()
+    expect(within(main).getByText('404')).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/no-such-section')
+    expect(sidebar()).toBeInTheDocument()
+
+    await user.click(within(main).getByRole('button', { name: 'На главную' }))
     await digestPageLoaded()
     expect(screen.getByText('Выпусков пока нет')).toBeInTheDocument()
     expect(window.location.pathname).toBe('/')
@@ -269,7 +279,7 @@ describe('App', { timeout: 15_000 }, () => {
     const { user } = openApp('/channels')
 
     const main = await screen.findByRole('main', {}, { timeout: 5000 })
-    expect(await within(main).findByRole('alert')).toHaveTextContent('Раздел не загрузился')
+    expect(await within(main).findByRole('alert')).toHaveTextContent('Что-то сломалось')
     expect(within(sidebar()).getByRole('link', { name: 'Каналы' })).toHaveAttribute(
       'aria-current',
       'page',

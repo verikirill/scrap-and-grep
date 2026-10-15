@@ -2,7 +2,7 @@ import { useId, useState } from 'react'
 import { Download, Loader2, Mic, RotateCcw } from '../../components/icons'
 import { SelectField } from '../../components/SelectField'
 import { buttonClass } from '../../components/tokens'
-import { MascotLoader } from '../../components/loading'
+import { PulseLoader } from '../../components/loading'
 import { Button, ErrorNote } from '../../components/ui'
 import {
   Dialog,
@@ -160,7 +160,7 @@ export function BriefingPlayer({ digest }: { digest: Digest }) {
           </p>
           <ErrorNote error={create.error ?? state.error} />
 
-          {!briefing && create.isPending && <MascotLoader label="Заказываем брифинг" isInline />}
+          {!briefing && create.isPending && <PulseLoader label="Заказываем брифинг" isInline />}
           {briefing && busy && <Progress briefing={briefing} />}
           {briefing?.status === 'done' && <Player briefing={briefing} voices={voices} />}
           {briefing?.status === 'failed' && (

@@ -1,9 +1,8 @@
 import { useNavigate } from 'react-router'
 import { toast } from '../../lib/toast'
-import { CircleCheck, LibraryAdd } from '../../components/icons'
+import { CircleCheck, LibraryAdd, TriangleAlert } from '../../components/icons'
 import { Loading as LoadingRegion, Skeleton } from '../../components/loading'
-import { Mascot } from '../../components/Mascot'
-import { Button, ErrorNote } from '../../components/ui'
+import { Button, ErrorNote, IconTile } from '../../components/ui'
 import {
   Dialog,
   DialogContent,
@@ -53,9 +52,7 @@ function Gone({ error, onClose }: { error: unknown; onClose: () => void }) {
   return (
     <div className="space-y-4">
       <DialogHeader>
-        <span className="mascot-tile mascot-tile--danger grid size-24 place-items-center">
-          <Mascot pose="error" size={88} />
-        </span>
+        <IconTile icon={<TriangleAlert />} tone="danger" />
         <DialogTitle className="text-lg">Профиль не открылся</DialogTitle>
         <DialogDescription>{goneReason(error)}</DialogDescription>
       </DialogHeader>

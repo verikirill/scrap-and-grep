@@ -1,7 +1,6 @@
 import { motion } from 'motion/react'
 import type { CSSProperties, ReactNode } from 'react'
 import { cn } from '../lib/utils'
-import { Mascot } from './Mascot'
 
 /** One shimmering block in the shape of what comes; decoration, the region speaks. */
 export function Skeleton({ className, style }: { className?: string; style?: CSSProperties }) {
@@ -145,18 +144,16 @@ export function PageSkeleton({ label = 'Открываем раздел' }: { la
 
 /**
  * Where nothing has a shape yet (a check of the session, an answer being
- * written): the cat looks through its magnifier, with what it is doing.
+ * written): a small calm pulse with what is being done.
  */
-export function MascotLoader({
+export function PulseLoader({
   label,
   hint,
-  size,
   isInline = false,
   className,
 }: {
   label: string
   hint?: ReactNode
-  size?: number
   /** In a line, as an answer being written in a chat; stacked and centred otherwise. */
   isInline?: boolean
   className?: string
@@ -167,17 +164,33 @@ export function MascotLoader({
       aria-busy="true"
       aria-label={label}
       className={cn(
-        isInline ? 'flex items-center gap-2' : 'flex flex-col items-center gap-2 py-6 text-center',
+        isInline
+          ? 'flex items-center gap-2.5'
+          : 'flex flex-col items-center gap-3 py-6 text-center',
         className,
       )}
     >
-      <Mascot pose="searching" size={size ?? (isInline ? 44 : 96)} />
+      <Pulse />
       <p className={cn('text-sm', isInline ? 'text-muted' : 'font-semibold text-foreground')}>
         {label}
         <Dots />
       </p>
       {hint && <div className="max-w-sm text-xs text-muted">{hint}</div>}
     </div>
+  )
+}
+
+/** A dot of the accent with a soft ring breathing out of it. */
+export function Pulse({ className }: { className?: string }) {
+  return (
+    <span aria-hidden className={cn('relative grid size-3 shrink-0 place-items-center', className)}>
+      <motion.span
+        className="absolute inset-0 rounded-full bg-accent"
+        animate={{ scale: [1, 2.6], opacity: [0.35, 0] }}
+        transition={{ duration: 1.6, repeat: Infinity, ease: 'easeOut' }}
+      />
+      <span className="size-2 rounded-full bg-accent" />
+    </span>
   )
 }
 

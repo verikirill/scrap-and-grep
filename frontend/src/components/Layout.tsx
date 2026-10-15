@@ -15,7 +15,7 @@ import {
 } from './icons'
 import type { IconComponent } from './icons'
 import { AnimatePresence, motion } from 'motion/react'
-import { useLayoutEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { flushSync } from 'react-dom'
 import { Link, NavLink, useLocation } from 'react-router'
@@ -28,6 +28,7 @@ import { LogoMark, Wordmark } from './Logo'
 import { DURATION, EASE } from './tokens'
 import { EntranceContext, newEntrance } from './entrance'
 import { Skeleton } from './loading'
+import { DottedVeil } from './ui/dotted-veil'
 
 type NavItem = {
   to: string
@@ -48,6 +49,16 @@ const NAV: NavItem[] = [
 ]
 
 const THEME_KEY = 'radar-theme'
+/** How long the colours of one theme take to fade into the other. */
+const THEME_FADE_MS = DURATION.medium * 1000
+/**
+ * On <html> while the new theme sweeps across the screen from corner to corner
+ * (index.css). The sweep is a CSS animation of ::view-transition-new(root):
+ * Firefox does not run element.animate() on that pseudo-element.
+ */
+const THEME_SWEEP_CLASS = 'theme-sweeping'
+/** On <html> while the colours fade without view transitions (index.css). */
+const THEME_FADE_CLASS = 'theme-fading'
 
 function initialTheme(): boolean {
   const stored = localStorage.getItem(THEME_KEY)
@@ -55,45 +66,56 @@ function initialTheme(): boolean {
   return window.matchMedia('(prefers-color-scheme: dark)').matches
 }
 
-function useDarkMode(): [boolean, (from: HTMLElement) => void] {
+function useDarkMode(): [boolean, () => void] {
   const [dark, setDark] = useState(initialTheme)
+  const fadeTimer = useRef<number | undefined>(undefined)
   useLayoutEffect(() => {
     const root = document.documentElement
-    // Every colour changes in one frame. With transitions on, text and chips
-    // lagged behind the backgrounds, which change at once.
-    root.classList.add('theme-switching')
+    // Outside a fade every colour changes in one frame: with each element's
+    // own transitions on, text and chips lagged behind the backgrounds.
+    const isFading = root.classList.contains(THEME_FADE_CLASS)
+    if (!isFading) root.classList.add('theme-switching')
     root.classList.toggle('dark', dark)
     void root.offsetHeight
     root.classList.remove('theme-switching')
     localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light')
   }, [dark])
-  // The new theme grows as a circle out of the button that was pressed.
-  const toggle = (from: HTMLElement) => {
+  useEffect(
+    () => () => {
+      window.clearTimeout(fadeTimer.current)
+      document.documentElement.classList.remove(THEME_FADE_CLASS)
+    },
+    [],
+  )
+  // The new theme sweeps over the old one from corner to corner. The first
+  // paint and a reader who turned motion down get the theme at once.
+  const toggle = () => {
     const flip = () => flushSync(() => setDark((value) => !value))
-    if (!document.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
       flip()
       return
     }
-    const box = from.getBoundingClientRect()
-    const x = box.left + box.width / 2
-    const y = box.top + box.height / 2
-    const radius = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y))
-    const transition = document.startViewTransition(flip)
-    transition.ready
-      .then(() => {
-        document.documentElement.animate(
-          {
-            clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`],
-          },
-          {
-            duration: DURATION.long * 1000,
-            easing: `cubic-bezier(${EASE.join(', ')})`,
-            pseudoElement: '::view-transition-new(root)',
-          },
-        )
-      })
-      // Skipped (another transition began): the theme has changed all the same.
-      .catch(() => {})
+    if (document.startViewTransition) {
+      // A picture of the new page is uncovered over a picture of the old one,
+      // which stays still underneath: nothing fades, so nothing flickers.
+      const root = document.documentElement
+      root.classList.add(THEME_SWEEP_CLASS)
+      document
+        .startViewTransition(flip)
+        // Skipped (another transition began): the theme has changed all the same.
+        .finished.catch(() => {})
+        .finally(() => root.classList.remove(THEME_SWEEP_CLASS))
+      return
+    }
+    // Without view transitions every element eases its own colours for a moment.
+    const root = document.documentElement
+    window.clearTimeout(fadeTimer.current)
+    root.classList.add(THEME_FADE_CLASS)
+    flip()
+    fadeTimer.current = window.setTimeout(
+      () => root.classList.remove(THEME_FADE_CLASS),
+      THEME_FADE_MS,
+    )
   }
   return [dark, toggle]
 }
@@ -252,7 +274,8 @@ function BarItem({ item, active }: { item: NavItem; active: boolean }) {
   )
 }
 
-function AccountButton() {
+/** The reader's picture leading to the account; in the open sidebar it is named. */
+function AccountButton({ hasLabel = false }: { hasLabel?: boolean }) {
   const { data: me } = useMe()
   if (!me) return null
   return (
@@ -261,27 +284,45 @@ function AccountButton() {
       onPointerEnter={() => prefetchRoute('/account')}
       aria-label={`Аккаунт: ${me.display_name}`}
       title={me.is_demo ? 'Временный аккаунт' : me.email}
-      className={({ isActive }) =>
-        clsx(
-          'grid size-9 shrink-0 place-items-center rounded-full transition-shadow',
-          // The picture keeps its colours; the ring says this is the open section.
-          isActive
-            ? 'ring-2 ring-accent ring-offset-2 ring-offset-background'
-            : 'hover:ring-2 hover:ring-border',
-        )
-      }
+      className="group flex shrink-0 items-center gap-2.5 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-focus"
     >
-      {/* The size of the button: a bigger picture pushed the letters off centre. */}
-      <UserAvatar me={me} size={36} />
+      {({ isActive }) => (
+        <>
+          <span
+            className={clsx(
+              'grid size-9 shrink-0 place-items-center rounded-full transition-shadow',
+              // The picture keeps its colours; the ring says this is the open section.
+              isActive
+                ? 'ring-2 ring-accent ring-offset-2 ring-offset-background'
+                : 'group-hover:ring-2 group-hover:ring-border',
+            )}
+          >
+            {/* The size of the button: a bigger picture pushed the letters off centre. */}
+            <UserAvatar me={me} size={36} />
+          </span>
+          {hasLabel && (
+            <span
+              className={clsx(
+                'text-sm',
+                isActive
+                  ? 'font-semibold text-foreground'
+                  : 'font-medium text-muted group-hover:text-foreground',
+              )}
+            >
+              Профиль
+            </span>
+          )}
+        </>
+      )}
     </NavLink>
   )
 }
 
-function ThemeButton({ dark, onToggle }: { dark: boolean; onToggle: (from: HTMLElement) => void }) {
+function ThemeButton({ dark, onToggle }: { dark: boolean; onToggle: () => void }) {
   return (
     <button
       type="button"
-      onClick={(event) => onToggle(event.currentTarget)}
+      onClick={onToggle}
       // The icon and the name both say where a press leads, not where one is.
       aria-label={dark ? 'Включить светлую тему' : 'Включить тёмную тему'}
       title={dark ? 'Включить светлую тему' : 'Включить тёмную тему'}
@@ -352,7 +393,9 @@ export function Layout({ children }: { children: ReactNode }) {
     return newEntrance()
   }, [pageKey])
   return (
-    <div className="min-h-dvh bg-background">
+    // isolate: the veil sits under every card yet over the page colour.
+    <div className="isolate min-h-dvh bg-background">
+      <DottedVeil className="dotted-veil" />
       <ActivityBar />
 
       {/* Sidebar, from tablet width up. */}
@@ -379,7 +422,7 @@ export function Layout({ children }: { children: ReactNode }) {
           )}
         >
           <motion.div layout transition={{ duration: 0.3, ease: EASE }}>
-            <AccountButton />
+            <AccountButton hasLabel={!isNarrow} />
           </motion.div>
           <motion.div
             layout

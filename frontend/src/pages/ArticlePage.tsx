@@ -55,7 +55,7 @@ function Loading() {
 function NotFound() {
   return (
     <EmptyState icon={<FileText size={22} />} title="Статья не найдена">
-      Кот обыскал всё, но статьи здесь нет. Возможно, источник удалили из каталога.
+      Такой статьи в архиве нет. Возможно, источник удалили из каталога.
     </EmptyState>
   )
 }
@@ -142,6 +142,7 @@ export function ArticlePage() {
       <ErrorState
         title="Статья не открылась"
         error={article.error}
+        isPage
         action={<Button onClick={() => void article.refetch()}>Повторить</Button>}
       />
     )

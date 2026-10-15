@@ -85,6 +85,8 @@ const ICONS = {
   ContentCopy: 'copy',
   Hub: 'nodes-down',
   CalendarMonth: 'calendar',
+  ViewCards: 'layout-rows',
+  ViewChat: 'comment',
   Terminal: 'terminal',
   Account: 'person',
   GitCompareArrows: 'code-compare',

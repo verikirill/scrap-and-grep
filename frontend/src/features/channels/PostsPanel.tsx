@@ -5,7 +5,7 @@ import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { toast } from '../../lib/toast'
 import { ErrorBoundary } from '../../components/ErrorBoundary'
-import { Loading, MascotLoader, SkeletonCard, SkeletonText } from '../../components/loading'
+import { Loading, Skeleton, SkeletonCard, SkeletonText } from '../../components/loading'
 import { Button, Card, Chip, EmptyState, Spinner } from '../../components/ui'
 import { DURATION, EASE, rowMotion } from '../../components/tokens'
 import {
@@ -238,11 +238,7 @@ function PostRow({
           </DialogHeader>
           {post.content && (
             <ErrorBoundary title="Редактор не загрузился">
-              <Suspense
-                fallback={
-                  <MascotLoader label="Открываем редактор" className="h-80 justify-center" />
-                }
-              >
+              <Suspense fallback={<EditorSkeleton />}>
                 <PostEditor
                   initial={post.content}
                   channel={title}
@@ -284,7 +280,7 @@ export function PostsPanel({ channelId, channels }: { channelId?: string; channe
   if (!posts?.length) {
     return (
       <Card variant="outlined">
-        <EmptyState icon={<Send size={22} />} title="Постов пока нет" pose="waiting">
+        <EmptyState icon={<Send size={22} />} title="Постов пока нет">
           Создайте пост вручную («Опубликовать сейчас» или «Создать черновик») либо дождитесь
           публикации по расписанию.
         </EmptyState>
@@ -299,5 +295,27 @@ export function PostsPanel({ channelId, channels }: { channelId?: string; channe
         ))}
       </AnimatePresence>
     </ul>
+  )
+}
+
+/** The editor while its code arrives: the toolbar over the text, the preview beside. */
+function EditorSkeleton() {
+  return (
+    <Loading
+      label="Открываем редактор"
+      className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,460px)]"
+    >
+      <div className="overflow-hidden rounded-2xl border border-separator">
+        <div className="flex gap-1.5 border-b border-separator px-2 py-2">
+          {Array.from({ length: 8 }, (_, index) => (
+            <Skeleton key={index} className="size-7 rounded-lg" />
+          ))}
+        </div>
+        <div className="p-4">
+          <SkeletonText lines={6} />
+        </div>
+      </div>
+      <Skeleton className="h-64 rounded-2xl" />
+    </Loading>
   )
 }

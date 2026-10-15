@@ -58,7 +58,11 @@ describe('RequireAuth', () => {
     )
     const { user } = renderGuarded()
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('База данных недоступна')
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Сервис временно недоступен')
+    expect(alert).toHaveTextContent('База данных недоступна')
+    // The whole screen is the failure: the cat asleep, the service down.
+    expect(alert.querySelector('img')).toHaveAttribute('src', '/brand/errors/503.webp')
     expect(screen.queryByText('Лента читателя')).toBeNull()
 
     await user.click(screen.getByRole('button', { name: 'Повторить попытку' }))

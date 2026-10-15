@@ -52,6 +52,8 @@ import ClockFillSvg from '~icons/gravity-ui/clock-fill'
 import CloudSvg from '~icons/gravity-ui/cloud'
 import CodeSvg from '~icons/gravity-ui/code'
 import CodeCompareSvg from '~icons/gravity-ui/code-compare'
+import CommentSvg from '~icons/gravity-ui/comment'
+import CommentFillSvg from '~icons/gravity-ui/comment-fill'
 import CompassSvg from '~icons/gravity-ui/compass'
 import CopySvg from '~icons/gravity-ui/copy'
 import CpuSvg from '~icons/gravity-ui/cpu'
@@ -77,6 +79,7 @@ import ItalicSvg from '~icons/gravity-ui/italic'
 import KeySvg from '~icons/gravity-ui/key'
 import LayersSvg from '~icons/gravity-ui/layers'
 import LayoutListSvg from '~icons/gravity-ui/layout-list'
+import LayoutRowsSvg from '~icons/gravity-ui/layout-rows'
 import LinkSvg from '~icons/gravity-ui/link'
 import LinkSlashSvg from '~icons/gravity-ui/link-slash'
 import ListOlSvg from '~icons/gravity-ui/list-ol'
@@ -242,6 +245,8 @@ export const Schedule = /* @__PURE__ */ icon(ClockSvg, ClockFillSvg)
 export const ContentCopy = /* @__PURE__ */ icon(CopySvg)
 export const Hub = /* @__PURE__ */ icon(NodesDownSvg)
 export const CalendarMonth = /* @__PURE__ */ icon(CalendarSvg)
+export const ViewCards = /* @__PURE__ */ icon(LayoutRowsSvg)
+export const ViewChat = /* @__PURE__ */ icon(CommentSvg, CommentFillSvg)
 export const Terminal = /* @__PURE__ */ icon(TerminalSvg)
 export const Account = /* @__PURE__ */ icon(PersonSvg, PersonFillSvg)
 export const GitCompareArrows = /* @__PURE__ */ icon(CodeCompareSvg)
