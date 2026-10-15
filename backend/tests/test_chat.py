@@ -220,6 +220,31 @@ async def test_json_that_is_only_broken_is_mended_without_asking_again() -> None
     assert len(server.requests) == 1
 
 
+class Card(BaseModel):
+    headline: str
+    fix: str = ""
+    tools: list[str] = Field(default_factory=list)
+
+
+async def test_an_empty_field_written_as_null_takes_its_default_without_asking_again() -> None:
+    # Alice AI LLM marks every field it has nothing for so.
+    server = Server('{"headline": "Обход аутентификации в FortiMail", "fix": null, "tools": null}')
+
+    card = await chat(server).ask(Card, "Опиши.", "Статья")
+
+    assert card == Card(headline="Обход аутентификации в FortiMail")
+    assert len(server.requests) == 1
+
+
+async def test_a_required_field_written_as_null_still_goes_back() -> None:
+    server = Server('{"relevance": null, "reason": "x"}', '{"relevance": 1, "reason": "x"}')
+
+    verdict = await chat(server).ask(Verdict, "Оцени.", "Статья")
+
+    assert verdict == Verdict(relevance=1, reason="x")
+    assert len(server.requests) == 2
+
+
 async def test_the_model_calls_its_tool_and_answers_with_what_it_got() -> None:
     server = Server(
         {"name": "lookup", "arguments": {"identifier": "CVE-2026-88772"}},

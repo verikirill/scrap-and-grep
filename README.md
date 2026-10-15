@@ -382,7 +382,7 @@ docker compose up -d --scale api=4 --scale worker-ingest=2 --scale worker-digest
 
 | Часть | Команда | Результат |
 |---|---|---|
-| Тесты бэкенда | `sh ci/backend-test.sh` | 891 тест: 604 функции и случаи с параметрами. В CI они идут на настоящих PostgreSQL с pgvector, Valkey и ClickHouse тех же версий, что в `docker-compose.yml`; покрытие строк `radar` 85% по pytest-cov |
+| Тесты бэкенда | `sh ci/backend-test.sh` | 893 теста: 606 функций и случаи с параметрами. В CI они идут на настоящих PostgreSQL с pgvector, Valkey и ClickHouse тех же версий, что в `docker-compose.yml`; покрытие строк `radar` 85% по pytest-cov |
 | Линтер и типы бэкенда | `sh ci/backend-lint.sh` | `ruff check`, `ruff format --check` и `mypy --strict` по 205 файлам без замечаний. `scripts/check_examples.py` прошёл все 28 выпусков в `examples/`: ни одной уязвимости в двух записях, ни одного совета поставить невыпущенное исправление, ни одного номера или версии в выпусках руководству |
 | Фронтенд | `sh ci/frontend-lint.sh`, `sh ci/frontend-test.sh` | `oxlint` без предупреждений, `tsc -b` без ошибок. Vitest 5: 796 тестов в 111 файлах, 20 файлов модульных тестов в Node и 91 файл компонентов и страниц в jsdom с Testing Library, ответы API подставляет MSW. Покрытие: строки 98%, операторы 97%, функции 96%, ветвления 92%; пороги в `vite.config.ts` 95, 94, 93 и 90% |
 | Сервис рендера | `sh ci/shorts-test.sh` | `tsc` и 20 тестов `node --test` |
