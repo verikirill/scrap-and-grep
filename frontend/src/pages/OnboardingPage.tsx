@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { FileText, Layers, PenLine } from '../components/icons'
+import { DottedPage } from '../components/DottedPage'
 import { LogoMark, Wordmark } from '../components/Logo'
 import { EASE } from '../components/tokens'
 import { Button, Card, ErrorNote } from '../components/ui'
@@ -208,111 +209,118 @@ export function OnboardingPage() {
 
   const days = profile?.defaults.period_days ?? DEFAULT_DAYS
   return (
-    <div className="mx-auto min-h-dvh max-w-2xl px-4 py-8 sm:px-5 sm:py-12">
-      <header className="mb-8 flex items-center justify-between gap-3">
-        <span className="flex items-center gap-2.5">
-          <LogoMark size={36} />
-          <Wordmark className="text-[17px]" />
-        </span>
-        <Button size="sm" variant="ghost" disabled={finish.isPending} onClick={() => leave('/')}>
-          Пропустить
-        </Button>
-      </header>
+    <DottedPage>
+      <div className="mx-auto max-w-2xl px-4 py-8 sm:px-5 sm:py-12">
+        <header className="mb-8 flex items-center justify-between gap-3">
+          <span className="flex items-center gap-2.5">
+            <LogoMark size={36} />
+            <Wordmark className="text-[17px]" />
+          </span>
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={finish.isPending}
+            onClick={() => leave('/')}
+          >
+            Пропустить
+          </Button>
+        </header>
 
-      <StepBar step={step} />
-      <div className="mb-4">
-        <ErrorNote error={finish.error} />
-      </div>
+        <StepBar step={step} />
+        <div className="mb-4">
+          <ErrorNote error={finish.error} />
+        </div>
 
-      <AnimatePresence mode="wait">
-        {step === 'intro' && (
-          <motion.section key="intro" {...STEP_MOTION} aria-labelledby="onboarding-title">
-            <h1
-              id="onboarding-title"
-              className="font-serif text-[30px] leading-tight font-semibold tracking-tight text-balance"
-            >
-              {me.data ? `Здравствуйте, ${me.data.display_name}` : 'Здравствуйте'}
-            </h1>
-            <p className="mt-3 text-base text-pretty">
-              Scrap&Grep читает больше 100 источников по ИТ, информационной безопасности и
-              энергетике и собирает из них короткие выпуски под ваши задачи.
-            </p>
-            <Card variant="filled" className="mt-6 p-5">
-              <p className="text-sm font-semibold">За пару минут настроим главное</p>
-              <ol className="mt-3 space-y-2 text-sm text-muted">
-                <li>1. Профиль интересов: какие темы важны в работе.</li>
-                <li>2. Первый выпуск: главное по вашим темам со ссылками на источники.</li>
-              </ol>
-              <p className="mt-3 text-xs text-muted">Всё это можно поменять позже.</p>
-            </Card>
-            <Button
-              variant="cta"
-              className="mt-7 w-full sm:w-auto"
-              onClick={() => setStep('profile')}
-            >
-              Начать
-            </Button>
-          </motion.section>
-        )}
-
-        {step === 'profile' && (
-          <motion.section key="profile" {...STEP_MOTION}>
-            <ProfileStep
-              profiles={profiles.data ?? []}
-              onProfile={toDigest}
-              onManual={() => leave('/profiles')}
-              isLeaving={finish.isPending}
-            />
-            <Button variant="ghost" className="mt-6" onClick={() => setStep('intro')}>
-              Назад
-            </Button>
-          </motion.section>
-        )}
-
-        {step === 'digest' && profile && (
-          <motion.section key="digest" {...STEP_MOTION}>
-            <h1 className="font-serif text-[30px] leading-tight font-semibold tracking-tight text-balance">
-              Первый выпуск
-            </h1>
-            <p className="mt-2 mb-6 text-sm text-muted">
-              Ассистент найдёт публикации по вашим темам {periodText(days)}, уберёт повторы и
-              напишет короткие выжимки со ссылками на источники. Это занимает от нескольких секунд
-              до пары минут.
-            </p>
-            <Card className="flex items-center gap-3 p-5">
-              <ProfileAvatar profile={profile} size={44} />
-              <div className="min-w-0">
-                <p className="text-sm font-semibold break-words">{profile.spec.name}</p>
-                <p className="text-sm text-muted">
-                  {profile.spec.interests.length}{' '}
-                  {plural(profile.spec.interests.length, ['тема', 'темы', 'тем'])}
-                </p>
-              </div>
-            </Card>
-            <div className="mt-4">
-              <ErrorNote error={build.error} />
-            </div>
-            <div className="mt-6 flex flex-wrap gap-2">
+        <AnimatePresence mode="wait">
+          {step === 'intro' && (
+            <motion.section key="intro" {...STEP_MOTION} aria-labelledby="onboarding-title">
+              <h1
+                id="onboarding-title"
+                className="font-serif text-[30px] leading-tight font-semibold tracking-tight text-balance"
+              >
+                {me.data ? `Здравствуйте, ${me.data.display_name}` : 'Здравствуйте'}
+              </h1>
+              <p className="mt-3 text-base text-pretty">
+                Scrap&Grep читает больше 100 источников по ИТ, информационной безопасности и
+                энергетике и собирает из них короткие выпуски под ваши задачи.
+              </p>
+              <Card variant="filled" className="mt-6 p-5">
+                <p className="text-sm font-semibold">За пару минут настроим главное</p>
+                <ol className="mt-3 space-y-2 text-sm text-muted">
+                  <li>1. Профиль интересов: какие темы важны в работе.</li>
+                  <li>2. Первый выпуск: главное по вашим темам со ссылками на источники.</li>
+                </ol>
+                <p className="mt-3 text-xs text-muted">Всё это можно поменять позже.</p>
+              </Card>
               <Button
                 variant="cta"
-                className="w-full sm:w-auto"
-                isBusy={build.isPending || finish.isPending}
-                onClick={() => void startDigest(profile)}
+                className="mt-7 w-full sm:w-auto"
+                onClick={() => setStep('profile')}
               >
-                Собрать выпуск
+                Начать
               </Button>
-              <Button
-                variant="ghost"
-                className="w-full sm:w-auto"
-                disabled={build.isPending || finish.isPending}
-                onClick={() => leave('/feed')}
-              >
-                Позже, открыть ленту
+            </motion.section>
+          )}
+
+          {step === 'profile' && (
+            <motion.section key="profile" {...STEP_MOTION}>
+              <ProfileStep
+                profiles={profiles.data ?? []}
+                onProfile={toDigest}
+                onManual={() => leave('/profiles')}
+                isLeaving={finish.isPending}
+              />
+              <Button variant="secondary" className="mt-6" onClick={() => setStep('intro')}>
+                Назад
               </Button>
-            </div>
-          </motion.section>
-        )}
-      </AnimatePresence>
-    </div>
+            </motion.section>
+          )}
+
+          {step === 'digest' && profile && (
+            <motion.section key="digest" {...STEP_MOTION}>
+              <h1 className="font-serif text-[30px] leading-tight font-semibold tracking-tight text-balance">
+                Первый выпуск
+              </h1>
+              <p className="mt-2 mb-6 text-sm text-muted">
+                Ассистент найдёт публикации по вашим темам {periodText(days)}, уберёт повторы и
+                напишет короткие выжимки со ссылками на источники. Это занимает от нескольких секунд
+                до пары минут.
+              </p>
+              <Card className="flex items-center gap-3 p-5">
+                <ProfileAvatar profile={profile} size={44} />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold break-words">{profile.spec.name}</p>
+                  <p className="text-sm text-muted">
+                    {profile.spec.interests.length}{' '}
+                    {plural(profile.spec.interests.length, ['тема', 'темы', 'тем'])}
+                  </p>
+                </div>
+              </Card>
+              <div className="mt-4">
+                <ErrorNote error={build.error} />
+              </div>
+              <div className="mt-6 flex flex-wrap gap-2">
+                <Button
+                  variant="cta"
+                  className="w-full sm:w-auto"
+                  isBusy={build.isPending || finish.isPending}
+                  onClick={() => void startDigest(profile)}
+                >
+                  Собрать выпуск
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="w-full sm:w-auto"
+                  disabled={build.isPending || finish.isPending}
+                  onClick={() => leave('/feed')}
+                >
+                  Позже, открыть ленту
+                </Button>
+              </div>
+            </motion.section>
+          )}
+        </AnimatePresence>
+      </div>
+    </DottedPage>
   )
 }
