@@ -111,6 +111,38 @@ describe('ShortPanel', () => {
     expect(ordered).toEqual(['anchor'])
   })
 
+  it('names the voice service as the engine and the voice by its title', async () => {
+    serveShorts(makeVideo({ voice: 'qwen3-tts:anchor' }), { voice_engine: 'qwen3-tts' })
+    renderWithProviders(<ShortPanel digestId="digest-1" />)
+
+    expect(await screen.findByText('Озвучка Qwen3-TTS')).toBeInTheDocument()
+    expect(await screen.findByText(/голос «Ведущий»/)).toBeInTheDocument()
+  })
+
+  it('names Yandex SpeechKit and its voice when SpeechKit speaks', async () => {
+    const yandex = [
+      { id: 'alena', title: 'Алёна', default: true },
+      { id: 'zahar', title: 'Захар', default: false },
+    ]
+    serveShorts(makeVideo({ voice: 'yandex:zahar', requested_voice: 'zahar' }), {
+      voice_engine: 'yandex',
+      short_voices: yandex,
+    })
+    renderWithProviders(<ShortPanel digestId="digest-1" />)
+
+    expect(await screen.findByText('Озвучка Yandex SpeechKit')).toBeInTheDocument()
+    expect(await screen.findByText(/голос «Захар»/)).toBeInTheDocument()
+    expect(screen.queryByText(/Qwen3-TTS/)).toBeNull()
+    expect(screen.getByRole('radio', { name: 'Захар' })).toBeChecked()
+  })
+
+  it('names the engine of a voice the list no longer has', async () => {
+    serveShorts(makeVideo({ voice: 'yandex:ermil' }), { voice_engine: 'yandex', short_voices: [] })
+    renderWithProviders(<ShortPanel digestId="digest-1" />)
+
+    expect(await screen.findByText(/голос Yandex SpeechKit ermil/)).toBeInTheDocument()
+  })
+
   it('makes a video with subtitles only on a server without voices', async () => {
     const { ordered } = serveShorts(null, { shorts_voice: false, short_voices: [] })
     const { user } = renderWithProviders(<ShortPanel digestId="digest-1" />)

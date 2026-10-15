@@ -19,7 +19,7 @@ from radar.domain import (
 from radar.ingest.net import proxy_name
 from radar.reader.blocks import Block
 from radar.reader.language import Language
-from radar.shorts.voice import VoiceOption
+from radar.shorts.voice import VoiceEngine, VoiceOption
 from radar.views import ItemView
 
 
@@ -472,6 +472,9 @@ class MetaOut(BaseModel):
     shorts_voice: bool = False
     # Voices a reader can pick; empty when the voice service offers no choice.
     short_voices: list[VoiceOption] = []
+    # What voices videos and briefs: the voice service (Qwen3-TTS) or Yandex
+    # SpeechKit; none on a server without a voice.
+    voice_engine: VoiceEngine | None = None
 
 
 class PlanTickIn(BaseModel):

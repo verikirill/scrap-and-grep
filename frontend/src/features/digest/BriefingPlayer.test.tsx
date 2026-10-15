@@ -115,6 +115,25 @@ describe('BriefingPlayer', () => {
     )
   })
 
+  it('names a SpeechKit voice by its title, not by its stored id', async () => {
+    serveBriefing(
+      makeBriefingState({
+        voices: [
+          { id: 'alena', title: 'Алёна', default: true },
+          { id: 'zahar', title: 'Захар', default: false },
+        ],
+        briefing: makeBriefing({ voice: 'yandex:zahar', requested_voice: 'zahar' }),
+      }),
+    )
+    const { user } = renderWithProviders(<BriefingPlayer digest={managementDigest} />)
+
+    await user.click(await screen.findByRole('button', { name: 'Слушать брифинг' }))
+
+    const dialog = await screen.findByRole('dialog', { name: 'Голосовой брифинг' })
+    expect(within(dialog).getByText(/^голос: Захар · 3,6 МБ/)).toBeInTheDocument()
+    expect(within(dialog).queryByText(/yandex:zahar/)).toBeNull()
+  })
+
   it('voices the brief again in a voice the reader picks', async () => {
     const { ordered } = serveBriefing(makeBriefingState())
     const { user } = renderWithProviders(<BriefingPlayer digest={managementDigest} />)

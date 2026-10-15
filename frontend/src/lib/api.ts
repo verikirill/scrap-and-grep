@@ -612,7 +612,11 @@ export interface Meta {
   shorts_voice: boolean
   /** Voices a reader can pick; empty when there is no choice to give. */
   short_voices: VoiceOption[]
+  /** What speaks: the voice service (Qwen3-TTS) or Yandex SpeechKit; null without a voice. */
+  voice_engine?: VoiceEngine | null
 }
+
+export type VoiceEngine = 'qwen3-tts' | 'yandex'
 
 export interface VoiceOption {
   id: string
@@ -627,7 +631,7 @@ export interface Video {
   stage: VideoStage | null
   progress: number
   error: string | null
-  /** "qwen3-tts:<speaker>", or null for a silent video with captions. */
+  /** "qwen3-tts:<speaker>" or "yandex:<voice>", or null for a silent video with captions. */
   voice: string | null
   /** The voice the reader picked, one of Meta.short_voices. */
   requested_voice: string | null
@@ -1137,7 +1141,7 @@ export interface Briefing {
   status: DigestStatus
   progress: number
   error: string | null
-  /** "qwen3-tts:<speaker>" once voiced. */
+  /** "qwen3-tts:<speaker>" or "yandex:<voice>" once voiced. */
   voice: string | null
   /** The voice the reader picked, one of BriefingState.voices. */
   requested_voice: string | null

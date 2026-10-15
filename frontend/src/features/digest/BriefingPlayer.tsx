@@ -14,7 +14,7 @@ import {
 import type { Briefing, Digest, VoiceOption } from '../../lib/api'
 import { formatDateTime, formatMegabytes } from '../../lib/format'
 import { useBriefing, useCreateBriefing } from '../../lib/queries'
-import { chosenVoice } from '../../lib/voices'
+import { chosenVoice, voiceTitle } from '../../lib/voices'
 
 const isBusy = (briefing: Briefing | null) =>
   briefing?.status === 'queued' || briefing?.status === 'running'
@@ -27,10 +27,10 @@ function announcement(briefing: Briefing | null): string {
   return briefing.status === 'done' ? 'Брифинг готов' : 'Не удалось озвучить брифинг'
 }
 
+/** "голос: Захар"; a voice the list no longer has by its engine and id. */
 function voiceName(briefing: Briefing, voices: VoiceOption[]): string | null {
-  const id = briefing.voice?.replace(/^qwen3-tts:/, '')
-  if (!id) return null
-  return `голос: ${voices.find((voice) => voice.id === id)?.title ?? id}`
+  if (!briefing.voice) return null
+  return `голос: ${voiceTitle(briefing.voice, voices).title}`
 }
 
 function Progress({ briefing }: { briefing: Briefing }) {

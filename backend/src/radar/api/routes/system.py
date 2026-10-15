@@ -9,10 +9,12 @@ from sqlalchemy import func, select, text
 from radar.ai.factory import get_embedder
 from radar.api.deps import CacheDep, SessionDep, SettingsDep
 from radar.api.schemas import MetaOut
+from radar.config import Settings
 from radar.db.models import Source
 from radar.resume.files import BUILTIN_FORMATS, DOCLING_FORMATS
 from radar.resume.parse import PARSER_BUILTIN, PARSER_DOCLING
 from radar.shorts.service import known_voices
+from radar.shorts.voice import VoiceEngine
 from radar.store.articles import corpus_stats
 
 router = APIRouter(tags=["system"])
@@ -82,4 +84,12 @@ async def meta(session: SessionDep, settings: SettingsDep, cache: CacheDep) -> M
         short_voices=await known_voices(cache)
         if settings.shorts_url and settings.has_voice
         else [],
+        voice_engine=_voice_engine(settings),
     )
+
+
+def _voice_engine(settings: Settings) -> VoiceEngine | None:
+    """What voices videos and briefs here, for the page to name it."""
+    if not settings.has_voice:
+        return None
+    return "yandex" if settings.tts_provider == "yandex" else "qwen3-tts"
