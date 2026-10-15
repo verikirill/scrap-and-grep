@@ -214,6 +214,22 @@ describe('SharedProfileDialog', () => {
     await waitFor(() => expect(location()).toBe('/'))
   })
 
+  it('says a mistyped link does not work instead of the server’s check', async () => {
+    server.use(
+      http.get(sharedUrl, () =>
+        HttpResponse.json(
+          { detail: "path.token: String should match pattern '^[A-Za-z0-9_-]{16,32}$'" },
+          { status: 422 },
+        ),
+      ),
+    )
+    renderLink()
+
+    const dialog = await screen.findByRole('dialog', { name: 'Профиль не открылся' })
+    expect(within(dialog).getByText(/в ней ошибка/)).toBeInTheDocument()
+    expect(within(dialog).queryByText(/pattern/)).toBeNull()
+  })
+
   it('never shows the previous link’s profile while the next one loads', async () => {
     // The app's own client keeps the previous answer on screen while the next loads.
     const client = new QueryClient({

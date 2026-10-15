@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../components/ui/dialog'
+import { ApiError } from '../../lib/api'
 import type { SharedProfile } from '../../lib/api'
 import { useAcceptSharedProfile, useSharedProfile } from '../../lib/queries'
 import { ProfileAvatar } from './ProfileLook'
@@ -39,6 +40,15 @@ function Loading() {
   )
 }
 
+/** What a reader is told when the link does not open. A malformed token is
+ * refused by the server's check, whose wording is not for people. */
+function goneReason(error: unknown): string {
+  if (error instanceof ApiError && error.status === 422) {
+    return 'Ссылка не работает: в ней ошибка. Попросите прислать её заново.'
+  }
+  return error instanceof Error ? error.message : 'Ссылка не работает.'
+}
+
 function Gone({ error, onClose }: { error: unknown; onClose: () => void }) {
   return (
     <div className="space-y-4">
@@ -47,9 +57,7 @@ function Gone({ error, onClose }: { error: unknown; onClose: () => void }) {
           <Mascot pose="error" size={88} />
         </span>
         <DialogTitle className="text-lg">Профиль не открылся</DialogTitle>
-        <DialogDescription>
-          {error instanceof Error ? error.message : 'Ссылка не работает.'}
-        </DialogDescription>
+        <DialogDescription>{goneReason(error)}</DialogDescription>
       </DialogHeader>
       <div className="flex justify-end">
         <Button variant="primary" onClick={onClose}>
