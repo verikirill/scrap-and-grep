@@ -14,6 +14,7 @@ const loaders = {
   '/channels': () => import('./pages/ChannelsPage'),
   '/account': () => import('./pages/AccountPage'),
   '/welcome': () => import('./pages/WelcomePage'),
+  '/start': () => import('./pages/OnboardingPage'),
   '/share': () => import('./pages/SharePage'),
   '/analytics': () => import('./pages/AnalyticsPage'),
   '/articles': () => import('./pages/ArticlePage'),
@@ -60,4 +61,7 @@ export const ArticlePage = lazy(() =>
 )
 export const WelcomePage = lazy(() =>
   loaders['/welcome']().then((m) => ({ default: m.WelcomePage })),
+)
+export const OnboardingPage = lazy(() =>
+  loaders['/start']().then((m) => ({ default: m.OnboardingPage })),
 )

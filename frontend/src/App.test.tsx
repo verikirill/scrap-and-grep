@@ -32,6 +32,7 @@ beforeAll(async () => {
     import('./pages/AnalyticsPage'),
     import('./pages/ArticlePage'),
     import('./pages/ComparePage'),
+    import('./pages/OnboardingPage'),
     import('./pages/SharePage'),
     import('./pages/WelcomePage'),
   ])
@@ -305,6 +306,37 @@ describe('App', { timeout: 15_000 }, () => {
       await screen.findByRole('button', { name: 'Создать профиль и открыть ленту' }),
     ).toBeInTheDocument()
     expect(screen.queryByRole('navigation', { name: 'Разделы' })).toBeNull()
+  })
+
+  it('meets a reader not yet introduced with the introduction, from any page', async () => {
+    serveNoDigests()
+    server.use(
+      http.get(apiUrl('/auth/me'), () => HttpResponse.json(makeMe({ onboarded_at: null }))),
+    )
+    openApp('/feed')
+
+    expect(
+      await screen.findByRole(
+        'heading',
+        { level: 1, name: 'Здравствуйте, Анна Петрова' },
+        { timeout: 5000 },
+      ),
+    ).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/start')
+    expect(screen.queryByRole('navigation', { name: 'Разделы' })).toBeNull()
+  })
+
+  it('never sends a guest to the introduction', async () => {
+    serveNoDigests()
+    server.use(
+      http.get(apiUrl('/auth/me'), () =>
+        HttpResponse.json(makeMe({ is_demo: true, onboarded_at: null })),
+      ),
+    )
+    openApp('/')
+
+    await digestPageLoaded()
+    expect(window.location.pathname).toBe('/')
   })
 
   it('asks a visitor without a session to sign in before the resume step', async () => {

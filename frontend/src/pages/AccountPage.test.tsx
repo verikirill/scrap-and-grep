@@ -64,6 +64,27 @@ describe('AccountPage', () => {
     expect(screen.queryByRole('radio', { name: /Как в Telegram/ })).toBeNull()
   })
 
+  it('opens the introduction again on demand, for a reader and a guest alike', async () => {
+    const marked: string[] = []
+    server.use(
+      http.post(apiUrl('/auth/me/onboarded'), ({ request }) => {
+        marked.push(request.url)
+        return HttpResponse.json({ onboarded_at: '2026-10-15T09:00:00Z' })
+      }),
+    )
+    for (const me of [makeMe(), makeMe({ is_demo: true, display_name: 'Гость' })]) {
+      serveAccount({ me })
+      const { user, unmount } = await renderPage()
+
+      await user.click(screen.getByRole('link', { name: 'Пройти знакомство ещё раз' }))
+
+      expect(screen.getByTestId('location')).toHaveTextContent('/start')
+      unmount()
+    }
+    // Opening it changes nothing on the server: only a finished or skipped one does.
+    expect(marked).toEqual([])
+  })
+
   describe('signing out', () => {
     it('signs a reader with a password out at once and remembers it was on purpose', async () => {
       serveAccount()

@@ -22,6 +22,7 @@ from radar.api.schemas import (
     FeedView,
     LoginIn,
     MeOut,
+    OnboardedOut,
     PasswordIn,
     RegisterIn,
     SettingsIn,
@@ -193,7 +194,9 @@ async def me(user: OptionalUser, session: SessionDep) -> MeOut | None:
     )
     looks = (
         await session.execute(
-            select(User.feed_view, User.feed_order, User.folded_sections).where(User.id == user.id)
+            select(User.feed_view, User.feed_order, User.folded_sections, User.onboarded_at).where(
+                User.id == user.id
+            )
         )
     ).one_or_none()
     return MeOut(
@@ -208,6 +211,7 @@ async def me(user: OptionalUser, session: SessionDep) -> MeOut | None:
         feed_view=_feed_view(looks.feed_view if looks else None),
         feed_order=_feed_order(looks.feed_order if looks else None),
         folded_sections=list(looks.folded_sections or []) if looks else [],
+        onboarded_at=looks.onboarded_at if looks else None,
     )
 
 
@@ -237,6 +241,21 @@ async def update_settings(
         feed_order=_feed_order(stored.feed_order),
         folded_sections=list(stored.folded_sections or []),
     )
+
+
+@router.post("/me/onboarded", dependencies=[_write_limit])
+async def finish_onboarding(user: CurrentUser, session: SessionDep) -> OnboardedOut:
+    """The reader finished or skipped the first-run introduction: it is not
+    offered again, in this browser or any other. Repeating keeps the first time."""
+    onboarded_at = await session.scalar(
+        update(User)
+        .where(User.id == user.id)
+        .values(onboarded_at=func.coalesce(User.onboarded_at, func.now()))
+        .returning(User.onboarded_at)
+    )
+    if onboarded_at is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Аккаунт не найден.")
+    return OnboardedOut(onboarded_at=onboarded_at)
 
 
 def _avatar_url(updated_at: datetime | None) -> str | None:

@@ -9,6 +9,7 @@ import type {
   PreviewItem,
   Profile,
   ProfileSpec,
+  ProfileTemplate,
   SharedProfile,
   Suggestion,
 } from '../../lib/api'
@@ -85,6 +86,16 @@ export function makeProfile(overrides: Partial<Profile> = {}): Profile {
     defaults: { period_days: 1, schedule: { cadence: 'weekdays', weekday: null, time: '09:00' } },
     created_at: '2026-10-01T09:00:00Z',
     updated_at: '2026-10-01T09:00:00Z',
+    ...overrides,
+  }
+}
+
+/** A ready profile for a typical role, as the server offers it to a new reader. */
+export function makeProfileTemplate(overrides: Partial<ProfileTemplate> = {}): ProfileTemplate {
+  return {
+    spec: makeSpec({ name: 'Специалист по ИБ АСУ ТП', interests: makeInterests(3) }),
+    icon: 'shield',
+    color: 'red',
     ...overrides,
   }
 }

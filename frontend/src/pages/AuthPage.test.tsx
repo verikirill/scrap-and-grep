@@ -87,7 +87,7 @@ describe('AuthPage', () => {
     expect(location()).toBe('/login')
   })
 
-  it('takes a new reader to the resume step after registration', async () => {
+  it('takes a new reader to the introduction after registration', async () => {
     const sent = serveSession()
     const { user } = renderWithProviders(<AuthPage mode="register" />, {
       route: '/register',
@@ -99,7 +99,7 @@ describe('AuthPage', () => {
     await user.type(screen.getByLabelText(/Пароль/), 'long enough pass')
     await user.click(screen.getByRole('button', { name: 'Зарегистрироваться' }))
 
-    await waitFor(() => expect(location()).toBe('/welcome'))
+    await waitFor(() => expect(location()).toBe('/start'))
     expect(sent[0]).toEqual({
       url: '/api/v1/auth/register',
       body: { email: 'anna@example.ru', password: 'long enough pass', display_name: 'Анна' },

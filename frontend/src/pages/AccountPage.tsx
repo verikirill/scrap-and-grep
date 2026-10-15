@@ -12,6 +12,7 @@ import { ResumeDrop } from '../features/resume/ResumeDrop'
 import { ResumeFactsView } from '../features/resume/ResumeFactsView'
 import { ResumeProcessing } from '../features/resume/ResumeProcessing'
 import type { Me } from '../lib/api'
+import { ONBOARDING_PATH } from '../lib/onboarding'
 import { useMediaQuery } from '../lib/useMediaQuery'
 import {
   isResumeStuck,
@@ -180,6 +181,23 @@ function DangerZone({ me }: { me: Me }) {
   )
 }
 
+/** The first-run introduction, again: it changes nothing until a step is taken. */
+function Introduction() {
+  return (
+    <Card className="p-5">
+      <h2 className="text-base font-semibold">Знакомство с сервисом</h2>
+      <p className="mt-1 text-sm text-muted">
+        Три коротких шага: что умеет сервис, профиль интересов и первый выпуск.
+      </p>
+      <div className="mt-4">
+        <Link to={ONBOARDING_PATH} className={buttonClass('secondary', 'sm')}>
+          Пройти знакомство ещё раз
+        </Link>
+      </div>
+    </Card>
+  )
+}
+
 const AVATAR_TYPES = 'image/jpeg,image/png,image/webp,image/gif'
 const AVATAR_MAX_BYTES = 5_000_000
 
@@ -298,6 +316,7 @@ export function AccountPage() {
       <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,19rem)_minmax(0,1fr)] lg:items-start">
         <aside className="space-y-5 lg:sticky lg:top-9">
           <Identity me={user} />
+          <Introduction />
           {isWide && <DangerZone me={user} />}
         </aside>
         <div className="min-w-0 space-y-5">

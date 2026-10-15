@@ -69,6 +69,12 @@ class MeOut(UserOut):
     feed_view: FeedView = "cards"
     feed_order: FeedOrder = "new"
     folded_sections: list[str] = []
+    # When the first-run introduction was finished or skipped; null until then.
+    onboarded_at: datetime | None = None
+
+
+class OnboardedOut(BaseModel):
+    onboarded_at: datetime
 
 
 # A section's title as the digest shows it; a few dozen titles at most.
@@ -338,6 +344,14 @@ class ProfileOut(BaseModel):
     defaults: ProfileDefaults
     created_at: datetime
     updated_at: datetime
+
+
+class ProfileTemplateOut(BaseModel):
+    """A ready profile for a typical role, to start from instead of a blank one."""
+
+    spec: ProfileSpec
+    icon: str | None = None
+    color: str | None = None
 
 
 class ProfileLook(BaseModel):
