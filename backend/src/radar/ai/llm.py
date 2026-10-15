@@ -52,6 +52,32 @@ log = get_logger(__name__)
 # Typographic hyphens and narrow spaces gpt-oss puts even into identifiers:
 # CVE-2025-40566 written with U+2011 hyphens is not found by a search for the plain one.
 _PLAIN = str.maketrans({"\u2010": "-", "\u2011": "-", "\u00a0": " ", "\u202f": " "})
+# Latin letters that look Cyrillic, which the model slips into Russian words:
+# "кражe" with a Latin "e" is not found by a search for "краже".
+_LOOKALIKES = {
+    "a": "а", "c": "с", "e": "е", "o": "о", "p": "р", "x": "х", "y": "у",
+    "A": "А", "B": "В", "C": "С", "E": "Е", "H": "Н", "K": "К", "M": "М",
+    "O": "О", "P": "Р", "T": "Т", "X": "Х", "Y": "У",
+}  # fmt: skip
+_TO_CYRILLIC = str.maketrans(_LOOKALIKES)
+# An address and a JSON escape are passed over whole; a word is the rest.
+_WORDS = re.compile(r"https?://[^\s\"<>]+|\\.|\w+")
+_CYRILLIC = re.compile(r"[а-яё]", re.IGNORECASE)
+
+
+def _cyrillic_word(match: re.Match[str]) -> str:
+    """A Cyrillic word with Latin look-alikes in it, all in Cyrillic. A Latin
+    word, even one of look-alikes only ("TOP"), an identifier with digits and
+    a word with a Latin letter Cyrillic has no twin for stay as written."""
+    word = match.group()
+    rest = set(word) - _LOOKALIKES.keys()
+    if not word.isalpha() or not rest or not all(map(_CYRILLIC.match, rest)):
+        return word
+    return word.translate(_TO_CYRILLIC)
+
+
+def _cyrillic_words(text: str) -> str:
+    return _WORDS.sub(_cyrillic_word, text)
 
 
 def _answer_format(schema: dict[str, Any]) -> str:
@@ -63,7 +89,7 @@ def _answer_format(schema: dict[str, Any]) -> str:
 
 def _json_text(content: str) -> str:
     """The object in an answer that wrapped it in a markdown fence or a sentence."""
-    text = content.translate(_PLAIN).strip()
+    text = _cyrillic_words(content.translate(_PLAIN)).strip()
     start, end = text.find("{"), text.rfind("}")
     return text[start : end + 1] if 0 <= start < end else text
 
