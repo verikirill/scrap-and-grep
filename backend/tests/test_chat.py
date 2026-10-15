@@ -372,6 +372,22 @@ async def test_an_openai_compatible_server_gets_the_key_the_folder_and_no_schema
     # Not every such server takes json_schema: the prompt carries the schema.
     assert "response_format" not in server.body(0)
     assert server.body(1)["messages"][-1]["role"] == "tool"
+    # Off is sent as "none": Qwen in Yandex AI Studio reasons unless told so.
+    assert server.body(0)["reasoning_effort"] == "none"
+
+
+async def test_a_reasoning_level_goes_to_an_openai_compatible_server_as_is() -> None:
+    server = OpenAIServer('{"relevance": 1, "reason": "косвенно"}')
+    model = openai_chat(
+        "gpt://b1g/gpt-oss-120b/latest",
+        "https://llm.example/v1",
+        reasoning="low",
+        transport=httpx.MockTransport(server),
+    )
+
+    await model.ask(Verdict, "Оцени.", "Статья")
+
+    assert server.body(0)["reasoning_effort"] == "low"
 
 
 async def test_an_openai_compatible_server_reports_tokens_but_not_the_time_of_writing() -> None:
