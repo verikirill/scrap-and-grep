@@ -3,7 +3,8 @@
  "runs": [
   {
    "profile": "Специалист по ИБ АСУ ТП",
-   "seconds": 2.0,
+   "seconds": 1.2,
+   "usage": null,
    "title": "Дайджест для профиля «Специалист по ИБ АСУ ТП»",
    "topics": [
     "Атаки",
@@ -14,40 +15,41 @@
    "stats": {
     "llm": "heuristic",
     "kinds": {
-     "news": 7,
-     "attack": 3,
+     "news": 9,
+     "attack": 1,
      "vulnerability": 10
     },
     "topics": 4,
-    "sources": 12,
+    "changes": [],
+    "sources": 14,
     "degraded": false,
     "selected": 20,
     "adaptation": {},
     "candidates": 60,
     "priorities": {
-     "low": 2,
+     "low": 0,
      "high": 4,
      "medium": 7
     },
     "embedded_now": 0,
     "lexical_only": false,
     "personalized": 0,
-    "window_total": 1588,
+    "window_total": 1716,
     "embedding_model": "ollama:embeddinggemma:300m",
     "graded_by_model": 0,
-    "duration_seconds": 1.7,
+    "duration_seconds": 1.1,
     "lookups_by_model": 0,
-    "references_found": 3,
+    "references_found": 13,
     "written_by_model": 0,
-    "duplicates_merged": 8,
-    "entries_corrected": 0,
-    "unsupported_fields": 0,
-    "lookups_by_pipeline": 20,
+    "duplicates_merged": 7,
+    "entries_corrected": 1,
+    "unsupported_fields": 1,
+    "lookups_by_pipeline": 21,
     "personalization_failed": false
    },
    "items": [
     {
-     "article_id": 87668,
+     "article_id": 487,
      "url": "https://t.me/alukatsky/15356",
      "headline": "На KazHackStan я слушал выступление Дениса Ласкова про атаки на критическую инфраструктуру и зацепила меня одна история",
      "kind": "attack",
@@ -57,27 +59,7 @@
      "references": []
     },
     {
-     "article_id": 87719,
-     "url": "https://asec.ahnlab.com/en/95649",
-     "headline": "August 2026 Threat Trend Report on APT Attacks (South Korea)",
-     "kind": "attack",
-     "priority": "low",
-     "tags": [],
-     "unsupported": [],
-     "references": []
-    },
-    {
-     "article_id": 564,
-     "url": "https://habr.com/ru/articles/1087460",
-     "headline": "Спуфинг кампания CaptiveCrunch: отпуск с «трояном в кармане» или как отельный Wi‑Fi может стать точкой кражи данных",
-     "kind": "attack",
-     "priority": "low",
-     "tags": [],
-     "unsupported": [],
-     "references": []
-    },
-    {
-     "article_id": 409,
+     "article_id": 1534,
      "url": "https://industrialcyber.co/news/schneider-electric-seclab-expand-ot-cybersecurity-collaboration-for-industrial-infrastructure",
      "headline": "Schneider Electric, SECLAB expand OT cybersecurity collaboration for industrial infrastructure",
      "kind": "vulnerability",
@@ -87,19 +69,33 @@
      "references": []
     },
     {
-     "article_id": 35933,
-     "url": "https://cisa.gov/news-events/ics-advisories/icsa-26-274-01",
-     "headline": "Armatura LLC Armatura One",
+     "article_id": 292,
+     "url": "https://1275.ru/vulnerability/dve-uyazvimosti-v-codesys-pozvolyayut-vyzvat-otkaz-v-obsluzhivanii-i-iskazit-dannye-monitoringa_42653",
+     "headline": "Две уязвимости в CODESYS позволяют вызвать отказ в обслуживании и исказить данные мониторинга",
      "kind": "vulnerability",
-     "priority": "high",
+     "priority": "medium",
      "tags": [],
      "unsupported": [],
      "references": [
-      "CVE-2023-46604"
+      "CVE-2026-76992",
+      "CVE-2026-79625"
      ]
     },
     {
-     "article_id": 54292,
+     "article_id": 659,
+     "url": "https://cisa.gov/news-events/ics-advisories/icsa-26-274-03",
+     "headline": "ABB Protection and Control IED Manager PCM600",
+     "kind": "vulnerability",
+     "priority": "medium",
+     "tags": [],
+     "unsupported": [],
+     "references": [
+      "CVE-2026-15952",
+      "CVE-2026-15953"
+     ]
+    },
+    {
+     "article_id": 1125,
      "url": "https://t.me/true_secator/8662",
      "headline": "Mandiant сообщает об эксплуатации 0-day, CVE-2026-88772, в Citrix NetScaler, связанной с развертыванием веб-оболочек и вредоносного ПО для туннелирования, получением root-доступа…",
      "kind": "vulnerability",
@@ -112,67 +108,70 @@
      ]
     },
     {
-     "article_id": 20267,
+     "article_id": 1914,
+     "url": "https://ptsecurity.com/research/analytics/trending-vulnerability-digest-september-2026/",
+     "headline": "Сентябрьский дайджест трендовых уязвимостей",
+     "kind": "vulnerability",
+     "priority": "high",
+     "tags": [],
+     "unsupported": [],
+     "references": [
+      "CVE-2026-63077",
+      "CVE-2026-72529"
+     ]
+    },
+    {
+     "article_id": 252,
+     "url": "https://1275.ru/vulnerability/kontrollery-johnson-controls-easyio-neo-dopuskayut-utechku-uchyotnyh-dannyh-cherez-http-i-otladochnye-porty_42663",
+     "headline": "Контроллеры Johnson Controls EasyIO Neo допускают утечку учётных данных через HTTP и отладочные порты",
+     "kind": "vulnerability",
+     "priority": "medium",
+     "tags": [],
+     "unsupported": [],
+     "references": [
+      "CVE-2026-64893",
+      "CVE-2026-64892"
+     ]
+    },
+    {
+     "article_id": 832,
      "url": "https://safe.cnews.ru/news/line/2026-10-01_positive_technologies_pomogla_ispravit",
      "headline": "Positive Technologies помогла исправить 17 уязвимостей в популярной российской SCADA-системе",
      "kind": "vulnerability",
      "priority": "medium",
      "tags": [],
-     "unsupported": [],
+     "unsupported": [
+      "Оценка CVSS"
+     ],
      "references": []
     },
     {
-     "article_id": 35928,
+     "article_id": 663,
      "url": "https://cisa.gov/news-events/ics-advisories/icsa-26-274-06",
      "headline": "Meari IoT Cloud Platform OpenAPI Service",
      "kind": "vulnerability",
      "priority": "medium",
      "tags": [],
      "unsupported": [],
-     "references": []
+     "references": [
+      "CVE-2026-101104",
+      "CVE-2026-96613"
+     ]
     },
     {
-     "article_id": 35929,
-     "url": "https://cisa.gov/news-events/ics-advisories/icsa-26-274-05",
-     "headline": "Johnson Controls EasyIO Neo Series EC and CW Controllers",
-     "kind": "vulnerability",
-     "priority": "medium",
-     "tags": [],
-     "unsupported": [],
-     "references": []
-    },
-    {
-     "article_id": 35931,
-     "url": "https://cisa.gov/news-events/ics-advisories/icsa-26-274-03",
-     "headline": "ABB Protection and Control IED Manager PCM600",
-     "kind": "vulnerability",
-     "priority": "medium",
-     "tags": [],
-     "unsupported": [],
-     "references": []
-    },
-    {
-     "article_id": 87686,
-     "url": "https://1275.ru/vulnerability/dve-uyazvimosti-v-codesys-pozvolyayut-vyzvat-otkaz-v-obsluzhivanii-i-iskazit-dannye-monitoringa_42653",
-     "headline": "Две уязвимости в CODESYS позволяют вызвать отказ в обслуживании и исказить данные мониторинга",
-     "kind": "vulnerability",
-     "priority": "medium",
-     "tags": [],
-     "unsupported": [],
-     "references": []
-    },
-    {
-     "article_id": 407,
+     "article_id": 1532,
      "url": "https://industrialcyber.co/threats-attacks/nozomi-identifies-19-vulnerabilities-in-pepperlfuchs-io-link-master-enabling-root-access-and-ot-attacks",
      "headline": "Nozomi identifies 19 vulnerabilities in Pepperl+Fuchs IO-Link Master enabling root access and OT attacks",
      "kind": "vulnerability",
      "priority": "medium",
      "tags": [],
      "unsupported": [],
-     "references": []
+     "references": [
+      "CVE-2026-27546"
+     ]
     },
     {
-     "article_id": 62122,
+     "article_id": 1017,
      "url": "https://t.me/bdufstecru/3488",
      "headline": "Обновление БДУ",
      "kind": "vulnerability",
@@ -182,17 +181,7 @@
      "references": []
     },
     {
-     "article_id": 582,
-     "url": "https://habr.com/ru/companies/selectel/articles/1078612",
-     "headline": "Аттестация и практика работы по приказу ФСТЭК 117",
-     "kind": "news",
-     "priority": null,
-     "tags": [],
-     "unsupported": [],
-     "references": []
-    },
-    {
-     "article_id": 87689,
+     "article_id": 315,
      "url": "https://1275.ru/compliance/fstek-razyasnila-poryadok-i-sroki-predstavleniya-rezultatov-otsenki-zaschischyonnosti-informatsionnyh-sistem_42689",
      "headline": "ФСТЭК разъяснила порядок и сроки представления результатов оценки защищённости информационных систем",
      "kind": "news",
@@ -202,7 +191,17 @@
      "references": []
     },
     {
-     "article_id": 87553,
+     "article_id": 1738,
+     "url": "https://habr.com/ru/companies/selectel/articles/1078612",
+     "headline": "Аттестация и практика работы по приказу ФСТЭК 117",
+     "kind": "news",
+     "priority": null,
+     "tags": [],
+     "unsupported": [],
+     "references": []
+    },
+    {
+     "article_id": 883,
      "url": "https://infobezopasnost.ru/blog/news/spikatel-i-gk-infobezopasnost-obyavili-ob-informatsionnom-partnyorstve",
      "headline": "Спикател и ГК «Инфобезопасность» объявили об информационном партнёрстве",
      "kind": "news",
@@ -212,7 +211,27 @@
      "references": []
     },
     {
-     "article_id": 87424,
+     "article_id": 1839,
+     "url": "https://www.kaspersky.ru/about/press-releases/laboratoriya-kasperskogo-prisvoila-t1-integraciya-partnyorskij-status-po-tehnicheskoj-specializacii-kics",
+     "headline": "«Лаборатория Касперского» присвоила Т1 Интеграция партнёрский статус по технической специализации KICS",
+     "kind": "news",
+     "priority": null,
+     "tags": [],
+     "unsupported": [],
+     "references": []
+    },
+    {
+     "article_id": 507,
+     "url": "https://securitymedia.org/news/goszakupki-rossiyskogo-po-perekraivayut-rynok-antivirusnykh-postavshchikov-stalo-na-18-menshe.html",
+     "headline": "Госзакупки российского ПО перекраивают рынок: антивирусных поставщиков стало на 18% меньше",
+     "kind": "news",
+     "priority": null,
+     "tags": [],
+     "unsupported": [],
+     "references": []
+    },
+    {
+     "article_id": 1569,
      "url": "https://habr.com/ru/companies/dsol/news/1087934",
      "headline": "«Цифровые решения» и Positive Technologies усилили мониторинг кибербезопасности энергетического холдинга",
      "kind": "news",
@@ -222,7 +241,7 @@
      "references": []
     },
     {
-     "article_id": 483,
+     "article_id": 1625,
      "url": "https://darkreading.com/ics-ot-security/one-packet-crash-servers-tdengine",
      "headline": "One Packet Can Crash OT Servers in Industrial Sectors",
      "kind": "news",
@@ -232,7 +251,7 @@
      "references": []
     },
     {
-     "article_id": 394,
+     "article_id": 1516,
      "url": "https://industrialcyber.co/features/how-decades-of-disconnected-modernization-created-ot-security-debt-manufacturers-cant-escape",
      "headline": "How decades of disconnected modernization created OT security debt manufacturers can’t escape",
      "kind": "news",
@@ -242,7 +261,7 @@
      "references": []
     },
     {
-     "article_id": 70873,
+     "article_id": 327,
      "url": "https://industrialcyber.co/critical-infrastructure/alliance-for-critical-infrastructure-expands-membership-across-us-sectors-to-address-evolving-cyber-physical-threats",
      "headline": "Alliance for Critical Infrastructure expands membership across US sectors to address evolving cyber, physical threats",
      "kind": "news",
@@ -255,22 +274,24 @@
   },
   {
    "profile": "Руководство и сотрудники: кибербезопасность",
-   "seconds": 0.7,
+   "seconds": 0.6,
+   "usage": null,
    "title": "Дайджест для профиля «Руководство и сотрудники: кибербезопасность»",
    "topics": [
-    "Крупные кибератаки и их последствия",
     "Законы и требования по ИБ",
-    "Утечки данных: ФБР"
+    "Атаки на энергетику и промышленность",
+    "Крупные кибератаки и их последствия"
    ],
    "stats": {
     "llm": "heuristic",
     "kinds": {
      "news": 8,
-     "attack": 5,
-     "vulnerability": 2
+     "attack": 4,
+     "vulnerability": 3
     },
     "topics": 3,
-    "sources": 10,
+    "changes": [],
+    "sources": 12,
     "degraded": false,
     "selected": 15,
     "adaptation": {},
@@ -283,14 +304,14 @@
     "embedded_now": 0,
     "lexical_only": false,
     "personalized": 0,
-    "window_total": 1588,
+    "window_total": 1716,
     "embedding_model": "ollama:embeddinggemma:300m",
     "graded_by_model": 0,
-    "duration_seconds": 0.6,
+    "duration_seconds": 0.5,
     "lookups_by_model": 0,
     "references_found": 0,
     "written_by_model": 0,
-    "duplicates_merged": 9,
+    "duplicates_merged": 8,
     "entries_corrected": 0,
     "unsupported_fields": 0,
     "lookups_by_pipeline": 0,
@@ -298,57 +319,89 @@
    },
    "items": [
     {
-     "article_id": 438,
-     "url": "https://xakep.ru/2026/09/29/datasuckers-dodo",
-     "headline": "«Додо Пицца» пострадала от кибератаки. Хакеры утверждают, что похитили данные пользователей",
-     "kind": "attack",
-     "priority": null,
-     "tags": [
-      "abroad",
-      "data_leak"
-     ],
-     "unsupported": [],
-     "references": []
-    },
-    {
-     "article_id": 483,
-     "url": "https://darkreading.com/ics-ot-security/one-packet-crash-servers-tdengine",
-     "headline": "One Packet Can Crash OT Servers in Industrial Sectors",
+     "article_id": 223,
+     "url": "https://habr.com/ru/companies/aurorium/articles/1089660",
+     "headline": "«Волчий билет» на один год за VPN на сервере — использовать все еще можно, а вот поднимать уже с ограничениями",
      "kind": "news",
      "priority": null,
      "tags": [
       "abroad",
-      "industry"
+      "government_law"
      ],
      "unsupported": [],
      "references": []
     },
     {
-     "article_id": 557,
-     "url": "https://safe.cnews.ru/news/line/2026-09-28_stormwall_vo_vremya_sezona_letnih",
-     "headline": "StormWall: во время сезона летних отпусков DDoS-атаки на туристическую отрасль в России выросли на 42%",
-     "kind": "attack",
-     "priority": null,
-     "tags": [
-      "ru"
-     ],
-     "unsupported": [],
-     "references": []
-    },
-    {
-     "article_id": 675,
-     "url": "https://safe.cnews.ru/news/line/2026-09-25_solar_infrastruktura",
-     "headline": "«Солар»: инфраструктура выборов выдержала тысячи DDoS-атак и более 170 млн кибернападений с ИИ на веб-сервисы",
+     "article_id": 761,
+     "url": "https://cnews.ru/news/line/2026-10-01_mintsifry_vystupaet_za_sohranenie",
+     "headline": "Минцифры выступает за сохранение действующих условий для ИТ-льгот",
      "kind": "news",
      "priority": null,
      "tags": [
-      "abroad"
+      "abroad",
+      "government_law"
      ],
      "unsupported": [],
      "references": []
     },
     {
-     "article_id": 20267,
+     "article_id": 1042,
+     "url": "https://habr.com/ru/news/1088634",
+     "headline": "Минцифры представило третий пакет мер по борьбе с кибермошенничеством",
+     "kind": "news",
+     "priority": null,
+     "tags": [
+      "abroad",
+      "data_leak",
+      "government_law"
+     ],
+     "unsupported": [],
+     "references": []
+    },
+    {
+     "article_id": 1064,
+     "url": "https://securitylab.ru/news/578108.php",
+     "headline": "Минцифры вынесло Антифрод 3.0 на обсуждение: что предлагают изменить для SIM-карт, сайтов и Госуслуг",
+     "kind": "news",
+     "priority": null,
+     "tags": [
+      "abroad",
+      "government_law",
+      "mass_service"
+     ],
+     "unsupported": [],
+     "references": []
+    },
+    {
+     "article_id": 1738,
+     "url": "https://habr.com/ru/companies/selectel/articles/1078612",
+     "headline": "Аттестация и практика работы по приказу ФСТЭК 117",
+     "kind": "news",
+     "priority": null,
+     "tags": [
+      "ru",
+      "government_law"
+     ],
+     "unsupported": [],
+     "references": []
+    },
+    {
+     "article_id": 487,
+     "url": "https://t.me/alukatsky/15356",
+     "headline": "На KazHackStan я слушал выступление Дениса Ласкова про атаки на критическую инфраструктуру и зацепила меня одна история",
+     "kind": "attack",
+     "priority": null,
+     "tags": [
+      "ru",
+      "industry",
+      "critical_infrastructure",
+      "government_law"
+     ],
+     "unsupported": [],
+     "references": []
+    },
+    {
+     "article_id": 832,
      "url": "https://safe.cnews.ru/news/line/2026-10-01_positive_technologies_pomogla_ispravit",
      "headline": "Positive Technologies помогла исправить 17 уязвимостей в популярной российской SCADA-системе",
      "kind": "vulnerability",
@@ -363,34 +416,33 @@
      "references": []
     },
     {
-     "article_id": 21279,
-     "url": "https://habr.com/ru/companies/runity/articles/1089016",
-     "headline": "Security-by-Design: как построить защищенный хостинг в режиме непрекращающихся киберугроз",
-     "kind": "attack",
+     "article_id": 1625,
+     "url": "https://darkreading.com/ics-ot-security/one-packet-crash-servers-tdengine",
+     "headline": "One Packet Can Crash OT Servers in Industrial Sectors",
+     "kind": "news",
      "priority": null,
      "tags": [
-      "ru"
+      "abroad",
+      "industry"
      ],
      "unsupported": [],
      "references": []
     },
     {
-     "article_id": 87668,
-     "url": "https://t.me/alukatsky/15356",
-     "headline": "На KazHackStan я слушал выступление Дениса Ласкова про атаки на критическую инфраструктуру и зацепила меня одна история",
-     "kind": "attack",
+     "article_id": 1065,
+     "url": "https://t.me/true_secator/8664",
+     "headline": "Вслед за агентами ФБР США масштабная утечка накрыла более 3 млн. штатовских военнослужащих",
+     "kind": "vulnerability",
      "priority": null,
      "tags": [
-      "ru",
-      "industry",
-      "critical_infrastructure",
-      "government_law"
+      "abroad",
+      "data_leak"
      ],
      "unsupported": [],
      "references": []
     },
     {
-     "article_id": 70873,
+     "article_id": 327,
      "url": "https://industrialcyber.co/critical-infrastructure/alliance-for-critical-infrastructure-expands-membership-across-us-sectors-to-address-evolving-cyber-physical-threats",
      "headline": "Alliance for Critical Infrastructure expands membership across US sectors to address evolving cyber, physical threats",
      "kind": "news",
@@ -406,89 +458,35 @@
      "references": []
     },
     {
-     "article_id": 15,
-     "url": "https://securitylab.ru/news/578108.php",
-     "headline": "Минцифры вынесло Антифрод 3.0 на обсуждение: что предлагают изменить для SIM-карт, сайтов и Госуслуг",
-     "kind": "news",
-     "priority": null,
-     "tags": [
-      "abroad",
-      "government_law",
-      "mass_service"
-     ],
-     "unsupported": [],
-     "references": []
-    },
-    {
-     "article_id": 582,
-     "url": "https://habr.com/ru/companies/selectel/articles/1078612",
-     "headline": "Аттестация и практика работы по приказу ФСТЭК 117",
-     "kind": "news",
-     "priority": null,
-     "tags": [
-      "ru",
-      "government_law"
-     ],
-     "unsupported": [],
-     "references": []
-    },
-    {
-     "article_id": 22253,
-     "url": "https://cnews.ru/news/line/2026-10-01_mintsifry_vystupaet_za_sohranenie",
-     "headline": "Минцифры выступает за сохранение действующих условий для ИТ-льгот",
-     "kind": "news",
-     "priority": null,
-     "tags": [
-      "abroad",
-      "government_law"
-     ],
-     "unsupported": [],
-     "references": []
-    },
-    {
-     "article_id": 83481,
-     "url": "https://habr.com/ru/companies/aurorium/articles/1089660",
-     "headline": "«Волчий билет» на один год за VPN на сервере — использовать все еще можно, а вот поднимать уже с ограничениями",
-     "kind": "news",
-     "priority": null,
-     "tags": [
-      "abroad",
-      "government_law"
-     ],
-     "unsupported": [],
-     "references": []
-    },
-    {
-     "article_id": 87409,
-     "url": "https://habr.com/ru/news/1088634",
-     "headline": "Минцифры представило третий пакет мер по борьбе с кибермошенничеством",
-     "kind": "news",
-     "priority": null,
-     "tags": [
-      "abroad",
-      "data_leak",
-      "government_law"
-     ],
-     "unsupported": [],
-     "references": []
-    },
-    {
-     "article_id": 54290,
-     "url": "https://t.me/true_secator/8664",
-     "headline": "Вслед за агентами ФБР США масштабная утечка накрыла более 3 млн. штатовских военнослужащих",
+     "article_id": 498,
+     "url": "https://securitymedia.org/news/obzor-kiberatak-i-uyazvimostey-za-proshedshuyu-nedelyu-28-sentyabrya-2-oktyabrya-2026-goda.html",
+     "headline": "Обзор кибератак и уязвимостей за прошедшую неделю: 28 сентября - 2 октября 2026 года",
      "kind": "vulnerability",
      "priority": null,
      "tags": [
-      "abroad",
-      "data_leak"
+      "ru",
+      "financial_loss"
      ],
      "unsupported": [],
      "references": []
     },
     {
-     "article_id": 121,
-     "url": "https://xakep.ru/2026/09/30/fbi-leak",
-     "headline": "После атаки ShinyHunters ФБР уведомило сотрудников об утечке данных",
+     "article_id": 594,
+     "url": "https://cisoclub.ru/rossijskih-predprinimatelej-predupredili-chto-malyj-biznes-stal-udobnoj-mishenju-dlja-hakerov",
+     "headline": "Российских предпринимателей предупредили, что малый бизнес стал удобной мишенью для хакеров",
+     "kind": "attack",
+     "priority": null,
+     "tags": [
+      "ru",
+      "financial_loss"
+     ],
+     "unsupported": [],
+     "references": []
+    },
+    {
+     "article_id": 1570,
+     "url": "https://xakep.ru/2026/09/29/datasuckers-dodo",
+     "headline": "«Додо Пицца» пострадала от кибератаки. Хакеры утверждают, что похитили данные пользователей",
      "kind": "attack",
      "priority": null,
      "tags": [
@@ -497,8 +495,46 @@
      ],
      "unsupported": [],
      "references": []
+    },
+    {
+     "article_id": 1713,
+     "url": "https://safe.cnews.ru/news/line/2026-09-28_stormwall_vo_vremya_sezona_letnih",
+     "headline": "StormWall: во время сезона летних отпусков DDoS-атаки на туристическую отрасль в России выросли на 42%",
+     "kind": "attack",
+     "priority": null,
+     "tags": [
+      "ru"
+     ],
+     "unsupported": [],
+     "references": []
+    },
+    {
+     "article_id": 1858,
+     "url": "https://safe.cnews.ru/news/line/2026-09-25_solar_infrastruktura",
+     "headline": "«Солар»: инфраструктура выборов выдержала тысячи DDoS-атак и более 170 млн кибернападений с ИИ на веб-сервисы",
+     "kind": "news",
+     "priority": null,
+     "tags": [
+      "abroad"
+     ],
+     "unsupported": [],
+     "references": []
     }
    ]
+  }
+ ],
+ "memory": [
+  {
+   "name": "embeddinggemma:300m",
+   "size_gb": 0.68,
+   "on_card_gb": 0.68,
+   "context": 2048
+  },
+  {
+   "name": "qwen3.5:9b",
+   "size_gb": 5.73,
+   "on_card_gb": 5.73,
+   "context": 8192
   }
  ]
 }
