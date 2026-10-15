@@ -312,6 +312,20 @@
   transition: none !important;
 }
 
+/* Set while the theme fades where view transitions are missing (Layout.tsx):
+   every element eases only its colours, all for the same 300 ms. */
+.theme-fading,
+.theme-fading *,
+.theme-fading *::before,
+.theme-fading *::after {
+  transition-property:
+    background-color, color, border-color, outline-color, text-decoration-color, fill, stroke,
+    box-shadow !important;
+  transition-duration: 300ms !important;
+  transition-timing-function: var(--ease-out-quint) !important;
+  transition-delay: 0s !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

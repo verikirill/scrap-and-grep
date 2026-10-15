@@ -135,7 +135,7 @@ describe('Layout', () => {
 
 describe('Layout theme', () => {
   afterEach(() => {
-    document.documentElement.classList.remove('dark')
+    document.documentElement.classList.remove('dark', 'theme-fading')
     Reflect.deleteProperty(document, 'startViewTransition')
     Reflect.deleteProperty(document.documentElement, 'animate')
   })
@@ -162,7 +162,8 @@ describe('Layout theme', () => {
     expect(document.documentElement).toHaveClass('dark')
   })
 
-  it('grows the new theme as a circle out of the button where the browser can', async () => {
+  it('cross-fades a picture of the new theme over the old where the browser can', async () => {
+    setMediaQueries({ '(prefers-reduced-motion: reduce)': false })
     const animate = vi.fn()
     Object.defineProperty(document.documentElement, 'animate', {
       configurable: true,
@@ -183,8 +184,27 @@ describe('Layout theme', () => {
 
     expect(document.documentElement).toHaveClass('dark')
     await waitFor(() => expect(animate).toHaveBeenCalledOnce())
-    expect(animate.mock.calls[0][0].clipPath[0]).toMatch(/^circle\(0px at /)
-    expect(animate.mock.calls[0][1].pseudoElement).toBe('::view-transition-new(root)')
+    const [keyframes, options] = animate.mock.calls[0]
+    expect(keyframes).toEqual({ opacity: [0, 1] })
+    expect(options).toMatchObject({ duration: 300, pseudoElement: '::view-transition-new(root)' })
+    // The browser fades the pictures: the elements themselves do not ease.
+    expect(document.documentElement).not.toHaveClass('theme-fading')
+  })
+
+  it('eases the colours of every element for a moment where view transitions are missing', async () => {
+    setMediaQueries({ '(prefers-reduced-motion: reduce)': false })
+    const { user } = renderLayout()
+    await accountShown()
+    // The first paint takes the theme at once.
+    expect(document.documentElement).not.toHaveClass('theme-fading')
+
+    await user.click(screen.getAllByRole('button', { name: 'Включить тёмную тему' })[0])
+
+    expect(document.documentElement).toHaveClass('dark')
+    expect(document.documentElement).toHaveClass('theme-fading')
+    // Once the fade is over the elements get their own transitions back.
+    await waitFor(() => expect(document.documentElement).not.toHaveClass('theme-fading'))
+    expect(document.documentElement).toHaveClass('dark')
   })
 
   it('switches at once for a reader who turned motion down', async () => {
@@ -201,5 +221,6 @@ describe('Layout theme', () => {
 
     expect(document.documentElement).toHaveClass('dark')
     expect(startViewTransition).not.toHaveBeenCalled()
+    expect(document.documentElement).not.toHaveClass('theme-fading')
   })
 })

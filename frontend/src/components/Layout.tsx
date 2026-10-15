@@ -15,7 +15,7 @@ import {
 } from './icons'
 import type { IconComponent } from './icons'
 import { AnimatePresence, motion } from 'motion/react'
-import { useLayoutEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { flushSync } from 'react-dom'
 import { Link, NavLink, useLocation } from 'react-router'
@@ -48,6 +48,10 @@ const NAV: NavItem[] = [
 ]
 
 const THEME_KEY = 'radar-theme'
+/** How long the colours of one theme take to fade into the other. */
+const THEME_FADE_MS = DURATION.medium * 1000
+/** On <html> while the colours fade without view transitions (index.css). */
+const THEME_FADE_CLASS = 'theme-fading'
 
 function initialTheme(): boolean {
   const stored = localStorage.getItem(THEME_KEY)
@@ -55,45 +59,62 @@ function initialTheme(): boolean {
   return window.matchMedia('(prefers-color-scheme: dark)').matches
 }
 
-function useDarkMode(): [boolean, (from: HTMLElement) => void] {
+function useDarkMode(): [boolean, () => void] {
   const [dark, setDark] = useState(initialTheme)
+  const fadeTimer = useRef<number | undefined>(undefined)
   useLayoutEffect(() => {
     const root = document.documentElement
-    // Every colour changes in one frame. With transitions on, text and chips
-    // lagged behind the backgrounds, which change at once.
-    root.classList.add('theme-switching')
+    // Outside a fade every colour changes in one frame: with each element's
+    // own transitions on, text and chips lagged behind the backgrounds.
+    const isFading = root.classList.contains(THEME_FADE_CLASS)
+    if (!isFading) root.classList.add('theme-switching')
     root.classList.toggle('dark', dark)
     void root.offsetHeight
     root.classList.remove('theme-switching')
     localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light')
   }, [dark])
-  // The new theme grows as a circle out of the button that was pressed.
-  const toggle = (from: HTMLElement) => {
+  useEffect(
+    () => () => {
+      window.clearTimeout(fadeTimer.current)
+      document.documentElement.classList.remove(THEME_FADE_CLASS)
+    },
+    [],
+  )
+  // The old theme fades into the new one; nothing moves. The first paint and
+  // a reader who turned motion down get the theme at once.
+  const toggle = () => {
     const flip = () => flushSync(() => setDark((value) => !value))
-    if (!document.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
       flip()
       return
     }
-    const box = from.getBoundingClientRect()
-    const x = box.left + box.width / 2
-    const y = box.top + box.height / 2
-    const radius = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y))
-    const transition = document.startViewTransition(flip)
-    transition.ready
-      .then(() => {
-        document.documentElement.animate(
-          {
-            clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`],
-          },
-          {
-            duration: DURATION.long * 1000,
-            easing: `cubic-bezier(${EASE.join(', ')})`,
-            pseudoElement: '::view-transition-new(root)',
-          },
-        )
-      })
-      // Skipped (another transition began): the theme has changed all the same.
-      .catch(() => {})
+    if (document.startViewTransition) {
+      // A picture of the new page fades in over a picture of the old one.
+      document
+        .startViewTransition(flip)
+        .ready.then(() => {
+          document.documentElement.animate(
+            { opacity: [0, 1] },
+            {
+              duration: THEME_FADE_MS,
+              easing: `cubic-bezier(${EASE.join(', ')})`,
+              pseudoElement: '::view-transition-new(root)',
+            },
+          )
+        })
+        // Skipped (another transition began): the theme has changed all the same.
+        .catch(() => {})
+      return
+    }
+    // Without view transitions every element eases its own colours for a moment.
+    const root = document.documentElement
+    window.clearTimeout(fadeTimer.current)
+    root.classList.add(THEME_FADE_CLASS)
+    flip()
+    fadeTimer.current = window.setTimeout(
+      () => root.classList.remove(THEME_FADE_CLASS),
+      THEME_FADE_MS,
+    )
   }
   return [dark, toggle]
 }
@@ -277,11 +298,11 @@ function AccountButton() {
   )
 }
 
-function ThemeButton({ dark, onToggle }: { dark: boolean; onToggle: (from: HTMLElement) => void }) {
+function ThemeButton({ dark, onToggle }: { dark: boolean; onToggle: () => void }) {
   return (
     <button
       type="button"
-      onClick={(event) => onToggle(event.currentTarget)}
+      onClick={onToggle}
       // The icon and the name both say where a press leads, not where one is.
       aria-label={dark ? 'Включить светлую тему' : 'Включить тёмную тему'}
       title={dark ? 'Включить светлую тему' : 'Включить тёмную тему'}
