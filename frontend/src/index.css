@@ -417,52 +417,95 @@
   mix-blend-mode: screen;
 }
 
-/* The sign-in page's dark side (pages/AuthPage.tsx): light dots that the
-   wave rolls through, and a glow of the call-to-action colours breathing
-   behind the cat. Transform and opacity only, a 14 s cycle. */
-.auth-veil {
+/* The radar behind the cat on the sign-in page (features/auth/AuthRadar.tsx):
+   rings, a beam sweeping once in 12 s with a fading tail in the call-to-action
+   colours, blips flaring as it passes. Transform and opacity only. */
+.auth-radar {
   position: absolute;
-  inset: 0;
-  z-index: -1;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  opacity: 0.16;
-  mix-blend-mode: screen;
-}
-.auth-glow {
-  position: absolute;
-  top: 18%;
+  top: 50%;
   left: 50%;
   z-index: -1;
-  width: 34rem;
-  height: 34rem;
-  margin-left: -17rem;
-  border-radius: 9999px;
+  width: 40rem;
+  height: 40rem;
+  translate: -50% -50%;
   pointer-events: none;
-  background: radial-gradient(
-    circle,
-    color-mix(in oklab, var(--cta-from) 34%, transparent),
-    color-mix(in oklab, var(--cta-to) 18%, transparent) 45%,
-    transparent 70%
-  );
-  filter: blur(24px);
-  animation: auth-glow 14s ease-in-out infinite;
+  border-radius: 9999px;
+  mask-image: radial-gradient(circle, black 55%, transparent 71%);
 }
-@keyframes auth-glow {
-  0%,
-  100% {
-    transform: translate3d(-6%, 0, 0) scale(0.92);
-    opacity: 0.55;
+.auth-radar__rings {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background:
+    repeating-radial-gradient(
+      circle,
+      transparent 0 calc(12.5% - 1px),
+      rgb(255 255 255 / 0.07) calc(12.5% - 1px) 12.5%
+    ),
+    linear-gradient(
+      transparent calc(50% - 0.5px),
+      rgb(255 255 255 / 0.05) 0 calc(50% + 0.5px),
+      transparent 0
+    ),
+    linear-gradient(
+      90deg,
+      transparent calc(50% - 0.5px),
+      rgb(255 255 255 / 0.05) 0 calc(50% + 0.5px),
+      transparent 0
+    );
+}
+.auth-radar__sweep {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg 280deg,
+    color-mix(in oklab, var(--cta-to) 10%, transparent) 300deg,
+    color-mix(in oklab, var(--cta-from) 30%, transparent) 357deg,
+    color-mix(in oklab, var(--cta-from) 75%, white) 359.5deg,
+    transparent 360deg
+  );
+  animation: auth-sweep 12s linear infinite;
+}
+.auth-radar__blip {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--cta-from) 60%, white);
+  box-shadow: 0 0 12px 3px color-mix(in oklab, var(--cta-from) 70%, transparent);
+  opacity: 0;
+  animation: auth-blip 12s linear infinite;
+}
+@keyframes auth-sweep {
+  to {
+    rotate: 360deg;
   }
-  50% {
-    transform: translate3d(6%, 4%, 0) scale(1.08);
-    opacity: 0.9;
+}
+@keyframes auth-blip {
+  0% {
+    opacity: 1;
+    scale: 1.4;
+  }
+  35% {
+    opacity: 0.25;
+    scale: 1;
+  }
+  70%,
+  100% {
+    opacity: 0;
+    scale: 1;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .auth-glow {
+  .auth-radar__sweep,
+  .auth-radar__blip {
     animation: none;
+  }
+  .auth-radar__blip {
+    opacity: 0.35;
   }
 }
 
