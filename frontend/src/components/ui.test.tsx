@@ -124,7 +124,7 @@ describe('ErrorNote', () => {
 })
 
 describe('ErrorState', () => {
-  it('is one alert with the upset cat, what failed, why, and the way out', async () => {
+  it('is one alert with a warning sign, what failed, why, and the way out', async () => {
     const onRetry = vi.fn()
     const user = userEvent.setup()
     const { container } = render(
@@ -140,7 +140,11 @@ describe('ErrorState', () => {
     expect(alert).toHaveTextContent('Лента не загрузилась')
     expect(alert).toHaveTextContent('Сервис недоступен')
     expect(alert).toHaveTextContent('Попробуйте через минуту.')
-    expect(container.querySelector('svg.mascot')).toHaveAttribute('data-pose', 'error')
+    // The sign sits in a danger-tinted tile, hidden from screen readers: the title says it.
+    const tile = container.querySelector('.icon-tile')
+    expect(tile).toHaveAttribute('data-tone', 'danger')
+    expect(tile).toHaveAttribute('aria-hidden', 'true')
+    expect(tile?.querySelector('svg')).not.toBeNull()
     await user.click(screen.getByRole('button', { name: 'Повторить' }))
     expect(onRetry).toHaveBeenCalledOnce()
   })
@@ -189,11 +193,16 @@ describe('EmptyState and PageHeader', () => {
     expect(screen.getByRole('button', { name: 'Собрать выпуск' })).toBeInTheDocument()
   })
 
-  it('pictures an empty place with the cat, in the pose it is given', () => {
-    const { container, rerender } = render(<EmptyState title="Постов пока нет" />)
-    expect(container.querySelector('svg.mascot')).toHaveAttribute('data-pose', 'empty')
-    rerender(<EmptyState title="Постов пока нет" pose="waiting" />)
-    expect(container.querySelector('svg.mascot')).toHaveAttribute('data-pose', 'waiting')
+  it('pictures an empty place with its topic icon in a soft tile, as decoration', () => {
+    const { container } = render(
+      <EmptyState icon={<svg data-testid="topic" />} title="Постов пока нет" />,
+    )
+    const tile = container.querySelector('.icon-tile')
+    expect(tile).toHaveAttribute('data-tone', 'accent')
+    expect(tile).toHaveAttribute('aria-hidden', 'true')
+    expect(tile).toContainElement(screen.getByTestId('topic'))
+    // Only the words are read.
+    expect(screen.getByRole('heading')).toHaveAccessibleName('Постов пока нет')
   })
 
   it('gives the main action of a screen an arrow, keeping its name', () => {

@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { ArrowUp, ChevronDown, Info, Sparkles } from '../../components/icons'
 import { EASE } from '../../components/tokens'
-import { MascotLoader } from '../../components/loading'
+import { PulseLoader } from '../../components/loading'
 import { ErrorNote } from '../../components/ui'
 import { api } from '../../lib/api'
 import { answerPieces } from '../../lib/answerText'
@@ -229,7 +229,7 @@ export function AskDigest({ digestId, audience }: { digestId: string; audience: 
                 </AnimatePresence>
                 {ask.isPending && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                    <MascotLoader label="Читаем записи выпуска" isInline />
+                    <PulseLoader label="Читаем записи выпуска" isInline />
                   </motion.div>
                 )}
                 <ErrorNote error={ask.error} />

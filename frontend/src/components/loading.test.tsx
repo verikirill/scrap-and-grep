@@ -2,8 +2,8 @@ import { render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import {
   Loading,
-  MascotLoader,
   PageSkeleton,
+  PulseLoader,
   Skeleton,
   SkeletonChart,
   SkeletonList,
@@ -51,23 +51,25 @@ describe('Loading', () => {
   })
 })
 
-describe('MascotLoader', () => {
-  it('shows the searching cat with what is being done, as a busy status', () => {
-    const { container } = render(
-      <MascotLoader label="Проверяем вход" hint="Это пара секунд" size={80} />,
-    )
+describe('PulseLoader', () => {
+  it('says what is being done as a busy status, with a pulse kept from screen readers', () => {
+    const { container } = render(<PulseLoader label="Проверяем вход" hint="Это пара секунд" />)
     const status = screen.getByRole('status', { name: 'Проверяем вход' })
     expect(status).toHaveAttribute('aria-busy', 'true')
     expect(within(status).getByText('Проверяем вход')).toBeInTheDocument()
     expect(within(status).getByText('Это пара секунд')).toBeInTheDocument()
-    const cat = container.querySelector('svg.mascot')
-    expect(cat).toHaveAttribute('data-pose', 'searching')
-    expect(cat).toHaveAttribute('width', '80')
+    // The pulse and the dots are only the picture of a wait.
+    const decoration = container.querySelectorAll('[aria-hidden="true"]')
+    expect(decoration).toHaveLength(2)
+    expect(status.firstElementChild).toBe(decoration[0])
   })
 
-  it('sits in a line with a smaller cat where an answer is being written', () => {
-    const { container } = render(<MascotLoader label="Читаем записи выпуска" isInline />)
-    expect(screen.getByRole('status', { name: 'Читаем записи выпуска' })).toBeInTheDocument()
-    expect(container.querySelector('svg.mascot')).toHaveAttribute('width', '44')
+  it('stacks in a column, or sits in a line where an answer is being written', () => {
+    const { rerender } = render(<PulseLoader label="Читаем записи выпуска" />)
+    const status = () => screen.getByRole('status', { name: 'Читаем записи выпуска' })
+    expect(status()).toHaveClass('flex-col')
+    rerender(<PulseLoader label="Читаем записи выпуска" isInline />)
+    expect(status()).not.toHaveClass('flex-col')
+    expect(within(status()).getByText('Читаем записи выпуска')).toHaveClass('text-muted')
   })
 })

@@ -1,5 +1,6 @@
-import { Mascot } from '../../components/Mascot'
-import { Card } from '../../components/ui'
+import { ScanText } from '../../components/icons'
+import { Pulse } from '../../components/loading'
+import { Card, IconTile } from '../../components/ui'
 
 type Props = {
   usesModel: boolean
@@ -10,14 +11,10 @@ type Props = {
 export function ResumeProcessing({ usesModel, usesDocling }: Props) {
   return (
     <Card className="flex flex-col items-center px-6 py-12 text-center">
-      {/* The cat reads the resume through its magnifier: no fake percentages. */}
-      <div
-        role="status"
-        aria-busy="true"
-        aria-label="Читаем резюме"
-        className="mascot-tile mb-5 grid size-28 place-items-center"
-      >
-        <Mascot pose="searching" size={104} />
+      {/* The document in its tile, with a pulse in the corner while it is read. */}
+      <div role="status" aria-busy="true" aria-label="Читаем резюме" className="relative mb-5">
+        <IconTile icon={<ScanText />} />
+        <Pulse className="absolute -top-1 -right-1" />
       </div>
       <h2 className="text-base font-semibold">Читаем резюме</h2>
       <p className="mt-1.5 max-w-sm text-sm text-muted">

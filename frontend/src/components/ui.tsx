@@ -1,12 +1,10 @@
 import clsx from 'clsx'
-import { ArrowRight, Help, Schedule } from './icons'
+import { ArrowRight, Help, Schedule, TriangleAlert } from './icons'
 import { animate, motion, useMotionValue, useTransform } from 'motion/react'
 import { useEffect } from 'react'
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { formatNumber } from '../lib/format'
 import { useEntranceDelay } from './entrance'
-import { Mascot } from './Mascot'
-import type { MascotPose } from './Mascot'
 import { DURATION, EASE, buttonClass } from './tokens'
 import type { ButtonVariant } from './tokens'
 
@@ -264,68 +262,53 @@ export function ReadingTime({ minutes }: { minutes: number | null | undefined })
 }
 
 /**
- * The cat in its picture tile, the inspiration's card: a soft gradient
- * square, and a round badge with the topic's icon cut into its corner.
+ * The topic of an empty or failed place: its icon in a soft tinted tile.
+ * Decoration: the title next to it says the same in words.
  */
-function MascotTile({
-  pose,
+export function IconTile({
   icon,
   tone = 'accent',
+  className,
 }: {
-  pose: MascotPose
-  icon?: ReactNode
+  icon: ReactNode
   tone?: 'accent' | 'danger'
+  className?: string
 }) {
   return (
     <motion.div
-      initial={{ scale: 0.85, opacity: 0 }}
+      aria-hidden
+      data-tone={tone}
+      initial={{ scale: 0.9, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
       transition={{ duration: DURATION.long, ease: EASE }}
-      className="relative mb-4"
-    >
-      <div
-        className={clsx(
-          'mascot-tile grid size-28 place-items-center',
-          tone === 'danger' && 'mascot-tile--danger',
-        )}
-      >
-        <Mascot pose={pose} size={104} />
-      </div>
-      {icon && (
-        <span
-          aria-hidden
-          className={clsx(
-            'absolute -right-2 -bottom-2 grid size-10 place-items-center rounded-full ring-[5px] ring-surface [&>svg]:size-5',
-            tone === 'danger' ? 'bg-danger text-white' : 'bg-accent text-white',
-          )}
-        >
-          {icon}
-        </span>
+      className={clsx(
+        'icon-tile grid size-16 shrink-0 place-items-center [&>svg]:size-7',
+        tone === 'danger' && 'icon-tile--danger',
+        className,
       )}
+    >
+      {icon}
     </motion.div>
   )
 }
 
-/** An empty place: the cat with nothing in its magnifier, what is missing and the step that fills it. */
+/** An empty place: its topic, what is missing and the step that fills it. */
 export function EmptyState({
   icon,
   title,
   children,
   action,
-  pose = 'empty',
 }: {
-  /** The topic, as a badge on the picture. */
-  icon?: ReactNode
+  /** The topic, shown in a tinted tile above the title. */
+  icon: ReactNode
   title: string
   children?: ReactNode
   /** The step that fills the empty place, as a button under the text. */
   action?: ReactNode
-  /** "waiting" where the place fills by itself, "found" where all is done. */
-  pose?: MascotPose
 }) {
   return (
     <div className="flex flex-col items-center px-6 py-12 text-center">
-      <MascotTile pose={pose} icon={icon} />
+      <IconTile icon={icon} className="mb-4" />
       <h3 className="text-base font-semibold">{title}</h3>
       {children && <div className="mt-1.5 max-w-xl text-sm text-muted">{children}</div>}
       {action && <div className="mt-4">{action}</div>}
@@ -334,7 +317,7 @@ export function EmptyState({
 }
 
 /**
- * A part that failed to load: the upset cat, what went wrong in plain words
+ * A part that failed to load: a warning sign, what went wrong in plain words
  * and a way out. The whole block is the alert, so its title is read too.
  */
 export function ErrorState({
@@ -342,7 +325,6 @@ export function ErrorState({
   error,
   children,
   action,
-  icon,
   className,
 }: {
   title: string
@@ -350,7 +332,6 @@ export function ErrorState({
   error?: unknown
   children?: ReactNode
   action?: ReactNode
-  icon?: ReactNode
   className?: string
 }) {
   const message = error ? (error instanceof Error ? error.message : 'Неизвестная ошибка') : null
@@ -359,7 +340,7 @@ export function ErrorState({
       role="alert"
       className={clsx('flex flex-col items-center px-6 py-10 text-center', className)}
     >
-      <MascotTile pose="error" icon={icon} tone="danger" />
+      <IconTile icon={<TriangleAlert />} tone="danger" className="mb-4" />
       <h3 className="text-base font-semibold">{title}</h3>
       {message && <p className="mt-1.5 max-w-md text-sm text-muted">{message}</p>}
       {children && <div className="mt-1.5 max-w-md text-sm text-muted">{children}</div>}

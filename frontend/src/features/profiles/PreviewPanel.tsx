@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { ArrowDown, ArrowUp, Minus, Plus } from '../../components/icons'
+import { ArrowDown, ArrowUp, Minus, PenLine, Plus, Search } from '../../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
 import type { ReactNode } from 'react'
 import { EASE } from '../../components/tokens'
@@ -107,7 +107,7 @@ export function PreviewPanel({ draft, saved, isDirty }: Props) {
           must be measured relative to its scroll offset. */}
       <motion.div layoutScroll className="relative flex-1 overflow-y-auto">
         {!current.isValid && (
-          <EmptyState title="Подборка ждёт названий" pose="waiting">
+          <EmptyState icon={<PenLine size={22} />} title="Подборка ждёт названий">
             Дайте название каждому интересу, и здесь появится подборка.
           </EmptyState>
         )}
@@ -126,7 +126,7 @@ export function PreviewPanel({ draft, saved, isDirty }: Props) {
           </Loading>
         )}
         {diff && diff.rows.length === 0 && (
-          <EmptyState title="Подборка пуста">
+          <EmptyState icon={<Search size={22} />} title="Подборка пуста">
             Ни одна публикация не проходит порог. Добавьте ключевые слова или снизьте порог
             релевантности.
           </EmptyState>

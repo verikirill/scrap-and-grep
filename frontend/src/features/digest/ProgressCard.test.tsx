@@ -20,8 +20,10 @@ function steps(): [string, StepState][] {
 
 const bar = () => screen.getByRole('progressbar', { name: 'Готовность выпуска' })
 
-/** The pose of the cat that walks the track: decoration, so found by its mark. */
-const cat = () => document.querySelector('svg.mascot')?.getAttribute('data-pose')
+/** The marker at the front of the bar: decoration, so found by its mark. */
+const marker = () => document.querySelector('.progress-marker')
+/** The layer that carries the marker along the track, moved by a share of its width. */
+const markerShift = () => (marker()?.parentElement as HTMLElement | null)?.style.transform
 
 describe('ProgressCard', () => {
   it('shows an issue waiting in the queue with no step under way', () => {
@@ -34,9 +36,10 @@ describe('ProgressCard', () => {
     expect(screen.getByRole('heading', { name: 'В очереди' })).toBeInTheDocument()
     // A sliver of the bar is drawn from the start: an empty bar reads as stuck.
     expect(bar()).toHaveAttribute('aria-valuenow', '2')
-    // The cat waits its turn with a clock, hidden from screen readers.
-    expect(cat()).toBe('waiting')
-    expect(document.querySelector('svg.mascot')).toHaveAttribute('aria-hidden', 'true')
+    // The marker rests at the start without a glow, hidden from screen readers.
+    expect(marker()).toHaveAttribute('data-state', 'queued')
+    expect(marker()?.closest('[aria-hidden="true"]')).not.toBeNull()
+    expect(markerShift()).toBe('translateX(2%)')
     expect(steps()).toEqual([
       ['Подготовка', 'waiting'],
       ['Поиск', 'waiting'],
@@ -57,7 +60,9 @@ describe('ProgressCard', () => {
     expect(screen.getByRole('heading', { name: /^Оцениваем релевантность/ })).toBeInTheDocument()
     expect(screen.getByText('16 из 40')).toBeInTheDocument()
     expect(bar()).toHaveAttribute('aria-valuenow', '40')
-    expect(cat()).toBe('searching')
+    // While a step runs the marker glows at the front of the fill.
+    expect(marker()).toHaveAttribute('data-state', 'running')
+    expect(markerShift()).toBe('translateX(40%)')
     expect(steps()).toEqual([
       ['Подготовка', 'done'],
       ['Поиск', 'done'],
@@ -111,8 +116,9 @@ describe('ProgressCard', () => {
     )
     expect(screen.getByRole('heading', { name: 'Сохраняем' })).toBeInTheDocument()
     expect(bar()).toHaveAttribute('aria-valuenow', '99')
-    // Saving: the cat holds up the issue it found.
-    expect(cat()).toBe('found')
+    // Saving: every step is done, the marker settles near the end.
+    expect(marker()).toHaveAttribute('data-state', 'saving')
+    expect(markerShift()).toBe('translateX(99%)')
     expect(steps().every(([, state]) => state === 'done')).toBe(true)
   })
 })

@@ -18,16 +18,6 @@
   --field-border-width: 1px;
   --field-border: oklch(86% 0.006 286);
   --field-border-hover: oklch(78% 0.008 286);
-  /* The cat (components/Mascot.tsx): the black cat of the logo, plush-shaded. */
-  --mascot-fur: oklch(24% 0.02 268);
-  --mascot-fur-light: oklch(40% 0.03 268);
-  --mascot-rim: transparent;
-  --mascot-eye: oklch(98% 0.008 250);
-  --mascot-pupil: oklch(17% 0.02 268);
-  --mascot-ear: oklch(74% 0.09 10);
-  --mascot-glass: color-mix(in oklab, var(--accent) 18%, white);
-  --mascot-paper: white;
-  --mascot-ink: oklch(82% 0.01 268);
   /* Page titles sit in a dark pill in both themes. */
   --title-pill: oklch(22% 0.012 280);
   --title-pill-foreground: oklch(98% 0 0);
@@ -42,13 +32,6 @@
   --field-border-hover: oklch(40% 0.01 286);
   /* Secondary text a step lighter than HeroUI's: metadata on dark cards stays above 4.5:1. */
   --muted: oklch(76% 0.012 286);
-  /* A black cat on a near-black page: lighter fur and a faint rim keep its shape. */
-  --mascot-fur: oklch(31% 0.02 268);
-  --mascot-fur-light: oklch(48% 0.03 268);
-  --mascot-rim: oklch(62% 0.03 268 / 0.5);
-  --mascot-glass: color-mix(in oklab, var(--accent) 28%, var(--surface));
-  --mascot-paper: oklch(95% 0.005 268);
-  --mascot-ink: oklch(78% 0.01 268);
   --title-pill: oklch(24% 0.008 286);
   --cta-to: oklch(60% 0.2 285);
 }
@@ -160,11 +143,6 @@
     box-shadow: 0 1px 3px rgb(0 0 0 / 0.2);
   }
 
-  .mascot-rim {
-    stroke: var(--mascot-rim);
-    stroke-width: 1.2;
-  }
-
   /* A page title: bold capitals in a dark pill, as a poster headline. */
   .title-pill {
     display: inline-block;
@@ -223,37 +201,22 @@
     transform: translateX(3px);
   }
 
-  /* The picture tile of an empty or failed place, as the cards of the inspiration. */
-  .mascot-tile {
-    border-radius: 2rem;
-    background:
-      radial-gradient(
-        circle at 30% 20%,
-        color-mix(in oklab, white 55%, transparent),
-        transparent 60%
-      ),
-      linear-gradient(
-        140deg,
-        color-mix(in oklab, var(--accent) 22%, var(--surface)),
-        color-mix(in oklab, var(--cta-to) 18%, var(--surface))
-      );
-  }
-
-  .dark .mascot-tile {
+  /* The tile of an empty or failed place: the topic's icon on a soft tint. */
+  .icon-tile {
+    border-radius: 1.25rem;
     background: linear-gradient(
       140deg,
-      color-mix(in oklab, var(--accent) 24%, var(--surface)),
-      color-mix(in oklab, var(--cta-to) 18%, var(--surface))
+      color-mix(in oklab, var(--accent) 14%, var(--surface)),
+      color-mix(in oklab, var(--cta-to) 9%, var(--surface))
     );
+    color: var(--accent-soft-foreground);
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 16%, transparent);
   }
 
-  .mascot-tile--danger,
-  .dark .mascot-tile--danger {
-    background: linear-gradient(
-      140deg,
-      color-mix(in oklab, var(--danger) 16%, var(--surface)),
-      color-mix(in oklab, var(--warning) 14%, var(--surface))
-    );
+  .icon-tile--danger {
+    background: color-mix(in oklab, var(--danger) 12%, var(--surface));
+    color: var(--danger);
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--danger) 20%, transparent);
   }
 
   /* The filled part of a progress bar: the call-to-action gradient with a light running over it. */
@@ -263,6 +226,18 @@
         200% 100%,
       linear-gradient(90deg, var(--cta-from), var(--cta-to));
     animation: progress-glint 2.2s linear infinite;
+  }
+
+  /* The front of the build progress: a light dot with a glow of the accent. */
+  .progress-marker__dot {
+    background: var(--surface);
+    box-shadow:
+      inset 0 0 0 3px var(--cta-to),
+      0 0 12px 1px color-mix(in oklab, var(--cta-to) 55%, transparent);
+  }
+
+  .progress-marker[data-state='queued'] .progress-marker__dot {
+    box-shadow: inset 0 0 0 3px color-mix(in oklab, var(--muted) 60%, transparent);
   }
 
   /* A card that opens something rises a little under the pointer. */
