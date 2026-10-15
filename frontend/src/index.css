@@ -193,6 +193,25 @@
     opacity: 0.55;
   }
 
+  /*
+   * HeroUI halves a disabled button, and on the dotted page an outlined one
+   * all but vanished. It stays solid instead: a plain grey fill and muted
+   * text say "not now" while the label still reads.
+   */
+  .button:not(.cta):not([aria-busy='true']):disabled,
+  .button:not(.cta)[aria-disabled='true'] {
+    opacity: 1;
+    background: var(--default);
+    border-color: transparent;
+    color: var(--muted);
+    box-shadow: none;
+  }
+
+  /* A button at work is disabled too, but its spinner already says so. */
+  .button:not(.cta)[aria-busy='true']:disabled {
+    opacity: 1;
+  }
+
   .button.cta .cta__arrow {
     transition: transform 0.25s var(--ease-out-quint);
   }

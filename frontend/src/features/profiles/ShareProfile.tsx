@@ -83,7 +83,7 @@ export function ShareProfileButton({ profile }: { profile: Profile }) {
 
           <div className="flex items-center gap-3 rounded-2xl bg-surface-secondary p-3">
             <ProfileAvatar profile={profile} size={40} />
-            <p className="min-w-0 flex-1 truncate font-medium">{profile.spec.name}</p>
+            <p className="min-w-0 flex-1 font-medium break-words">{profile.spec.name}</p>
           </div>
 
           {url ? (
