@@ -11,6 +11,7 @@ import { EASE, INPUT_CLASS } from '../components/tokens'
 import { Button, ErrorNote, Field } from '../components/ui'
 import { SharedAccounts } from '../features/auth/SharedAccounts'
 import { TailVisual } from '../features/auth/TailVisual'
+import { DottedVeil } from '../components/ui/dotted-veil'
 import { ONBOARDING_PATH } from '../lib/onboarding'
 import { useMe, useMeta, useSignIn } from '../lib/queries'
 import { SlidingPill } from '../components/SlidingPill'
@@ -76,7 +77,16 @@ export function AuthPage({ mode }: Props) {
   return (
     <div className="grid min-h-dvh lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
       {/* The brand side keeps its dark look in both themes: it is a picture, not a surface. */}
-      <aside className="relative hidden overflow-hidden bg-[#0b0f17] px-12 py-10 text-white lg:flex lg:flex-col">
+      <aside className="relative isolate hidden overflow-hidden bg-[#0b0f17] px-12 py-10 text-white lg:flex lg:flex-col">
+        {/* A slow wave through a field of light dots and a glow breathing behind
+            the cat: the halftone of the app, brighter on the dark side. Still
+            under "reduce motion"; mounted only where the side is visible. */}
+        {isWide && (
+          <>
+            <DottedVeil tone="light" className="auth-veil" />
+            <div aria-hidden className="auth-glow" />
+          </>
+        )}
         <div className="flex items-center gap-2.5">
           <LogoMark size={32} />
           <Wordmark className="text-[15px]" />
