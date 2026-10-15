@@ -238,9 +238,12 @@ class OpenAIEmbedder:
             await asyncio.sleep(self._pace.delay())
             self.requests += 1
             response = await client.post(self._url, json=body)
-            # A full quota is a queue, not a failure: the request waits and goes
-            # again, spread out so that refused requests do not return together.
-            if response.status_code == 429 and attempt < OPENAI_EMBED_RETRIES:
+            # A full quota is a queue, not a failure, and neither is a server
+            # error: Yandex answered one text of thousands with a 500 once, and it
+            # stopped the whole embedding run. The request waits and goes again,
+            # spread out so that refused requests do not return together.
+            retry = response.status_code == 429 or response.status_code >= 500
+            if retry and attempt < OPENAI_EMBED_RETRIES:
                 step = min(OPENAI_EMBED_PAUSE_SECONDS * 2**attempt, OPENAI_EMBED_MAX_PAUSE_SECONDS)
                 await asyncio.sleep(step * random.uniform(0.5, 1.5))  # noqa: S311
                 continue

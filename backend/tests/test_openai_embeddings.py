@@ -116,9 +116,11 @@ async def test_a_text_beyond_the_input_limit_is_cut() -> None:
     assert len(server.body(0)["input"]) == embedder_module.OPENAI_EMBED_MAX_CHARS
 
 
-async def test_a_full_quota_is_waited_out(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_a_full_quota_or_a_server_error_is_waited_out(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(embedder_module, "OPENAI_EMBED_PAUSE_SECONDS", 0.0)
-    server = Server(429, 429)
+    server = Server(429, 500)
 
     (vector,) = await yandex(server).embed(["SCADA"], "document")
 
