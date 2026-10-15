@@ -154,9 +154,10 @@ async def count_teams(session: AsyncSession, company_id: uuid.UUID) -> int:
     return int(count or 0)
 
 
-async def follow_team(session: AsyncSession, team: Team) -> int:
+async def follow_team(session: AsyncSession, team: Team) -> list[uuid.UUID]:
     """Give the team's current profile to every member profile that still
-    follows it. A profile its reader edited no longer follows, and keeps the edit."""
+    follows it, and return whose profiles changed. A profile its reader edited
+    no longer follows, and keeps the edit. The look stays the reader's."""
     spec = ProfileSpec.model_validate(team.spec)
     rows = (
         await session.execute(
@@ -165,15 +166,16 @@ async def follow_team(session: AsyncSession, team: Team) -> int:
             .where(Profile.team_id == team.id)
         )
     ).all()
+    changed: list[uuid.UUID] = []
     for profile, job_title in rows:
         personal = member_spec(spec, job_title).model_dump(mode="json")
         if personal != profile.spec:
             profile.spec = personal
             profile.name = spec.name
             profile.version += 1
-        profile.icon, profile.color = team.icon, team.color
+            changed.append(profile.user_id)
     await session.flush()
-    return len(rows)
+    return changed
 
 
 async def move_profiles(session: AsyncSession, user: User, source: uuid.UUID, target: Team) -> None:
@@ -272,9 +274,18 @@ async def invited(session: AsyncSession, token: str) -> User | None:
     )
 
 
-async def accept(session: AsyncSession, user: User, password: str) -> None:
-    """Set the first password; the link stops working at once."""
-    user.password_hash = await hash_password(password)
-    user.invite_token = None
-    user.invite_expires_at = None
-    await session.flush()
+async def accept(session: AsyncSession, token: str, password: str) -> User | None:
+    """Set the first password; the link stops working at once. Two requests
+    with one link cannot both win: the update itself checks the link is unused."""
+    password_hash = await hash_password(password)
+    return await session.scalar(
+        update(User)
+        .where(
+            User.invite_token == token,
+            User.invite_expires_at > datetime.now(UTC),
+            User.password_hash.is_(None),
+            User.is_demo.is_(False),
+        )
+        .values(password_hash=password_hash, invite_token=None, invite_expires_at=None)
+        .returning(User)
+    )

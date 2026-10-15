@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import delete
+from sqlalchemy.exc import IntegrityError
 
 from radar.api.company_schemas import (
     CompanyIn,
@@ -144,7 +145,13 @@ async def create_company(payload: CompanyIn, session: SessionDep, user: CurrentU
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Пространство компании уже есть.")
     company = Company(owner_id=user.id, name=payload.name.strip(), about=payload.about.strip())
     session.add(company)
-    await session.flush()
+    try:
+        await session.flush()
+    except IntegrityError as exc:
+        # A second request of the same manager got there first.
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, detail="Пространство компании уже есть."
+        ) from exc
     await session.refresh(company)
     log.info("company_created", company_id=str(company.id))
     return await _company_out(session, company)
@@ -207,7 +214,11 @@ async def create_team(payload: TeamIn, session: SessionDep, user: CurrentUser) -
 
 @router.put("/teams/{team_id}", dependencies=[_draft_limit])
 async def update_team(
-    team_id: uuid.UUID, payload: TeamIn, session: SessionDep, user: CurrentUser
+    team_id: uuid.UUID,
+    payload: TeamIn,
+    session: SessionDep,
+    cache: CacheDep,
+    user: CurrentUser,
 ) -> TeamOut:
     """Change the team; the member profiles that still follow it change too."""
     company = await _company(session, user)
@@ -221,9 +232,15 @@ async def update_team(
     if payload.color:
         team.color = payload.color
     await session.flush()
-    await service.follow_team(session, team)
+    changed = await service.follow_team(session, team)
     await session.refresh(team)
-    return team_out(team, await service.team_members(session, [team.id]))
+    out = team_out(team, await service.team_members(session, [team.id]))
+    if changed:
+        # Commit first, then let the cached tastes go, as a profile edit does.
+        await session.commit()
+        for member_id in set(changed):
+            await forget_taste(cache, member_id)
+    return out
 
 
 @router.delete(

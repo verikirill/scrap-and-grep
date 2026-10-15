@@ -307,3 +307,63 @@ async def test_an_invitation_works_while_registration_is_closed(api: str, monkey
 
     assert short.status_code == 422
     assert accepted.status_code == 200
+
+
+async def test_an_accepted_suggestion_makes_the_profile_the_readers_own(api: str) -> None:
+    import uuid
+
+    from radar.db import session_scope
+    from radar.db.models import ProfileSuggestion
+
+    async with register(api, "boss") as boss:
+        await boss.post("/company", json={"name": "Энергосеть"})
+        team = await make_team(boss)
+        member = (await add(boss, team["id"], {"name": "Ян", "email": "yan@energo.example"}))[
+            "created"
+        ][0]
+        async with client(api) as yan:
+            await yan.post(f"/auth/invite/{token_of(member)}", json={"password": PASSWORD})
+            profile = (await yan.get("/profiles")).json()[0]
+            async with session_scope() as session:
+                suggestion = ProfileSuggestion(
+                    profile_id=uuid.UUID(profile["id"]),
+                    kind="interest",
+                    source="likes",
+                    title="Облачные сервисы",
+                    keywords=["облако", "SaaS"],
+                )
+                session.add(suggestion)
+                await session.flush()
+                suggestion_id = suggestion.id
+            accepted = await yan.post(
+                f"/profiles/{profile['id']}/suggestions/{suggestion_id}/accept"
+            )
+            await boss.put(
+                f"/company/teams/{team['id']}",
+                json={**SOC, "spec": {**team["spec"], "max_items": 9}},
+            )
+            after = (await yan.get("/profiles")).json()[0]
+
+    assert accepted.status_code == 200
+    assert after["team_id"] is None
+    assert "Облачные сервисы" in [interest["title"] for interest in after["spec"]["interests"]]
+    assert after["spec"]["max_items"] == team["spec"]["max_items"]
+
+
+async def test_one_link_lets_in_one_password(api: str) -> None:
+    import asyncio
+
+    async with register(api, "boss") as boss:
+        await boss.post("/company", json={"name": "Энергосеть"})
+        team = await make_team(boss)
+        member = (await add(boss, team["id"], {"name": "Ия", "email": "iya2@energo.example"}))[
+            "created"
+        ][0]
+
+    async with client(api) as first, client(api) as second:
+        answers = await asyncio.gather(
+            first.post(f"/auth/invite/{token_of(member)}", json={"password": PASSWORD}),
+            second.post(f"/auth/invite/{token_of(member)}", json={"password": PASSWORD + "!"}),
+        )
+
+    assert sorted(answer.status_code for answer in answers) == [200, 404]

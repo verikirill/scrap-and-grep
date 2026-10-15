@@ -313,8 +313,9 @@ async def accept_invite(
 ) -> UserOut:
     """Set the first password and come in. Works while registration is
     closed: the account was made by the company, not by a visitor."""
-    user = await _invited(session, token)
-    await company_service.accept(session, user, payload.password)
+    user = await company_service.accept(session, token, payload.password)
+    if user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=_BAD_INVITE)
     _set_cookie(
         response, await auth_sessions.start(session, user, settings.session_ttl_days), settings
     )
