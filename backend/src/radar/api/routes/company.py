@@ -243,7 +243,7 @@ async def draft_team(payload: TeamDraftIn, session: SessionDep, user: CurrentUse
     brief = service.brief_for(company, payload.name, payload.services, payload.systems)
     drafter = service.get_drafter()
     spec = await drafter.draft(brief)
-    return TeamDraftOut(spec=spec, icon=team_icon(brief.as_text()), drafted_by=drafter.name)
+    return TeamDraftOut(spec=spec, icon=team_icon(brief.own_text()), drafted_by=drafter.name)
 
 
 async def _team_spec(company: Company, payload: TeamIn) -> ProfileSpec:
@@ -262,7 +262,7 @@ async def create_team(payload: TeamIn, session: SessionDep, user: CurrentUser) -
     if count >= service.MAX_TEAMS:
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Слишком много команд.")
     spec = await _team_spec(company, payload)
-    text = service.brief_for(company, payload.name, payload.services, payload.systems).as_text()
+    text = service.brief_for(company, payload.name, payload.services, payload.systems).own_text()
     team = Team(
         company_id=company.id,
         name=payload.name.strip(),
@@ -482,7 +482,7 @@ async def draft_role(
     spec = await drafter.draft(brief)
     return TeamDraftOut(
         spec=service.role_spec(team, payload.name, spec),
-        icon=team.icon or team_icon(brief.as_text()),
+        icon=team.icon or team_icon(brief.own_text()),
         drafted_by=drafter.name,
     )
 

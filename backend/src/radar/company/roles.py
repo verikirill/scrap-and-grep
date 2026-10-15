@@ -83,6 +83,11 @@ class TeamBrief:
         parts = [self.team, self.services, ", ".join(self.systems), self.about]
         return ". ".join(part.strip() for part in parts if part.strip())
 
+    def own_text(self) -> str:
+        """The team's words alone: its icon must not come from what the company does."""
+        parts = [self.team, self.services, ", ".join(self.systems)]
+        return ". ".join(part.strip() for part in parts if part.strip())
+
 
 class TeamDrafter(Protocol):
     name: str

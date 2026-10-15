@@ -156,3 +156,15 @@ def test_a_team_gets_an_icon_from_its_work_and_colours_go_round() -> None:
     assert team_icon("Бухгалтерия") == "work"
     assert team_color(0) == "blue"
     assert team_color(9) == team_color(0)
+
+
+def test_a_team_icon_comes_from_the_team_not_from_the_company() -> None:
+    brief = TeamBrief(
+        company="Энергосеть",
+        about="Распределение электроэнергии, 40 подстанций.",
+        team="Сети",
+        services="Маршрутизаторы и VPN между филиалами.",
+    )
+
+    assert team_icon(brief.own_text()) == "network"
+    assert team_icon(brief.as_text()) == "factory"
