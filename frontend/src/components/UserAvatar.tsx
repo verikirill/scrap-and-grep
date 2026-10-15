@@ -4,7 +4,7 @@ import type { Me } from '../lib/api'
 import { nameHue, nameInitials } from '../lib/avatar'
 
 type Props = {
-  me: Pick<Me, 'display_name' | 'avatar_url'>
+  me: Pick<Me, 'display_name' | 'avatar_url'> & Partial<Pick<Me, 'is_demo'>>
   size: number
   className?: string
 }
@@ -12,6 +12,7 @@ type Props = {
 /**
  * The reader's picture, or their initials on a soft gradient of a hue of
  * their own while there is none: two readers without a picture look apart.
+ * A guest without a picture gets the guest character instead of a letter.
  */
 export function UserAvatar({ me, size, className }: Props) {
   // A picture that failed to load falls back to the initials, until a new one is set.
@@ -25,6 +26,21 @@ export function UserAvatar({ me, size, className }: Props) {
         height={size}
         decoding="async"
         onError={() => setBroken(me.avatar_url)}
+        className={clsx('shrink-0 rounded-full object-cover', className)}
+        style={{ width: size, height: size }}
+      />
+    )
+  }
+  if (me.is_demo) {
+    return (
+      <img
+        src="/brand/guest.webp"
+        srcSet="/brand/guest.webp 1x, /brand/guest@2x.webp 2x"
+        alt=""
+        width={size}
+        height={size}
+        decoding="async"
+        draggable={false}
         className={clsx('shrink-0 rounded-full object-cover', className)}
         style={{ width: size, height: size }}
       />

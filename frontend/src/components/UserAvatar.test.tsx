@@ -16,6 +16,22 @@ describe('UserAvatar', () => {
     expect(screen.getByText('АС')).toBeInTheDocument()
   })
 
+  it('gives a guest without a picture the guest character, and a guest’s own picture wins', () => {
+    const { container, rerender } = render(
+      <UserAvatar me={{ display_name: 'Гость', avatar_url: null, is_demo: true }} size={36} />,
+    )
+    expect(container.querySelector('img')).toHaveAttribute('src', '/brand/guest.webp')
+    expect(screen.queryByText('Г')).toBeNull()
+
+    rerender(
+      <UserAvatar
+        me={{ display_name: 'Гость', avatar_url: '/a/2.png', is_demo: true }}
+        size={36}
+      />,
+    )
+    expect(container.querySelector('img')).toHaveAttribute('src', '/a/2.png')
+  })
+
   it('falls back to initials when the picture fails, and tries a new picture again', () => {
     const { container, rerender } = render(
       <UserAvatar me={{ display_name: 'Анна Смирнова', avatar_url: '/a/1.png' }} size={32} />,
