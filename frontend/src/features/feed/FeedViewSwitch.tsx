@@ -7,7 +7,7 @@ import { toast } from '../../lib/toast'
 
 const VIEWS: readonly { value: FeedView; label: string; icon: IconComponent }[] = [
   { value: 'cards', label: 'Карточки', icon: ViewCards },
-  { value: 'telegram', label: 'Как в Telegram', icon: ViewChat },
+  { value: 'telegram', label: 'Посты', icon: ViewChat },
 ]
 
 /**
