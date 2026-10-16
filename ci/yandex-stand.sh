@@ -16,7 +16,11 @@ cd "$(dirname "$0")/.."
 port=${WEB_PORT:-8080}
 env_file=$(mktemp)
 profiles=""
-[ "${SMOKE_VIDEO:-true}" = true ] && profiles="--profile video"
+shorts_url=""
+if [ "${SMOKE_VIDEO:-true}" = true ]; then
+  profiles="--profile video"
+  shorts_url=http://shorts:3000
+fi
 
 compose() {
   # shellcheck disable=SC2086  # the profile flags split on purpose
@@ -41,6 +45,7 @@ umask 077
 cat >"$env_file" <<EOF
 WEB_PORT=$port
 SHORTS_CPUS=$(nproc)
+RADAR_SHORTS_URL=$shorts_url
 POSTGRES_PASSWORD=$(openssl rand -hex 16)
 RADAR_SECRET_KEY=$(openssl rand -hex 32)
 RADAR_LLM_PROVIDER=openai
