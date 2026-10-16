@@ -35,6 +35,7 @@ export function makeTeam(overrides: Partial<Team> = {}): Team {
     }),
     icon: 'shield',
     color: 'blue',
+    picture_url: null,
     roles: [],
     members: [],
     created_at: '2026-10-16T09:00:00Z',

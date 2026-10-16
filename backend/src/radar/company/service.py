@@ -438,3 +438,7 @@ async def accept(session: AsyncSession, token: str, password: str) -> User | Non
 
 async def logo_of(session: AsyncSession, company_id: uuid.UUID) -> bytes | None:
     return await session.scalar(select(Company.logo).where(Company.id == company_id))
+
+
+async def team_picture(session: AsyncSession, team_id: uuid.UUID) -> bytes | None:
+    return await session.scalar(select(Team.picture).where(Team.id == team_id))
