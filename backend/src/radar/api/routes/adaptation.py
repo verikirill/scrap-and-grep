@@ -294,6 +294,8 @@ async def accept_suggestion(
     spec = _applied(ProfileSpec.model_validate(profile.spec), suggestion)
     profile.spec = spec.model_dump(mode="json")
     profile.version += 1
+    # The reader chose this change: the team's later edits no longer reach it.
+    profile.team_id = None
     suggestion.status = "accepted"
     suggestion.decided_at = datetime.now(UTC)
     await session.flush()

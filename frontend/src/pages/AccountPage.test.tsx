@@ -56,6 +56,47 @@ const avatarInput = (container: HTMLElement) =>
   container.querySelector('input[accept^="image/"]') as HTMLInputElement
 
 describe('AccountPage', () => {
+  it('tells a member which company and team the account belongs to', async () => {
+    serveAccount({
+      me: makeMe({
+        company: {
+          company: 'Энергосеть',
+          team: 'SOC',
+          role: 'member',
+          job_title: 'Инженер SOC',
+          manager: 'Олег Смирнов',
+        },
+      }),
+    })
+    await renderPage()
+
+    const card = screen.getByRole('heading', { name: 'Компания' }).parentElement as HTMLElement
+    expect(within(card).getByText('Энергосеть')).toBeInTheDocument()
+    expect(within(card).getByText('SOC')).toBeInTheDocument()
+    expect(within(card).getByText('Инженер SOC')).toBeInTheDocument()
+    expect(within(card).getByText('Олег Смирнов')).toBeInTheDocument()
+  })
+
+  it('leads the manager of a space to it', async () => {
+    serveAccount({
+      me: makeMe({
+        company: {
+          company: 'Энергосеть',
+          team: null,
+          role: 'owner',
+          job_title: null,
+          manager: null,
+        },
+      }),
+    })
+    await renderPage()
+
+    expect(screen.getByRole('link', { name: 'Открыть пространство' })).toHaveAttribute(
+      'href',
+      '/company',
+    )
+  })
+
   it('leaves the look of the feed to the feed page, beside its tabs', async () => {
     serveAccount()
     await renderPage()

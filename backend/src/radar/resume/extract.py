@@ -112,6 +112,12 @@ def _score_areas(tokens: list[str]) -> list[tuple[Area, int, list[str]]]:
     return sorted(scored, key=lambda item: -item[1])
 
 
+def match_areas(text: str) -> list[Area]:
+    """Areas a free text gives enough evidence of, strongest first: a team's
+    description is read the way a resume is."""
+    return [area for area, _, _ in _score_areas(tokenize(text))]
+
+
 def _headline(text: str) -> str | None:
     """The first line near the top that reads like a job title."""
     seen = 0
@@ -127,13 +133,13 @@ def _headline(text: str) -> str | None:
     return None
 
 
-def _level_from_title(headline: str) -> Seniority | None:
+def level_from_title(headline: str) -> Seniority | None:
     """The level a job title states outright, e.g. "ведущий" or "руководитель"."""
     return next((level for level, pattern in _SENIORITY_RULES if pattern.search(headline)), None)
 
 
 def _seniority(headline: str, text: str) -> Seniority:
-    stated = _level_from_title(headline)
+    stated = level_from_title(headline)
     if stated is not None:
         return stated
     years = [int(match) for match in _YEAR_RE.findall(text)]
@@ -143,7 +149,7 @@ def _seniority(headline: str, text: str) -> Seniority:
     return "middle" if span >= _MIDDLE_YEARS else "unknown"
 
 
-def _interest(area: Area, weight: float) -> Interest:
+def area_interest(area: Area, weight: float) -> Interest:
     return Interest(
         id=area.id,
         title=area.title,
@@ -195,12 +201,12 @@ class HeuristicResumeExtractor:
         if matched:
             # The strongest area leads; the rest keep the neutral weight.
             interests = tuple(
-                _interest(area, 1.2 if index == 0 else 1.0)
+                area_interest(area, 1.2 if index == 0 else 1.0)
                 for index, (area, _, _) in enumerate(matched)
             )
         else:
             by_id = {area.id: area for area in AREAS}
-            interests = tuple(_interest(by_id[area_id], 1.0) for area_id in FALLBACK_AREA_IDS)
+            interests = tuple(area_interest(by_id[area_id], 1.0) for area_id in FALLBACK_AREA_IDS)
         return Extraction(facts=facts, suggestion=build_profile(facts, interests))
 
 
@@ -259,7 +265,7 @@ class OllamaResumeExtractor:
             headline=truncate(out.headline.strip(), 110),
             # A title that names the level outright is more reliable than the
             # model's reading of it: "ведущий инженер" leads nobody.
-            seniority=_level_from_title(out.headline) or out.seniority,
+            seniority=level_from_title(out.headline) or out.seniority,
             summary=truncate(out.summary.strip(), 590),
             skills=tuple(out.skills),
             domains=tuple(out.domains),

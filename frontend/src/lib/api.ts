@@ -3,6 +3,7 @@
 
 import type { CardFieldKey } from './cardFields'
 import type { DigestBlockKey } from './digestBlocks'
+import type { Membership } from './company'
 
 export type { CardFieldKey } from './cardFields'
 export type { DigestBlockKey } from './digestBlocks'
@@ -49,6 +50,8 @@ export interface Profile {
   share_token: string | null
   /** Whether the profile follows its reader's marks. */
   adaptive: boolean
+  /** The company team the profile follows: the manager's changes reach it until the reader edits it. */
+  team_id?: string | null
   /** What the profile's audience suggests: the period of a digest and a schedule. */
   defaults: ProfileDefaults
   created_at: string
@@ -696,6 +699,8 @@ export interface Me extends User {
   folded_sections?: string[]
   /** When the first-run introduction was finished or skipped; null until then. */
   onboarded_at: string | null
+  /** The company space the account manages or was made for; null for neither. */
+  company?: Membership | null
 }
 
 /** How the feed looks: cards with the reasons in full, or posts as in a Telegram channel. */

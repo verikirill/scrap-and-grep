@@ -335,6 +335,90 @@ class User(Base):
     # there is no uploaded photo. NULL for accounts from before the pictures:
     # they get one derived from the id.
     avatar_preset: Mapped[str | None] = mapped_column(String(16))
+    # The team of a company space the account was made for (radar.company);
+    # NULL for a reader who signed up alone. use_alter: teams point back at
+    # users through their company's owner.
+    team_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("teams.id", ondelete="SET NULL", use_alter=True)
+    )
+    # The position the manager entered, e.g. «Ведущий инженер SOC».
+    job_title: Mapped[str | None] = mapped_column(String(120))
+    # An account made by a company has no password until its owner opens the
+    # invitation and sets one. The manager copies the link again whenever
+    # needed, so it is kept as is, like a profile's share link; it stops
+    # working once used or past its date.
+    invite_token: Mapped[str | None] = mapped_column(String(64), unique=True)
+    invite_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # A role of the team (TeamRole): its profile instead of the team's.
+    role_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("team_roles.id", ondelete="SET NULL", use_alter=True)
+    )
+    # The manager's changes for this person (radar.company.patches), laid over
+    # the team's or the role's profile, oldest first.
+    profile_overrides: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, default=list, server_default="[]"
+    )
+
+
+class Company(Base):
+    """A company space: its manager describes the teams, and the service makes
+    accounts with ready profiles for the people in them."""
+
+    __tablename__ = "companies"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid7)
+    # One space per manager; deleting the manager's account deletes the space,
+    # and the accounts it made stay with their owners.
+    owner_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), unique=True
+    )
+    name: Mapped[str] = mapped_column(String(120))
+    # What the company does: the model reads it with every team's description.
+    about: Mapped[str] = mapped_column(Text, default="", server_default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Team(Base):
+    """A team of a company and the profile its people start with."""
+
+    __tablename__ = "teams"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid7)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("companies.id", ondelete="CASCADE"))
+    name: Mapped[str] = mapped_column(String(120))
+    # The team's work and the services it runs, in the manager's words.
+    services: Mapped[str] = mapped_column(Text, default="", server_default="")
+    # The profile picked for the team (radar.domain.ProfileSpec): every member
+    # gets a copy, worded for their position.
+    spec: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    icon: Mapped[str | None] = mapped_column(String(24))
+    color: Mapped[str | None] = mapped_column(String(12))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (Index("ix_teams_company", "company_id", "created_at"),)
+
+
+class TeamRole(Base):
+    """A role within a team, e.g. two security people who read differently:
+    a profile of its own that its members get instead of the team's."""
+
+    __tablename__ = "team_roles"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid7)
+    team_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("teams.id", ondelete="CASCADE"))
+    name: Mapped[str] = mapped_column(String(120))
+    # How the role differs from the rest of the team, in the manager's words.
+    description: Mapped[str] = mapped_column(Text, default="", server_default="")
+    spec: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (Index("ix_team_roles_team", "team_id", "created_at"),)
 
 
 class ApiKey(Base):
@@ -589,6 +673,10 @@ class Profile(Base):
     # and marks before it no longer count.
     adaptive: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     adapt_since: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # The team the profile came from. While set, the profile follows the
+    # team: the manager's changes reach it. The reader's own edit makes it
+    # theirs and clears the link.
+    team_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("teams.id", ondelete="SET NULL"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

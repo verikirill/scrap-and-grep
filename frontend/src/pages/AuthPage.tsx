@@ -10,9 +10,7 @@ import type { AuthRedirect } from '../components/RequireAuth'
 import { EASE, INPUT_CLASS } from '../components/tokens'
 import { Button, ErrorNote, Field } from '../components/ui'
 import { SharedAccounts } from '../features/auth/SharedAccounts'
-import { AuthRadar } from '../features/auth/AuthRadar'
-import { ScrambleText } from '../features/auth/ScrambleText'
-import { TailVisual } from '../features/auth/TailVisual'
+import { AuthAside } from '../features/auth/AuthAside'
 import { ONBOARDING_PATH } from '../lib/onboarding'
 import { useMe, useMeta, useSignIn } from '../lib/queries'
 import { SlidingPill } from '../components/SlidingPill'
@@ -24,15 +22,6 @@ const TABS = [
   { mode: 'login', to: '/login', label: 'Вход' },
   { mode: 'register', to: '/register', label: 'Регистрация' },
 ] as const
-
-// The readers the brand side names in turn: the profiles the service ships with.
-const ROLES = [
-  'инженера АСУ ТП',
-  'руководителя ИТ',
-  'дежурного SOC',
-  'директора по цифре',
-  'аналитика ИБ',
-]
 
 type Props = {
   mode: 'login' | 'register'
@@ -86,39 +75,7 @@ export function AuthPage({ mode }: Props) {
 
   return (
     <div className="grid min-h-dvh lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
-      {/* The brand side keeps its dark look in both themes: it is a picture, not a surface. */}
-      <aside className="relative isolate hidden overflow-hidden bg-[#0b0f17] px-12 py-10 text-white lg:flex lg:flex-col">
-        {/* The radar sweeps the whole dark side from its middle; mounted only
-            where the side is visible. */}
-        {isWide && <AuthRadar />}
-        <div className="flex items-center gap-2.5">
-          <LogoMark size={32} />
-          <Wordmark className="text-[15px]" />
-        </div>
-        <div className="flex flex-1 items-center justify-center py-10">
-          {/* Mounted only where it is visible: animations hidden by CSS still run. */}
-          {isWide && <TailVisual />}
-        </div>
-        <div className="max-w-md">
-          {/* The reader the digest is for changes, decoded like a match in
-              the terminal above; a screen reader hears the sentence once. */}
-          <p
-            aria-label="Новости ИТ и ИБ под вашу работу"
-            className="font-serif text-[28px] leading-tight font-semibold"
-          >
-            <span aria-hidden>Новости ИТ и ИБ</span>
-            <span aria-hidden className="mt-1 flex items-baseline gap-2.5">
-              <span>для</span>
-              <ScrambleText words={ROLES} className="auth-role" />
-            </span>
-          </p>
-          <p className="mt-3 text-sm leading-relaxed text-white/60">
-            Сервис читает больше 100 источников по ИТ, информационной безопасности и энергетике,
-            фильтрует публикации по вашим интересам и собирает из них выпуски со ссылками. Резюме
-            помогает настроить отбор с первой минуты.
-          </p>
-        </div>
-      </aside>
+      <AuthAside isWide={isWide} />
 
       <main className="relative isolate flex items-center justify-center overflow-hidden px-5 py-10 lg:px-16">
         <div aria-hidden className="auth-ripple hidden lg:block">

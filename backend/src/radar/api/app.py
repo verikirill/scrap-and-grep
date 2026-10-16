@@ -20,6 +20,7 @@ from radar.api.routes import (
     auth,
     briefing,
     catalog,
+    company,
     digests,
     feed,
     mail,
@@ -168,6 +169,7 @@ def create_app() -> FastAPI:
         publishing.router,
         mcp_keys.router,
         analytics.router,
+        company.router,
     ):
         app.include_router(router, prefix="/api/v1")
     # Assistants reach the reader's news here, with a key made on the account page.

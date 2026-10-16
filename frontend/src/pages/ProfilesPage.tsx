@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { Newspaper, Plus, RotateCcw, Save, Trash2 } from '../components/icons'
+import { Newspaper, Plus, RotateCcw, Save, Trash2, Users } from '../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { useContext, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
@@ -12,7 +12,7 @@ import { ProfileForm } from '../features/profiles/ProfileForm'
 import { ProfileAvatar, ProfileLookPicker } from '../features/profiles/ProfileLook'
 import { ShareProfileButton } from '../features/profiles/ShareProfile'
 import type { Profile, ProfileSpec } from '../lib/api'
-import { useDeleteProfile, useProfiles, useSaveProfile } from '../lib/queries'
+import { useDeleteProfile, useMe, useProfiles, useSaveProfile } from '../lib/queries'
 import { EntranceContext } from '../components/entrance'
 import { useConfirmLeave } from '../lib/useConfirmLeave'
 
@@ -50,8 +50,28 @@ type EditorProps = {
  * another profile is picked. A save keeps the editor mounted, so an open
  * section, the focus and anything typed while the request was in flight stay.
  */
+/** A profile the company team gave: the manager's changes reach it until the reader edits it. */
+function TeamNote({ team, isDirty }: { team: string | null; isDirty: boolean }) {
+  return (
+    <Card variant="filled" className="mb-5 flex items-start gap-3 p-4">
+      <Users size={18} className="mt-0.5 shrink-0 text-accent" />
+      <p className="text-sm">
+        <span className="font-medium">
+          {team ? `Профиль команды «${team}».` : 'Профиль команды.'}
+        </span>{' '}
+        <span className="text-muted">
+          {isDirty
+            ? 'После сохранения он станет вашим и перестанет обновляться вместе с командой.'
+            : 'Его ведёт руководитель пространства: изменения команды приходят сюда сами, пока вы не правите профиль.'}
+        </span>
+      </p>
+    </Card>
+  )
+}
+
 function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
   const navigate = useNavigate()
+  const me = useMe()
   const save = useSaveProfile()
   const remove = useDeleteProfile()
   const saved = stored?.spec ?? null
@@ -203,6 +223,7 @@ function ProfileEditor({ profiles, stored, onSelect }: EditorProps) {
         </div>
       </Card>
 
+      {stored?.team_id && <TeamNote team={me.data?.company?.team ?? null} isDirty={dirty} />}
       <div className="mb-4 space-y-2">
         <ErrorNote error={save.error ?? remove.error} />
         {dirty && problem && <p className="text-sm text-warning">{problem}</p>}

@@ -6,6 +6,7 @@ import type { Profile, ProfileSpec } from '../lib/api'
 import {
   makeAdaptation,
   makeInterest,
+  makeMe,
   makePreview,
   makeProfile,
   makeSpec,
@@ -76,6 +77,31 @@ async function rename(user: UserEvent, name: string) {
 }
 
 describe('ProfilesPage', () => {
+  it('says a team profile follows the team until the reader saves an edit of their own', async () => {
+    serveProfiles([makeProfile({ team_id: 'team-1' })])
+    server.use(
+      http.get(apiUrl('/auth/me'), () =>
+        HttpResponse.json(
+          makeMe({
+            company: {
+              company: 'Энергосеть',
+              team: 'SOC',
+              role: 'member',
+              job_title: 'Инженер SOC',
+              manager: 'Олег',
+            },
+          }),
+        ),
+      ),
+    )
+    const { user } = await renderPage()
+
+    expect(await screen.findByText('Профиль команды «SOC».')).toBeInTheDocument()
+    expect(screen.getByText(/изменения команды приходят сюда сами/)).toBeInTheDocument()
+    await rename(user, 'Мой SOC')
+    expect(screen.getByText(/перестанет обновляться вместе с командой/)).toBeInTheDocument()
+  })
+
   it('opens the first profile and saves an edit as its new version', async () => {
     const sent = serveProfiles()
     const { user } = await renderPage()

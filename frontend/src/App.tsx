@@ -19,6 +19,8 @@ import {
   AccountPage,
   AnalyticsPage,
   ArticlePage,
+  CompanyPage,
+  InvitePage,
   ChannelsPage,
   ComparePage,
   FeedPage,
@@ -90,6 +92,17 @@ export default function App({ client = queryClient }: { client?: QueryClient }) 
           <Routes>
             <Route path="/login" element={<AuthPage mode="login" />} />
             <Route path="/register" element={<AuthPage mode="register" />} />
+            {/* Before any sign-in: the person sets the first password here. */}
+            <Route
+              path="/invite/:token"
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={fallback}>
+                    <InvitePage />
+                  </Suspense>
+                </ErrorBoundary>
+              }
+            />
             <Route
               path="/welcome"
               element={
@@ -117,6 +130,7 @@ export default function App({ client = queryClient }: { client?: QueryClient }) 
               <Route path="/channels" element={<ChannelsPage />} />
               <Route path="/account" element={<AccountPage />} />
               <Route path="/analytics" element={<AnalyticsPage />} />
+              <Route path="/company" element={<CompanyPage />} />
               <Route path="/share/:token" element={<SharePage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Route>
