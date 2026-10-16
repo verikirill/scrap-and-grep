@@ -8,6 +8,7 @@ import { ChannelCard } from '../features/channels/ChannelCard'
 import { PostsPanel } from '../features/channels/PostsPanel'
 import { Segmented } from '../components/Segmented'
 import { useChannels, usePublishingDefaults } from '../lib/publishingQueries'
+import { quoted } from '../lib/company'
 import { useMe } from '../lib/queries'
 
 // How a channel gets connected, shown where the list of channels will be.
@@ -26,7 +27,7 @@ export function ChannelsPage() {
         <PageHeader title="Каналы" />
         <Card>
           <EmptyState icon={<Send />} title="Каналы ведёт руководитель пространства">
-            Посты в Telegram-каналы компании «{me.data.company.company}» публикует{' '}
+            Посты в Telegram-каналы компании {quoted(me.data.company.company)} публикует{' '}
             {me.data.company.manager ?? 'руководитель'}. Ваши выпуски и лента остаются в разделах
             «Дайджест» и «Для вас».
           </EmptyState>

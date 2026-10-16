@@ -10,6 +10,7 @@ import { TeamEditor } from '../features/company/TeamEditor'
 import { TeamPanel } from '../features/company/TeamPanel'
 import { CompanyLogo } from '../features/company/CompanyLogo'
 import { ProfileAvatar } from '../features/profiles/ProfileLook'
+import { quoted } from '../lib/company'
 import type { Company, Team } from '../lib/company'
 import { useCompany, useMoveMembers } from '../lib/companyQueries'
 import { useMe } from '../lib/queries'
@@ -230,8 +231,9 @@ export function CompanyPage() {
         <PageHeader title={TITLE} />
         <Card>
           <EmptyState icon={<Users />} title={`Вы в команде «${membership?.team ?? ''}»`}>
-            Пространством «{membership?.company}» управляет {membership?.manager ?? 'руководитель'}.
-            Команду и должность видно на странице «Аккаунт».
+            Пространством {quoted(membership?.company ?? '')} управляет{' '}
+            {membership?.manager ?? 'руководитель'}. Команду и должность видно на странице
+            «Аккаунт».
           </EmptyState>
         </Card>
       </>

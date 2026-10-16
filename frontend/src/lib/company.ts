@@ -220,3 +220,6 @@ export function companyInitials(name: string): string {
     words.length > 1 ? words[0][0] + words[1][0] : (words[0] ?? '?').slice(0, 2)
   ).toUpperCase()
 }
+
+/** A name in quotes, unless it brings its own: «SOC», АО «Энергосеть». */
+export const quoted = (name: string) => (name.includes('«') ? name : `«${name}»`)

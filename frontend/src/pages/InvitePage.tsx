@@ -7,6 +7,7 @@ import { EASE, INPUT_CLASS } from '../components/tokens'
 import { Button, Chip, ErrorNote, ErrorState, Field, Spinner } from '../components/ui'
 import { AuthAside } from '../features/auth/AuthAside'
 import { CompanyLogo } from '../features/company/CompanyLogo'
+import { quoted } from '../lib/company'
 import type { Invite } from '../lib/company'
 import { useInvite } from '../lib/companyQueries'
 import { ONBOARDING_PATH } from '../lib/onboarding'
@@ -22,8 +23,6 @@ const capitalized = (text: string) => text.slice(0, 1).toUpperCase() + text.slic
 
 /** "Олег Петров пригласил вас в команду «SOC» компании «Энергосеть»." */
 function inviteLine(invite: Invite): string {
-  // A name that brings its own quotes («АО «Энергосеть»») gets no second pair.
-  const quoted = (name: string) => (name.includes('«') ? name : `«${name}»`)
   const where = `в команду ${quoted(invite.team)} компании ${quoted(invite.company)}`
   return invite.manager ? `${invite.manager} приглашает вас ${where}.` : `Вас приглашают ${where}.`
 }
