@@ -24,6 +24,7 @@ import {
 import { formatDate, formatRelative, plural } from '../../lib/format'
 import { toast } from '../../lib/toast'
 import { copyText } from './copy'
+import { matchesMember } from '../../lib/company'
 import { DRAG_TYPE } from './drag'
 
 /** Where the person stands, in words and a tone: the colour is never the only sign. */
@@ -260,6 +261,45 @@ type Props = {
   /** The people ticked for one change or one move. */
   selected: string[]
   onSelect: (ids: string[]) => void
+  /** What the search box holds: the list shows only who answers it. */
+  query?: string
+  /** Who is being dragged now, so the teams on the left can show where to drop. */
+  onDragChange?: (ids: string[]) => void
+}
+
+/** Six dots: the row can be taken and moved. */
+function Grip() {
+  return (
+    <svg aria-hidden viewBox="0 0 10 16" className="h-4 w-2.5 shrink-0 text-muted/70">
+      {[3, 8, 13].flatMap((y) => [
+        <circle key={`l${y}`} cx="2.5" cy={y} r="1.4" fill="currentColor" />,
+        <circle key={`r${y}`} cx="7.5" cy={y} r="1.4" fill="currentColor" />,
+      ])}
+    </svg>
+  )
+}
+
+/**
+ * What follows the pointer while people are dragged: a card with the name, or
+ * how many are moving. Drawn once in the page and handed to the browser.
+ */
+function dragGhost(label: string): HTMLElement {
+  const ghost = document.createElement('div')
+  ghost.textContent = label
+  ghost.style.cssText = [
+    'position:fixed',
+    'top:-200px',
+    'left:-200px',
+    'padding:10px 16px',
+    'border-radius:16px',
+    'font:600 14px/1.2 system-ui, sans-serif',
+    'background:var(--accent)',
+    'color:var(--accent-foreground)',
+    'box-shadow:0 12px 32px rgb(0 0 0 / .25)',
+    'white-space:nowrap',
+  ].join(';')
+  document.body.appendChild(ghost)
+  return ghost
 }
 
 /**
@@ -267,10 +307,13 @@ type Props = {
  * and own changes. Ticked people change together; a row dragged onto another
  * team in the list on the left moves there, with everyone ticked beside it.
  */
-export function MemberList({ team, teams, selected, onSelect }: Props) {
+export function MemberList({ team, teams, selected, onSelect, query = '', onDragChange }: Props) {
   const [editing, setEditing] = useState<Member | null>(null)
   const [dragging, setDragging] = useState<string[]>([])
   const roles = new Map(team.roles.map((role) => [role.id, role.name]))
+  const shown = team.members.filter((member) =>
+    matchesMember(member, query, member.role_id ? roles.get(member.role_id) : undefined),
+  )
   const canMove = teams.length > 1
   const isAll = team.members.length > 0 && selected.length === team.members.length
 
@@ -281,7 +324,20 @@ export function MemberList({ team, teams, selected, onSelect }: Props) {
     const ids = selected.includes(member.id) ? selected : [member.id]
     event.dataTransfer.setData(DRAG_TYPE, JSON.stringify(ids))
     event.dataTransfer.effectAllowed = 'move'
+    const label =
+      ids.length === 1
+        ? member.display_name
+        : `${ids.length} ${plural(ids.length, ['сотрудник', 'сотрудника', 'сотрудников'])}`
+    const ghost = dragGhost(label)
+    event.dataTransfer.setDragImage?.(ghost, 20, 20)
+    // The browser has taken its picture by the next frame.
+    window.setTimeout(() => ghost.remove(), 0)
     setDragging(ids)
+    onDragChange?.(ids)
+  }
+  const endDrag = () => {
+    setDragging([])
+    onDragChange?.([])
   }
 
   return (
@@ -300,15 +356,18 @@ export function MemberList({ team, teams, selected, onSelect }: Props) {
           </span>
         )}
       </label>
+      {shown.length === 0 && (
+        <p className="py-6 text-center text-sm text-muted">Никого не нашли по «{query.trim()}»</p>
+      )}
       <ul className="divide-y divide-separator">
-        {team.members.map((member) => {
+        {shown.map((member) => {
           const isChosen = selected.includes(member.id)
           return (
             <li
               key={member.id}
               draggable={canMove}
               onDragStart={(event) => startDrag(event, member)}
-              onDragEnd={() => setDragging([])}
+              onDragEnd={endDrag}
               className={clsx(
                 'flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl px-1 py-3 transition-colors',
                 canMove && 'lg:cursor-grab',
@@ -316,6 +375,7 @@ export function MemberList({ team, teams, selected, onSelect }: Props) {
                 dragging.includes(member.id) && 'opacity-50',
               )}
             >
+              {canMove && <Grip />}
               <input
                 type="checkbox"
                 aria-label={`Выбрать: ${member.display_name}`}

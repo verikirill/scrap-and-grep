@@ -33,7 +33,7 @@ from radar.api.uploads import read_limited
 from radar.auth import sessions as auth_sessions
 from radar.auth.sessions import AuthUser
 from radar.avatars import MAX_BYTES as LOGO_MAX_BYTES
-from radar.avatars import AvatarError, normalize_logo, preset_for
+from radar.avatars import AvatarError, normalize, normalize_logo, preset_for
 from radar.company import service
 from radar.company.patches import PatchError
 from radar.company.roles import team_color, team_icon
@@ -114,6 +114,11 @@ def team_out(team: Team, members: list[User], roles: list[TeamRole]) -> TeamOut:
         spec=ProfileSpec.model_validate(team.spec),
         icon=team.icon,
         color=team.color,
+        picture_url=(
+            f"/api/v1/company/teams/{team.id}/picture?v={int(team.picture_updated_at.timestamp())}"
+            if team.picture_updated_at
+            else None
+        ),
         roles=[role_out(role) for role in roles],
         members=[member_out(member, team, by_id, now) for member in members],
         created_at=team.created_at,
@@ -650,6 +655,56 @@ async def get_logo(session: SessionDep, user: CurrentUser) -> Response:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Логотипа нет.")
     return Response(
         content=logo,
+        media_type="image/webp",
+        headers={"Cache-Control": "private, max-age=31536000, immutable"},
+    )
+
+
+@router.put("/teams/{team_id}/picture", dependencies=[_picture_limit])
+async def set_team_picture(
+    team_id: uuid.UUID, request: Request, session: SessionDep, user: CurrentUser
+) -> TeamOut:
+    """A picture of the team's own in place of its icon: squared, a small WebP."""
+    company = await _company(session, user)
+    team = await _team(session, company, team_id)
+    data = await read_limited(
+        request, LOGO_MAX_BYTES, "Размер файла превышает 5 МБ. Выберите картинку поменьше."
+    )
+    try:
+        async with _DRAWING:
+            picture = await asyncio.to_thread(normalize, data)
+    except AvatarError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
+    team.picture = picture
+    team.picture_updated_at = datetime.now(UTC)
+    await session.flush()
+    await session.refresh(team)
+    return await _team_view(session, team)
+
+
+@router.delete("/teams/{team_id}/picture", dependencies=[_write_limit])
+async def delete_team_picture(
+    team_id: uuid.UUID, session: SessionDep, user: CurrentUser
+) -> TeamOut:
+    company = await _company(session, user)
+    team = await _team(session, company, team_id)
+    team.picture = None
+    team.picture_updated_at = None
+    await session.flush()
+    await session.refresh(team)
+    return await _team_view(session, team)
+
+
+@router.get("/teams/{team_id}/picture")
+async def get_team_picture(team_id: uuid.UUID, session: SessionDep, user: CurrentUser) -> Response:
+    """The picture of a team of the space this account manages or belongs to."""
+    company = await service.company_of(session, user.id)
+    team = await service.owned_team(session, company, team_id) if company else None
+    picture = await service.team_picture(session, team.id) if team else None
+    if picture is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Картинки нет.")
+    return Response(
+        content=picture,
         media_type="image/webp",
         headers={"Cache-Control": "private, max-age=31536000, immutable"},
     )

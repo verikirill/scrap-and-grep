@@ -16,6 +16,7 @@ import type { Team, TeamBrief } from '../../lib/company'
 import { useDraftTeam, useSaveTeam } from '../../lib/companyQueries'
 import { toast } from '../../lib/toast'
 import { SpecReview } from './SpecReview'
+import { TeamLookPicker } from './TeamLook'
 
 const SERVICES_HINT =
   'Например: круглосуточный мониторинг событий ИБ в MaxPatrol SIEM, разбор инцидентов, правила корреляции. Ведём EDR на рабочих станциях трёх филиалов.'
@@ -50,6 +51,7 @@ export function TeamEditor({ team, open, onOpenChange, onSaved }: Props) {
   const [spec, setSpec] = useState<ProfileSpec | null>(team?.spec ?? null)
   const [draftedFrom, setDraftedFrom] = useState(team ? briefKey(brief) : null)
   const [draftedBy, setDraftedBy] = useState<string | null>(null)
+  const [look, setLook] = useState({ icon: team?.icon ?? null, color: team?.color ?? null })
 
   const isNameShort = brief.name.trim().length < 2
   const isStale = spec !== null && draftedFrom !== briefKey(brief)
@@ -64,6 +66,8 @@ export function TeamEditor({ team, open, onOpenChange, onSaved }: Props) {
         setSpec(result.spec)
         setDraftedFrom(briefKey(next))
         setDraftedBy(result.drafted_by)
+        // The icon the description suggests, unless one was chosen already.
+        setLook((current) => (current.icon ? current : { ...current, icon: result.icon }))
       },
     })
 
@@ -73,7 +77,13 @@ export function TeamEditor({ team, open, onOpenChange, onSaved }: Props) {
     save.mutate(
       {
         id: team?.id ?? null,
-        team: { ...brief, systems, spec: { ...spec, name: brief.name.trim(), systems } },
+        team: {
+          ...brief,
+          systems,
+          spec: { ...spec, name: brief.name.trim(), systems },
+          ...(look.icon && { icon: look.icon }),
+          ...(look.color && { color: look.color }),
+        },
       },
       {
         onSuccess: (saved) => {
@@ -135,6 +145,14 @@ export function TeamEditor({ team, open, onOpenChange, onSaved }: Props) {
               onChange={(systems) => setBrief({ ...brief, systems })}
             />
           </Field>
+
+          <TeamLookPicker
+            team={team}
+            name={brief.name || 'Команда'}
+            icon={look.icon}
+            color={look.color}
+            onChange={setLook}
+          />
 
           {(!spec || isStale) && (
             <div className="flex flex-wrap items-center gap-3">

@@ -591,3 +591,24 @@ async def test_channels_are_for_readers_and_managers_not_for_people_a_company_ad
     assert reader_channels.status_code == 200
     assert refused.status_code == 403
     assert refused.json()["detail"] == "Каналы ведёт руководитель пространства компании."
+
+
+async def test_a_team_gets_a_picture_of_its_own_and_its_icon_and_colour(api: str) -> None:
+    async with register(api, "boss") as boss, register(api, "other") as other:
+        await boss.post("/company", json={"name": "Энергосеть"})
+        team = await make_team(boss)
+        looked = await boss.put(
+            f"/company/teams/{team['id']}",
+            json={**SOC, "spec": team["spec"], "icon": "bug", "color": "#2a9d8f"},
+        )
+        put = await boss.put(f"/company/teams/{team['id']}/picture", content=_png(400, 300))
+        picture = await boss.get(put.json()["picture_url"].removeprefix("/api/v1"))
+        stranger = await other.get(f"/company/teams/{team['id']}/picture")
+        removed = await boss.delete(f"/company/teams/{team['id']}/picture")
+
+    assert (looked.json()["icon"], looked.json()["color"]) == ("bug", "#2a9d8f")
+    assert put.status_code == 200
+    assert put.json()["picture_url"].startswith(f"/api/v1/company/teams/{team['id']}/picture?v=")
+    assert picture.headers["content-type"] == "image/webp"
+    assert stranger.status_code == 404
+    assert removed.json()["picture_url"] is None

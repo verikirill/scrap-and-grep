@@ -11,24 +11,28 @@ import {
   X,
 } from '../../components/icons'
 import { SelectField } from '../../components/SelectField'
-import { EASE } from '../../components/tokens'
+import { EASE, INPUT_CLASS } from '../../components/tokens'
 import { Button, Card, Chip, EmptyState, ErrorNote } from '../../components/ui'
 import type { PatchTarget, Role, Team } from '../../lib/company'
 import { useDeleteRole, useDeleteTeam, useMoveMembers } from '../../lib/companyQueries'
 import { plural } from '../../lib/format'
 import { toast } from '../../lib/toast'
-import { ProfileAvatar } from '../profiles/ProfileLook'
 import { AddPeopleDialog } from './AddPeopleDialog'
 import { copyText, invitationsText } from './copy'
 import { MemberList } from './MemberList'
 import { PatchDialog } from './PatchDialog'
 import { RoleEditor } from './RoleEditor'
+import { TeamAvatar } from './TeamLook'
 
 type Props = {
   team: Team
   teams: Team[]
   onEdit: () => void
   onDeleted: () => void
+  /** The search over people, kept by the page so the team list counts matches too. */
+  query: string
+  onQuery: (query: string) => void
+  onDragChange: (ids: string[]) => void
 }
 
 const people = (count: number) => plural(count, ['сотрудник', 'сотрудника', 'сотрудников'])
@@ -206,7 +210,7 @@ function SelectionBar({
 }
 
 /** One team: the profile its people get, its roles, and the people with their links. */
-export function TeamPanel({ team, teams, onEdit, onDeleted }: Props) {
+export function TeamPanel({ team, teams, onEdit, onDeleted, query, onQuery, onDragChange }: Props) {
   const remove = useDeleteTeam()
   const [isAdding, setIsAdding] = useState(false)
   const [selected, setSelected] = useState<string[]>([])
@@ -221,7 +225,7 @@ export function TeamPanel({ team, teams, onEdit, onDeleted }: Props) {
     <div className="min-w-0 space-y-5">
       <Card className="p-5 sm:p-6">
         <div className="flex flex-wrap items-start gap-4">
-          <ProfileAvatar profile={team} size={52} />
+          <TeamAvatar team={team} size={52} />
           <div className="min-w-0 flex-1 basis-56">
             <h2 className="text-lg font-semibold break-words">{team.name}</h2>
             {team.services && (
@@ -332,7 +336,22 @@ export function TeamPanel({ team, teams, onEdit, onDeleted }: Props) {
         </div>
         {team.members.length > 0 ? (
           <div className="mt-3">
-            <MemberList team={team} teams={teams} selected={ticked} onSelect={setSelected} />
+            <input
+              type="search"
+              aria-label="Поиск по сотрудникам"
+              placeholder="Поиск по имени, почте, должности или роли"
+              className={`${INPUT_CLASS} mb-3`}
+              value={query}
+              onChange={(event) => onQuery(event.target.value)}
+            />
+            <MemberList
+              team={team}
+              teams={teams}
+              selected={ticked}
+              onSelect={setSelected}
+              query={query}
+              onDragChange={onDragChange}
+            />
           </div>
         ) : (
           <EmptyState icon={<Users />} title="В команде пока никого">

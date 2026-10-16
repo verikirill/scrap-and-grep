@@ -66,6 +66,19 @@ export function useCompanyLogo() {
   }
 }
 
+/** A team's own picture: a new one, or none. */
+export function useTeamPicture() {
+  const refresh = useRefresh()
+  return {
+    upload: useMutation({
+      mutationFn: ({ teamId, file }: { teamId: string; file: File }) =>
+        companyApi.uploadTeamPicture(teamId, file),
+      onSuccess: () => refresh(),
+    }),
+    remove: useMutation({ mutationFn: companyApi.deleteTeamPicture, onSuccess: () => refresh() }),
+  }
+}
+
 /** The profile a description suggests; nothing is saved. */
 export const useDraftTeam = () =>
   useMutation({ mutationFn: (brief: TeamBrief) => companyApi.draftTeam(brief) })

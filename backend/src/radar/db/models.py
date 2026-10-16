@@ -397,6 +397,9 @@ class Team(Base):
     spec: Mapped[dict[str, Any]] = mapped_column(JSONB)
     icon: Mapped[str | None] = mapped_column(String(24))
     color: Mapped[str | None] = mapped_column(String(12))
+    # A picture of the team's own in place of the icon: a square WebP.
+    picture: Mapped[bytes | None] = mapped_column(LargeBinary, deferred=True)
+    picture_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

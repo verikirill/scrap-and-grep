@@ -50,6 +50,8 @@ export interface Team {
   spec: ProfileSpec
   icon: string | null
   color: string | null
+  /** The team's own picture, in place of the icon; null without one. */
+  picture_url: string | null
   roles: Role[]
   members: Member[]
   created_at: string
@@ -161,6 +163,14 @@ export const companyApi = {
       headers: { 'Content-Type': file.type || 'application/octet-stream' },
     }),
   deleteLogo: () => request<Company>('/company/logo', { method: 'DELETE' }),
+  uploadTeamPicture: (teamId: string, file: File) =>
+    request<Team>(`/company/teams/${teamId}/picture`, {
+      method: 'PUT',
+      body: file,
+      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+    }),
+  deleteTeamPicture: (teamId: string) =>
+    request<Team>(`/company/teams/${teamId}/picture`, { method: 'DELETE' }),
   draftTeam: (brief: TeamBrief) => request<TeamDraft>('/company/teams/draft', json('POST', brief)),
   createTeam: (team: TeamInput) => request<Team>('/company/teams', json('POST', team)),
   updateTeam: (id: string, team: TeamInput) =>
@@ -223,3 +233,18 @@ export function companyInitials(name: string): string {
 
 /** A name in quotes, unless it brings its own: «SOC», АО «Энергосеть». */
 export const quoted = (name: string) => (name.includes('«') ? name : `«${name}»`)
+
+const fold = (text: string) => text.toLocaleLowerCase('ru').replaceAll('ё', 'е')
+
+/**
+ * Whether a person answers a search: every word typed is found in their
+ * name, address, position or role, in any case and with е for ё.
+ */
+export function matchesMember(member: Member, query: string, roleName?: string): boolean {
+  const words = fold(query).split(/\s+/).filter(Boolean)
+  if (words.length === 0) return true
+  const text = fold(
+    [member.display_name, member.email, member.job_title ?? '', roleName ?? ''].join(' '),
+  )
+  return words.every((word) => text.includes(word))
+}

@@ -103,6 +103,8 @@ class TeamOut(BaseModel):
     spec: ProfileSpec
     icon: str | None
     color: str | None
+    # The team's own picture, in place of the icon; null without one.
+    picture_url: str | None = None
     roles: list[RoleOut] = []
     members: list[MemberOut]
     created_at: datetime

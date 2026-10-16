@@ -9,8 +9,8 @@ import { CreateCompany } from '../features/company/CreateCompany'
 import { TeamEditor } from '../features/company/TeamEditor'
 import { TeamPanel } from '../features/company/TeamPanel'
 import { CompanyLogo } from '../features/company/CompanyLogo'
-import { ProfileAvatar } from '../features/profiles/ProfileLook'
-import { quoted } from '../lib/company'
+import { TeamAvatar } from '../features/company/TeamLook'
+import { matchesMember, quoted } from '../lib/company'
 import type { Company, Team } from '../lib/company'
 import { useCompany, useMoveMembers } from '../lib/companyQueries'
 import { useMe } from '../lib/queries'
@@ -71,6 +71,13 @@ function Space({ company }: { company: Company }) {
 
   const move = useMoveMembers()
   const [dropTarget, setDropTarget] = useState<string | null>(null)
+  // Who is being dragged: the other teams light up as places to drop them.
+  const [dragging, setDragging] = useState<string[]>([])
+  const [query, setQuery] = useState('')
+  const matches = (item: Team) =>
+    item.members.filter((member) =>
+      matchesMember(member, query, item.roles.find((role) => role.id === member.role_id)?.name),
+    ).length
 
   /** People dropped on a team move there; their own team cannot take them twice. */
   const dropOn = (target: Team, ids: string[]) => {
@@ -165,22 +172,34 @@ function Space({ company }: { company: Company }) {
                         onDrop={(event) => {
                           event.preventDefault()
                           setDropTarget(null)
+                          setDragging([])
                           dropOn(item, droppedMembers(event.dataTransfer))
                         }}
                         className={clsx(
-                          'flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-colors',
+                          'flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-all',
                           dropTarget === item.id
-                            ? 'bg-accent-soft ring-2 ring-accent'
-                            : item.id === team?.id
-                              ? 'bg-accent-soft ring-1 ring-accent/40'
-                              : 'hover:bg-default/60',
+                            ? 'scale-[1.02] bg-accent-soft ring-2 ring-accent'
+                            : dragging.length > 0 && item.id !== team?.id
+                              ? 'bg-accent-soft/40 outline-2 outline-offset-[-3px] outline-dashed outline-accent/60'
+                              : item.id === team?.id
+                                ? 'bg-accent-soft ring-1 ring-accent/40'
+                                : 'hover:bg-default/60',
                         )}
                       >
-                        <ProfileAvatar profile={item} size={36} />
-                        <span className="min-w-0">
+                        <TeamAvatar team={item} size={36} />
+                        <span className="min-w-0 flex-1">
                           <span className="block text-sm font-medium break-words">{item.name}</span>
-                          <span className="block text-xs text-muted">{teamLine(item)}</span>
+                          <span className="block text-xs text-muted">
+                            {dragging.length > 0 && item.id !== team?.id
+                              ? 'Отпустите здесь, чтобы перевести'
+                              : teamLine(item)}
+                          </span>
                         </span>
+                        {query.trim() && (
+                          <span className="shrink-0 rounded-full bg-default px-2 py-0.5 text-xs tabular-nums">
+                            {matches(item)}
+                          </span>
+                        )}
                       </button>
                     </li>
                   ))}
@@ -194,6 +213,9 @@ function Space({ company }: { company: Company }) {
                 teams={company.teams}
                 onEdit={() => setEditing({ team })}
                 onDeleted={() => select(null)}
+                query={query}
+                onQuery={setQuery}
+                onDragChange={setDragging}
               />
             )}
           </div>
