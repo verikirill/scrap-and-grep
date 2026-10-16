@@ -6,11 +6,14 @@ import { LogoMark, Wordmark } from '../components/Logo'
 import { EASE, INPUT_CLASS } from '../components/tokens'
 import { Button, Chip, ErrorNote, ErrorState, Field, Spinner } from '../components/ui'
 import { AuthAside } from '../features/auth/AuthAside'
+import { CompanyLogo } from '../features/company/CompanyLogo'
 import type { Invite } from '../lib/company'
 import { useInvite } from '../lib/companyQueries'
 import { ONBOARDING_PATH } from '../lib/onboarding'
 import { useSignIn } from '../lib/queries'
 import { useMediaQuery } from '../lib/useMediaQuery'
+import { useDarkMode } from '../lib/useDarkMode'
+import { ThemeButton } from '../components/ThemeToggle'
 import { cn } from '../lib/utils'
 
 const PASSWORD_MIN = 10
@@ -34,6 +37,9 @@ function InviteForm({ token, invite }: { token: string; invite: Invite }) {
 
   return (
     <>
+      {invite.logo_url && (
+        <CompanyLogo name={invite.company} logoUrl={invite.logo_url} size={56} className="mb-5" />
+      )}
       <h1 className="text-2xl font-semibold tracking-tight">Здравствуйте, {invite.display_name}</h1>
       <p className="mt-1 text-sm text-muted">{inviteLine(invite)}</p>
 
@@ -126,11 +132,15 @@ export function InvitePage() {
   const { token = '' } = useParams()
   const invite = useInvite(token)
   const isWide = useMediaQuery('(min-width: 1024px)')
+  const [dark, toggleDark] = useDarkMode()
 
   return (
     <div className="grid min-h-dvh lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
       <AuthAside isWide={isWide} />
       <main className="relative isolate flex items-center justify-center overflow-hidden px-5 py-10 lg:px-16">
+        <div className="absolute top-4 right-4 z-10">
+          <ThemeButton dark={dark} onToggle={toggleDark} />
+        </div>
         <div aria-hidden className="auth-ripple hidden lg:block">
           <span />
           <span />

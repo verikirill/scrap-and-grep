@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 
-from radar.api.deps import CurrentUser, SessionDep, SettingsDep, user_rate_limit
+from radar.api.deps import CurrentUser, SessionDep, SettingsDep, publisher, user_rate_limit
 from radar.db.models import Article, Profile, TelegramBot, TelegramChannel, TelegramPost
 from radar.logging import get_logger
 from radar.publishing import service as publishing_service
@@ -22,7 +22,8 @@ from radar.publishing.settings import ChannelSettings
 from radar.publishing.telegram import TelegramUnavailable
 from radar.worker.tasks import compose_post, send_post
 
-router = APIRouter(prefix="/publishing", tags=["publishing"])
+# People a company added read the news; channels belong to readers and managers.
+router = APIRouter(prefix="/publishing", tags=["publishing"], dependencies=[Depends(publisher)])
 log = get_logger(__name__)
 
 _limit = Depends(

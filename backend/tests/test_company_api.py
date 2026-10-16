@@ -78,6 +78,7 @@ async def test_a_person_from_the_list_comes_in_with_a_ready_profile(api: str) ->
         "role": "owner",
         "job_title": None,
         "manager": None,
+        "logo_url": None,
     }
     assert team["spec"]["systems"][0] == "MaxPatrol SIEM"
     assert team["icon"] == "shield"
@@ -516,3 +517,77 @@ async def test_people_dragged_to_another_team_get_its_profile(api: str) -> None:
     assert gleb["role_id"] == company["teams"][1]["roles"][0]["id"]
     assert profile["team_id"] == network["id"]
     assert profile["spec"]["name"] == "Сети: Инженер сетей"
+
+
+def _png(width: int, height: int) -> bytes:
+    from io import BytesIO
+
+    from PIL import Image
+
+    out = BytesIO()
+    Image.new("RGB", (width, height), (20, 35, 184)).save(out, "PNG")
+    return out.getvalue()
+
+
+async def test_a_logo_is_kept_in_its_proportions_and_seen_by_the_space(api: str) -> None:
+    from io import BytesIO
+
+    from PIL import Image
+
+    async with register(api, "boss") as boss, register(api, "other") as other:
+        await boss.post("/company", json={"name": "Энергосеть"})
+        team = await make_team(boss)
+        member = (await add(boss, team["id"], {"name": "Ия", "email": "logo@energo.example"}))[
+            "created"
+        ][0]
+        invite = await boss.get("/auth/invite/" + token_of(member))
+        put = await boss.put("/company/logo", content=_png(1200, 300))
+        logo_url = put.json()["logo_url"]
+        mine = await boss.get("/company/logo")
+        stranger = await other.get("/company/logo")
+        not_a_picture = await boss.put("/company/logo", content=b"not an image at all")
+        async with client(api) as visitor:
+            invited = (await visitor.get(f"/auth/invite/{token_of(member)}")).json()
+            invite_logo = await visitor.get(f"/auth/invite/{token_of(member)}/logo")
+        async with client(api) as person:
+            await person.post(f"/auth/invite/{token_of(member)}", json={"password": PASSWORD})
+            seen = await person.get("/company/logo")
+            me = (await person.get("/auth/me")).json()
+        removed = await boss.delete("/company/logo")
+        gone = await boss.get("/company/logo")
+
+    assert invite.json()["logo_url"] is None
+    assert put.status_code == 200
+    assert logo_url.startswith("/api/v1/company/logo?v=")
+    assert mine.headers["content-type"] == "image/webp"
+    # A wide logo stays wide: 512 on its long side, not cropped to a square.
+    assert Image.open(BytesIO(mine.content)).size == (512, 128)
+    assert stranger.status_code == 404
+    assert not_a_picture.status_code == 422
+    assert invited["logo_url"] == f"/api/v1/auth/invite/{token_of(member)}/logo"
+    assert invite_logo.status_code == 200
+    assert seen.status_code == 200
+    assert me["company"]["logo_url"] == logo_url
+    assert removed.json()["logo_url"] is None
+    assert gone.status_code == 404
+
+
+async def test_channels_are_for_readers_and_managers_not_for_people_a_company_added(
+    api: str,
+) -> None:
+    async with register(api, "boss") as boss, register(api, "reader") as reader:
+        await boss.post("/company", json={"name": "Энергосеть"})
+        team = await make_team(boss)
+        member = (await add(boss, team["id"], {"name": "Юра", "email": "channels@energo.example"}))[
+            "created"
+        ][0]
+        manager_channels = await boss.get("/publishing/channels")
+        reader_channels = await reader.get("/publishing/channels")
+        async with client(api) as person:
+            await person.post(f"/auth/invite/{token_of(member)}", json={"password": PASSWORD})
+            refused = await person.get("/publishing/channels")
+
+    assert manager_channels.status_code == 200
+    assert reader_channels.status_code == 200
+    assert refused.status_code == 403
+    assert refused.json()["detail"] == "Каналы ведёт руководитель пространства компании."

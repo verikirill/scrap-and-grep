@@ -48,6 +48,7 @@ export function makeCompany(overrides: Partial<Company> = {}): Company {
     id: 'company-1',
     name: 'Энергосеть',
     about: 'Распределение электроэнергии в трёх регионах.',
+    logo_url: null,
     teams: [],
     created_at: '2026-10-16T09:00:00Z',
     ...overrides,

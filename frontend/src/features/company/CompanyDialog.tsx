@@ -11,6 +11,7 @@ import {
 import type { Company } from '../../lib/company'
 import { useUpdateCompany } from '../../lib/companyQueries'
 import { toast } from '../../lib/toast'
+import { LogoPicker } from './CompanyLogo'
 
 /** The company's name and what it does: the second is read with every team's description. */
 export function CompanyDialog({ company, onClose }: { company: Company; onClose: () => void }) {
@@ -24,9 +25,10 @@ export function CompanyDialog({ company, onClose }: { company: Company; onClose:
         <DialogHeader>
           <DialogTitle>О компании</DialogTitle>
           <DialogDescription>
-            Описание учитывается, когда сервис подбирает темы для команд.
+            Логотип увидят сотрудники, а описание сервис учитывает, когда подбирает темы для команд.
           </DialogDescription>
         </DialogHeader>
+        <LogoPicker name={company.name} logoUrl={company.logo_url} />
         <form
           className="space-y-4"
           onSubmit={(event) => {

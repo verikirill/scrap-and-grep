@@ -60,6 +60,8 @@ export interface Company {
   id: string
   name: string
   about: string
+  /** Where the logo is served; a new one gets a new address. Null without one. */
+  logo_url: string | null
   teams: Team[]
   created_at: string
 }
@@ -128,6 +130,7 @@ export interface Membership {
   job_title: string | null
   /** Who manages the space, as a member sees it. */
   manager: string | null
+  logo_url?: string | null
 }
 
 /** What an invited person sees before setting a password. */
@@ -139,6 +142,7 @@ export interface Invite {
   job_title: string | null
   manager: string | null
   audience: Audience
+  logo_url?: string | null
   interests: string[]
 }
 
@@ -149,6 +153,14 @@ export const companyApi = {
     request<Company>('/company', json('POST', { name, about })),
   updateCompany: (change: { name?: string; about?: string }) =>
     request<Company>('/company', json('PATCH', change)),
+  /** The picture goes as the raw body; the server redraws it in its own proportions. */
+  uploadLogo: (file: File) =>
+    request<Company>('/company/logo', {
+      method: 'PUT',
+      body: file,
+      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+    }),
+  deleteLogo: () => request<Company>('/company/logo', { method: 'DELETE' }),
   draftTeam: (brief: TeamBrief) => request<TeamDraft>('/company/teams/draft', json('POST', brief)),
   createTeam: (team: TeamInput) => request<Team>('/company/teams', json('POST', team)),
   updateTeam: (id: string, team: TeamInput) =>
@@ -191,4 +203,20 @@ export const companyApi = {
 /** The full address of an invitation, to send to the person. */
 export function inviteUrl(member: Pick<Member, 'invite_path'>, origin = window.location.origin) {
   return member.invite_path ? `${origin}${member.invite_path}` : null
+}
+
+// The form of a company says nothing about it: «АО «Энергосеть»» is «Э».
+const LEGAL_FORM = /^(ао|оао|зао|пао|ооо|гк|ук|фгуп|муп)\s+/i
+
+/** The letters a company is known by, when it has no logo yet. */
+export function companyInitials(name: string): string {
+  const words = name
+    .replace(/[«»"']/g, ' ')
+    .trim()
+    .replace(LEGAL_FORM, '')
+    .split(/\s+/)
+    .filter(Boolean)
+  return (
+    words.length > 1 ? words[0][0] + words[1][0] : (words[0] ?? '?').slice(0, 2)
+  ).toUpperCase()
 }

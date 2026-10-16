@@ -1,9 +1,10 @@
 """A company space: its teams, their profiles and the accounts of their people."""
 
+import asyncio
 import uuid
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import delete
 from sqlalchemy.exc import IntegrityError
 
@@ -28,9 +29,11 @@ from radar.api.company_schemas import (
     TeamOut,
 )
 from radar.api.deps import CacheDep, CurrentUser, SessionDep, user_rate_limit
+from radar.api.uploads import read_limited
 from radar.auth import sessions as auth_sessions
 from radar.auth.sessions import AuthUser
-from radar.avatars import preset_for
+from radar.avatars import MAX_BYTES as LOGO_MAX_BYTES
+from radar.avatars import AvatarError, normalize_logo, preset_for
 from radar.company import service
 from radar.company.patches import PatchError
 from radar.company.roles import team_color, team_icon
@@ -53,6 +56,11 @@ _NO_COMPANY = "Пространство компании ещё не созда�
 _NO_TEAM = "Команда не найдена."
 _NO_MEMBER = "Сотрудник не найден."
 _NO_ROLE = "Роль не найдена."
+# Redrawing a picture costs CPU: a few at a time.
+_DRAWING = asyncio.Semaphore(2)
+_picture_limit = Depends(
+    user_rate_limit("avatar", lambda settings: settings.resume_rate_limit_per_minute)
+)
 
 
 def member_out(
@@ -182,6 +190,7 @@ async def _company_out(session: SessionDep, company: Company) -> CompanyOut:
         id=company.id,
         name=company.name,
         about=company.about,
+        logo_url=service.logo_url(company.logo_updated_at),
         teams=[team_out(team, by_team[team.id], roles_of[team.id]) for team in teams],
         created_at=company.created_at,
     )
@@ -601,3 +610,46 @@ async def patch_profiles(
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
     await _forget(session, cache, changed)
     return PatchOut(changed=len(set(changed)))
+
+
+@router.put("/logo", dependencies=[_picture_limit])
+async def set_logo(request: Request, session: SessionDep, user: CurrentUser) -> CompanyOut:
+    """The company's logo: JPEG, PNG, WebP or GIF up to 5 MB, redrawn as a
+    small WebP in its own proportions."""
+    company = await _company(session, user)
+    data = await read_limited(
+        request, LOGO_MAX_BYTES, "Размер файла превышает 5 МБ. Выберите картинку поменьше."
+    )
+    try:
+        async with _DRAWING:
+            logo = await asyncio.to_thread(normalize_logo, data)
+    except AvatarError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
+    company.logo = logo
+    company.logo_updated_at = datetime.now(UTC)
+    await session.flush()
+    return await _company_out(session, company)
+
+
+@router.delete("/logo", dependencies=[_write_limit])
+async def delete_logo(session: SessionDep, user: CurrentUser) -> CompanyOut:
+    company = await _company(session, user)
+    company.logo = None
+    company.logo_updated_at = None
+    await session.flush()
+    return await _company_out(session, company)
+
+
+@router.get("/logo")
+async def get_logo(session: SessionDep, user: CurrentUser) -> Response:
+    """The logo of the space this account manages or was made for. The address
+    carries the logo's time, so the browser may keep it for good."""
+    company = await service.company_of(session, user.id)
+    logo = await service.logo_of(session, company.id) if company else None
+    if logo is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Логотипа нет.")
+    return Response(
+        content=logo,
+        media_type="image/webp",
+        headers={"Cache-Control": "private, max-age=31536000, immutable"},
+    )

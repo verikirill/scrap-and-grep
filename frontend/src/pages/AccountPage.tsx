@@ -9,6 +9,7 @@ import { Loading, PageSkeleton, Skeleton } from '../components/loading'
 import { Button, Card, Chip, ErrorNote, Field, PageHeader } from '../components/ui'
 import { AvatarPicker } from '../features/account/AvatarPicker'
 import { McpAccess } from '../features/account/McpAccess'
+import { CompanyLogo } from '../features/company/CompanyLogo'
 import { ResumeDrop } from '../features/resume/ResumeDrop'
 import { ResumeFactsView } from '../features/resume/ResumeFactsView'
 import { ResumeProcessing } from '../features/resume/ResumeProcessing'
@@ -200,13 +201,36 @@ function DangerZone({ me }: { me: Me }) {
 /** The company space the account belongs to: its team, the position and who manages it. */
 function CompanyCard({ me }: { me: Me }) {
   const company = me.company
-  if (!company) return null
+  if (!company) {
+    // Guests and shared accounts are not where a company keeps its people.
+    if (me.is_demo || me.is_shared) return null
+    return (
+      <Card className="p-5">
+        <h2 className="text-base font-semibold">Пространство компании</h2>
+        <p className="mt-1 text-sm text-muted">
+          Заведите команды своей компании, и сотрудники войдут по ссылке с готовыми профилями
+          интересов.
+        </p>
+        <div className="mt-4">
+          <Link to="/company" className={buttonClass('secondary', 'sm')}>
+            Создать пространство
+          </Link>
+        </div>
+      </Card>
+    )
+  }
+  const heading = (
+    <div className="flex items-center gap-3">
+      <CompanyLogo name={company.company} logoUrl={company.logo_url} size={40} />
+      <h2 className="text-base font-semibold">{company.company}</h2>
+    </div>
+  )
   if (company.role === 'owner') {
     return (
       <Card className="p-5">
-        <h2 className="text-base font-semibold">Компания</h2>
+        {heading}
         <p className="mt-1 text-sm text-muted">
-          Вы управляете пространством «{company.company}»: командами и аккаунтами сотрудников.
+          Вы управляете пространством компании: командами, ролями и аккаунтами сотрудников.
         </p>
         <div className="mt-4">
           <Link to="/company" className={buttonClass('secondary', 'sm')}>
@@ -218,12 +242,8 @@ function CompanyCard({ me }: { me: Me }) {
   }
   return (
     <Card className="p-5">
-      <h2 className="text-base font-semibold">Компания</h2>
-      <dl className="mt-2 space-y-1.5 text-sm">
-        <div className="flex flex-wrap gap-x-2">
-          <dt className="text-muted">Компания</dt>
-          <dd className="font-medium">{company.company}</dd>
-        </div>
+      {heading}
+      <dl className="mt-3 space-y-1.5 text-sm">
         {company.team && (
           <div className="flex flex-wrap gap-x-2">
             <dt className="text-muted">Команда</dt>

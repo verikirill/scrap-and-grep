@@ -113,6 +113,8 @@ class CompanyOut(BaseModel):
     id: uuid.UUID
     name: str
     about: str
+    # Where the logo is served; a new one gets a new address. Null without one.
+    logo_url: str | None = None
     teams: list[TeamOut]
     created_at: datetime
 
@@ -179,6 +181,7 @@ class MembershipOut(BaseModel):
     job_title: str | None = None
     # Who manages the space, as a member sees it.
     manager: str | None = None
+    logo_url: str | None = None
 
 
 class InviteOut(BaseModel):
@@ -191,6 +194,7 @@ class InviteOut(BaseModel):
     job_title: str | None
     manager: str | None
     audience: Audience
+    logo_url: str | None = None
     # The topics of the profile waiting in the account.
     interests: list[str]
 

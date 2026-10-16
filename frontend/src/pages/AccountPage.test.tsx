@@ -70,11 +70,27 @@ describe('AccountPage', () => {
     })
     await renderPage()
 
-    const card = screen.getByRole('heading', { name: 'Компания' }).parentElement as HTMLElement
+    const card = screen
+      .getByRole('heading', { name: 'Энергосеть' })
+      .closest('div.rounded-3xl') as HTMLElement
     expect(within(card).getByText('Энергосеть')).toBeInTheDocument()
     expect(within(card).getByText('SOC')).toBeInTheDocument()
     expect(within(card).getByText('Инженер SOC')).toBeInTheDocument()
     expect(within(card).getByText('Олег Смирнов')).toBeInTheDocument()
+  })
+
+  it('offers a reader on their own to start a company space, and a guest nothing', async () => {
+    serveAccount()
+    const { unmount } = await renderPage()
+    expect(screen.getByRole('link', { name: 'Создать пространство' })).toHaveAttribute(
+      'href',
+      '/company',
+    )
+    unmount()
+
+    serveAccount({ me: makeMe({ is_demo: true }) })
+    await renderPage()
+    expect(screen.queryByRole('link', { name: 'Создать пространство' })).toBeNull()
   })
 
   it('leads the manager of a space to it', async () => {

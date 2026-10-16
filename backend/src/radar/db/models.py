@@ -375,6 +375,10 @@ class Company(Base):
     name: Mapped[str] = mapped_column(String(120))
     # What the company does: the model reads it with every team's description.
     about: Mapped[str] = mapped_column(Text, default="", server_default="")
+    # The logo, redrawn as a small WebP (radar.avatars.normalize_logo); its
+    # time goes into the address, so a new one is never served from cache.
+    logo: Mapped[bytes | None] = mapped_column(LargeBinary, deferred=True)
+    logo_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

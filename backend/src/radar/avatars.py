@@ -26,8 +26,22 @@ class AvatarError(ValueError):
     """The upload is not a picture this service takes."""
 
 
+LOGO_SIZE = 512
+
+
+def normalize_logo(data: bytes) -> bytes:
+    """A company's logo as a WebP no larger than LOGO_SIZE on its long side,
+    in its own proportions: a wide logo is not cropped to a square."""
+    return _redraw(data, square=False)
+
+
 def normalize(data: bytes) -> bytes:
     """A square AVATAR_SIZE WebP of the picture, cropped around its centre."""
+    return _redraw(data, square=True)
+
+
+def _redraw(data: bytes, *, square: bool) -> bytes:
+    size = AVATAR_SIZE if square else LOGO_SIZE
     try:
         with Image.open(BytesIO(data), formats=FORMATS) as source:
             width, height = source.size
@@ -37,12 +51,15 @@ def normalize(data: bytes) -> bytes:
             source.seek(0)
             # A JPEG decodes straight at a fraction of its size: a 16 MP photo
             # never takes its full 50 MB in memory.
-            source.draft("RGB", (AVATAR_SIZE * 2, AVATAR_SIZE * 2))
+            source.draft("RGB", (size * 2, size * 2))
             image = ImageOps.exif_transpose(source)
             image = image.convert("RGBA" if image.has_transparency_data else "RGB")
-            square = ImageOps.fit(image, (AVATAR_SIZE, AVATAR_SIZE), Image.Resampling.LANCZOS)
+            if square:
+                image = ImageOps.fit(image, (size, size), Image.Resampling.LANCZOS)
+            else:
+                image.thumbnail((size, size), Image.Resampling.LANCZOS)
             out = BytesIO()
-            square.save(out, "WEBP", quality=QUALITY, method=4)
+            image.save(out, "WEBP", quality=QUALITY, method=4)
             return out.getvalue()
     except AvatarError:
         raise

@@ -81,6 +81,14 @@ class Membership:
     role: str  # "owner" or "member"
     job_title: str | None = None
     manager: str | None = None
+    # When the company's logo was set; None without one.
+    logo_at: datetime | None = None
+
+
+def logo_url(logo_at: datetime | None) -> str | None:
+    """Where the logo is served: its time in the address, so a new one is
+    fetched at once and an old one can be cached for good."""
+    return f"/api/v1/company/logo?v={int(logo_at.timestamp())}" if logo_at else None
 
 
 def new_invite() -> tuple[str, datetime]:
@@ -129,10 +137,14 @@ async def is_member(session: AsyncSession, user_id: uuid.UUID) -> bool:
 async def membership(session: AsyncSession, user_id: uuid.UUID) -> Membership | None:
     owned = await owned_company(session, user_id)
     if owned is not None:
-        return Membership(company=owned.name, team=None, role="owner")
+        return Membership(
+            company=owned.name, team=None, role="owner", logo_at=owned.logo_updated_at
+        )
     row = (
         await session.execute(
-            select(Company.name, Team.name, User.job_title, Company.owner_id)
+            select(
+                Company.name, Team.name, User.job_title, Company.owner_id, Company.logo_updated_at
+            )
             .select_from(User)
             .join(Team, Team.id == User.team_id)
             .join(Company, Company.id == Team.company_id)
@@ -142,7 +154,27 @@ async def membership(session: AsyncSession, user_id: uuid.UUID) -> Membership | 
     if row is None:
         return None
     manager = await session.scalar(select(User.display_name).where(User.id == row[3]))
-    return Membership(company=row[0], team=row[1], role="member", job_title=row[2], manager=manager)
+    return Membership(
+        company=row[0],
+        team=row[1],
+        role="member",
+        job_title=row[2],
+        manager=manager,
+        logo_at=row[4],
+    )
+
+
+async def company_of(session: AsyncSession, user_id: uuid.UUID) -> Company | None:
+    """The space an account manages, or else the one it was made for."""
+    owned = await owned_company(session, user_id)
+    if owned is not None:
+        return owned
+    return await session.scalar(
+        select(Company)
+        .join(Team, Team.company_id == Company.id)
+        .join(User, User.team_id == Team.id)
+        .where(User.id == user_id)
+    )
 
 
 def brief_for(company: Company, name: str, services: str, systems: Sequence[str] = ()) -> TeamBrief:
@@ -402,3 +434,7 @@ async def accept(session: AsyncSession, token: str, password: str) -> User | Non
         .values(password_hash=password_hash, invite_token=None, invite_expires_at=None)
         .returning(User)
     )
+
+
+async def logo_of(session: AsyncSession, company_id: uuid.UUID) -> bytes | None:
+    return await session.scalar(select(Company.logo).where(Company.id == company_id))
