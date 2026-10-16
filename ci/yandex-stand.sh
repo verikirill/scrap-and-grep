@@ -37,8 +37,10 @@ trap cleanup EXIT
 ai=https://ai.api.cloud.yandex.net/v1
 # The key goes into a file only the runner reads, never onto a command line.
 umask 077
+# The video service asks for no more processors than the machine has.
 cat >"$env_file" <<EOF
 WEB_PORT=$port
+SHORTS_CPUS=$(nproc)
 POSTGRES_PASSWORD=$(openssl rand -hex 16)
 RADAR_SECRET_KEY=$(openssl rand -hex 32)
 RADAR_LLM_PROVIDER=openai
