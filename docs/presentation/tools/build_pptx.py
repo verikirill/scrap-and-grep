@@ -1,6 +1,6 @@
 """Builds the editable PPTX from what extract.cjs measured in slides.html.
 
-Text goes into text boxes at the measured positions (Segoe UI for titles, Georgia for the reading text),
+Text goes into text boxes at the measured positions (Georgia for headings, Segoe UI for the rest),
 tables become native tables, and charts, schemes, screenshots and card backgrounds are the 2x PNG
 pictures extract.cjs cut from the rendered slides.
 
@@ -212,7 +212,7 @@ def build(extract_dir: Path, out: Path) -> None:
     for data in deck:
         slide = prs.slides.add_slide(layout)
         slide.background.fill.solid()
-        slide.background.fill.fore_color.rgb = color(data.get("bg", "")) or BACKGROUND
+        slide.background.fill.fore_color.rgb = BACKGROUND
         for picture in data["pictures"]:
             add_picture(slide, extract_dir, picture)
         for table in data["tables"]:
