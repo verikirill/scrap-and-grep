@@ -32,9 +32,19 @@ async def test_the_look_and_the_order_of_the_feed_are_kept_with_the_account(api:
         unknown = await reader.patch("/auth/me/settings", json={"feed_order": "oldest"})
 
     assert (before["feed_view"], before["feed_order"]) == ("cards", "new")
-    assert view.json() == {"feed_view": "telegram", "feed_order": "new", "folded_sections": []}
+    assert view.json() == {
+        "feed_view": "telegram",
+        "feed_order": "new",
+        "folded_sections": [],
+        "nav_order": [],
+    }
     # One setting changes, the other stays.
-    assert order.json() == {"feed_view": "telegram", "feed_order": "top", "folded_sections": []}
+    assert order.json() == {
+        "feed_view": "telegram",
+        "feed_order": "top",
+        "folded_sections": [],
+        "nav_order": [],
+    }
     assert (after["feed_view"], after["feed_order"]) == ("telegram", "top")
     assert unknown.status_code == 422
 
@@ -53,6 +63,24 @@ async def test_folded_sections_are_kept_with_the_account_once_each(api: str) -> 
     # Another setting leaves the folded sections alone.
     assert other.json()["folded_sections"] == ["Атаки", "Регуляторика"]
     assert too_long.status_code == 422
+
+
+async def test_the_menu_order_is_kept_with_the_account(api: str) -> None:
+    async with register(api) as reader:
+        moved = await reader.patch(
+            "/auth/me/settings", json={"nav_order": ["/channels", "/", "/channels", "/feed"]}
+        )
+        kept = (await reader.get("/auth/me")).json()
+        other = await reader.patch("/auth/me/settings", json={"feed_order": "top"})
+        odd = await reader.patch("/auth/me/settings", json={"nav_order": ["javascript:x"]})
+        back = await reader.patch("/auth/me/settings", json={"nav_order": []})
+
+    assert moved.json()["nav_order"] == ["/channels", "/", "/feed"]
+    assert kept["nav_order"] == ["/channels", "/", "/feed"]
+    assert other.json()["nav_order"] == ["/channels", "/", "/feed"]
+    assert odd.status_code == 422
+    # An empty list gives the app its own order back.
+    assert back.json()["nav_order"] == []
 
 
 async def test_the_new_order_shows_unseen_articles_newest_first_then_the_seen(api: str) -> None:

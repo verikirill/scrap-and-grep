@@ -102,6 +102,8 @@ import PersonFillSvg from '~icons/gravity-ui/person-fill'
 import PersonPlusSvg from '~icons/gravity-ui/person-plus'
 import PersonsSvg from '~icons/gravity-ui/persons'
 import PictureSvg from '~icons/gravity-ui/picture'
+import PlaySvg from '~icons/gravity-ui/play'
+import PlayFillSvg from '~icons/gravity-ui/play-fill'
 import PlusSvg from '~icons/gravity-ui/plus'
 import QuoteOpenSvg from '~icons/gravity-ui/quote-open'
 import RocketSvg from '~icons/gravity-ui/rocket'
@@ -116,6 +118,8 @@ import SparklesSvg from '~icons/gravity-ui/sparkles'
 import SparklesFillSvg from '~icons/gravity-ui/sparkles-fill'
 import SquareArticleSvg from '~icons/gravity-ui/square-article'
 import SquarePlusSvg from '~icons/gravity-ui/square-plus'
+import StopSvg from '~icons/gravity-ui/stop'
+import StopFillSvg from '~icons/gravity-ui/stop-fill'
 import StrikethroughSvg from '~icons/gravity-ui/strikethrough'
 import SunSvg from '~icons/gravity-ui/sun'
 import TargetSvg from '~icons/gravity-ui/target'
@@ -193,6 +197,8 @@ export const FilePen = /* @__PURE__ */ icon(PencilToSquareSvg)
 export const FileText = /* @__PURE__ */ icon(FileTextSvg)
 export const Heading2 = /* @__PURE__ */ icon(Heading2Svg)
 export const Heart = /* @__PURE__ */ icon(HeartSvg, HeartFillSvg)
+export const Play = /* @__PURE__ */ icon(PlaySvg, PlayFillSvg)
+export const Square = /* @__PURE__ */ icon(StopSvg, StopFillSvg)
 export const ImageOff = /* @__PURE__ */ icon(PictureSvg)
 export const Info = /* @__PURE__ */ icon(CircleInfoSvg, CircleInfoFillSvg)
 export const Italic = /* @__PURE__ */ icon(ItalicSvg)

@@ -633,6 +633,8 @@ export interface VoiceOption {
   id: string
   title: string
   default: boolean
+  /** Whether a few seconds of the voice can be heard before picking it. */
+  sample?: boolean
 }
 
 export type VideoStage = 'script' | 'voice' | 'render'
@@ -697,6 +699,8 @@ export interface Me extends User {
   feed_order: FeedOrder
   /** Digest sections the reader keeps folded, by title. */
   folded_sections?: string[]
+  /** The menu sections by path, in the order the reader dragged them; empty keeps the app's. */
+  nav_order?: string[]
   /** When the first-run introduction was finished or skipped; null until then. */
   onboarded_at: string | null
   /** The company space the account manages or was made for; null for neither. */
@@ -713,6 +717,7 @@ export interface Settings {
   feed_view: FeedView
   feed_order: FeedOrder
   folded_sections: string[]
+  nav_order: string[]
 }
 
 /** Articles that arrived after the feed on screen was ranked and pass the reader's interests. */

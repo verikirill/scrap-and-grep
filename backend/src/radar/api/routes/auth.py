@@ -232,6 +232,7 @@ async def me(user: OptionalUser, session: SessionDep) -> MeOut | None:
                 User.feed_view,
                 User.feed_order,
                 User.folded_sections,
+                User.nav_order,
                 User.onboarded_at,
                 User.avatar_preset,
             ).where(User.id == user.id)
@@ -251,6 +252,7 @@ async def me(user: OptionalUser, session: SessionDep) -> MeOut | None:
         feed_view=_feed_view(looks.feed_view if looks else None),
         feed_order=_feed_order(looks.feed_order if looks else None),
         folded_sections=list(looks.folded_sections or []) if looks else [],
+        nav_order=list(looks.nav_order or []) if looks else [],
         onboarded_at=looks.onboarded_at if looks else None,
         company=_membership(await company_service.membership(session, user.id)),
     )
@@ -354,13 +356,16 @@ async def update_settings(
         await session.execute(update(User).where(User.id == user.id).values(**changes))
     stored = (
         await session.execute(
-            select(User.feed_view, User.feed_order, User.folded_sections).where(User.id == user.id)
+            select(User.feed_view, User.feed_order, User.folded_sections, User.nav_order).where(
+                User.id == user.id
+            )
         )
     ).one()
     return SettingsOut(
         feed_view=_feed_view(stored.feed_view),
         feed_order=_feed_order(stored.feed_order),
         folded_sections=list(stored.folded_sections or []),
+        nav_order=list(stored.nav_order or []),
     )
 
 

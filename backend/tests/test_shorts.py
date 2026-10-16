@@ -6,6 +6,7 @@ import json
 import wave
 from datetime import UTC, datetime, timedelta
 from itertools import pairwise
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -585,6 +586,43 @@ async def test_a_voice_the_service_no_longer_has_gives_way_to_its_default() -> N
 
     assert asked == ["removed", None]
     assert narration.voice == "qwen3-tts:anchor"
+
+
+async def test_each_voice_records_its_sample_once_and_a_failed_one_is_tried_again(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from radar.config import get_settings
+    from radar.shorts import service
+    from radar.shorts.voice import VoiceOption
+
+    spoken: list[tuple[str, str | None]] = []
+
+    class Voice:
+        async def voices(self) -> list[VoiceOption]:
+            return []
+
+        async def speak(self, lines: list[str], voice: str | None = None) -> Narration:
+            spoken.append((lines[0], voice))
+            if voice == "broken":
+                raise httpx.ConnectError("down")
+            return Narration(segments=(Segment(0, 900),), audio=wav_bytes(), voice=voice)
+
+    monkeypatch.setenv("RADAR_MEDIA_DIR", str(tmp_path))
+    get_settings.cache_clear()
+    offered = [VoiceOption(id="zahar", title="Захар"), VoiceOption(id="broken", title="Сломанный")]
+    try:
+        first = await service._record_samples(Voice(), offered)
+        second = await service._record_samples(Voice(), offered)
+        path = service.sample_path("zahar")
+    finally:
+        get_settings.cache_clear()
+
+    assert [(voice.id, voice.sample) for voice in first] == [("zahar", True), ("broken", False)]
+    assert [(voice.id, voice.sample) for voice in second] == [("zahar", True), ("broken", False)]
+    assert path.read_bytes() == wav_bytes()
+    # The voice says its own name; a recorded one is not asked again, a failed one is.
+    assert spoken[0] == ("Здравствуйте! Это голос «Захар». Так прозвучит ваш выпуск.", "zahar")
+    assert [voice for _, voice in spoken] == ["zahar", "broken", "broken"]
 
 
 async def test_one_malformed_voice_does_not_take_the_whole_choice_away() -> None:

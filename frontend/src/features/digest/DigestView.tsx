@@ -263,12 +263,20 @@ function TopicSection({
                 type="button"
                 onClick={() => setNoteOpen((value) => !value)}
                 aria-expanded={isNoteOpen}
-                className={clsx(
-                  'mt-0.5 mb-1.5 w-full rounded-xl bg-surface px-4 py-2 text-left text-sm text-muted hover:text-foreground',
-                  isNoteOpen ? 'block' : 'line-clamp-1',
-                )}
+                className="mt-0.5 mb-1.5 flex w-full items-start gap-2 rounded-xl bg-surface px-4 py-2 text-left text-sm text-muted hover:text-foreground"
               >
-                {topic.overview}
+                {/* Clamped inside the padding: no half of a second line peeks out below. */}
+                <span className={clsx('min-w-0 flex-1', !isNoteOpen && 'line-clamp-1')}>
+                  {topic.overview}
+                </span>
+                <ChevronDown
+                  size={16}
+                  aria-hidden
+                  className={clsx(
+                    'mt-0.5 shrink-0 transition-transform',
+                    isNoteOpen && 'rotate-180',
+                  )}
+                />
               </button>
             )}
             <div className="space-y-1">

@@ -24,6 +24,7 @@ import {
   useResume,
   useResumeMutations,
   useSignOut,
+  useUpdateSettings,
 } from '../lib/queries'
 
 function ResumeSection() {
@@ -287,6 +288,36 @@ function Introduction() {
   )
 }
 
+/** The menu in the reader's order: how to change it, and the way back to the app's. */
+function MenuOrder({ me }: { me: Me }) {
+  const update = useUpdateSettings()
+  const isCustom = (me.nav_order ?? []).length > 0
+  return (
+    <Card className="hidden p-5 md:block">
+      <h2 className="text-base font-semibold">Порядок меню</h2>
+      <p className="mt-1 text-sm text-muted">
+        Перетащите раздел в меню слева выше или ниже. С клавиатуры раздел двигают Alt и стрелки.
+      </p>
+      {isCustom && (
+        <div className="mt-4">
+          <Button
+            size="sm"
+            isBusy={update.isPending}
+            onClick={() =>
+              update.mutate(
+                { nav_order: [] },
+                { onSuccess: () => toast.success('Меню снова в исходном порядке') },
+              )
+            }
+          >
+            Вернуть исходный порядок
+          </Button>
+        </div>
+      )}
+    </Card>
+  )
+}
+
 const AVATAR_TYPES = 'image/jpeg,image/png,image/webp,image/gif'
 const AVATAR_MAX_BYTES = 5_000_000
 
@@ -411,6 +442,7 @@ export function AccountPage() {
           <Identity me={user} />
           <CompanyCard me={user} />
           <Introduction />
+          <MenuOrder me={user} />
           {isWide && <DangerZone me={user} />}
         </aside>
         <div className="min-w-0 space-y-5">

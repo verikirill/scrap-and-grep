@@ -81,7 +81,7 @@ export function makeUser(overrides: Partial<User> = {}): User {
 }
 
 export function makeSettings(overrides: Partial<Settings> = {}): Settings {
-  return { feed_view: 'cards', feed_order: 'new', folded_sections: [], ...overrides }
+  return { feed_view: 'cards', feed_order: 'new', folded_sections: [], nav_order: [], ...overrides }
 }
 
 export function makeResumeFacts(overrides: Partial<ResumeFacts> = {}): ResumeFacts {

@@ -9,6 +9,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+import httpx
 from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import IntegrityError
@@ -87,11 +88,42 @@ def get_voice() -> Voice | None:
     )
 
 
+# What every voice says before a reader picks it: its name and what it is for.
+SAMPLE_LINE = "Здравствуйте! Это голос «{title}». Так прозвучит ваш выпуск."
+
+
+def sample_path(voice_id: str) -> Path:
+    """A voice's sample; the engine is in the name, so another engine's voice
+    of the same id is not heard by mistake."""
+    settings = get_settings()
+    return Path(settings.media_dir) / "voices" / f"{settings.tts_provider}-{voice_id}.wav"
+
+
+async def _record_samples(client: Voice, voices: list[VoiceOption]) -> list[VoiceOption]:
+    """Record the samples not on disk yet, once each; the list says which can be heard.
+    A voice that fails now is tried again on the next round."""
+    marked = []
+    for voice in voices:
+        path = sample_path(voice.id)
+        if not await asyncio.to_thread(path.is_file):
+            try:
+                narration = await client.speak([SAMPLE_LINE.format(title=voice.title)], voice.id)
+            except (httpx.HTTPError, ValueError) as exc:
+                log.warning("voice_sample_failed", voice=voice.id, error=type(exc).__name__)
+                narration = None
+            if narration is not None and narration.audio:
+                await asyncio.to_thread(_write, path, narration.audio)
+        marked.append(voice.model_copy(update={"sample": await asyncio.to_thread(path.is_file)}))
+    return marked
+
+
 async def refresh_voices(cache: Cache) -> list[VoiceOption]:
     """Ask the voice service which voices it offers and remember the answer
-    for the api, which has no route to the service."""
+    for the api, which has no route to the service. New voices get a sample."""
     client = get_voice()
     voices = await client.voices() if client is not None else []
+    if client is not None:
+        voices = await _record_samples(client, voices)
     await cache.set_json(VOICES_KEY, [voice.model_dump() for voice in voices], VOICES_TTL_SECONDS)
     return voices
 

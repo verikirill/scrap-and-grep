@@ -8,6 +8,7 @@ import type { Video, VideoStage, VoiceOption } from '../../lib/api'
 import { formatDateTime, formatDuration, formatMegabytes } from '../../lib/format'
 import { useCreateShort, useMeta, useShort } from '../../lib/queries'
 import { chosenVoice, ENGINE_NAMES, voiceTitle } from '../../lib/voices'
+import { VoiceSelect } from './VoiceSelect'
 
 const STEPS: { stage: VideoStage; name: string; doing: string }[] = [
   { stage: 'script', name: 'Сценарий', doing: 'Пишем сценарий' },
@@ -92,52 +93,6 @@ function voiceLabel(video: Video, voices: VoiceOption[]): string {
   return known ? `голос «${title}»` : `голос ${title}`
 }
 
-type VoicePickerProps = {
-  /** Radio groups of two digests open at once must not share a name. */
-  name: string
-  voices: VoiceOption[]
-  value: string | null
-  onChange: (id: string) => void
-}
-
-/** The voice of the narration, as a row of pills that are radio buttons. */
-function VoicePicker({ name, voices, value, onChange }: VoicePickerProps) {
-  return (
-    <fieldset className="mt-3">
-      <legend className="mb-1.5 text-xs text-muted">Голос</legend>
-      <div className="flex flex-wrap gap-1.5">
-        {voices.map((voice) => {
-          const isChecked = value === voice.id
-          return (
-            <label
-              key={voice.id}
-              className={clsx(
-                'inline-flex cursor-pointer items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition-colors',
-                'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent',
-                isChecked
-                  ? 'border-warning bg-warning-soft text-warning'
-                  : 'border-separator text-muted hover:border-border hover:text-foreground',
-              )}
-            >
-              <input
-                type="radio"
-                name={name}
-                value={voice.id}
-                checked={isChecked}
-                onChange={() => onChange(voice.id)}
-                className="sr-only"
-              />
-              {/* Not by colour alone: the chosen pill carries a tick. */}
-              {isChecked && <Check size={12} strokeWidth={3} aria-hidden />}
-              {voice.title}
-            </label>
-          )
-        })}
-      </div>
-    </fieldset>
-  )
-}
-
 function Player({ video, voices }: { video: Video; voices: VoiceOption[] }) {
   const details = [
     video.duration_ms ? formatDuration(video.duration_ms) : null,
@@ -212,12 +167,9 @@ export function ShortPanel({ digestId }: { digestId: string }) {
               : 'Озвучка на этом сервере не подключена, в видео будут только субтитры'}
           </p>
           {!isBusy && voices.length > 0 && (
-            <VoicePicker
-              name={`short-voice-${digestId}`}
-              voices={voices}
-              value={voice}
-              onChange={setPicked}
-            />
+            <div className="mt-3 max-w-sm">
+              <VoiceSelect voices={voices} value={voice} onChange={setPicked} />
+            </div>
           )}
         </div>
         {!isBusy && (

@@ -2,7 +2,14 @@ import { screen, waitFor, within } from '@testing-library/react'
 import { HttpResponse, http } from 'msw'
 import { describe, expect, it, vi } from 'vitest'
 import type { Me, Resume } from '../lib/api'
-import { makeAvatar, makeMe, makeMeta, makeResume, makeResumeFacts } from '../test/fixtures'
+import {
+  makeAvatar,
+  makeMe,
+  makeMeta,
+  makeResume,
+  makeResumeFacts,
+  makeSettings,
+} from '../test/fixtures'
 import { renderWithProviders } from '../test/render'
 import { apiUrl, server } from '../test/server'
 import { AccountPage } from './AccountPage'
@@ -476,5 +483,23 @@ describe('AccountPage', () => {
       expect(await screen.findByRole('status', { name: 'Читаем резюме' })).toBeInTheDocument()
       expect(name).toBe('Новое резюме.docx')
     })
+  })
+})
+
+describe('AccountPage menu order', () => {
+  it('puts the menu back in the app’s order once the reader changed it', async () => {
+    let saved: string[] | null = null
+    serveAccount({ me: makeMe({ nav_order: ['/feed', '/'] }) })
+    server.use(
+      http.patch(apiUrl('/auth/me/settings'), async ({ request }) => {
+        saved = ((await request.json()) as { nav_order: string[] }).nav_order
+        return HttpResponse.json(makeSettings({ nav_order: [] }))
+      }),
+    )
+    const { user } = await renderPage()
+
+    await user.click(await screen.findByRole('button', { name: 'Вернуть исходный порядок' }))
+
+    await waitFor(() => expect(saved).toEqual([]))
   })
 })
