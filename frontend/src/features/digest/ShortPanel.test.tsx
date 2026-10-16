@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import { HttpResponse, http } from 'msw'
 import { describe, expect, it, vi } from 'vitest'
 import type { Meta, Video } from '../../lib/api'
@@ -62,10 +62,8 @@ describe('ShortPanel', () => {
     const { user } = renderWithProviders(<ShortPanel digestId="digest-1" />, {
       userOptions: { advanceTimers: vi.advanceTimersByTime },
     })
-    const voices = await screen.findByRole('group', { name: 'Голос' })
-    expect(within(voices).getByRole('radio', { name: 'Ведущий' })).toBeChecked()
-
-    await user.click(within(voices).getByRole('radio', { name: 'Ведущая' }))
+    await user.click(await screen.findByRole('button', { name: /Голос: Ведущий$/ }))
+    await user.click(await screen.findByRole('option', { name: 'Ведущая' }))
     await user.click(screen.getByRole('button', { name: 'Создать видео' }))
 
     expect(await screen.findByRole('progressbar', { name: 'Готовность видео' })).toHaveAttribute(
@@ -133,7 +131,7 @@ describe('ShortPanel', () => {
     expect(await screen.findByText('Озвучка Yandex SpeechKit')).toBeInTheDocument()
     expect(await screen.findByText(/голос «Захар»/)).toBeInTheDocument()
     expect(screen.queryByText(/Qwen3-TTS/)).toBeNull()
-    expect(screen.getByRole('radio', { name: 'Захар' })).toBeChecked()
+    expect(screen.getByRole('button', { name: /Голос: Захар$/ })).toBeInTheDocument()
   })
 
   it('names the engine of a voice the list no longer has', async () => {
@@ -152,7 +150,7 @@ describe('ShortPanel', () => {
         'Озвучка на этом сервере не подключена, в видео будут только субтитры',
       ),
     ).toBeInTheDocument()
-    expect(screen.queryByRole('group', { name: 'Голос' })).toBeNull()
+    expect(screen.queryByRole('button', { name: /^Голос/ })).toBeNull()
 
     await user.click(screen.getByRole('button', { name: 'Создать видео' }))
     expect(await screen.findByRole('progressbar')).toBeInTheDocument()

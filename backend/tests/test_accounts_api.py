@@ -858,6 +858,34 @@ async def test_a_reader_picks_a_voice_from_the_ones_the_service_offers(
     assert picked.json()["requested_voice"] == "blogger"
 
 
+async def test_a_voice_sample_is_heard_once_the_worker_recorded_it(
+    api: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from radar.config import get_settings
+    from radar.shorts.service import sample_path
+
+    monkeypatch.setenv("RADAR_MEDIA_DIR", str(tmp_path))
+    get_settings.cache_clear()
+    path = sample_path("zahar")
+    path.parent.mkdir(parents=True)
+    path.write_bytes(b"RIFF....WAVEdata")
+
+    async with register(api, "vlas") as reader:
+        heard = await reader.get("/voices/zahar/sample.wav")
+        missing = await reader.get("/voices/omazh/sample.wav")
+        odd = await reader.get("/voices/..%2Fsecret/sample.wav")
+    async with client(api) as guest:
+        anonymous = await guest.get("/voices/zahar/sample.wav")
+    get_settings.cache_clear()
+
+    assert heard.status_code == 200
+    assert heard.headers["content-type"] == "audio/wav"
+    assert heard.content == b"RIFF....WAVEdata"
+    assert missing.status_code == 404
+    assert odd.status_code in {404, 422}
+    assert anonymous.status_code == 401
+
+
 async def test_a_voice_is_taken_on_trust_before_the_worker_lists_them(
     api: str, shorts_on: list[dict[str, Any]]
 ) -> None:

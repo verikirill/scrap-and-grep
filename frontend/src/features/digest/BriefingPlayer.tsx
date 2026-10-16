@@ -1,6 +1,5 @@
 import { useId, useState } from 'react'
 import { Download, Loader2, Mic, RotateCcw } from '../../components/icons'
-import { SelectField } from '../../components/SelectField'
 import { buttonClass } from '../../components/tokens'
 import { PulseLoader } from '../../components/loading'
 import { Button, ErrorNote } from '../../components/ui'
@@ -15,6 +14,7 @@ import type { Briefing, Digest, VoiceOption } from '../../lib/api'
 import { formatDateTime, formatMegabytes } from '../../lib/format'
 import { useBriefing, useCreateBriefing } from '../../lib/queries'
 import { chosenVoice, voiceTitle } from '../../lib/voices'
+import { VoiceSelect } from './VoiceSelect'
 
 const isBusy = (briefing: Briefing | null) =>
   briefing?.status === 'queued' || briefing?.status === 'running'
@@ -172,17 +172,8 @@ export function BriefingPlayer({ digest }: { digest: Digest }) {
           {briefing && !busy && (
             <div className="flex flex-wrap items-end gap-3 border-t border-separator pt-4">
               {voices.length > 0 && (
-                <div className="min-w-48 flex-1 space-y-1.5">
-                  {/* The select names itself for assistive tech; this is the visible label. */}
-                  <p aria-hidden className="text-xs text-muted">
-                    Голос
-                  </p>
-                  <SelectField
-                    label="Голос"
-                    value={voice ?? ''}
-                    onChange={setPicked}
-                    options={voices.map((option) => ({ value: option.id, label: option.title }))}
-                  />
+                <div className="min-w-48 flex-1">
+                  <VoiceSelect voices={voices} value={voice} onChange={setPicked} />
                 </div>
               )}
               <Button

@@ -56,6 +56,8 @@ describe('CompanyPage search and look', () => {
     expect(screen.getByText('Олег Петров')).toBeInTheDocument()
     expect(screen.queryByText('Анна Смирнова')).toBeNull()
     const teams = screen.getByRole('navigation', { name: 'Команды' })
+    expect(within(teams).getByRole('heading', { name: '2 команды' })).toBeInTheDocument()
+    expect(within(teams).getByText('3 сотрудника, в сервисе 0')).toBeInTheDocument()
     expect(within(teams).getByRole('button', { name: /^SOC.*1$/ })).toBeInTheDocument()
     expect(within(teams).getByRole('button', { name: /^Сети.*0$/ })).toBeInTheDocument()
 

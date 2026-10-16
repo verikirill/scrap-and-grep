@@ -292,3 +292,44 @@ describe('Layout theme', () => {
     expect(document.documentElement).not.toHaveClass('theme-fading')
   })
 })
+
+describe('Layout menu order', () => {
+  it('lists the sections in the reader’s order and moves one with Alt and an arrow', async () => {
+    let saved: string[] | null = null
+    server.use(
+      http.get(apiUrl('/auth/me'), () =>
+        HttpResponse.json(makeMe({ nav_order: saved ?? ['/sources', '/', '/feed'] })),
+      ),
+      http.patch(apiUrl('/auth/me/settings'), async ({ request }) => {
+        saved = ((await request.json()) as { nav_order: string[] }).nav_order
+        return HttpResponse.json({
+          feed_view: 'cards',
+          feed_order: 'new',
+          folded_sections: [],
+          nav_order: saved,
+        })
+      }),
+    )
+    const { user } = renderLayout()
+    await accountShown()
+
+    const names = () =>
+      within(sidebar())
+        .getAllByRole('link')
+        .map((link) => link.textContent)
+    // Placed sections first, as placed; the rest follow in the app's own order.
+    expect(names().slice(0, 5)).toEqual([
+      'Источники',
+      'Дайджест',
+      'Для вас',
+      'Интересы',
+      'Сравнение',
+    ])
+
+    within(sidebar()).getByRole('link', { name: 'Дайджест' }).focus()
+    await user.keyboard('{Alt>}{ArrowUp}{/Alt}')
+
+    await waitFor(() => expect(saved?.slice(0, 3)).toEqual(['/', '/sources', '/feed']))
+    await waitFor(() => expect(names()[0]).toBe('Дайджест'))
+  })
+})

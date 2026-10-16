@@ -328,6 +328,11 @@ class User(Base):
     folded_sections: Mapped[list[str]] = mapped_column(
         ARRAY(String(120)), default=list, server_default="{}"
     )
+    # The menu sections in the order the reader dragged them, by path: "/feed".
+    # Empty keeps the app's own order; sections missing here keep their place.
+    nav_order: Mapped[list[str]] = mapped_column(
+        ARRAY(String(32)), default=list, server_default="{}"
+    )
     # When the reader finished or skipped the first-run introduction; NULL
     # until then, and the web app offers it once. Guests never get it.
     onboarded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

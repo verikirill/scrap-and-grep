@@ -50,3 +50,6 @@ export function chosenVoice(
     null
   )
 }
+
+/** Where a voice's sample is served; the media worker records it once. */
+export const voiceSampleUrl = (id: string) => `/api/v1/voices/${encodeURIComponent(id)}/sample.wav`

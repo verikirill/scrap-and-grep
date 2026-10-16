@@ -48,6 +48,8 @@ class VoiceOption(BaseModel):
     id: str = Field(pattern=VOICE_ID_PATTERN)
     title: str = Field(min_length=1, max_length=40)
     default: bool = False
+    # Whether a short sample of the voice can be heard before it is picked.
+    sample: bool = False
 
 
 class Voice(Protocol):

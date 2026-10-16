@@ -13,14 +13,15 @@ import {
   Users,
 } from './icons'
 import type { IconComponent } from './icons'
-import { AnimatePresence, motion } from 'motion/react'
-import { useMemo, useState } from 'react'
+import { AnimatePresence, motion, Reorder } from 'motion/react'
+import { useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link, NavLink, useLocation } from 'react-router'
 import { formatNumber, modelLabel } from '../lib/format'
 import { navAccess } from '../lib/access'
 import type { Access } from '../lib/access'
-import { useMe, useMeta } from '../lib/queries'
+import { inReaderOrder, movedBy } from '../lib/navOrder'
+import { useMe, useMeta, useUpdateSettings } from '../lib/queries'
 import { prefetchRoute } from '../routes'
 import { readOpen, writeOpen } from '../lib/remembered'
 import { UserAvatar } from './UserAvatar'
@@ -144,6 +145,8 @@ function SideItem({
   return (
     <Link
       to={item.to}
+      // The row itself is dragged to a new place, not the link's address.
+      draggable={false}
       // Folded, the name is the hint: the icon alone is all the row shows.
       title={isNarrow ? item.label : undefined}
       aria-label={isNarrow ? item.label : undefined}
@@ -301,7 +304,31 @@ export function Layout({ children }: { children: ReactNode }) {
   const me = useMe()
   const isAdmin = Boolean(me.data?.is_admin && !me.data.is_demo)
   const access = navAccess(me.data)
-  const sections = NAV.filter((item) => access[item.access])
+  const ordered = inReaderOrder(
+    NAV.filter((item) => access[item.access]),
+    me.data?.nav_order ?? [],
+  )
+  // While a section is dragged, the order on screen; it is saved when let go.
+  const [dragged, setDragged] = useState<NavItem[] | null>(null)
+  const draggedRef = useRef<NavItem[] | null>(null)
+  // A drag ends with a click on the link under the pointer: that click stays put.
+  const wasDragged = useRef(false)
+  const updateSettings = useUpdateSettings()
+  const sections = dragged ?? ordered
+  const saveOrder = (paths: string[]) => {
+    if (paths.join() !== ordered.map((item) => item.to).join()) {
+      updateSettings.mutate({ nav_order: paths })
+    }
+  }
+  const reorder = (items: NavItem[]) => {
+    draggedRef.current = items
+    setDragged(items)
+  }
+  const letGo = () => {
+    if (draggedRef.current) saveOrder(draggedRef.current.map((item) => item.to))
+    draggedRef.current = null
+    setDragged(null)
+  }
   // On a phone the bottom bar holds five sections; the running ones sit up top.
   const barSections = sections.filter((item) => item.group !== 'manage').slice(0, 5)
   const topSections = sections.filter((item) => !barSections.includes(item))
@@ -330,15 +357,49 @@ export function Layout({ children }: { children: ReactNode }) {
         )}
       >
         <Brand isNarrow={isNarrow} />
-        <nav aria-label="Разделы" className="isolate flex flex-col gap-0.5">
-          {sections.map((item, index) => (
-            <div
-              key={item.to}
-              className={clsx(index > 0 && sections[index - 1].group !== item.group && 'mt-3')}
-            >
-              <SideItem item={item} active={item.to === active} isNarrow={isNarrow} />
-            </div>
-          ))}
+        <nav aria-label="Разделы">
+          {/* The reader drags sections into their own order; Alt with an arrow moves one too. */}
+          <Reorder.Group
+            axis="y"
+            values={sections}
+            onReorder={reorder}
+            className="isolate flex flex-col gap-0.5"
+          >
+            {sections.map((item, index) => (
+              <Reorder.Item
+                key={item.to}
+                value={item}
+                onDragStart={() => {
+                  wasDragged.current = true
+                }}
+                onDragEnd={letGo}
+                onPointerDown={() => {
+                  wasDragged.current = false
+                }}
+                onClickCapture={(event) => {
+                  if (!wasDragged.current) return
+                  event.preventDefault()
+                  event.stopPropagation()
+                  wasDragged.current = false
+                }}
+                onKeyDown={(event) => {
+                  if (!event.altKey || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) {
+                    return
+                  }
+                  event.preventDefault()
+                  const paths = sections.map((section) => section.to)
+                  saveOrder(movedBy(paths, item.to, event.key === 'ArrowUp' ? -1 : 1))
+                }}
+                whileDrag={{ scale: 1.03, zIndex: 10 }}
+                className={clsx(
+                  'relative cursor-grab list-none rounded-xl active:cursor-grabbing',
+                  index > 0 && sections[index - 1].group !== item.group && 'mt-3',
+                )}
+              >
+                <SideItem item={item} active={item.to === active} isNarrow={isNarrow} />
+              </Reorder.Item>
+            ))}
+          </Reorder.Group>
         </nav>
         <motion.div
           layout

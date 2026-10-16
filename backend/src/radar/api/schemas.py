@@ -75,6 +75,7 @@ class MeOut(UserOut):
     feed_view: FeedView = "cards"
     feed_order: FeedOrder = "new"
     folded_sections: list[str] = []
+    nav_order: list[str] = []
     # When the first-run introduction was finished or skipped; null until then.
     onboarded_at: datetime | None = None
     # The company space the account manages or was made for; null for neither.
@@ -87,6 +88,8 @@ class OnboardedOut(BaseModel):
 
 # A section's title as the digest shows it; a few dozen titles at most.
 FoldedSection = Annotated[str, Field(min_length=1, max_length=120)]
+# A menu section by its path, as the web app names it: "/", "/feed".
+NavSection = Annotated[str, Field(max_length=32, pattern=r"^/[a-z-]*$")]
 
 
 class SettingsIn(BaseModel):
@@ -95,6 +98,7 @@ class SettingsIn(BaseModel):
     feed_view: FeedView | None = None
     feed_order: FeedOrder | None = None
     folded_sections: list[FoldedSection] | None = Field(default=None, max_length=60)
+    nav_order: list[NavSection] | None = Field(default=None, max_length=16)
 
     @field_validator("folded_sections")
     @classmethod
@@ -103,11 +107,17 @@ class SettingsIn(BaseModel):
             return None
         return list(dict.fromkeys(title.strip() for title in value if title.strip()))
 
+    @field_validator("nav_order")
+    @classmethod
+    def _once(cls, value: list[str] | None) -> list[str] | None:
+        return None if value is None else list(dict.fromkeys(value))
+
 
 class SettingsOut(BaseModel):
     feed_view: FeedView
     feed_order: FeedOrder
     folded_sections: list[str]
+    nav_order: list[str] = []
 
 
 class AvatarOut(BaseModel):

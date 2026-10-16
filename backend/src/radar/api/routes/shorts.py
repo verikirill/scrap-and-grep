@@ -144,6 +144,20 @@ async def get_short(
     return _out(video) if video is not None else None
 
 
+@router.get("/voices/{voice_id}/sample.wav", response_class=FileResponse)
+async def voice_sample(
+    voice_id: Annotated[str, StringConstraints(pattern=VOICE_ID_PATTERN)],
+    user: CurrentUser,
+) -> FileResponse:
+    """A few seconds of a voice, to hear it before picking it."""
+    path = service.sample_path(voice_id)
+    if not await asyncio.to_thread(path.is_file):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Примера голоса пока нет.")
+    return FileResponse(
+        path, media_type="audio/wav", headers={"Cache-Control": "private, max-age=3600"}
+    )
+
+
 @router.get("/digests/{digest_id}/short.mp4", response_class=FileResponse)
 async def watch_short(
     digest_id: uuid.UUID,

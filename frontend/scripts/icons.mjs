@@ -36,6 +36,8 @@ const ICONS = {
   FileText: 'file-text',
   Heading2: 'heading-2',
   Heart: 'heart',
+  Play: 'play',
+  Square: 'stop',
   ImageOff: 'picture',
   Info: 'circle-info',
   Italic: 'italic',

@@ -1009,6 +1009,7 @@ export function useUpdateSettings() {
                 feed_view: before.feed_view,
                 feed_order: before.feed_order,
                 folded_sections: before.folded_sections,
+                nav_order: before.nav_order,
               }
             : me,
         )

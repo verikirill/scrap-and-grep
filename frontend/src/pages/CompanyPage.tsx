@@ -31,32 +31,21 @@ function teamLine(team: Team): string {
     : people
 }
 
+/** The heading of the team list: how many teams, people, and who came in. */
 function Totals({ company }: { company: Company }) {
   const members = company.teams.flatMap((team) => team.members)
   const active = members.filter((member) => member.status === 'active').length
-  const items = [
-    {
-      value: company.teams.length,
-      label: plural(company.teams.length, ['команда', 'команды', 'команд']),
-    },
-    {
-      value: members.length,
-      label: plural(members.length, ['сотрудник', 'сотрудника', 'сотрудников']),
-    },
-    { value: active, label: 'уже в сервисе' },
-  ]
+  const teams = company.teams.length
   return (
-    <dl className="mb-5 grid grid-cols-3 gap-3 sm:max-w-lg">
-      {items.map((item) => (
-        <div
-          key={item.label}
-          className="flex flex-col-reverse rounded-2xl bg-surface px-4 py-3 shadow-surface"
-        >
-          <dt className="text-xs text-muted">{item.label}</dt>
-          <dd className="text-xl font-semibold tabular-nums">{item.value}</dd>
-        </div>
-      ))}
-    </dl>
+    <div className="px-3 pt-2 pb-3">
+      <h2 className="text-sm font-semibold">
+        {teams} {plural(teams, ['команда', 'команды', 'команд'])}
+      </h2>
+      <p className="text-xs text-muted">
+        {members.length} {plural(members.length, ['сотрудник', 'сотрудника', 'сотрудников'])}, в
+        сервисе {active}
+      </p>
+    </div>
   )
 }
 
@@ -150,10 +139,10 @@ function Space({ company }: { company: Company }) {
         </Card>
       ) : (
         <>
-          <Totals company={company} />
           <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[18rem_minmax(0,1fr)]">
             <nav aria-label="Команды" className="lg:sticky lg:top-9 lg:self-start">
               <Card className="p-2">
+                <Totals company={company} />
                 <ul className="space-y-1">
                   {company.teams.map((item) => (
                     <li key={item.id}>
