@@ -315,6 +315,8 @@ export function Layout({ children }: { children: ReactNode }) {
   const wasDragged = useRef(false)
   const updateSettings = useUpdateSettings()
   const sections = dragged ?? ordered
+  // Gaps set the app's groups apart; in the reader's own order, or mid-drag, the list runs even.
+  const hasGroups = dragged === null && (me.data?.nav_order ?? []).length === 0
   const saveOrder = (paths: string[]) => {
     if (paths.join() !== ordered.map((item) => item.to).join()) {
       updateSettings.mutate({ nav_order: paths })
@@ -393,7 +395,7 @@ export function Layout({ children }: { children: ReactNode }) {
                 whileDrag={{ scale: 1.03, zIndex: 10 }}
                 className={clsx(
                   'relative cursor-grab list-none rounded-xl active:cursor-grabbing',
-                  index > 0 && sections[index - 1].group !== item.group && 'mt-3',
+                  hasGroups && index > 0 && sections[index - 1].group !== item.group && 'mt-3',
                 )}
               >
                 <SideItem item={item} active={item.to === active} isNarrow={isNarrow} />

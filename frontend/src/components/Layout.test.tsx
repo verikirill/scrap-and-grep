@@ -326,6 +326,10 @@ describe('Layout menu order', () => {
       'Сравнение',
     ])
 
+    // In the reader's own order the groups mix, so no gaps set them apart.
+    const rows = within(sidebar()).getAllByRole('listitem')
+    expect(rows.some((row) => row.classList.contains('mt-3'))).toBe(false)
+
     within(sidebar()).getByRole('link', { name: 'Дайджест' }).focus()
     await user.keyboard('{Alt>}{ArrowUp}{/Alt}')
 
