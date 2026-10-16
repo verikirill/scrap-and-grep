@@ -336,6 +336,6 @@ docker compose down
 
 ## Тесты и CI
 
-966 тестов бэкенда на настоящих PostgreSQL, Valkey и ClickHouse с покрытием строк 86%, 841 тест фронтенда в 115 файлах с покрытием строк 98%; `ruff`, `mypy --strict`, `oxlint` и `tsc` без замечаний. GitLab (`.gitlab-ci.yml`, 17 заданий) и GitHub Actions (`.github/workflows/ci.yml`, 15 заданий) запускают одни и те же скрипты из `ci/`, прогон GitHub Actions всего кода 15 октября 2026 года прошёл целиком.
+999 тестов бэкенда на настоящих PostgreSQL, Valkey и ClickHouse с покрытием строк 85%, 889 тестов фронтенда в 123 файлах с покрытием строк 97%; `ruff`, `mypy --strict`, `oxlint` и `tsc` без замечаний. GitLab (`.gitlab-ci.yml`, 17 заданий) и GitHub Actions (`.github/workflows/ci.yml`, 16 заданий) запускают одни и те же скрипты из `ci/`. Задание `stand:yandex` поднимает весь стек коммита на моделях Yandex AI Studio и проходит по нему путь жюри: выпуск, ролик с голосом, резюме и пространство компании.
 
 Задания и запуск у себя описаны в [docs/CI.md](docs/CI.md), результаты по частям - в [docs/QUALITY.md](docs/QUALITY.md#тесты).
