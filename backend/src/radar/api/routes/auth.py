@@ -265,6 +265,7 @@ def _membership(found: company_service.Membership | None) -> MembershipOut | Non
         role="owner" if found.role == "owner" else "member",
         job_title=found.job_title,
         manager=found.manager,
+        logo_url=company_service.logo_url(found.logo_at),
     )
 
 
@@ -299,8 +300,20 @@ async def get_invite(token: InviteToken, session: SessionDep) -> InviteOut:
         job_title=user.job_title,
         manager=found.manager if found else None,
         audience=audience_for(user.job_title),
+        logo_url=f"/api/v1/auth/invite/{token}/logo" if found and found.logo_at else None,
         interests=list(dict.fromkeys(interests)),
     )
+
+
+@router.get("/invite/{token}/logo", dependencies=[_auth_limit])
+async def invite_logo(token: InviteToken, session: SessionDep) -> Response:
+    """The logo of the company that sent the invitation, before any sign-in."""
+    user = await _invited(session, token)
+    company = await company_service.company_of(session, user.id)
+    logo = await company_service.logo_of(session, company.id) if company else None
+    if logo is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Логотипа нет.")
+    return Response(content=logo, media_type="image/webp", headers={"Cache-Control": "no-store"})
 
 
 @router.post("/invite/{token}", dependencies=[_auth_limit])

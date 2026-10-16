@@ -86,3 +86,20 @@ describe('InvitePage quotes', () => {
     ).toBeInTheDocument()
   })
 })
+
+describe('InvitePage look', () => {
+  it('shows the company logo and switches the theme before any sign-in', async () => {
+    server.use(
+      http.get(apiUrl(`/auth/invite/${TOKEN}`), () =>
+        HttpResponse.json(makeInvite({ logo_url: `/api/v1/auth/invite/${TOKEN}/logo` })),
+      ),
+    )
+    const { user, container } = renderPage()
+
+    await screen.findByText('Здравствуйте, Олег Смирнов')
+    expect(container.querySelector(`img[src="/api/v1/auth/invite/${TOKEN}/logo"]`)).not.toBeNull()
+    const wasDark = document.documentElement.classList.contains('dark')
+    await user.click(screen.getByRole('button', { name: /тему$/ }))
+    expect(document.documentElement.classList.contains('dark')).toBe(!wasDark)
+  })
+})

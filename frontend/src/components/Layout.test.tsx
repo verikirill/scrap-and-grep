@@ -106,7 +106,7 @@ describe('Layout', () => {
     expect(within(sidebar()).queryByRole('link', { name: 'Аналитика' })).toBeNull()
   })
 
-  it('offers the company space to a reader and its manager, not to its members or a guest', async () => {
+  it('shows each kind of account its own sections, reading first and running last', async () => {
     const company = (role: 'owner' | 'member') => ({
       company: 'Энергосеть',
       team: role === 'member' ? 'SOC' : null,
@@ -114,18 +114,37 @@ describe('Layout', () => {
       job_title: null,
       manager: null,
     })
+    const reading = ['Дайджест', 'Для вас', 'Интересы', 'Источники', 'Сравнение']
     const cases = [
-      [makeMe(), true],
-      [makeMe({ company: company('owner') }), true],
-      [makeMe({ company: company('member') }), false],
-      [makeMe({ is_demo: true }), false],
+      ['a reader on their own', makeMe(), [...reading, 'Каналы']],
+      [
+        'the manager of a space',
+        makeMe({ company: company('owner') }),
+        [...reading, 'Каналы', 'Компания'],
+      ],
+      ['a person a company added', makeMe({ company: company('member') }), reading],
+      [
+        'the administrator',
+        makeMe({ is_admin: true }),
+        [...reading, 'Каналы', 'Компания', 'Аналитика'],
+      ],
+      ['a guest', makeMe({ is_demo: true }), [...reading, 'Каналы']],
     ] as const
-    for (const [me, isShown] of cases) {
+    for (const [, me, sections] of cases) {
       server.use(http.get(apiUrl('/auth/me'), () => HttpResponse.json(me)))
       const { unmount } = renderLayout()
       await accountShown()
-      const link = within(sidebar()).queryByRole('link', { name: 'Компания' })
-      expect(link !== null).toBe(isShown)
+      const names = within(sidebar())
+        .getAllByRole('link')
+        .map((link) => link.textContent)
+        .filter((name) => name !== 'Scrap&Grep' && !name?.startsWith('Анна'))
+      expect(names).toEqual(sections)
+      // The phone keeps reading at the bottom and the running sections up top.
+      expect(
+        within(bottomBar())
+          .getAllByRole('link')
+          .map((link) => link.textContent),
+      ).toEqual(reading)
       unmount()
     }
   })

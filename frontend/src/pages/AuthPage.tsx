@@ -15,6 +15,8 @@ import { ONBOARDING_PATH } from '../lib/onboarding'
 import { useMe, useMeta, useSignIn } from '../lib/queries'
 import { SlidingPill } from '../components/SlidingPill'
 import { useMediaQuery } from '../lib/useMediaQuery'
+import { useDarkMode } from '../lib/useDarkMode'
+import { ThemeButton } from '../components/ThemeToggle'
 
 const PASSWORD_MIN = 10
 
@@ -52,6 +54,7 @@ export function AuthPage({ mode }: Props) {
   const [displayName, setDisplayName] = useState('')
   const [isPasswordShown, setIsPasswordShown] = useState(false)
   const isWide = useMediaQuery('(min-width: 1024px)')
+  const [dark, toggleDark] = useDarkMode()
 
   const isRegister = mode === 'register'
   const target = safeTarget(location.state)
@@ -78,6 +81,9 @@ export function AuthPage({ mode }: Props) {
       <AuthAside isWide={isWide} />
 
       <main className="relative isolate flex items-center justify-center overflow-hidden px-5 py-10 lg:px-16">
+        <div className="absolute top-4 right-4 z-10">
+          <ThemeButton dark={dark} onToggle={toggleDark} />
+        </div>
         <div aria-hidden className="auth-ripple hidden lg:block">
           <span />
           <span />

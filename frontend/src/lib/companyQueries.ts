@@ -57,6 +57,15 @@ export function useUpdateCompany() {
   })
 }
 
+/** The company's logo: a new picture, or none. */
+export function useCompanyLogo() {
+  const refresh = useRefresh()
+  return {
+    upload: useMutation({ mutationFn: companyApi.uploadLogo, onSuccess: refresh }),
+    remove: useMutation({ mutationFn: companyApi.deleteLogo, onSuccess: refresh }),
+  }
+}
+
 /** The profile a description suggests; nothing is saved. */
 export const useDraftTeam = () =>
   useMutation({ mutationFn: (brief: TeamBrief) => companyApi.draftTeam(brief) })

@@ -1,16 +1,19 @@
 import clsx from 'clsx'
 import { useState } from 'react'
 import { useSearchParams } from 'react-router'
-import { PenLine, Plus, Sparkles } from '../components/icons'
+import { PenLine, Plus, Sparkles, Users } from '../components/icons'
 import { Loading, Skeleton, SkeletonText } from '../components/loading'
 import { Button, Card, EmptyState, ErrorState, PageHeader } from '../components/ui'
 import { CompanyDialog } from '../features/company/CompanyDialog'
 import { CreateCompany } from '../features/company/CreateCompany'
 import { TeamEditor } from '../features/company/TeamEditor'
 import { TeamPanel } from '../features/company/TeamPanel'
+import { CompanyLogo } from '../features/company/CompanyLogo'
 import { ProfileAvatar } from '../features/profiles/ProfileLook'
+import { quoted } from '../lib/company'
 import type { Company, Team } from '../lib/company'
 import { useCompany, useMoveMembers } from '../lib/companyQueries'
+import { useMe } from '../lib/queries'
 import { DRAG_TYPE, droppedMembers } from '../features/company/drag'
 import { toast } from '../lib/toast'
 import { plural } from '../lib/format'
@@ -94,7 +97,15 @@ function Space({ company }: { company: Company }) {
     <>
       <PageHeader
         title={TITLE}
-        subtitle={company.about ? `${company.name}. ${company.about}` : company.name}
+        subtitle={
+          <span className="flex items-center gap-3">
+            <CompanyLogo name={company.name} logoUrl={company.logo_url} size={44} />
+            <span>
+              <span className="font-medium text-foreground">{company.name}</span>
+              {company.about && `. ${company.about}`}
+            </span>
+          </span>
+        }
         actions={
           <>
             <Button variant="ghost" icon={<PenLine size={15} />} onClick={() => setIsAbout(true)}>
@@ -208,7 +219,26 @@ function Space({ company }: { company: Company }) {
  * accounts with ready profiles for the people in them.
  */
 export function CompanyPage() {
-  const company = useCompany()
+  const me = useMe()
+  const membership = me.data?.company
+  const isMember = membership?.role === 'member'
+  const company = useCompany(!isMember)
+
+  // People a company added read; the space is run by its manager.
+  if (isMember) {
+    return (
+      <>
+        <PageHeader title={TITLE} />
+        <Card>
+          <EmptyState icon={<Users />} title={`Вы в команде «${membership?.team ?? ''}»`}>
+            Пространством {quoted(membership?.company ?? '')} управляет{' '}
+            {membership?.manager ?? 'руководитель'}. Команду и должность видно на странице
+            «Аккаунт».
+          </EmptyState>
+        </Card>
+      </>
+    )
+  }
 
   if (company.isPending) {
     return (

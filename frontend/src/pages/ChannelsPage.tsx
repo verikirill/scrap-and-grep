@@ -8,6 +8,7 @@ import { ChannelCard } from '../features/channels/ChannelCard'
 import { PostsPanel } from '../features/channels/PostsPanel'
 import { Segmented } from '../components/Segmented'
 import { useChannels, usePublishingDefaults } from '../lib/publishingQueries'
+import { quoted } from '../lib/company'
 import { useMe } from '../lib/queries'
 
 // How a channel gets connected, shown where the list of channels will be.
@@ -17,7 +18,27 @@ const CHANNEL_STEPS = [
   'Нажмите «Добавить канал» и выберите тон и расписание',
 ]
 
+/** Telegram channels: a reader's own, or a company's run by its manager. */
 export function ChannelsPage() {
+  const me = useMe()
+  if (me.data?.company?.role === 'member') {
+    return (
+      <>
+        <PageHeader title="Каналы" />
+        <Card>
+          <EmptyState icon={<Send />} title="Каналы ведёт руководитель пространства">
+            Посты в Telegram-каналы компании {quoted(me.data.company.company)} публикует{' '}
+            {me.data.company.manager ?? 'руководитель'}. Ваши выпуски и лента остаются в разделах
+            «Дайджест» и «Для вас».
+          </EmptyState>
+        </Card>
+      </>
+    )
+  }
+  return <Channels />
+}
+
+function Channels() {
   const { data: defaults } = usePublishingDefaults()
   const me = useMe()
   // How to turn publishing on is the operator's business; a reader learns only that it is off.

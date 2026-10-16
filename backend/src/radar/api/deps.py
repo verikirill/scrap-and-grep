@@ -4,6 +4,7 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from radar.auth import sessions as auth_sessions
@@ -11,6 +12,7 @@ from radar.auth.sessions import AuthUser
 from radar.cache import Cache, get_cache
 from radar.config import Settings, get_settings
 from radar.db import session_scope
+from radar.db.models import User
 
 
 async def get_session() -> AsyncIterator[AsyncSession]:
@@ -93,6 +95,17 @@ async def catalog_writer(user: CurrentUser, settings: SettingsDep) -> AuthUser:
 
 
 CatalogWriter = Annotated[AuthUser, Depends(catalog_writer)]
+
+
+async def publisher(user: CurrentUser, session: SessionDep) -> AuthUser:
+    """Who may run Telegram channels: a reader on their own or the manager of a
+    company space. People a company added read; its channels are the manager's."""
+    if await session.scalar(select(User.team_id).where(User.id == user.id)) is not None:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            detail="Каналы ведёт руководитель пространства компании.",
+        )
+    return user
 
 
 def user_rate_limit(

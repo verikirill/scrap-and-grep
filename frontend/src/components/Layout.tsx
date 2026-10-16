@@ -6,117 +6,60 @@ import {
   ChevronRight,
   CompareArrows,
   DynamicFeed,
-  Moon,
   Newspaper,
   Rss,
   Send,
   SlidersHorizontal,
-  Sun,
   Users,
 } from './icons'
 import type { IconComponent } from './icons'
 import { AnimatePresence, motion } from 'motion/react'
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { flushSync } from 'react-dom'
 import { Link, NavLink, useLocation } from 'react-router'
 import { formatNumber, modelLabel } from '../lib/format'
+import { navAccess } from '../lib/access'
+import type { Access } from '../lib/access'
 import { useMe, useMeta } from '../lib/queries'
 import { prefetchRoute } from '../routes'
 import { readOpen, writeOpen } from '../lib/remembered'
-import { THEME_KEY, prefersDark } from '../lib/theme'
 import { UserAvatar } from './UserAvatar'
 import { LogoMark, Wordmark } from './Logo'
 import { DURATION, EASE } from './tokens'
 import { EntranceContext, newEntrance } from './entrance'
 import { Skeleton } from './loading'
 import { DottedVeil } from './ui/dotted-veil'
+import { ThemeButton } from './ThemeToggle'
+import { useDarkMode } from '../lib/useDarkMode'
 
 type NavItem = {
   to: string
   label: string
   icon: IconComponent
   also?: string[]
-  isAdminOnly?: boolean
-  /** For whoever may manage a company space: not a guest, not a member of one. */
-  isForManagers?: boolean
+  /** Reading, setting up, or running things: a gap sets the groups apart. */
+  group: 'read' | 'setup' | 'manage'
+  access: Access
 }
 
+// In the order of use: what a reader reads, what tunes it, what a manager runs.
 const NAV: NavItem[] = [
-  { to: '/', label: 'Дайджест', icon: Newspaper, also: ['/digests', '/share'] },
-  { to: '/feed', label: 'Для вас', icon: DynamicFeed },
-  { to: '/profiles', label: 'Интересы', icon: SlidersHorizontal },
-  { to: '/channels', label: 'Каналы', icon: Send },
-  { to: '/sources', label: 'Источники', icon: Rss },
-  { to: '/compare', label: 'Сравнение', icon: CompareArrows },
-  { to: '/company', label: 'Компания', icon: Users, isForManagers: true },
-  { to: '/analytics', label: 'Аналитика', icon: Analytics, isAdminOnly: true },
+  {
+    to: '/',
+    label: 'Дайджест',
+    icon: Newspaper,
+    also: ['/digests', '/share'],
+    group: 'read',
+    access: 'all',
+  },
+  { to: '/feed', label: 'Для вас', icon: DynamicFeed, group: 'read', access: 'all' },
+  { to: '/profiles', label: 'Интересы', icon: SlidersHorizontal, group: 'setup', access: 'all' },
+  { to: '/sources', label: 'Источники', icon: Rss, group: 'setup', access: 'all' },
+  { to: '/compare', label: 'Сравнение', icon: CompareArrows, group: 'setup', access: 'all' },
+  { to: '/channels', label: 'Каналы', icon: Send, group: 'manage', access: 'publisher' },
+  { to: '/company', label: 'Компания', icon: Users, group: 'manage', access: 'manager' },
+  { to: '/analytics', label: 'Аналитика', icon: Analytics, group: 'manage', access: 'admin' },
 ]
-
-/** How long the colours of one theme take to fade into the other. */
-const THEME_FADE_MS = DURATION.medium * 1000
-/**
- * On <html> while the new theme sweeps across the screen from corner to corner
- * (index.css). The sweep is a CSS animation of ::view-transition-new(root):
- * Firefox does not run element.animate() on that pseudo-element.
- */
-const THEME_SWEEP_CLASS = 'theme-sweeping'
-/** On <html> while the colours fade without view transitions (index.css). */
-const THEME_FADE_CLASS = 'theme-fading'
-
-function useDarkMode(): [boolean, () => void] {
-  const [dark, setDark] = useState(prefersDark)
-  const fadeTimer = useRef<number | undefined>(undefined)
-  useLayoutEffect(() => {
-    const root = document.documentElement
-    // Outside a fade every colour changes in one frame: with each element's
-    // own transitions on, text and chips lagged behind the backgrounds.
-    const isFading = root.classList.contains(THEME_FADE_CLASS)
-    if (!isFading) root.classList.add('theme-switching')
-    root.classList.toggle('dark', dark)
-    void root.offsetHeight
-    root.classList.remove('theme-switching')
-    localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light')
-  }, [dark])
-  useEffect(
-    () => () => {
-      window.clearTimeout(fadeTimer.current)
-      document.documentElement.classList.remove(THEME_FADE_CLASS)
-    },
-    [],
-  )
-  // The new theme sweeps over the old one from corner to corner. The first
-  // paint and a reader who turned motion down get the theme at once.
-  const toggle = () => {
-    const flip = () => flushSync(() => setDark((value) => !value))
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      flip()
-      return
-    }
-    if (document.startViewTransition) {
-      // A picture of the new page is uncovered over a picture of the old one,
-      // which stays still underneath: nothing fades, so nothing flickers.
-      const root = document.documentElement
-      root.classList.add(THEME_SWEEP_CLASS)
-      document
-        .startViewTransition(flip)
-        // Skipped (another transition began): the theme has changed all the same.
-        .finished.catch(() => {})
-        .finally(() => root.classList.remove(THEME_SWEEP_CLASS))
-      return
-    }
-    // Without view transitions every element eases its own colours for a moment.
-    const root = document.documentElement
-    window.clearTimeout(fadeTimer.current)
-    root.classList.add(THEME_FADE_CLASS)
-    flip()
-    fadeTimer.current = window.setTimeout(
-      () => root.classList.remove(THEME_FADE_CLASS),
-      THEME_FADE_MS,
-    )
-  }
-  return [dark, toggle]
-}
 
 /**
  * A thin progress bar along the top while anything loads in the
@@ -318,31 +261,6 @@ function AccountButton({ hasLabel = false }: { hasLabel?: boolean }) {
   )
 }
 
-function ThemeButton({ dark, onToggle }: { dark: boolean; onToggle: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      // The icon and the name both say where a press leads, not where one is.
-      aria-label={dark ? 'Включить светлую тему' : 'Включить тёмную тему'}
-      title={dark ? 'Включить светлую тему' : 'Включить тёмную тему'}
-      className="button button--ghost button--icon-only button--md shrink-0 text-muted"
-    >
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.span
-          key={dark ? 'sun' : 'moon'}
-          initial={{ rotate: -90, scale: 0.6, opacity: 0 }}
-          animate={{ rotate: 0, scale: 1, opacity: 1 }}
-          exit={{ rotate: 90, scale: 0.6, opacity: 0 }}
-          transition={{ duration: DURATION.short, ease: EASE }}
-        >
-          {dark ? <Sun size={19} /> : <Moon size={19} />}
-        </motion.span>
-      </AnimatePresence>
-    </button>
-  )
-}
-
 function Brand({ isNarrow }: { isNarrow: boolean }) {
   return (
     <Link
@@ -382,10 +300,11 @@ export function Layout({ children }: { children: ReactNode }) {
   const [isNarrow, toggleNarrow] = useNarrowSidebar()
   const me = useMe()
   const isAdmin = Boolean(me.data?.is_admin && !me.data.is_demo)
-  const canManage = Boolean(me.data && !me.data.is_demo && me.data.company?.role !== 'member')
-  const sections = NAV.filter(
-    (item) => (isAdmin || !item.isAdminOnly) && (canManage || !item.isForManagers),
-  )
+  const access = navAccess(me.data)
+  const sections = NAV.filter((item) => access[item.access])
+  // On a phone the bottom bar holds five sections; the running ones sit up top.
+  const barSections = sections.filter((item) => item.group !== 'manage').slice(0, 5)
+  const topSections = sections.filter((item) => !barSections.includes(item))
   const location = useLocation()
   const section = location.pathname.split('/')[1] ?? ''
   const active = activeSection(location.pathname)
@@ -412,8 +331,13 @@ export function Layout({ children }: { children: ReactNode }) {
       >
         <Brand isNarrow={isNarrow} />
         <nav aria-label="Разделы" className="isolate flex flex-col gap-0.5">
-          {sections.map((item) => (
-            <SideItem key={item.to} item={item} active={item.to === active} isNarrow={isNarrow} />
+          {sections.map((item, index) => (
+            <div
+              key={item.to}
+              className={clsx(index > 0 && sections[index - 1].group !== item.group && 'mt-3')}
+            >
+              <SideItem item={item} active={item.to === active} isNarrow={isNarrow} />
+            </div>
           ))}
         </nav>
         <motion.div
@@ -451,22 +375,11 @@ export function Layout({ children }: { children: ReactNode }) {
         <LogoMark size={30} />
         <Wordmark className="flex-1 text-lg" />
         {/* The bottom bar holds five sections; the others live up here. */}
-        <NavLink
-          to="/compare"
-          aria-label="Сравнение выпусков"
-          className={({ isActive }) =>
-            clsx(
-              'button button--ghost button--icon-only button--md shrink-0',
-              isActive ? 'bg-default text-foreground' : 'text-muted',
-            )
-          }
-        >
-          <CompareArrows size={21} />
-        </NavLink>
-        {canManage && (
+        {topSections.map((item) => (
           <NavLink
-            to="/company"
-            aria-label="Компания"
+            key={item.to}
+            to={item.to}
+            aria-label={item.label}
             className={({ isActive }) =>
               clsx(
                 'transition-colors hover:bg-default/70 relative grid size-10 shrink-0 place-items-center overflow-hidden rounded-full',
@@ -474,23 +387,9 @@ export function Layout({ children }: { children: ReactNode }) {
               )
             }
           >
-            <Users size={21} />
+            <item.icon size={21} />
           </NavLink>
-        )}
-        {isAdmin && (
-          <NavLink
-            to="/analytics"
-            aria-label="Аналитика"
-            className={({ isActive }) =>
-              clsx(
-                'transition-colors hover:bg-default/70 relative grid size-10 shrink-0 place-items-center overflow-hidden rounded-full',
-                isActive ? 'bg-default text-default-foreground' : 'text-muted',
-              )
-            }
-          >
-            <Analytics size={21} />
-          </NavLink>
-        )}
+        ))}
         <ThemeButton dark={dark} onToggle={toggleDark} />
         <AccountButton />
       </header>
@@ -529,7 +428,7 @@ export function Layout({ children }: { children: ReactNode }) {
         aria-label="Разделы"
         className="fixed inset-x-0 bottom-0 z-30 flex border-t border-separator bg-background/90 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
       >
-        {NAV.slice(0, 5).map((item) => (
+        {barSections.map((item) => (
           <BarItem key={item.to} item={item} active={item.to === active} />
         ))}
       </nav>
