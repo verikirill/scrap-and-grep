@@ -16,26 +16,25 @@ type Props = {
 }
 
 /**
- * A company's mark: its logo on a white tile, in its own proportions, or its
+ * A company's mark: its logo on a white tile as wide as the logo, or its
  * initials while there is none. Decorative: the name always stands beside it.
  */
 export function CompanyLogo({ name, logoUrl, size, className }: Props) {
   const [broken, setBroken] = useState<string | null>(null)
   if (logoUrl && broken !== logoUrl) {
+    // As tall as the initials would be, as wide as the logo is: a wide mark
+    // is not shrunk into a square.
     return (
       <span
         aria-hidden
-        className={clsx(
-          'grid shrink-0 place-items-center overflow-hidden rounded-2xl bg-white p-1.5',
-          className,
-        )}
-        style={{ width: size, height: size }}
+        className={clsx('flex shrink-0 items-center rounded-2xl bg-white px-2 py-1.5', className)}
+        style={{ height: size, maxWidth: size * 3.5 }}
       >
         <img
           src={logoUrl}
           alt=""
           onError={() => setBroken(logoUrl)}
-          className="max-h-full max-w-full object-contain"
+          className="h-full w-auto max-w-full object-contain"
         />
       </span>
     )
