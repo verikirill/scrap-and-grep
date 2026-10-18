@@ -538,12 +538,9 @@
 }
 
 /* The reader on the sign-in page's headline (features/auth/ScrambleText.tsx):
-   monospaced, in a light accent. */
+   in the headline's Inter, in a light accent. The word ends its line, so the
+   glyphs it runs through move only its own right edge. */
 .auth-role {
-  font-family: var(--font-mono);
-  font-size: 0.86em;
-  font-weight: 600;
-  letter-spacing: -0.02em;
   white-space: nowrap;
   color: color-mix(in oklab, var(--accent) 80%, white);
 }

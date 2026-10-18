@@ -37,7 +37,7 @@ export function AuthAside({ isWide }: { isWide: boolean }) {
             the terminal above; a screen reader hears the sentence once. */}
         <p
           aria-label="Новости ИТ и ИБ под вашу работу"
-          className="font-serif text-[28px] leading-tight font-semibold"
+          className="text-[28px] leading-tight font-semibold tracking-tight"
         >
           <span aria-hidden>Новости ИТ и ИБ</span>
           <span aria-hidden className="mt-1 flex items-baseline gap-2.5">
