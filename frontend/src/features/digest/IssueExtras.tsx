@@ -15,7 +15,9 @@ import { Card, Chip } from '../../components/ui'
 import type { Digest, PlanEntry, TagCount, VulnerabilityChange } from '../../lib/api'
 import { durationWords, externalHref, formatDate, formatNumber, plural } from '../../lib/format'
 import { isShown } from '../../lib/digestBlocks'
+import { showEntry } from '../../lib/entryNav'
 import { useTickPlan } from '../../lib/queries'
+import { OriginalLink } from '../reader/OriginalLink'
 
 /** The issue's work as an analyst would do it by hand, at the pace measured on one. */
 const decimal = (value: number) => String(value).replace('.', ',')
@@ -76,19 +78,70 @@ function SectionHead({
   )
 }
 
+/** The entries' numbers through the whole issue, topic after topic, by their links. */
+function positionsByUrl(digest: Digest): Map<string, number> {
+  const urls = digest.topics.flatMap((topic) => topic.items.map((item) => item.url))
+  return new Map(urls.map((url, index) => [url, index + 1]))
+}
+
+/**
+ * The entry's summary below in the issue when it has one: the plan points to
+ * it rather than to the article, which stays a click aside.
+ */
+function PlanHeadline({
+  entry,
+  position,
+  className,
+}: {
+  entry: PlanEntry
+  position: number | undefined
+  className: string
+}) {
+  if (position === undefined) {
+    return (
+      <a
+        href={externalHref(entry.url)}
+        target="_blank"
+        rel="noreferrer noopener"
+        className={className}
+      >
+        {entry.headline}
+      </a>
+    )
+  }
+  return (
+    <>
+      <a
+        href={`#entry-${position}`}
+        onClick={(event) => {
+          event.preventDefault()
+          showEntry(position)
+        }}
+        title={`К записи ${position} в выпуске`}
+        className={className}
+      >
+        {entry.headline}
+      </a>
+      <OriginalLink url={entry.url} title={entry.headline} />
+    </>
+  )
+}
+
 function PlanRow({
   entry,
   index,
+  position,
   onToggle,
 }: {
   entry: PlanEntry
   index: number
+  position: number | undefined
   onToggle: (done: boolean) => void
 }) {
   const done = entry.done
   const id = `plan-${index}`
   return (
-    <motion.li {...rowMotion(index)} className="flex gap-3 py-3">
+    <motion.li {...rowMotion(index)} className="group flex gap-3 py-3">
       <input
         id={id}
         type="checkbox"
@@ -98,17 +151,16 @@ function PlanRow({
         aria-label={`Сделано: ${entry.headline}`}
       />
       <div className={clsx('min-w-0 flex-1 transition-opacity', done && 'opacity-50')}>
-        <a
-          href={externalHref(entry.url)}
-          target="_blank"
-          rel="noreferrer noopener"
-          className={clsx(
-            'font-medium text-foreground decoration-accent/40 underline-offset-4 hover:underline',
-            done && 'line-through',
-          )}
-        >
-          {entry.headline}
-        </a>
+        <div className="flex items-start gap-1">
+          <PlanHeadline
+            entry={entry}
+            position={position}
+            className={clsx(
+              'min-w-0 flex-1 font-medium text-foreground decoration-accent/40 underline-offset-4 hover:underline',
+              done && 'line-through',
+            )}
+          />
+        </div>
         {entry.steps.length > 0 && (
           <ul className="mt-1 space-y-0.5 text-sm text-muted">
             {entry.steps.map((step) => (
@@ -134,8 +186,9 @@ function PlanRow({
  * The ticks are the digest's, kept on the server: they come with the digest
  * and survive a fold of the block, a reload and another device.
  */
-function ShiftPlan({ digestId, entries }: { digestId: string; entries: PlanEntry[] }) {
-  const tick = useTickPlan(digestId)
+function ShiftPlan({ digest, entries }: { digest: Digest; entries: PlanEntry[] }) {
+  const tick = useTickPlan(digest.id)
+  const positions = positionsByUrl(digest)
   return (
     <Card className="p-6">
       <Collapsible
@@ -159,6 +212,7 @@ function ShiftPlan({ digestId, entries }: { digestId: string; entries: PlanEntry
               key={entry.url}
               entry={entry}
               index={index}
+              position={positions.get(entry.url)}
               onToggle={(done) => tick.mutate({ url: entry.url, done })}
             />
           ))}
@@ -278,7 +332,7 @@ export function IssueExtras({ digest }: { digest: Digest }) {
   if (plan.length + changes.length + numbers.length === 0) return null
   return (
     <div className="space-y-6">
-      {plan.length > 0 && <ShiftPlan digestId={digest.id} entries={plan} />}
+      {plan.length > 0 && <ShiftPlan digest={digest} entries={plan} />}
       {changes.length > 0 && <Changes changes={changes} />}
       {numbers.length > 0 && (
         <Numbers rows={numbers} title={digest.numbers_title || 'Период в цифрах'} />
