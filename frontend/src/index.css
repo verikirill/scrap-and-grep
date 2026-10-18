@@ -4,6 +4,19 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Window heights the sign-in page tightens for, so that it fits a laptop's
+   browser window without a scroll: a 1536×864 screen and a 1366×768 one. */
+@custom-variant short {
+  @media (max-height: 820px) {
+    @slot;
+  }
+}
+@custom-variant shorter {
+  @media (max-height: 740px) {
+    @slot;
+  }
+}
+
 /*
  * HeroUI v3 is the design system: its semantic colours (background, surface,
  * accent, muted, success, warning, danger and their soft variants), radii and

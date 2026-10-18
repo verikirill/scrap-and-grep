@@ -36,7 +36,10 @@ type Props = {
  */
 export function SharedAccounts({ busyKey, isDisabled, onEnter }: Props) {
   return (
-    <section aria-labelledby="shared-accounts" className="mt-6 border-t border-separator pt-5">
+    <section
+      aria-labelledby="shared-accounts"
+      className="mt-6 border-t border-separator pt-5 short:mt-5 short:pt-4 shorter:mt-4"
+    >
       <h2 id="shared-accounts" className="text-sm font-semibold">
         Посмотреть без регистрации
       </h2>

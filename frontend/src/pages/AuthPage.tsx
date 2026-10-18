@@ -80,7 +80,7 @@ export function AuthPage({ mode }: Props) {
     <div className="grid min-h-dvh lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
       <AuthAside isWide={isWide} />
 
-      <main className="relative isolate flex items-center justify-center overflow-hidden px-5 py-10 lg:px-16">
+      <main className="relative isolate flex items-center justify-center overflow-hidden px-5 py-10 short:py-6 shorter:py-4 lg:px-16">
         <div className="absolute top-4 right-4 z-10">
           <ThemeButton dark={dark} onToggle={toggleDark} />
         </div>
@@ -93,9 +93,9 @@ export function AuthPage({ mode }: Props) {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: EASE }}
-          className="w-full max-w-sm rounded-3xl lg:max-w-md lg:bg-surface lg:p-10 lg:shadow-surface"
+          className="w-full max-w-sm rounded-3xl lg:max-w-md lg:bg-surface lg:p-10 lg:shadow-surface lg:short:p-8 lg:shorter:p-6"
         >
-          <div className="mb-8 flex items-center gap-2.5 lg:hidden">
+          <div className="mb-8 flex items-center gap-2.5 short:mb-5 lg:hidden">
             <LogoMark size={36} />
             <Wordmark className="text-[17px]" />
           </div>
@@ -103,7 +103,9 @@ export function AuthPage({ mode }: Props) {
           <h1 className="text-2xl font-semibold tracking-tight">
             {isRegister ? 'Новый аккаунт' : 'Вход'}
           </h1>
-          <p className="mt-1 text-sm text-muted">
+          {/* On a very short window the plain greeting gives way; a shared
+              profile's note stays, it says what happens after signing in. */}
+          <p className={clsx('mt-1 text-sm text-muted', !isSharedProfile && 'shorter:hidden')}>
             {isSharedProfile
               ? 'С вами поделились профилем интересов. Он откроется после входа или регистрации, и вы решите, добавлять ли его себе.'
               : isRegister
@@ -114,7 +116,7 @@ export function AuthPage({ mode }: Props) {
           <nav
             ref={tabRow}
             aria-label="Вход или регистрация"
-            className="relative isolate mt-6 inline-flex gap-1 rounded-xl bg-surface-secondary p-1"
+            className="relative isolate mt-6 inline-flex gap-1 rounded-xl bg-surface-secondary p-1 short:mt-5 shorter:mt-4"
           >
             <SlidingPill
               container={tabRow}
@@ -139,7 +141,10 @@ export function AuthPage({ mode }: Props) {
             ))}
           </nav>
 
-          <form onSubmit={submit} className="mt-6 space-y-4">
+          <form
+            onSubmit={submit}
+            className="mt-6 space-y-4 short:mt-5 shorter:mt-4 shorter:space-y-3"
+          >
             {isRegister && (
               <Field label="Как к вам обращаться">
                 <input
@@ -215,7 +220,7 @@ export function AuthPage({ mode }: Props) {
           )}
 
           {meta.data?.demo_login && (
-            <div className="mt-6 border-t border-separator pt-5">
+            <div className="mt-6 border-t border-separator pt-5 short:mt-5 short:pt-4 shorter:mt-4">
               <Button
                 className="w-full"
                 isBusy={demo.isPending}
