@@ -20,7 +20,7 @@ type Props = {
 
 /**
  * Where the reader is in the tour: a thin segment per step, the current one in
- * the call-to-action gradient, and above them the step's icon, name and number.
+ * the accent, and above them the step's icon, name and number.
  * A segment opens its step, as dots under a slideshow do.
  */
 export function TourStepper({ steps, current, canOpen, onOpen }: Props) {
@@ -73,7 +73,7 @@ export function TourStepper({ steps, current, canOpen, onOpen }: Props) {
                     <motion.span
                       layoutId="tour-stepper-current"
                       transition={{ duration: DURATION.medium, ease: EASE }}
-                      className="absolute inset-0 rounded-full bg-linear-to-r from-[var(--cta-from)] to-[var(--cta-to)]"
+                      className="absolute inset-0 rounded-full bg-accent"
                     />
                   )}
                 </span>

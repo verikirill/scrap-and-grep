@@ -246,7 +246,7 @@ export function AccountPreview({ me }: { me?: Me | null }) {
           <Tile icon={Hub} size={24} />
           Доступ для ИИ-ассистентов
         </p>
-        <p className="mt-2 truncate rounded-lg bg-surface-secondary px-2.5 py-1.5 font-code text-[11px]">
+        <p className="mt-2 truncate rounded-lg bg-surface-secondary px-2.5 py-1.5 font-mono text-[11px]">
           https://…/api/mcp/
         </p>
         <div className="mt-2 flex flex-wrap gap-1">
