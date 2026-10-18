@@ -1,14 +1,17 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import { HttpResponse, http } from 'msw'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { Digest } from '../../lib/api'
 import { useDigest } from '../../lib/queries'
 import {
   makeDigest,
+  makeItem,
   makeManualWork,
   makePlanEntry,
   makeTagCount,
+  makeTopic,
   makeVulnerabilityChange,
+  makeVulnerabilityItem,
 } from '../../test/fixtures'
 import { renderWithProviders } from '../../test/render'
 import { apiUrl, server } from '../../test/server'
@@ -144,6 +147,41 @@ describe('IssueExtras', () => {
     await user.click(done)
     expect(done).toBeChecked()
     expect(screen.getByRole('checkbox', { name: PHISHING })).not.toBeChecked()
+  })
+
+  it('points a line to the entry’s summary below, the article a click aside', async () => {
+    const digest = {
+      ...twoLinePlan(),
+      topics: [
+        makeTopic({ items: [makeItem()] }),
+        makeTopic({ title: 'Атаки', items: [makeVulnerabilityItem()] }),
+      ],
+    }
+    const entry = document.createElement('article')
+    entry.id = 'entry-2'
+    const scrollIntoView = vi.fn()
+    Object.assign(entry, { scrollIntoView, animate: vi.fn() })
+    document.body.append(entry)
+    const { user } = renderWithProviders(<IssueExtras digest={digest} />)
+
+    const first = screen.getByRole('link', {
+      name: 'Уязвимость SIMATIC S7-1500 используется в атаках',
+    })
+    expect(first).toHaveAttribute('href', '#entry-2')
+    expect(
+      screen.getByRole('link', {
+        name: '«Уязвимость SIMATIC S7-1500 используется в атаках» на сайте источника',
+      }),
+    ).toHaveAttribute('href', 'https://www.securitylab.ru/news/562811.php')
+    await user.click(first)
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center' })
+
+    // A line whose entry is not in the issue keeps the article's own link.
+    expect(screen.getByRole('link', { name: 'Фишинг от имени Минэнерго' })).toHaveAttribute(
+      'href',
+      'https://ics-cert.kaspersky.ru/publications/minenergo-phishing-2026/',
+    )
+    entry.remove()
   })
 
   it('keeps a ticked line with the issue: folded, unfolded and loaded again', async () => {

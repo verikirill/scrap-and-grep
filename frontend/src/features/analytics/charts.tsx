@@ -1,6 +1,5 @@
 import clsx from 'clsx'
 import { motion } from 'motion/react'
-import { useId } from 'react'
 import type { ReactNode } from 'react'
 import { EASE } from '../../components/tokens'
 import { formatDay, formatPercent } from '../../lib/analyticsFormat'
@@ -89,8 +88,6 @@ export function DayBars({
   values: number[]
   label: string
 }) {
-  // An id that url(#…) takes as is, whatever characters React puts in it.
-  const gradient = `day-bars-${useId().replace(/[^\w-]/g, '')}`
   const peak = Math.max(0, ...values)
   const step = WIDTH / Math.max(1, values.length)
   const width = Math.max(1, step * 0.62)
@@ -98,12 +95,6 @@ export function DayBars({
     <figure>
       <ChartCaption label={label} top={peak ? `до ${formatNumber(peak)}` : undefined} />
       <Plot empty={peak ? null : 'За период показов не было'}>
-        <defs>
-          <linearGradient id={gradient} x1="0" x2="0" y1="1" y2="0">
-            <stop offset="0" style={{ stopColor: 'var(--cta-from)' }} />
-            <stop offset="1" style={{ stopColor: 'var(--cta-to)' }} />
-          </linearGradient>
-        </defs>
         <Guides />
         {values.map((value, index) => {
           const x = slotCenter(index, values.length) - width / 2
@@ -125,7 +116,7 @@ export function DayBars({
                 initial={{ y: HEIGHT, height: 0 }}
                 animate={{ y: HEIGHT - height, height }}
                 transition={{ duration: 0.5, ease: EASE, delay: Math.min(0.3, index * 0.01) }}
-                fill={`url(#${gradient})`}
+                className="fill-accent"
               >
                 <title>{`${formatDay(days[index])}: ${formatNumber(value)}`}</title>
               </motion.rect>
@@ -303,7 +294,7 @@ export function RateLines({
 
 export type BarTone = 'accent' | 'warning' | 'danger' | 'muted'
 
-// The main measure takes the call-to-action gradient; marks keep their own colours.
+// The main measure takes the accent; marks keep their own colours.
 const FILLS: Record<BarTone, string> = {
   accent: 'rate-fill',
   warning: 'bg-warning',

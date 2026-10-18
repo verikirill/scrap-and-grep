@@ -28,7 +28,7 @@ export function rowMotion(index: number, isQuiet = false) {
 export type ButtonVariant = 'primary' | 'tonal' | 'secondary' | 'ghost' | 'danger' | 'cta'
 
 // Our names for HeroUI's button variants: filled accent, soft, outlined, text, and danger;
-// cta is the one main action of a screen, a skewed gradient slab (index.css).
+// cta is the one main action of a screen, a skewed slab of the accent (index.css).
 const BUTTON_VARIANTS: Record<ButtonVariant, string> = {
   primary: 'button--primary',
   tonal: 'button--secondary',

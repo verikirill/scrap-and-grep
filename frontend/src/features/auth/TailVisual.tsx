@@ -65,10 +65,10 @@ export function TailVisual() {
   })
 
   return (
-    <div aria-hidden className="flex w-full max-w-[460px] flex-col items-center gap-8">
+    <div aria-hidden className="flex w-full max-w-[460px] flex-col items-center gap-8 short:gap-5">
       {/* The logo cat, awake and searching, on the light tile of the logo.
           Still under "reduce motion". */}
-      <ArtTile className="rounded-[1.75rem] p-3 shadow-[0_24px_80px_rgba(125,155,255,0.25)]">
+      <ArtTile className="rounded-[1.75rem] p-3 shadow-[0_24px_80px_rgba(125,155,255,0.25)] shorter:hidden">
         <BrandCat size={104} />
       </ArtTile>
       <div className="w-full overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] font-mono text-[13px] leading-6 shadow-2xl backdrop-blur">

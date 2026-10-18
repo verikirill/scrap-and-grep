@@ -15,11 +15,12 @@ const ROLES = [
 /**
  * The dark brand side of the sign-in pages: the radar, the cat and the reader
  * the digest is for. Shown from laptop width up; the moving parts mount only there.
+ * One window tall and no taller: it never stretches the page into a scroll.
  */
 export function AuthAside({ isWide }: { isWide: boolean }) {
   // The brand side keeps its dark look in both themes: it is a picture, not a surface.
   return (
-    <aside className="relative isolate hidden overflow-hidden bg-[#0b0f17] px-12 py-10 text-white lg:flex lg:flex-col">
+    <aside className="relative isolate hidden overflow-hidden bg-[#0b0f17] px-12 py-10 text-white short:py-7 lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col">
       {/* The radar sweeps the whole dark side from its middle; mounted only
           where the side is visible. */}
       {isWide && <AuthRadar />}
@@ -27,7 +28,7 @@ export function AuthAside({ isWide }: { isWide: boolean }) {
         <LogoMark size={32} />
         <Wordmark className="text-[15px]" />
       </div>
-      <div className="flex flex-1 items-center justify-center py-10">
+      <div className="flex min-h-0 flex-1 items-center justify-center py-10 short:py-5">
         {/* Mounted only where it is visible: animations hidden by CSS still run. */}
         {isWide && <TailVisual />}
       </div>
@@ -36,7 +37,7 @@ export function AuthAside({ isWide }: { isWide: boolean }) {
             the terminal above; a screen reader hears the sentence once. */}
         <p
           aria-label="Новости ИТ и ИБ под вашу работу"
-          className="font-serif text-[28px] leading-tight font-semibold"
+          className="text-[28px] leading-tight font-semibold tracking-tight"
         >
           <span aria-hidden>Новости ИТ и ИБ</span>
           <span aria-hidden className="mt-1 flex items-baseline gap-2.5">

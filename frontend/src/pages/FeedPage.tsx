@@ -12,7 +12,7 @@ import {
 } from '../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Fragment, useRef, useState } from 'react'
+import { Fragment, useCallback, useRef, useState } from 'react'
 import { toast } from '../lib/toast'
 import { Link, useSearchParams } from 'react-router'
 import { EASE, buttonClass } from '../components/tokens'
@@ -27,10 +27,11 @@ import {
   SheetTrigger,
 } from '../components/ui/sheet'
 import { FeedCard } from '../features/feed/FeedCard'
+import type { FeedReact } from '../features/feed/FeedCard'
 import { FeedViewSwitch } from '../features/feed/FeedViewSwitch'
 import { PostCard } from '../features/feed/PostCard'
 import { TastePanel } from '../features/feed/TastePanel'
-import type { FeedItem, FeedOrder, FeedView, Placement, ReactionKind } from '../lib/api'
+import type { FeedItem, FeedOrder, FeedView, ReactionKind } from '../lib/api'
 import { formatRelative, plural } from '../lib/format'
 import {
   keys,
@@ -171,11 +172,6 @@ export function FeedPage() {
       page.items.map((item) => [item.article_id, page.snapshot] as const),
     ) ?? [],
   )
-  const placementOf = (item: FeedItem): Placement => ({
-    listId: snapshotOf.get(item.article_id) ?? null,
-    position: item.position,
-    slot: item.slot,
-  })
   const generatedAt = feed.data?.pages[0]?.generated_at
   // New articles that passed the reader's interests since the list on screen was made.
   const fresh = useFeedFresh(tab === 'saved' ? null : feed.data?.pages[0]?.built_at)
@@ -185,22 +181,22 @@ export function FeedPage() {
   // Each mark's own outcome: with marks queued one after another, the
   // mutation's callbacks and its error follow only the last one made.
   const [markError, setMarkError] = useState<unknown>(null)
-  const react = (item: FeedItem, kind: ReactionKind, isActive: boolean) => {
-    setMarkError(null)
-    feedback
-      .mutateAsync({
-        articleId: item.article_id,
-        kind,
-        isActive,
-        context: 'feed',
-        placement: placementOf(item),
-      })
-      .then(() => {
-        if (TEACHING.includes(kind)) setPendingSignals((count) => count + 1)
-        const said = MARKED[kind]
-        if (isActive && said) toast.success(said)
-      }, setMarkError)
-  }
+  const { mutateAsync: sendFeedback } = feedback
+  // One function for the whole feed, so the memoized cards are not redrawn for a new one.
+  const react = useCallback<FeedReact>(
+    (kind, isActive, item, placement) => {
+      setMarkError(null)
+      sendFeedback({ articleId: item.article_id, kind, isActive, context: 'feed', placement }).then(
+        () => {
+          if (TEACHING.includes(kind)) setPendingSignals((count) => count + 1)
+          const said = MARKED[kind]
+          if (isActive && said) toast.success(said)
+        },
+        setMarkError,
+      )
+    },
+    [sendFeedback],
+  )
 
   // On a desktop it stands beside the feed; narrower, it opens from a button
   // instead of waiting after the whole feed.
@@ -479,8 +475,8 @@ export function FeedPage() {
                     item={item}
                     index={index}
                     isQuiet={isQuiet}
-                    placement={placementOf(item)}
-                    onReact={(kind, isActive) => react(item, kind, isActive)}
+                    listId={snapshotOf.get(item.article_id) ?? null}
+                    onReact={react}
                   />
                 </Fragment>
               ))}

@@ -1,7 +1,7 @@
 import clsx from 'clsx'
 import { ChevronDown } from '../../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { Link } from 'react-router'
 import { EASE, rowMotion } from '../../components/tokens'
 import { Chip, ReadingTime } from '../../components/ui'
@@ -12,6 +12,7 @@ import { OriginalLink } from '../reader/OriginalLink'
 import { articlePath } from '../reader/paths'
 import { RejectedRow, WhyPanel } from './cardParts'
 import { ReactionBar } from './ReactionBar'
+import { placementIn } from './placement'
 import { hasBreakdown, reasonIcon } from './reasons'
 
 export type FeedCardProps = {
@@ -19,12 +20,34 @@ export type FeedCardProps = {
   index: number
   /** Shown without the entrance, as after switching the feed's tab. */
   isQuiet?: boolean
-  placement: Placement
-  onReact: (kind: ReactionKind, isActive: boolean) => void
+  /** The feed snapshot the article came from. */
+  listId: string | null
+  /** One function for the whole feed: the card says which article and where it stood. */
+  onReact: FeedReact
 }
 
-/** One article of the feed: what it is, why it is here, and the reader's verdict. */
-export function FeedCard({ item, index, isQuiet, placement, onReact }: FeedCardProps) {
+/** A mark on a card, with the article and its place in the list. */
+export type FeedReact = (
+  kind: ReactionKind,
+  isActive: boolean,
+  item: FeedItem,
+  placement: Placement,
+) => void
+
+/**
+ * One article of the feed: what it is, why it is here, and the reader's verdict.
+ * Memoized with plain props, so a mark redraws its own card and not the feed.
+ */
+export const FeedCard = memo(function FeedCard({
+  item,
+  index,
+  isQuiet,
+  listId,
+  onReact: onReactTo,
+}: FeedCardProps) {
+  const placement = placementIn(listId, item)
+  const onReact = (kind: ReactionKind, isActive: boolean) =>
+    onReactTo(kind, isActive, item, placement)
   const [isWhyOpen, setIsWhyOpen] = useState(false)
   // Scrolled past without a mark is a quiet "not this": adaptive profiles learn from it.
   const seenRef = useSeen(item.article_id, 'feed', item.reactions.length === 0, placement)
@@ -125,4 +148,4 @@ export function FeedCard({ item, index, isQuiet, placement, onReact }: FeedCardP
       </AnimatePresence>
     </motion.article>
   )
-}
+})

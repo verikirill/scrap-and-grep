@@ -4,6 +4,19 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Window heights the sign-in page tightens for, so that it fits a laptop's
+   browser window without a scroll: a 1536×864 screen and a 1366×768 one. */
+@custom-variant short {
+  @media (max-height: 820px) {
+    @slot;
+  }
+}
+@custom-variant shorter {
+  @media (max-height: 740px) {
+    @slot;
+  }
+}
+
 /*
  * HeroUI v3 is the design system: its semantic colours (background, surface,
  * accent, muted, success, warning, danger and their soft variants), radii and
@@ -21,9 +34,6 @@
   /* Page titles sit in a dark pill in both themes. */
   --title-pill: oklch(22% 0.012 280);
   --title-pill-foreground: oklch(98% 0 0);
-  /* The one call to action: the accent running into the violet of the tags. */
-  --cta-from: var(--accent);
-  --cta-to: oklch(55% 0.22 285);
   /* HeroUI mixes the soft tones with transparent, and on the dotted page the
      dots showed through every tinted block. Mixed with the card colour they
      look the same on a card and stay solid on the page. */
@@ -44,7 +54,6 @@
   /* Secondary text a step lighter than HeroUI's: metadata on dark cards stays above 4.5:1. */
   --muted: oklch(76% 0.012 286);
   --title-pill: oklch(24% 0.008 286);
-  --cta-to: oklch(60% 0.2 285);
   --accent-soft: color-mix(in oklab, var(--accent) 12%, var(--surface));
   --accent-soft-hover: color-mix(in oklab, var(--accent) 16%, var(--surface));
   --danger-soft: color-mix(in oklab, var(--danger) 15%, var(--surface));
@@ -60,7 +69,8 @@
      an issue reads like an edited publication. */
   --font-sans: 'Inter Variable', ui-sans-serif, system-ui, 'Segoe UI', Arial, sans-serif;
   --font-serif: 'Source Serif 4 Variable', Georgia, 'Times New Roman', serif;
-  --font-code: 'JetBrains Mono Variable', ui-monospace, Consolas, monospace;
+  /* Under Tailwind's own name, so font-mono is ours and not the system's Consolas. */
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, Consolas, monospace;
 
   --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -177,7 +187,7 @@
   }
 
   /*
-   * The main call to action: a skewed gradient slab with an arrow. Only the
+   * The main call to action: a skewed slab of the accent with an arrow. Only the
    * slab behind is skewed (::before), the label stays upright and readable.
    */
   .button.cta {
@@ -195,16 +205,20 @@
     inset: 0;
     z-index: -1;
     border-radius: 0.85rem;
-    background: linear-gradient(100deg, var(--cta-from), var(--cta-to));
-    box-shadow: 0 10px 24px -12px color-mix(in oklab, var(--cta-to) 80%, transparent);
+    background: var(--accent);
+    box-shadow: 0 6px 14px -8px rgb(0 0 0 / 0.3);
     transform: skewX(-12deg);
     transition:
       transform 0.25s var(--ease-out-quint),
       filter 0.25s var(--ease-out-quint);
   }
 
+  .dark .button.cta::before {
+    box-shadow: 0 6px 14px -8px rgb(0 0 0 / 0.6);
+  }
+
   .button.cta:hover:not(:disabled)::before {
-    filter: brightness(1.08) saturate(1.1);
+    filter: brightness(1.08);
     transform: skewX(-12deg) scale(1.03);
   }
 
@@ -260,11 +274,7 @@
   /* The tile of an empty or failed place: the topic's icon on a soft tint. */
   .icon-tile {
     border-radius: 1.25rem;
-    background: linear-gradient(
-      140deg,
-      color-mix(in oklab, var(--accent) 14%, var(--surface)),
-      color-mix(in oklab, var(--cta-to) 9%, var(--surface))
-    );
+    background: var(--accent-soft);
     color: var(--accent-soft-foreground);
     box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 16%, transparent);
   }
@@ -275,23 +285,23 @@
     box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--danger) 20%, transparent);
   }
 
-  /* The filled part of a progress bar: the call-to-action gradient with a light running over it. */
+  /* The filled part of a progress bar: the accent with a light running over it. */
   .progress-fill {
     background:
       linear-gradient(100deg, transparent 30%, rgb(255 255 255 / 0.35) 50%, transparent 70%) 0 0 /
         200% 100%,
-      linear-gradient(90deg, var(--cta-from), var(--cta-to));
+      var(--accent);
     animation: progress-glint 2.2s linear infinite;
   }
 
-  /* A rate on the analytics page: the call-to-action gradient, still. */
+  /* A rate on the analytics page: the accent, still. */
   .rate-fill {
-    background: linear-gradient(90deg, var(--cta-from), var(--cta-to));
+    background: var(--accent);
   }
 
-  /* The interval across a rate: a thin violet whisker. */
+  /* The interval across a rate: a thin whisker, darker than the accent bar it crosses. */
   .rate-interval {
-    color: color-mix(in oklab, var(--cta-to) 75%, var(--foreground));
+    color: color-mix(in oklab, var(--accent) 45%, var(--foreground));
   }
 
   .rate-interval__part {
@@ -308,8 +318,8 @@
   .progress-marker__dot {
     background: var(--surface);
     box-shadow:
-      inset 0 0 0 3px var(--cta-to),
-      0 0 12px 1px color-mix(in oklab, var(--cta-to) 55%, transparent);
+      inset 0 0 0 3px var(--accent),
+      0 0 12px 1px color-mix(in oklab, var(--accent) 55%, transparent);
   }
 
   .progress-marker[data-state='queued'] .progress-marker__dot {
@@ -479,9 +489,9 @@
   background: conic-gradient(
     from 0deg,
     transparent 0deg 280deg,
-    color-mix(in oklab, var(--cta-to) 10%, transparent) 300deg,
-    color-mix(in oklab, var(--cta-from) 30%, transparent) 357deg,
-    color-mix(in oklab, var(--cta-from) 75%, white) 359.5deg,
+    color-mix(in oklab, var(--accent) 10%, transparent) 300deg,
+    color-mix(in oklab, var(--accent) 30%, transparent) 357deg,
+    color-mix(in oklab, var(--accent) 75%, white) 359.5deg,
     transparent 360deg
   );
   animation: auth-sweep 12s linear infinite;
@@ -492,8 +502,8 @@
   height: 6px;
   margin: -3px 0 0 -3px;
   border-radius: 9999px;
-  background: color-mix(in oklab, var(--cta-from) 60%, white);
-  box-shadow: 0 0 12px 3px color-mix(in oklab, var(--cta-from) 70%, transparent);
+  background: color-mix(in oklab, var(--accent) 60%, white);
+  box-shadow: 0 0 12px 3px color-mix(in oklab, var(--accent) 70%, transparent);
   opacity: 0;
   animation: auth-blip 12s linear infinite;
 }
@@ -528,20 +538,11 @@
 }
 
 /* The reader on the sign-in page's headline (features/auth/ScrambleText.tsx):
-   monospaced, in the call-to-action colours. */
+   in the headline's Inter, in a light accent. The word ends its line, so the
+   glyphs it runs through move only its own right edge. */
 .auth-role {
-  font-family: var(--font-code);
-  font-size: 0.86em;
-  font-weight: 600;
-  letter-spacing: -0.02em;
   white-space: nowrap;
-  background: linear-gradient(
-    100deg,
-    color-mix(in oklab, var(--cta-from) 70%, white),
-    var(--cta-to)
-  );
-  background-clip: text;
-  color: transparent;
+  color: color-mix(in oklab, var(--accent) 80%, white);
 }
 
 /* Rings that leave the sign-in form now and then, an echo of the radar on the
