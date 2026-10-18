@@ -8,7 +8,7 @@ import {
   Info,
 } from '../../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
-import { useEffect, useState } from 'react'
+import { memo, useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { buttonClass, EASE, rowMotion } from '../../components/tokens'
 import { AnimatedNumber, Card, Chip, ScoreBar, ReadingTime } from '../../components/ui'
@@ -63,17 +63,39 @@ function Funnel({ digest }: { digest: Digest }) {
   )
 }
 
+type OnReact = (articleId: number, kind: ReactionKind, isActive: boolean, position: number) => void
+
 type ItemCardProps = {
   item: DigestItem
   index: number
-  placement: Placement
+  digestId: string
+  /** The entry's number through the whole digest, from 1. */
+  position: number
   reactions: ReactionKind[] | undefined
-  onReact: (kind: ReactionKind, isActive: boolean) => void
+  onReact: OnReact
   /** The vulnerability's dated steps under the entry, unless the reader hides them. */
   hasTimeline: boolean
 }
 
-function ItemCard({ item, index, placement, reactions, onReact, hasTimeline }: ItemCardProps) {
+// A card without reactions yet gets this one array, not a new one on every render.
+const NO_REACTIONS: ReactionKind[] = []
+
+/**
+ * Memoized with plain props: a tick in the plan, a folded section or a mark on
+ * another entry redrew every card of the issue, 600 to 800 components.
+ */
+const ItemCard = memo(function ItemCard({
+  item,
+  index,
+  digestId,
+  position,
+  reactions,
+  onReact: onReactTo,
+  hasTimeline,
+}: ItemCardProps) {
+  const placement: Placement = { listId: digestId, position, slot: 'digest' }
+  const onReact = (kind: ReactionKind, isActive: boolean) =>
+    onReactTo(item.article_id, kind, isActive, position)
   const translated = item.headline !== item.title
   const personal = Math.abs(item.personal) >= 0.005 ? item.personal : 0
   const seenRef = useSeen(item.article_id, 'digest', !reactions?.length, placement)
@@ -155,7 +177,7 @@ function ItemCard({ item, index, placement, reactions, onReact, hasTimeline }: I
       <StoryStack main={item.source_name} duplicates={item.duplicates} />
     </motion.article>
   )
-}
+})
 
 type TopicSectionProps = {
   topic: Topic
@@ -164,7 +186,7 @@ type TopicSectionProps = {
   /** The place of the topic's first article in the whole digest, from 1. */
   firstPosition: number
   reactions: Record<string, ReactionKind[]> | undefined
-  onReact: (articleId: number, kind: ReactionKind, isActive: boolean, position: number) => void
+  onReact: OnReact
   hasTimeline: boolean
 }
 
@@ -248,7 +270,8 @@ function TopicSection({
           </button>
         </h3>
       </div>
-      <AnimatePresence initial={false}>
+      {/* As around the issue (DigestPage): the cards' motion elements stay put on a redraw. */}
+      <AnimatePresence initial={false} presenceAffectsLayout={false}>
         {!isFolded && (
           <motion.div
             key="body"
@@ -285,11 +308,10 @@ function TopicSection({
                   key={item.article_id}
                   item={item}
                   index={index}
-                  placement={{ listId: digestId, position: firstPosition + index, slot: 'digest' }}
-                  reactions={reactions ? (reactions[item.article_id] ?? []) : undefined}
-                  onReact={(kind, isActive) =>
-                    onReact(item.article_id, kind, isActive, firstPosition + index)
-                  }
+                  digestId={digestId}
+                  position={firstPosition + index}
+                  reactions={reactions ? (reactions[item.article_id] ?? NO_REACTIONS) : undefined}
+                  onReact={onReact}
                   hasTimeline={hasTimeline}
                 />
               ))}
@@ -380,15 +402,19 @@ export function DigestView({ digest, previousId }: { digest: Digest; previousId?
   const stats = digest.stats
   const articleIds = digest.topics.flatMap((topic) => topic.items.map((item) => item.article_id))
   const reactions = useReactions(articleIds)
-  const feedback = useFeedback()
-  const react = (articleId: number, kind: ReactionKind, isActive: boolean, position: number) =>
-    feedback.mutate({
-      articleId,
-      kind,
-      isActive,
-      context: 'digest',
-      placement: { listId: digest.id, position, slot: 'digest' },
-    })
+  const { mutate: sendFeedback } = useFeedback()
+  // One function for the whole issue, so the memoized cards are not redrawn for a new one.
+  const react = useCallback<OnReact>(
+    (articleId, kind, isActive, position) =>
+      sendFeedback({
+        articleId,
+        kind,
+        isActive,
+        context: 'digest',
+        placement: { listId: digest.id, position, slot: 'digest' },
+      }),
+    [sendFeedback, digest.id],
+  )
   // A block the reader's profile hides is not drawn; the entries always are.
   const shows = (key: DigestBlockKey) => isShown(digest, key)
   // Articles are counted through the whole digest, topic after topic.

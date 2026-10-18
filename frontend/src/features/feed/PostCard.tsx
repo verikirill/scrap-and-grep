@@ -1,11 +1,12 @@
 import clsx from 'clsx'
 import { ChevronDown, Eye, Target } from '../../components/icons'
 import { AnimatePresence, motion } from 'motion/react'
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { Link } from 'react-router'
 import { EASE, rowMotion } from '../../components/tokens'
 import { ReadingTime } from '../../components/ui'
 import { api } from '../../lib/api'
+import type { ReactionKind } from '../../lib/api'
 import { CATEGORY_LABELS, formatPostTime } from '../../lib/format'
 import { useSeen } from '../../lib/impressions'
 import { OriginalLink } from '../reader/OriginalLink'
@@ -13,6 +14,7 @@ import { articlePath } from '../reader/paths'
 import { RejectedRow, WhyPanel } from './cardParts'
 import type { FeedCardProps } from './FeedCard'
 import { ReactionBar } from './ReactionBar'
+import { placementIn } from './placement'
 import { REASON_ICONS, hasBreakdown } from './reasons'
 import { SourceAvatar } from './SourceAvatar'
 import { sourceTint } from './sourceLook'
@@ -22,7 +24,16 @@ import { sourceTint } from './sourceLook'
  * the article's picture, its headline and summary, one reason, and the
  * reader's verdict as reactions. The other reasons and the score open on tap.
  */
-export function PostCard({ item, index, isQuiet, placement, onReact }: FeedCardProps) {
+export const PostCard = memo(function PostCard({
+  item,
+  index,
+  isQuiet,
+  listId,
+  onReact: onReactTo,
+}: FeedCardProps) {
+  const placement = placementIn(listId, item)
+  const onReact = (kind: ReactionKind, isActive: boolean) =>
+    onReactTo(kind, isActive, item, placement)
   const [isWhyOpen, setIsWhyOpen] = useState(false)
   // A picture the site would not give leaves a post of text, until the feed is reloaded.
   const [isPictureBroken, setIsPictureBroken] = useState(false)
@@ -178,4 +189,4 @@ export function PostCard({ item, index, isQuiet, placement, onReact }: FeedCardP
       </div>
     </motion.article>
   )
-}
+})

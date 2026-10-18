@@ -6,8 +6,6 @@ import { makeFeedItem, makeFeedReason } from '../../test/fixtures'
 import { renderWithProviders } from '../../test/render'
 import { FeedCard } from './FeedCard'
 
-const placement = { listId: 'snapshot-1', position: 1, slot: 'ranked' as const }
-
 /** A card as the feed keeps it: a mark changes the card's reactions at once. */
 function MarkableCard({
   item,
@@ -21,7 +19,7 @@ function MarkableCard({
     <FeedCard
       item={{ ...item, reactions }}
       index={0}
-      placement={placement}
+      listId="snapshot-1"
       onReact={(kind, isActive) => {
         onReact(kind, isActive)
         setReactions((current) =>

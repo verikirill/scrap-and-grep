@@ -143,7 +143,10 @@ export function DigestPage() {
             />
           )}
 
-          <AnimatePresence mode="wait">
+          {/* No new presence context on every render: by default each one redrew
+              every motion element of the issue past the memoized cards. Nothing
+              inside animates its layout around an entering neighbour. */}
+          <AnimatePresence mode="wait" presenceAffectsLayout={false}>
             {digest.isLoading && activeId && (
               <motion.div key="loading" exit={{ opacity: 0 }}>
                 <Loading label="Открываем выпуск" className="space-y-3">

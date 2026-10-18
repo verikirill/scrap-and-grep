@@ -2,10 +2,11 @@ import { fireEvent, screen, within } from '@testing-library/react'
 import { HttpResponse, http } from 'msw'
 import { describe, expect, it, vi } from 'vitest'
 import { API_BASE } from '../../lib/api'
-import type { FeedItem, ReactionKind } from '../../lib/api'
+import type { FeedItem } from '../../lib/api'
 import { makeFeedItem, makeFeedReason } from '../../test/fixtures'
 import { renderWithProviders } from '../../test/render'
 import { apiUrl, server } from '../../test/server'
+import type { FeedReact } from './FeedCard'
 import { PostCard } from './PostCard'
 
 /** The server's source pictures: source id to the picture's version. */
@@ -23,14 +24,9 @@ function serveAvatars(avatars: Record<string, string> = {}) {
 /** A post with its source's picture looked up, as the feed draws it. */
 async function renderPost(item: FeedItem) {
   const asked = serveAvatars()
-  const onReact = vi.fn<(kind: ReactionKind, isActive: boolean) => void>()
+  const onReact = vi.fn<FeedReact>()
   const view = renderWithProviders(
-    <PostCard
-      item={item}
-      index={0}
-      placement={{ listId: 'snapshot-1', position: 1, slot: 'ranked' }}
-      onReact={onReact}
-    />,
+    <PostCard item={item} index={0} listId="snapshot-1" onReact={onReact} />,
   )
   await vi.waitFor(() => expect(asked()).toBe(1))
   return { ...view, onReact, post: screen.getByRole('article', { name: item.title }) }
@@ -88,13 +84,17 @@ describe('PostCard', () => {
       within(post).getByRole('link', { name: item.title }),
       new MouseEvent('auxclick', { bubbles: true, button: 1 }),
     )
-    expect(onReact).toHaveBeenCalledWith('open', true)
+    expect(onReact).toHaveBeenCalledWith('open', true, item, {
+      listId: 'snapshot-1',
+      position: item.position,
+      slot: item.slot,
+    })
 
     rerender(
       <PostCard
         item={{ ...item, reactions: ['open'] }}
         index={0}
-        placement={{ listId: 'snapshot-1', position: 1, slot: 'ranked' }}
+        listId="snapshot-1"
         onReact={onReact}
       />,
     )
@@ -103,20 +103,19 @@ describe('PostCard', () => {
 
   it('leaves a service line, as a chat does, for an article the reader hid', async () => {
     const item = makeFeedItem({ reactions: ['hide'] })
-    const onReact = vi.fn<(kind: ReactionKind, isActive: boolean) => void>()
+    const onReact = vi.fn<FeedReact>()
     const { user } = renderWithProviders(
-      <PostCard
-        item={item}
-        index={0}
-        placement={{ listId: 'snapshot-1', position: 1, slot: 'ranked' }}
-        onReact={onReact}
-      />,
+      <PostCard item={item} index={0} listId="snapshot-1" onReact={onReact} />,
     )
     expect(screen.getByRole('status')).toHaveTextContent(`Скрыто: ${item.title}`)
     expect(screen.queryByRole('article')).toBeNull()
 
     await user.click(screen.getByRole('button', { name: 'Вернуть в ленту' }))
 
-    expect(onReact).toHaveBeenCalledWith('hide', false)
+    expect(onReact).toHaveBeenCalledWith('hide', false, item, {
+      listId: 'snapshot-1',
+      position: item.position,
+      slot: item.slot,
+    })
   })
 })
