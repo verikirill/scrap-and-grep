@@ -1,10 +1,11 @@
-"""Builds the editable PPTX from what extract.cjs measured in slides.html.
+"""Builds the editable PPTX from what build.cjs measured in slides.html.
 
-Text goes into text boxes at the measured positions (Georgia for headings, Segoe UI for the rest),
-tables become native tables, and charts, schemes, screenshots and card backgrounds are the 2x PNG
-pictures extract.cjs cut from the rendered slides.
+Every slide gets its background picture (the frosted panels, charts and bars, without text),
+the pictures that can be moved on their own (device frames with screens, the cat, the Telegram
+post) and native text boxes at the measured places, in Inter as on the site. Line breaks are
+the ones the browser made, so a heading reads the same in PowerPoint.
 
-    uv run --no-project --with python-pptx --with pillow python build_pptx.py <extractDir> <out.pptx>
+    uv run --no-project --with python-pptx python build_pptx.py <workDir> <out.pptx>
 """
 
 from __future__ import annotations
@@ -24,8 +25,9 @@ from pptx.util import Emu, Pt
 SLIDE_W, SLIDE_H = 1920, 1080
 EMU_PER_PX = 12192000 // SLIDE_W  # a 1920 px slide is 13.333 in wide
 PT_PER_PX = 0.5  # 1920 px -> 960 pt
-BACKGROUND = RGBColor(0xF4, 0xF2, 0xEC)
 ALIGN = {"center": PP_ALIGN.CENTER, "right": PP_ALIGN.RIGHT, "end": PP_ALIGN.RIGHT}
+# PowerPoint measures a face a little differently: boxes get this much room to spare.
+SLACK = 0.04
 
 
 def px(value: float) -> Emu:
@@ -40,24 +42,21 @@ def color(css: str) -> RGBColor | None:
 
 
 def font_of(style: dict) -> tuple[str, bool]:
-    """Font name and bold flag for a CSS style: Georgia for serif, Consolas for code, else Segoe UI."""
+    """The face PowerPoint knows by name, and whether it is the bold of that face."""
     weight = int(style["weight"])
-    family = style["family"].lower()
-    if style.get("code") or "consolas" in family or "mono" in family:
+    if style.get("mono"):
         return "Consolas", False
-    if "georgia" in family or ("serif" in family and "sans" not in family):
-        return "Georgia", weight >= 600
-    if 560 <= weight < 700:
-        return "Segoe UI Semibold", False
-    return "Segoe UI", weight >= 700
-
-
-def clean(text: str, style: dict) -> str:
-    if style.get("ws") not in ("pre", "pre-wrap"):
-        text = re.sub(r"[ \t\r\n\f]+", " ", text)
-    if style.get("transform") == "uppercase":
-        text = text.upper()
-    return text
+    if "inter display" in style["family"].lower():
+        return ("Inter Display ExtraBold", False) if weight >= 800 else ("Inter Display", True)
+    if weight >= 800:
+        return "Inter ExtraBold", False
+    if weight >= 700:
+        return "Inter", True
+    if weight >= 600:
+        return "Inter SemiBold", False
+    if weight >= 500:
+        return "Inter Medium", False
+    return "Inter", False
 
 
 def style_run(run, style: dict) -> None:
@@ -65,133 +64,90 @@ def style_run(run, style: dict) -> None:
     run.font.name = name
     run.font.bold = bold
     run.font.italic = style.get("italic", False)
-    run.font.size = Pt(style["size"] * PT_PER_PX)
+    run.font.size = Pt(round(style["size"] * PT_PER_PX * 2) / 2)
     rgb = color(style["color"])
     if rgb:
         run.font.color.rgb = rgb
-    if style.get("ls") not in (None, "normal"):
+    if style.get("ls") not in (None, "normal", "0px"):
         spacing = float(style["ls"].removesuffix("px")) * PT_PER_PX * 100
         run.font._element.set("spc", str(round(spacing)))
-    # Latin and Cyrillic both take the same face.
     rpr = run.font._element
-    for tag in ("a:cs", "a:ea"):
+    for tag in ("a:ea", "a:cs"):
         el = rpr.find(qn(tag))
         if el is None:
             el = etree.SubElement(rpr, qn(tag))
         el.set("typeface", name)
 
 
-def fill_paragraph(paragraph, runs: list[dict], lines: list[str] | None = None) -> None:
-    """Writes runs into a paragraph; for headings the measured line breaks are kept."""
-    items = runs
-    if lines:
-        style = next(r["style"] for r in runs if "style" in r)
-        items = []
-        for k, line in enumerate(lines):
-            items.append({"text": line.strip() if k else line.rstrip(), "style": style})
-            if k < len(lines) - 1:
-                items.append({"br": True})
-    first = True
-    for item in items:
-        if item.get("br"):
-            paragraph.add_line_break()
-            first = True
+def pieces(runs: list[dict]) -> list[tuple[str, dict] | None]:
+    """Runs cut at the browser's line breaks; None stands for a break. White space is collapsed
+    as CSS does, and removed at the ends of every line."""
+    out: list[tuple[str, dict] | None] = []
+    for run in runs:
+        if run.get("br"):
+            out.append(None)
             continue
-        text = clean(item["text"], item["style"])
-        if first:
-            text = text.lstrip()
-        if not text:
-            continue
-        first = False
-        run = paragraph.add_run()
-        run.text = text
-        style_run(run, item["style"])
-    # A trailing space at the end of a block does not belong to the text.
-    if paragraph.runs:
-        last = paragraph.runs[-1]
-        last.text = last.text.rstrip()
-
-
-def set_frame(frame, pad: list[float], valign: str = "top") -> None:
-    frame.word_wrap = True
-    frame.auto_size = MSO_AUTO_SIZE.NONE
-    top, right, bottom, left = pad
-    frame.margin_top, frame.margin_right = px(top), px(right)
-    frame.margin_bottom, frame.margin_left = px(bottom), px(left)
-    frame.vertical_anchor = MSO_ANCHOR.MIDDLE if valign == "middle" else MSO_ANCHOR.TOP
+        text, style = run["text"], run["style"]
+        cuts = [0, *run.get("breaks", []), len(text)]
+        for k in range(len(cuts) - 1):
+            if k:
+                out.append(None)
+            part = re.sub(r"[ \t\r\n\f]+", " ", text[cuts[k] : cuts[k + 1]])
+            if style.get("transform") == "uppercase":
+                part = part.upper()
+            out.append((part, style))
+    # Trim the spaces each line starts or ends with. A <br> and the new line the browser
+    # reported right after it are one break.
+    lines: list[list[tuple[str, dict]]] = [[]]
+    for item in out:
+        if item is None:
+            if lines[-1]:
+                lines.append([])
+        elif item[0]:
+            lines[-1].append(item)
+    result: list[tuple[str, dict] | None] = []
+    for n, line in enumerate(lines):
+        if line:
+            line[0] = (line[0][0].lstrip(), line[0][1])
+            line[-1] = (line[-1][0].rstrip(), line[-1][1])
+        if n:
+            result.append(None)
+        result.extend(item for item in line if item[0])
+    while result and result[-1] is None:
+        result.pop()
+    return result
 
 
 def add_text(slide, block: dict) -> None:
     r = dict(block["rect"])
-    if block["slideNumber"]:
-        r["x"], r["w"] = r["x"] + r["w"] - 80, 80
-        block = {**block, "align": "right"}
-    box = slide.shapes.add_textbox(px(r["x"]), px(r["y"]), px(r["w"]) + px(2), px(r["h"]))
+    top, right, bottom, left = block["pad"]
+    extra = max(8.0, r["w"] * SLACK)
+    align = block["align"]
+    if align == "center":
+        r["x"] -= extra / 2
+    elif align in ("right", "end"):
+        r["x"] -= extra
+    r["w"] += extra
+    box = slide.shapes.add_textbox(px(r["x"]), px(r["y"]), px(r["w"]), px(r["h"]))
     frame = box.text_frame
-    set_frame(frame, block["pad"])
-    # One measured line stays one line even if PowerPoint measures the face a little wider.
-    if r["h"] < block["lineHeight"] * 1.5:
-        frame.word_wrap = False
+    frame.auto_size = MSO_AUTO_SIZE.NONE
+    frame.margin_top, frame.margin_right = px(top), px(right)
+    frame.margin_bottom, frame.margin_left = px(bottom), px(left)
+    frame.vertical_anchor = MSO_ANCHOR.TOP
+    # The breaks are given: PowerPoint must not add its own.
+    frame.word_wrap = False
     paragraph = frame.paragraphs[0]
-    paragraph.alignment = ALIGN.get(block["align"], PP_ALIGN.LEFT)
+    paragraph.alignment = ALIGN.get(align, PP_ALIGN.LEFT)
     paragraph.line_spacing = Pt(block["lineHeight"] * PT_PER_PX)
-    fill_paragraph(paragraph, block["runs"], block.get("lines"))
-    box.name = f"{block['tag']} text"
-
-
-def border(cell, side: str, width: float, rgb: RGBColor | None) -> None:
-    tcpr = cell._tc.get_or_add_tcPr()
-    tag = {"L": "a:lnL", "R": "a:lnR", "T": "a:lnT", "B": "a:lnB"}[side]
-    for old in tcpr.findall(qn(tag)):
-        tcpr.remove(old)
-    line = etree.SubElement(tcpr, qn(tag), w=str(round(width * EMU_PER_PX)) if rgb else "0")
-    if rgb:
-        fill = etree.SubElement(line, qn("a:solidFill"))
-        etree.SubElement(fill, qn("a:srgbClr"), val=str(rgb))
-    else:
-        etree.SubElement(line, qn("a:noFill"))
-    # Borders must come before the cell fill in tcPr.
-    for tag in ("a:noFill", "a:solidFill"):
-        fill_el = tcpr.find(qn(tag))
-        if fill_el is not None:
-            tcpr.remove(fill_el)
-            tcpr.append(fill_el)
-
-
-def add_table(slide, table: dict) -> None:
-    rows = table["rows"]
-    widest = max(rows, key=lambda row: len(row["cells"]))
-    lefts = [c["rect"]["x"] for c in widest["cells"]] + [table["rect"]["x"] + table["rect"]["w"]]
-    widths = [lefts[i + 1] - lefts[i] for i in range(len(widest["cells"]))]
-    r = table["rect"]
-    shape = slide.shapes.add_table(len(rows), len(widths), px(r["x"]), px(r["y"]), px(r["w"]), px(r["h"]))
-    tbl = shape.table
-    tbl.first_row = False
-    tbl.horz_banding = False
-    for i, w in enumerate(widths):
-        tbl.columns[i].width = px(w)
-    for i, row in enumerate(rows):
-        tbl.rows[i].height = px(row["rect"]["h"])
-        col = 0
-        for cell_data in row["cells"]:
-            cell = tbl.cell(i, col)
-            span = cell_data["colspan"]
-            if span > 1:
-                cell.merge(tbl.cell(i, col + span - 1))
-            cell.fill.background()
-            set_frame(cell.text_frame, cell_data["pad"])
-            paragraph = cell.text_frame.paragraphs[0]
-            paragraph.alignment = ALIGN.get(cell_data["align"], PP_ALIGN.LEFT)
-            paragraph.line_spacing = Pt(cell_data["lineHeight"] * PT_PER_PX)
-            fill_paragraph(paragraph, cell_data["runs"])
-            for k in range(span):
-                target = tbl.cell(i, col + k)
-                for side in "LRT":
-                    border(target, side, 0, None)
-                b = cell_data["borderBottom"]
-                border(target, "B", b["w"], color(b["color"]) if b["style"] != "none" and b["w"] else None)
-            col += span
-    shape.name = "table"
+    for item in pieces(block["runs"]):
+        if item is None:
+            paragraph.add_line_break()
+            continue
+        run = paragraph.add_run()
+        run.text = item[0]
+        style_run(run, item[1])
+    text = "".join(run.text for run in paragraph.runs)
+    box.name = f"Текст: {text[:40]}"
 
 
 def add_picture(slide, base: Path, picture: dict) -> None:
@@ -199,24 +155,23 @@ def add_picture(slide, base: Path, picture: dict) -> None:
     shape = slide.shapes.add_picture(
         str(base / picture["file"]), px(clip["x"]), px(clip["y"]), px(clip["w"]), px(clip["h"])
     )
-    shape.name = f"{picture['kind']} {picture['id'] or picture['label'] or picture['alt']}".strip()
+    names = {"device": "Экран", "cat": "Кот", "image": "Картинка"}
+    shape.name = f"{names.get(picture['kind'], 'Картинка')}: {picture['alt']}"[:80]
     if picture["alt"]:
         shape._element.nvPicPr.cNvPr.set("descr", picture["alt"])
 
 
-def build(extract_dir: Path, out: Path) -> None:
-    deck = json.loads((extract_dir / "deck.json").read_text(encoding="utf-8"))
+def build(work: Path, out: Path) -> None:
+    deck = json.loads((work / "deck.json").read_text(encoding="utf-8"))
     prs = Presentation()
     prs.slide_width, prs.slide_height = px(SLIDE_W), px(SLIDE_H)
     layout = prs.slide_layouts[6]  # blank
     for data in deck:
         slide = prs.slides.add_slide(layout)
-        slide.background.fill.solid()
-        slide.background.fill.fore_color.rgb = BACKGROUND
+        bg = slide.shapes.add_picture(str(work / data["bg"]), 0, 0, px(SLIDE_W), px(SLIDE_H))
+        bg.name = "Фон слайда"
         for picture in data["pictures"]:
-            add_picture(slide, extract_dir, picture)
-        for table in data["tables"]:
-            add_table(slide, table)
+            add_picture(slide, work, picture)
         for block in data["texts"]:
             add_text(slide, block)
     prs.save(out)

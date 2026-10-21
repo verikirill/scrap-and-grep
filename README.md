@@ -4,7 +4,7 @@ Scrap&Grep собирает новости ИТ и ИБ для энергоко�
 
 Руководитель заводит команды компании один раз, а сотрудники входят по ссылке с готовым профилем интересов.
 
-Решение хакатона «ИИ-ассистенты для энергетики» ([задание](docs/task/TASK.md)). [Видео](https://git.codenrock.com/codenrock/ii-assistenty/misis-mojarung/assistent-dlya-sozdaniya-it-ib-daydzhestov/uploads/36d3943d5863dd953afaaeee3f1b9afe/scrapgrep-demo.mp4), 5,5 минуты, без голоса, с субтитрами. [Презентация](docs/presentation/scrapgrep.pdf), 24 слайда, и её [редактируемая версия в PPTX](docs/presentation/scrapgrep.pptx). Примеры: [выпуск специалисту за сутки](examples/specialist-daily.md), [выпуск руководству за неделю](examples/management-weekly.md).
+Решение хакатона «ИИ-ассистенты для энергетики» ([задание](docs/task/TASK.md)). [Видео](https://git.codenrock.com/codenrock/ii-assistenty/misis-mojarung/assistent-dlya-sozdaniya-it-ib-daydzhestov/uploads/36d3943d5863dd953afaaeee3f1b9afe/scrapgrep-demo.mp4), 5,5 минуты, без голоса, с субтитрами. [Презентация](docs/presentation/scrapgrep.pdf), 18 слайдов, и её [редактируемая версия в PPTX](docs/presentation/scrapgrep.pptx). Примеры: [выпуск специалисту за сутки](examples/specialist-daily.md), [выпуск руководству за неделю](examples/management-weekly.md).
 
 ![Выпуск специалисту по ИБ АСУ ТП: «Главное», цифры периода, строка «Вместо ручной работы», история выпусков справа](docs/screenshots/digest.png)
 
@@ -337,7 +337,7 @@ docker compose down
 | [docs/CI.md](docs/CI.md) | задания GitLab CI/CD и GitHub Actions, запуск проверок у себя, выкатка стенда |
 | [docs/eval/](docs/eval/) | сравнение с аналитиком, поиск, лента, подстройка профиля, ранжирование, склейка дублей, стоимость контура |
 | [examples/](examples/README.md) | готовые выпуски в Markdown и DOCX, резюме, смена интересов, датасет организаторов, тот же выпуск на пяти моделях |
-| [docs/presentation/](docs/presentation/README.md) | презентация на 24 слайда в PDF и PPTX |
+| [docs/presentation/](docs/presentation/README.md) | презентация на 18 слайдов в PDF и PPTX |
 
 ## Тесты и CI
 
