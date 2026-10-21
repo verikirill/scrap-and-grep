@@ -72,6 +72,11 @@ def style_run(run, style: dict) -> None:
         spacing = float(style["ls"].removesuffix("px")) * PT_PER_PX * 100
         run.font._element.set("spc", str(round(spacing)))
     rpr = run.font._element
+    # A reference to a source is a superscript, as on the slide.
+    if style.get("va") == "super":
+        rpr.set("baseline", "30000")
+        # PowerPoint draws a superscript about a third smaller than its size.
+        run.font.size = Pt(round(style["size"] * PT_PER_PX * 1.5 * 2) / 2)
     for tag in ("a:ea", "a:cs"):
         el = rpr.find(qn(tag))
         if el is None:
