@@ -2,759 +2,791 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=1920">
-<title>Scrap&amp;Grep</title>
+<title>Scrap&amp;Grep - презентация</title>
 <style>
-@font-face { font-family: 'Roboto Flex'; font-weight: 100 1000; font-display: block;
-  src: url(fonts/roboto-flex-cyrillic-wght-normal.woff2) format('woff2-variations');
-  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
-@font-face { font-family: 'Roboto Flex'; font-weight: 100 1000; font-display: block;
-  src: url(fonts/roboto-flex-latin-wght-normal.woff2) format('woff2-variations');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
-@font-face { font-family: 'Source Serif 4'; font-weight: 200 900; font-display: block;
-  src: url(fonts/source-serif-4-cyrillic-wght-normal.woff2) format('woff2-variations');
-  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
-@font-face { font-family: 'Source Serif 4'; font-weight: 200 900; font-display: block;
-  src: url(fonts/source-serif-4-latin-wght-normal.woff2) format('woff2-variations');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Inter'; src: url(fonts/Inter-Regular.ttf); font-weight: 400; }
+@font-face { font-family: 'Inter'; src: url(fonts/Inter-Medium.ttf); font-weight: 500; }
+@font-face { font-family: 'Inter'; src: url(fonts/Inter-SemiBold.ttf); font-weight: 600; }
+@font-face { font-family: 'Inter'; src: url(fonts/Inter-Bold.ttf); font-weight: 700; }
+@font-face { font-family: 'Inter'; src: url(fonts/Inter-ExtraBold.ttf); font-weight: 800; }
+@font-face { font-family: 'Inter Display'; src: url(fonts/InterDisplay-Bold.ttf); font-weight: 700; }
+@font-face { font-family: 'Inter Display'; src: url(fonts/InterDisplay-ExtraBold.ttf); font-weight: 800; }
 
-/* One palette for the whole deck: warm paper, muted teal, ochre for the numbers that matter. */
+/* The site's theme: HeroUI v3 colours, Inter, round corners. */
 :root {
-  --bg: #f4f2ec;
-  --surface: #ffffff;
-  --tint: #e3ebe9;
-  --text: #1d2a30;
-  --muted: #55646a;
-  --faint: #86939a;
-  --line: #d6dbd8;
-  --primary: #2f5f66;
-  --primary-soft: #8fb0b4;
-  --accent: #a8743d;
-  --accent-tint: #f0e5d5;
-  --serif: 'Source Serif 4', Georgia, serif;
-  --sans: 'Roboto Flex', 'Segoe UI', Arial, sans-serif;
-  --mono: 'Cascadia Mono', Consolas, monospace;
+  --bg: #f5f5f5;
+  --ink: #18181b;
+  --ink-2: #3f3f46;
+  --muted: #71717a;
+  --accent: #0485f7;
+  --accent-ink: #0369c9;
+  --accent-soft: #e1effe;
+  --success: #17c964;
+  --success-ink: #0f8a44;
+  --warning: #f5a524;
+  --warning-ink: #b56d00;
+  --danger: #ff383c;
+  --danger-ink: #d1191d;
+  --pill: #191a20;
+  --line: #dedee0;
+  --glass: rgba(255, 255, 255, 0.66);
+  --glass-edge: rgba(255, 255, 255, 0.9);
+  --display: 'Inter Display', 'Inter', sans-serif;
+  --sans: 'Inter', sans-serif;
+  --mono: 'JetBrains Mono', Consolas, monospace;
 }
-* { box-sizing: border-box; margin: 0; padding: 0; }
 @page { size: 1920px 1080px; margin: 0; }
-html, body { background: #cfd3d0; }
-body { font-family: var(--sans); color: var(--text); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-section.slide {
-  width: 1920px; height: 1080px; position: relative; overflow: hidden;
-  background: var(--bg); padding: 84px 104px 110px; display: flex; flex-direction: column;
-  break-after: page; margin: 0 auto 24px;
+* { box-sizing: border-box; }
+html, body { margin: 0; background: #d9dadd; }
+body { font-family: var(--sans); color: var(--ink); -webkit-font-smoothing: antialiased; font-feature-settings: 'cv11', 'ss01'; }
+.slide {
+  position: relative; width: 1920px; height: 1080px; overflow: hidden;
+  background: var(--bg); margin: 0 auto 40px; page-break-after: always; break-after: page;
 }
-@media print { section.slide { margin: 0; } html, body { background: var(--bg); } }
+@media print { html, body { background: none; } .slide { margin: 0; } }
 
-.kicker { font-size: 21px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; color: var(--primary); }
-h2 { font-family: var(--serif); font-weight: 600; font-size: 54px; line-height: 1.16; margin-top: 16px; max-width: 1560px; text-wrap: balance; }
-.lead { font-size: 30px; line-height: 1.5; color: var(--muted); max-width: 1400px; margin-top: 22px; text-wrap: pretty; }
-p, li { font-size: 27px; line-height: 1.5; text-wrap: pretty; }
+/* Background: soft blobs of the site's colours over the site's halftone dots. */
+.bg { position: absolute; inset: 0; z-index: 0; }
+.bg::before {
+  content: ''; position: absolute; inset: 0;
+  background-image: radial-gradient(rgba(24, 24, 27, 0.13) 1.6px, transparent 2px);
+  background-size: 26px 26px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 80% at var(--dx, 85%) var(--dy, 20%), #000 0, transparent 70%);
+  mask-image: radial-gradient(ellipse 70% 80% at var(--dx, 85%) var(--dy, 20%), #000 0, transparent 70%);
+}
+.blob { position: absolute; border-radius: 50%; filter: blur(70px); opacity: 0.55; }
+.b-blue { background: #4aa3ff; }
+.b-sky { background: #8fd3ff; }
+.b-violet { background: #b9a6ff; }
+.b-mint { background: #8ff0c5; }
+.b-peach { background: #ffc78f; }
+.b-rose { background: #ffadc0; }
+
+.wrap { position: absolute; inset: 0; z-index: 2; padding: 72px 96px 0; }
+
+/* The page title of the site: a dark pill in capitals. */
+.tag {
+  display: inline-block; background: var(--pill); color: #fff; border-radius: 999px;
+  font: 800 20px/1 var(--sans); letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 13px 24px 12px;
+}
+.tag.accent { background: var(--accent); }
+h1, h2 { font-family: var(--display); font-weight: 800; letter-spacing: -0.025em; margin: 0; color: var(--ink); }
+h2 { font-size: 66px; line-height: 1.06; margin-top: 26px; max-width: 1400px; }
+h2 em { font-style: normal; color: var(--accent); }
+.lead { font: 400 29px/1.42 var(--sans); color: var(--ink-2); margin: 22px 0 0; max-width: 1100px; }
+p { margin: 0; }
+b, strong { font-weight: 700; }
+
+.glass {
+  position: absolute; background: var(--glass);
+  -webkit-backdrop-filter: blur(26px) saturate(1.5); backdrop-filter: blur(26px) saturate(1.5);
+  border: 2px solid var(--glass-edge); border-radius: 36px;
+  box-shadow: 0 30px 70px -30px rgba(20, 30, 60, 0.28), 0 2px 6px rgba(20, 30, 60, 0.05);
+}
+.solid { background: #fff; }
+.pad { padding: 34px 38px; }
+
+/* Numbers. */
+.num { font: 800 92px/0.95 var(--display); letter-spacing: -0.035em; color: var(--accent); }
+.num.ink { color: var(--ink); }
+.num.sm { font-size: 64px; }
+.num.xs { font-size: 50px; }
+.cap { font: 500 24px/1.35 var(--sans); color: var(--ink-2); margin-top: 12px; }
+.cap.sm { font-size: 21px; }
+.label { font: 700 18px/1.2 var(--sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 .muted { color: var(--muted); }
-b, strong { font-weight: 650; }
-.num { color: var(--accent); font-weight: 700; }
-code { font-family: var(--mono); font-size: .84em; background: var(--tint); padding: 2px 8px; border-radius: 8px; }
-.src { font-size: 19px; line-height: 1.45; color: var(--faint); }
-.foot { position: absolute; left: 104px; right: 104px; bottom: 40px; display: flex; justify-content: space-between; align-items: baseline; font-size: 19px; color: var(--faint); }
-.foot .crit { color: var(--primary); }
-.grow { flex: 1; min-height: 0; }
-.row { display: flex; gap: 64px; }
-.col { display: flex; flex-direction: column; }
+.acc { color: var(--accent); }
+.ok { color: var(--success-ink); }
+.warn { color: var(--warning-ink); }
+.bad { color: var(--danger-ink); }
 
-/* A browser window around a screenshot: drawn once here, used on every slide. */
-.browser { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; overflow: hidden;
-  box-shadow: 0 8px 28px rgba(29, 42, 48, .08); }
-.browser .bar { height: 42px; display: flex; align-items: center; gap: 9px; padding: 0 18px; background: #eceeeb; border-bottom: 1px solid var(--line); }
-.browser .bar i { width: 13px; height: 13px; border-radius: 50%; background: #cdd3d1; }
-.browser .bar span { margin-left: 18px; height: 24px; flex: 0 1 460px; border-radius: 12px; background: #fbfbf9; font-size: 15px; line-height: 24px; padding: 0 14px; color: var(--faint); }
-.browser img { display: block; width: 100%; }
-/* A frame of a set height shows the top of the screen and crops the rest. */
-.browser.fit { display: flex; flex-direction: column; }
-.browser.fit img { flex: 1; min-height: 0; object-fit: cover; object-position: top left; }
-.phone { width: 330px; border: 13px solid #1d2a30; border-radius: 50px; overflow: hidden; background: #1d2a30;
-  box-shadow: 0 10px 30px rgba(29, 42, 48, .16); position: relative; }
-.phone img { display: block; width: 100%; border-radius: 37px; }
-.caption { font-size: 21px; line-height: 1.45; color: var(--muted); margin-top: 14px; }
+/* Footer: the mark, the source of the numbers, the slide number. */
+.foot {
+  position: absolute; left: 96px; right: 96px; bottom: 34px; z-index: 3;
+  display: flex; align-items: center; gap: 18px; font: 500 18px/1.3 var(--sans); color: var(--muted);
+}
+.foot .mark { width: 34px; height: 34px; border-radius: 10px; background: #fff; padding: 3px; box-shadow: 0 2px 6px rgba(0,0,0,.08); }
+.foot .brand { font: 700 19px/1 var(--sans); color: var(--ink); }
+.foot .brand i { font-style: normal; color: var(--accent); }
+.foot .src { flex: 1; text-align: right; }
+.foot .page { font: 700 19px/1 var(--sans); color: var(--ink); min-width: 70px; text-align: right; }
 
-/* Cover */
-.cover { padding: 96px 104px; }
-.cover .brand { font-family: var(--serif); font-size: 40px; font-weight: 650; color: var(--primary); }
-.cover h1 { font-family: var(--serif); font-weight: 600; font-size: 66px; line-height: 1.12; margin-top: 40px; max-width: 760px; text-wrap: balance; }
-.cover .lead { max-width: 740px; font-size: 28px; }
-.cover .meta { position: absolute; left: 104px; bottom: 72px; font-size: 22px; color: var(--muted); }
-.cover .art { position: absolute; right: 72px; top: 170px; width: 980px; }
-.cover .art .phone { position: absolute; right: -10px; top: 330px; width: 250px; }
+/* Device frames: a MacBook Pro and an iPhone 17 Pro. */
+.device { position: absolute; z-index: 1; }
+.mac .lid {
+  position: relative; background: #0b0b0d; border-radius: 26px 26px 12px 12px;
+  padding: 16px 16px 20px; box-shadow: 0 0 0 3px #c4c7cc, 0 0 0 4px #9da1a8;
+}
+.mac .lid::after {
+  content: ''; position: absolute; top: 15px; left: 50%; width: 12%; height: 20px;
+  transform: translateX(-50%); background: #0b0b0d; border-radius: 0 0 12px 12px;
+}
+.mac .screen { border-radius: 10px; overflow: hidden; background: #fff; line-height: 0; }
+.mac .screen img { width: 100%; display: block; }
+.mac .base {
+  position: relative; height: 24px; margin: 0 -7.5%;
+  background: linear-gradient(#eceef1 0, #cfd2d7 35%, #a7abb2 100%);
+  border-radius: 2px 2px 26px 26px / 2px 2px 20px 20px;
+  box-shadow: 0 30px 50px -18px rgba(20, 25, 40, 0.45);
+}
+.mac .base::before {
+  content: ''; position: absolute; left: 50%; top: 0; width: 15%; height: 9px; transform: translateX(-50%);
+  background: linear-gradient(#b5b9bf, #d5d8dc); border-radius: 0 0 10px 10px;
+}
+.iphone .rim {
+  position: relative; padding: 5px; border-radius: 74px;
+  background: linear-gradient(140deg, #f2f3f5 0, #a9adb4 22%, #e7e8eb 48%, #8f949c 74%, #dfe1e4 100%);
+  box-shadow: 0 40px 70px -28px rgba(20, 25, 40, 0.5);
+}
+.iphone .bezel { background: #050506; border-radius: 69px; padding: 12px; }
+.iphone .screen { position: relative; border-radius: 58px; overflow: hidden; background: #fff; aspect-ratio: 402 / 874; }
+.iphone .screen img { position: absolute; left: 0; top: 0; width: 100%; display: block; }
+.iphone .screen.dark { background: #0f1115; }
+.iphone .screen { container-type: inline-size; }
+.iphone .screen > img { top: 6.2%; }
+.iphone .screen.dark > img { top: 0; height: 100%; object-fit: contain; }
+.iphone .status {
+  position: absolute; left: 0; right: 0; top: 0; height: 6.2%; z-index: 1; background: #fff;
+  display: flex; align-items: center; justify-content: space-between; padding: 0.6% 9% 0;
+  font: 600 4.3cqw/1 var(--sans); color: #000;
+}
+.iphone .status svg { height: 3.4cqw; width: auto; fill: #000; }
+.iphone .island {
+  position: absolute; top: 3.2%; left: 50%; width: 31%; height: 3.9%; transform: translateX(-50%);
+  background: #000; border-radius: 99px; z-index: 2;
+}
+.iphone .btn { position: absolute; width: 5px; background: #9da1a8; border-radius: 3px; }
 
-/* Process and step diagrams */
-.steps { display: grid; gap: 22px; }
-.step { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 30px 30px 32px; }
-.step .n { font-family: var(--serif); font-size: 40px; font-weight: 650; color: var(--primary); line-height: 1; }
-.step h3 { font-size: 30px; font-weight: 650; margin: 14px 0 10px; }
-.step p { font-size: 24px; line-height: 1.45; color: var(--muted); }
-.note { margin-top: 26px; padding: 20px 28px; border-left: 5px solid var(--accent); background: var(--accent-tint); border-radius: 0 14px 14px 0; font-size: 24px; line-height: 1.45; }
+/* Cats. */
+.cat { position: absolute; z-index: 3; }
 
-.flow { display: flex; align-items: stretch; gap: 0; margin-top: 44px; }
-.flow .box { flex: 1; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 22px 20px; }
-.flow .box b { display: block; font-size: 25px; margin-bottom: 8px; color: var(--primary); }
-.flow .box span { font-size: 21px; line-height: 1.4; color: var(--muted); display: block; }
-.flow .arrow { width: 34px; display: grid; place-items: center; color: var(--primary-soft); font-size: 30px; }
-.flow .box.key { background: var(--tint); border-color: var(--primary-soft); }
+/* Chips and rows. */
+.chip {
+  display: inline-flex; align-items: center; gap: 10px; border-radius: 999px; padding: 10px 18px;
+  font: 600 20px/1.2 var(--sans); background: #fff; color: var(--ink); border: 1.5px solid var(--line);
+}
+.chip.blue { background: var(--accent-soft); border-color: transparent; color: var(--accent-ink); }
+.dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+.list { margin: 0; padding: 0; list-style: none; }
+.list li { position: relative; padding-left: 34px; font: 400 25px/1.4 var(--sans); color: var(--ink-2); margin-top: 14px; }
+.list li::before { content: ''; position: absolute; left: 4px; top: 13px; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); }
+.list.tight li { font-size: 23px; margin-top: 10px; }
+.ico {
+  width: 58px; height: 58px; border-radius: 18px; background: var(--accent-soft);
+  display: grid; place-items: center; flex: none;
+}
+.ico svg { width: 30px; height: 30px; fill: none; stroke: var(--accent); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.ico.green { background: #dcf8e8; } .ico.green svg { stroke: var(--success-ink); }
+.ico.amber { background: #fdf0d9; } .ico.amber svg { stroke: var(--warning-ink); }
+.ico.red { background: #ffe1e2; } .ico.red svg { stroke: var(--danger-ink); }
+.ico.dark { background: var(--pill); } .ico.dark svg { stroke: #fff; }
+h3 { font: 700 30px/1.2 var(--sans); margin: 0; letter-spacing: -0.01em; }
+.t { font: 400 23px/1.4 var(--sans); color: var(--ink-2); margin-top: 10px; }
+code, .code { font-family: var(--mono); font-size: 0.9em; background: rgba(24,24,27,.06); border-radius: 8px; padding: 2px 8px; }
 
-.stair { display: flex; align-items: flex-end; gap: 18px; height: 520px; }
-.stair .tread { flex: 1; background: var(--surface); border: 1px solid var(--line); border-radius: 16px 16px 4px 4px; padding: 22px 22px; display: flex; flex-direction: column; }
-.stair .tread .n { font-family: var(--serif); font-size: 34px; color: var(--primary); font-weight: 650; }
-.stair .tread b { font-size: 25px; margin: 8px 0; }
-.stair .tread span { font-size: 21px; line-height: 1.4; color: var(--muted); }
-.stair .tread em { font-style: normal; color: var(--accent); font-weight: 650; }
+/* Bars drawn with blocks, so the labels stay text. */
+.bar { height: 100%; border-radius: 14px; background: var(--accent); }
+.track { background: rgba(24, 24, 27, 0.07); border-radius: 14px; }
 
-table { border-collapse: collapse; width: 100%; }
-th { text-align: left; font-size: 21px; font-weight: 650; color: var(--muted); padding: 0 18px 12px 0; border-bottom: 2px solid var(--text); }
-td { font-size: 24px; line-height: 1.4; padding: 14px 18px 14px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
-td.r, th.r { text-align: right; font-variant-numeric: tabular-nums; }
-tr.hl td { background: rgba(47, 95, 102, .07); }
+/* Arrows between steps. */
+.arrow { position: absolute; width: 46px; height: 46px; border-radius: 50%; background: #fff; display: grid; place-items: center; box-shadow: 0 6px 16px rgba(20,30,60,.12); z-index: 3; }
+.arrow svg { width: 24px; height: 24px; fill: none; stroke: var(--accent); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
 
-.chart text { font-family: var(--sans); }
-.cards { display: grid; gap: 22px; }
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 24px 26px; }
-.card h3 { font-size: 26px; font-weight: 650; margin-bottom: 8px; }
-.card p { font-size: 22px; line-height: 1.45; color: var(--muted); }
-.big { font-family: var(--serif); font-weight: 650; font-size: 104px; line-height: 1; color: var(--accent); }
-.cmd { font-family: var(--mono); font-size: 23px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; margin-top: 12px; white-space: nowrap; }
-
-/* The stack: four lanes of services, drawn as boxes. */
-.arch { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; margin-top: 36px; }
-.lane { background: var(--tint); border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
-.lane-h { font-size: 20px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--primary); }
-.node { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font-size: 22px; font-weight: 650; }
-.node span { display: block; font-size: 18px; font-weight: 400; color: var(--muted); line-height: 1.35; margin-top: 4px; }
-.node.soft { background: #fbfaf7; }
-.stat { font-family: var(--serif); font-weight: 650; font-size: 60px; line-height: 1; color: var(--accent); margin-bottom: 12px; }
+/* A callout over a screen. */
+.callout {
+  position: absolute; z-index: 4; display: flex; align-items: center; gap: 14px;
+  background: #fff; border-radius: 22px; padding: 16px 22px; box-shadow: 0 18px 40px -14px rgba(20,30,60,.35);
+  font: 600 22px/1.25 var(--sans); color: var(--ink);
+}
+.callout .dot { width: 14px; height: 14px; flex: none; }
 </style>
 </head>
 <body>
 
-<section class="slide cover">
-  <div class="brand">Scrap&amp;Grep</div>
-  <h1>Выпуск новостей ИБ под каждого читателя собирается за 24 секунды</h1>
-  <p class="lead">Выпуск специалисту на Qwen3.6 35B в Yandex AI Studio. 104 источника, отбор по интересам, приоритет по правилу датасета организаторов и сверка с CISA KEV и БДУ ФСТЭК. Специалисту подробно за сутки, руководству тезисно за неделю.</p>
-  <div class="art">
-    <div class="browser"><div class="bar"><i></i><i></i><i></i><span>localhost:8080</span></div><img src="img/specialist-top.png" alt="Выпуск специалисту"></div>
-    <div class="phone"><img src="../screenshots/adapt-phone.png" alt="Подстройка профиля на телефоне"></div>
+<!-- 1. Cover -->
+<section class="slide" id="s-cover">
+  <div class="bg" style="--dx: 88%; --dy: 30%">
+    <div class="blob b-blue" style="left: 1080px; top: -160px; width: 760px; height: 620px"></div>
+    <div class="blob b-violet" style="left: 1460px; top: 420px; width: 520px; height: 520px"></div>
+    <div class="blob b-sky" style="left: -160px; top: 760px; width: 620px; height: 420px"></div>
   </div>
-  <div class="meta">Хакатон «ИИ-ассистенты для энергетики», финал · команда misis-mojarung · октябрь 2026</div>
+  <div class="device mac" style="left: 1010px; top: 286px; width: 820px">
+    <div class="lid"><div class="screen"><img src="img/shots/digest-scroll.jpg" alt="Выпуск специалисту: главное, воронка отбора, план на смену"></div></div>
+    <div class="base"></div>
+  </div>
+  <img class="cat" src="img/brand/cat-read.png" alt="Кот Scrap&amp;Grep с лупой" style="left: 1030px; top: 700px; width: 300px">
+  <div class="wrap">
+    <span class="tag">Хакатон «ИИ-ассистенты для энергетики»</span>
+    <h1 style="font-size: 150px; line-height: 0.95; margin-top: 64px; letter-spacing: -0.04em">Scrap<span class="acc">&amp;</span>Grep</h1>
+    <p class="lead" style="font-size: 34px; max-width: 820px; margin-top: 30px">ИИ-ассистент, который каждые 15 минут читает 104 источника по ИТ и ИБ и собирает каждому сотруднику энергокомпании его выпуск новостей.</p>
+    <div style="display: flex; gap: 18px; margin-top: 60px; width: 900px">
+      <div class="glass pad" style="position: relative; flex: 1; padding: 28px 30px">
+        <div class="num sm">85 с</div><div class="cap sm">вместо 205&nbsp;минут у&nbsp;аналитика на&nbsp;два выпуска</div>
+      </div>
+      <div class="glass pad" style="position: relative; flex: 1; padding: 28px 30px">
+        <div class="num sm">30 ч</div><div class="cap sm">аналитика в&nbsp;месяц освобождается на&nbsp;4&nbsp;читателях</div>
+      </div>
+      <div class="glass pad" style="position: relative; flex: 1.25; padding: 28px 30px">
+        <div class="num sm" style="white-space: nowrap">330 тыс&nbsp;₽</div><div class="cap sm">экономии в&nbsp;год на&nbsp;тех&nbsp;же 4&nbsp;читателях</div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Замеры: docs/eval/vs-analyst.md, docs/BUSINESS.md</span><span class="page">01 / 18</span></div>
 </section>
 
-<section class="slide">
-  <div class="kicker">Задача заказчика</div>
-  <h2>Недельный выпуск вручную занимает у аналитика 102,5 минуты, четырём читателям это 34&nbsp;999&nbsp;₽ в месяц</h2>
-  <div class="row grow" style="margin-top: 48px;">
-    <div class="col" style="flex: 0 0 760px;">
-      <ul style="list-style: none; display: grid; gap: 22px;">
-        <li>Только в списках организаторов <span class="num">62</span> источника: 24 сайта и 18 Telegram-каналов для специалистов, 20 сайтов для руководства.</li>
-        <li>Часть сайтов не пускает бота: Cloudflare, Akamai, страницы, которые собирает скрипт.</li>
-        <li>Специалисту нужны детали каждый день, руководству выводы раз в неделю.</li>
-        <li>Аналитик ИБ собрал два выпуска одной недели за 205 минут и успел просмотреть около 80 публикаций из 1&nbsp;737.</li>
+<!-- 2. Problem -->
+<section class="slide" id="s-problem">
+  <div class="bg" style="--dx: 20%; --dy: 80%">
+    <div class="blob b-rose" style="left: 1250px; top: -120px; width: 640px; height: 520px"></div>
+    <div class="blob b-peach" style="left: -120px; top: 640px; width: 640px; height: 460px"></div>
+  </div>
+  <img class="cat" src="img/brand/cat-juggle.png" alt="Кот жонглирует газетами" style="left: 1440px; top: 70px; width: 380px">
+  <div class="wrap">
+    <span class="tag">Проблема</span>
+    <h2>Новости ИБ собирают вручную, и&nbsp;большая часть недели остаётся непрочитанной</h2>
+    <div class="glass" style="left: 96px; top: 400px; width: 1010px; height: 530px; padding: 40px 46px">
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 34px">
+        <div><div class="num ink">42</div><div class="cap">источника только в&nbsp;списках для специалистов: 24 сайта и&nbsp;18&nbsp;Telegram-каналов</div></div>
+        <div><div class="num ink">205<span style="font-size: 48px"> мин</span></div><div class="cap">ушло у аналитика ИБ на два недельных выпуска: специалисту и&nbsp;руководству</div></div>
+        <div><div class="num" style="color: var(--danger)">≈ 80</div><div class="cap">из 1&nbsp;737 публикаций недели он&nbsp;успел просмотреть</div></div>
+      </div>
+      <div style="margin-top: 54px; padding-top: 30px; border-top: 2px solid rgba(24,24,27,.08); display: flex; gap: 22px; align-items: center">
+        <div class="ico red"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+        <p style="font: 500 26px/1.4 var(--sans); color: var(--ink-2)">Уязвимость Ivanti попала в каталог CISA KEV 13 октября со сроком устранения <b class="bad">16 октября</b>. Недельный обзор вышел бы, когда срок уже прошёл.</p>
+      </div>
+    </div>
+    <div class="glass" style="left: 1150px; top: 470px; width: 674px; height: 460px; padding: 40px 44px">
+      <div class="label">Просмотрено за неделю</div>
+      <div style="display: flex; align-items: center; gap: 40px; margin-top: 26px">
+        <div style="position: relative; width: 250px; height: 250px; border-radius: 50%; background: conic-gradient(var(--danger) 0 4.6%, rgba(24,24,27,.08) 4.6% 100%)">
+          <div style="position: absolute; inset: 38px; border-radius: 50%; background: #fff; display: grid; place-items: center">
+            <div style="text-align: center"><div class="num xs" style="color: var(--danger)">4,6%</div><div class="cap sm" style="margin-top: 4px">вручную</div></div>
+          </div>
+        </div>
+        <div>
+          <div style="display: flex; align-items: center; gap: 12px"><span class="dot" style="background: var(--danger)"></span><span style="font: 600 24px/1.3 var(--sans)">аналитик: ≈ 80</span></div>
+          <div style="display: flex; align-items: center; gap: 12px; margin-top: 18px"><span class="dot" style="background: var(--accent)"></span><span style="font: 600 24px/1.3 var(--sans)">ассистент: все 1&nbsp;737</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Списки источников из датасета организаторов; журнал аналитика: docs/eval/vs-analyst.md</span><span class="page">02 / 18</span></div>
+</section>
+
+<!-- 3. Solution -->
+<section class="slide" id="s-solution">
+  <div class="bg" style="--dx: 80%; --dy: 70%">
+    <div class="blob b-blue" style="left: 1120px; top: 300px; width: 760px; height: 700px"></div>
+    <div class="blob b-mint" style="left: 380px; top: -200px; width: 600px; height: 420px"></div>
+  </div>
+  <div class="device mac" style="left: 1000px; top: 300px; width: 830px">
+    <div class="lid"><div class="screen"><img src="img/shots/digest-scroll.jpg" alt="Выпуск: главное, воронка 471 → 60 → 20, план на смену"></div></div>
+    <div class="base"></div>
+  </div>
+  <div class="callout" style="left: 1130px; top: 236px"><span class="dot" style="background: var(--accent)"></span>471 публикация → 60 кандидатов → 20 в выпуске</div>
+  <div class="wrap">
+    <span class="tag accent">Решение</span>
+    <h2 style="max-width: 860px">Ассистент делает эту работу за&nbsp;минуту</h2>
+    <div style="position: absolute; left: 96px; top: 300px; width: 840px">
+      <div class="glass" style="position: relative; display: flex; gap: 24px; padding: 20px 28px; border-radius: 28px; align-items: center">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1.5"/></svg></div>
+        <div><h3>Собирает</h3><p class="t">104 источника каждые 15 минут: сайты, ленты, Telegram, бюллетени CISA ICS и БДУ ФСТЭК. Сайты за Cloudflare читает браузер.</p></div>
+      </div>
+      <div class="glass" style="position: relative; display: flex; gap: 24px; padding: 20px 28px; border-radius: 28px; align-items: center; margin-top: 12px">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M3 5h18l-7 8v6l-4-2v-4z"/></svg></div>
+        <div><h3>Отбирает</h3><p class="t">По интересам профиля: оценивает 60 кандидатов, лучшие идут в выпуск по правилу приоритета датасета.</p></div>
+      </div>
+      <div class="glass" style="position: relative; display: flex; gap: 24px; padding: 20px 28px; border-radius: 28px; align-items: center; margin-top: 12px">
+        <div class="ico green"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg></div>
+        <div><h3>Проверяет</h3><p class="t">Номера CVE, оценки и версии сверяет с текстом статьи и с базами CISA KEV, БДУ ФСТЭК, NVD.</p></div>
+      </div>
+      <div class="glass" style="position: relative; display: flex; gap: 24px; padding: 20px 28px; border-radius: 28px; align-items: center; margin-top: 12px">
+        <div class="ico amber"><svg viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg></div>
+        <div><h3>Доставляет</h3><p class="t">В веб и на телефон, в Telegram, на почту, в DOCX и в ИИ-ассистента компании через MCP.</p></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Экран: выпуск специалисту по ИБ АСУ ТП за сутки на стенде с моделями Yandex AI Studio</span><span class="page">03 / 18</span></div>
+</section>
+
+<!-- 4. Speed -->
+<section class="slide" id="s-speed">
+  <div class="bg" style="--dx: 15%; --dy: 25%">
+    <div class="blob b-sky" style="left: 900px; top: -200px; width: 800px; height: 560px"></div>
+    <div class="blob b-mint" style="left: 1400px; top: 640px; width: 600px; height: 480px"></div>
+  </div>
+  <img class="cat" src="img/brand/cat-wait.png" alt="Кот с секундомером и стопкой газет" style="left: 1530px; top: 28px; width: 300px">
+  <div class="wrap">
+    <span class="tag">Скорость</span>
+    <h2 style="max-width: 1240px">Минута вместо половины рабочего&nbsp;дня</h2>
+    <div class="glass" style="left: 96px; top: 330px; width: 1728px; height: 300px; padding: 40px 48px">
+      <div style="display: flex; align-items: center; gap: 30px">
+        <div style="width: 270px; font: 600 26px/1.25 var(--sans)">Аналитик ИБ</div>
+        <div class="track" style="flex: 1; height: 62px"><div class="bar" style="width: 100%; background: linear-gradient(90deg, #ff8a8c, var(--danger))"></div></div>
+        <div style="width: 210px; text-align: right"><span class="num xs ink">205 мин</span></div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 30px; margin-top: 30px">
+        <div style="width: 270px; font: 600 26px/1.25 var(--sans)">Scrap&amp;Grep</div>
+        <div class="track" style="flex: 1; height: 62px"><div class="bar" style="width: 1.2%; min-width: 14px"></div></div>
+        <div style="width: 210px; text-align: right"><span class="num xs">85 с</span></div>
+      </div>
+      <p style="font: 500 24px/1.35 var(--sans); color: var(--ink-2); margin-top: 28px; padding-left: 300px">Два выпуска одной недели, специалисту и руководству. Ассистент быстрее в&nbsp;<b class="acc">144 раза</b> и&nbsp;просмотрел все 1&nbsp;737 публикаций.</p>
+    </div>
+    <div style="position: absolute; left: 96px; top: 668px; width: 1728px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px">
+      <div class="glass" style="position: relative; padding: 30px 34px; height: 250px"><div class="num sm">24 с</div><div class="cap">выпуск специалисту на Qwen3.6 в&nbsp;Yandex AI Studio</div></div>
+      <div class="glass" style="position: relative; padding: 30px 34px; height: 250px"><div class="num sm">17 с</div><div class="cap">выпуск руководству на той же модели</div></div>
+      <div class="glass" style="position: relative; padding: 30px 34px; height: 250px"><div class="num sm">7 с</div><div class="cap">повторная сборка по тому же профилю из&nbsp;кеша</div></div>
+      <div class="glass" style="position: relative; padding: 30px 34px; height: 250px"><div class="num sm">2,1 с</div><div class="cap">профиль новой команды по её описанию</div></div>
+    </div>
+  </div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">docs/eval/vs-analyst.md, docs/BUSINESS.md, docs/QUALITY.md</span><span class="page">04 / 18</span></div>
+</section>
+
+<!-- 5. From a vulnerability to a fix -->
+<section class="slide" id="s-fix">
+  <div class="bg" style="--dx: 85%; --dy: 85%">
+    <div class="blob b-blue" style="left: -200px; top: 560px; width: 760px; height: 560px"></div>
+    <div class="blob b-rose" style="left: 1500px; top: -160px; width: 520px; height: 460px"></div>
+  </div>
+  <div class="device mac" style="left: 980px; top: 352px; width: 850px">
+    <div class="lid"><div class="screen"><img src="img/shots/entry-checked.jpg" alt="Карточка уязвимости Ivanti ICS: сверено с CISA KEV, шкала событий, срок устранения"></div></div>
+    <div class="base"></div>
+  </div>
+  <div class="callout" style="left: 1420px; top: 300px"><span class="dot" style="background: var(--success)"></span>Сверено с CISA KEV и БДУ</div>
+  <div class="callout" style="left: 1010px; top: 880px"><span class="dot" style="background: var(--danger)"></span>Срок устранения из CISA KEV: 16.10</div>
+  <div class="wrap">
+    <span class="tag">От уязвимости до исправления</span>
+    <h2 style="max-width: 1500px">Срочное приходит первым и&nbsp;сразу с&nbsp;планом действий</h2>
+    <div style="position: absolute; left: 96px; top: 340px; width: 800px">
+      <div class="glass" style="position: relative; padding: 24px 30px; border-radius: 28px; display: flex; gap: 22px; align-items: center">
+        <div class="num xs" style="width: 170px; font-size: 44px; white-space: nowrap">15 мин</div><p class="t" style="margin: 0">источники опрашиваются круглосуточно, KEV и&nbsp;БДУ обновляются сами</p>
+      </div>
+      <div class="glass" style="position: relative; padding: 24px 30px; border-radius: 28px; display: flex; gap: 22px; align-items: center; margin-top: 14px">
+        <div class="num xs" style="width: 170px; font-size: 44px; white-space: nowrap">24 с</div><p class="t" style="margin: 0">собран выпуск: используемые в атаках уязвимости стоят первыми</p>
+      </div>
+      <div class="glass" style="position: relative; padding: 24px 30px; border-radius: 28px; display: flex; gap: 22px; align-items: center; margin-top: 14px">
+        <div class="ico green" style="margin: 0 56px"><svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg></div><p class="t" style="margin: 0">план на смену: обновление, временные меры, индикаторы и&nbsp;техники атаки</p>
+      </div>
+      <div class="glass" style="position: relative; padding: 24px 30px; border-radius: 28px; display: flex; gap: 22px; align-items: center; margin-top: 14px">
+        <div class="ico amber" style="margin: 0 56px"><svg viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg></div><p class="t" style="margin: 0">в&nbsp;SOC одной кнопкой: STIX 2.1, событие MISP или&nbsp;CSV</p>
+      </div>
+      <p style="font: 500 23px/1.4 var(--sans); color: var(--ink-2); margin-top: 26px">Совет «установите патч» появляется, только когда патч вышел. Пока его нет, в&nbsp;карточке стоят временные меры.</p>
+    </div>
+  </div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Экран: запись выпуска 14-15 октября 2026; docs/BUSINESS.md, «Надёжность и безопасность»</span><span class="page">05 / 18</span></div>
+</section>
+
+<!-- 6. The analyst study -->
+<section class="slide" id="s-study">
+  <div class="bg" style="--dx: 10%; --dy: 20%">
+    <div class="blob b-violet" style="left: 1240px; top: 520px; width: 760px; height: 560px"></div>
+    <div class="blob b-sky" style="left: 300px; top: -220px; width: 760px; height: 440px"></div>
+  </div>
+  <div class="wrap">
+    <span class="tag">Исследование</span>
+    <h2>Провели исследование с&nbsp;аналитиком ИБ на&nbsp;одной неделе</h2>
+    <p class="lead" style="max-width: 1500px">Аналитик с&nbsp;семью годами опыта в&nbsp;Threat Intelligence и&nbsp;защите АСУ ТП собрал те&nbsp;же два выпуска: та&nbsp;же неделя 25 сентября - 2 октября, те&nbsp;же профили читателей, те&nbsp;же 69 источников.</p>
+    <div class="glass" style="left: 96px; top: 430px; width: 1728px; height: 520px; padding: 14px 44px">
+      <div style="display: grid; grid-template-columns: 1.25fr 1fr 1fr; align-items: center; padding: 22px 0; border-bottom: 2px solid rgba(24,24,27,.08)">
+        <div class="label">Что сравнивали</div><div class="label">Аналитик ИБ</div><div class="label acc" style="color: var(--accent)">Scrap&amp;Grep</div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1.25fr 1fr 1fr; align-items: center; padding: 24px 0; border-bottom: 2px solid rgba(24,24,27,.08)">
+        <div style="font: 600 27px/1.3 var(--sans)">Время на два выпуска</div><div class="num xs ink">205 мин</div><div class="num xs">85 с</div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1.25fr 1fr 1fr; align-items: center; padding: 24px 0; border-bottom: 2px solid rgba(24,24,27,.08)">
+        <div style="font: 600 27px/1.3 var(--sans)">Просмотрено публикаций</div><div class="num xs ink">≈ 80</div><div class="num xs">все 1&nbsp;737</div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1.25fr 1fr 1fr; align-items: center; padding: 24px 0; border-bottom: 2px solid rgba(24,24,27,.08)">
+        <div style="font: 600 27px/1.3 var(--sans)">Записей в&nbsp;двух выпусках</div><div class="num xs ink">14 и 9</div><div class="num xs">19 и 15</div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1.25fr 2fr; align-items: center; padding: 24px 0">
+        <div style="font: 600 27px/1.3 var(--sans)">Главная угроза недели</div>
+        <div style="display: flex; align-items: center; gap: 16px"><span class="chip blue">совпала</span><span style="font: 500 25px/1.35 var(--sans); color: var(--ink-2)">у обоих: 0-day в Citrix NetScaler, CVE-2026-88771 и&nbsp;CVE-2026-88772</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Ответ аналитика, его журнал и оба выпуска: examples/vs-analyst; разбор: docs/eval/vs-analyst.md</span><span class="page">06 / 18</span></div>
+</section>
+
+<!-- 7. Economics -->
+<section class="slide" id="s-money">
+  <div class="bg" style="--dx: 90%; --dy: 15%">
+    <div class="blob b-mint" style="left: 140px; top: 520px; width: 820px; height: 560px"></div>
+    <div class="blob b-blue" style="left: 1300px; top: -180px; width: 620px; height: 480px"></div>
+  </div>
+  <div class="wrap">
+    <span class="tag">Экономика</span>
+    <h2>Экономия растёт с&nbsp;каждым читателем</h2>
+    <div class="glass" style="left: 96px; top: 320px; width: 1080px; height: 610px; padding: 36px 44px">
+      <div class="label">Экономия в год, ₽, по числу читателей с недельным выпуском</div>
+      <div style="position: absolute; left: 44px; right: 44px; bottom: 36px; top: 110px; display: flex; align-items: flex-end; gap: 46px">
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%">
+          <div style="font: 800 30px/1 var(--display); text-align: center; margin-bottom: 12px">119 840</div>
+          <div class="bar" style="height: 5.96%; background: #9cccfb"></div>
+          <div style="font: 600 22px/1.2 var(--sans); text-align: center; margin-top: 14px; color: var(--ink-2)">2 читателя</div>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%">
+          <div style="font: 800 30px/1 var(--display); text-align: center; margin-bottom: 12px">329 832</div>
+          <div class="bar" style="height: 16.4%; background: #5eabf8"></div>
+          <div style="font: 600 22px/1.2 var(--sans); text-align: center; margin-top: 14px; color: var(--ink-2)">4 читателя</div>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%">
+          <div style="font: 800 30px/1 var(--display); text-align: center; margin-bottom: 12px">959 806</div>
+          <div class="bar" style="height: 36.6%; background: #2f98f8"></div>
+          <div style="font: 600 22px/1.2 var(--sans); text-align: center; margin-top: 14px; color: var(--ink-2)">10 читателей</div>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%">
+          <div style="font: 800 30px/1 var(--display); text-align: center; margin-bottom: 12px; color: var(--accent)">2 009 762</div>
+          <div class="bar" style="height: 76.6%"></div>
+          <div style="font: 600 22px/1.2 var(--sans); text-align: center; margin-top: 14px; color: var(--ink-2)">20 читателей</div>
+        </div>
+      </div>
+    </div>
+    <div style="position: absolute; left: 1210px; top: 320px; width: 614px">
+      <div class="glass" style="position: relative; padding: 28px 34px"><div class="num sm ink">8&nbsp;750 ₽</div><div class="cap">в месяц стоит ручной недельный выпуск одному читателю</div></div>
+      <div class="glass" style="position: relative; padding: 28px 34px; margin-top: 16px"><div class="num sm">7&nbsp;513 ₽</div><div class="cap">в месяц стоит ассистент на всех: модель, сервер и&nbsp;2&nbsp;часа администратора</div></div>
+      <div class="glass" style="position: relative; padding: 28px 34px; margin-top: 16px"><div class="num sm" style="color: var(--success-ink)">22 мин</div><div class="cap">ручного выпуска достаточно, чтобы ассистент окупился уже на 4 читателях</div></div>
+    </div>
+  </div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Расчёт: docs/BUSINESS.md. Зарплата аналитика SOC 149 000 ₽ (Хабр Карьера), токены замерены на выпуске</span><span class="page">07 / 18</span></div>
+</section>
+
+<!-- 8. Two audiences -->
+<section class="slide" id="s-audiences">
+  <div class="bg" style="--dx: 50%; --dy: 90%">
+    <div class="blob b-blue" style="left: 200px; top: 420px; width: 780px; height: 600px"></div>
+    <div class="blob b-peach" style="left: 1380px; top: 260px; width: 560px; height: 560px"></div>
+  </div>
+  <div class="device mac" style="left: 110px; top: 400px; width: 840px">
+    <div class="lid"><div class="screen"><img src="img/shots/digest-scroll.jpg" alt="Выпуск специалисту"></div></div>
+    <div class="base"></div>
+  </div>
+  <div class="device iphone" style="left: 1450px; top: 236px; width: 360px">
+    <div class="rim"><div class="bezel"><div class="screen"><div class="island"></div><div class="status"><span>9:41</span><svg viewBox="0 0 64 14"><rect x="0" y="9" width="3" height="5" rx="1"/><rect x="5" y="6" width="3" height="8" rx="1"/><rect x="10" y="3" width="3" height="11" rx="1"/><rect x="15" y="0" width="3" height="14" rx="1"/><path d="M29 4a11 11 0 0 1 14 0l-2 2a8 8 0 0 0-10 0zM32 8a6 6 0 0 1 8 0l-4 4z"/><rect x="47" y="1" width="15" height="12" rx="3.5" fill="none" stroke="#000" stroke-width="1.4"/><rect x="49" y="3" width="10" height="8" rx="2"/></svg></div><img src="img/shots/phone-management.jpg" alt="Выпуск руководству на телефоне"></div></div></div>
+  </div>
+  <div class="wrap">
+    <span class="tag">Две аудитории</span>
+    <h2 style="max-width: 1360px; font-size: 60px">Специалисту - что чинить, руководителю - что&nbsp;это значит для&nbsp;компании</h2>
+    <div class="glass" style="left: 1030px; top: 410px; width: 380px; padding: 26px 30px">
+      <div class="label">Руководителю</div>
+      <ul class="list tight"><li>без номеров CVE и&nbsp;жаргона</li><li>первым блоком «Что это значит для&nbsp;нас»</li><li>брифинг голосом на&nbsp;2&nbsp;минуты</li></ul>
+    </div>
+    <div class="glass" style="left: 1030px; top: 772px; width: 380px; padding: 26px 30px">
+      <div class="num xs">−30%</div><div class="cap sm">стоимости, когда оба выпуска собираются одним запуском</div>
+    </div>
+    <div class="callout" style="left: 120px; top: 330px"><span class="dot" style="background: var(--accent)"></span>Специалисту: атаки и уязвимости первыми, CVE, CVSS, EPSS и план на смену</div>
+  </div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Экраны: выпуски специалисту за сутки и руководству за неделю; docs/QUALITY.md</span><span class="page">08 / 18</span></div>
+</section>
+
+<!-- 9. Customisation -->
+<section class="slide" id="s-custom">
+  <div class="bg" style="--dx: 12%; --dy: 85%">
+    <div class="blob b-violet" style="left: 1200px; top: -160px; width: 720px; height: 560px"></div>
+    <div class="blob b-sky" style="left: 900px; top: 640px; width: 700px; height: 460px"></div>
+  </div>
+  <div class="device mac" style="left: 900px; top: 330px; width: 930px">
+    <div class="lid"><div class="screen"><img src="img/shots/profiles.jpg" alt="Профиль интересов с подстройкой по отметкам и предпросмотром"></div></div>
+    <div class="base"></div>
+  </div>
+  <div class="wrap">
+    <span class="tag">Под каждого</span>
+    <h2 style="max-width: 1500px">Каждый настраивает выпуск под&nbsp;себя</h2>
+    <div style="position: absolute; left: 96px; top: 316px; width: 770px">
+      <div class="glass" style="position: relative; padding: 24px 30px; border-radius: 28px; display: flex; gap: 22px">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg></div>
+        <div><h3 style="font-size: 26px">Интересы, веса и&nbsp;исключения</h3><p class="t">Предпросмотр сразу показывает, как правка меняет выпуск.</p></div>
+      </div>
+      <div class="glass" style="position: relative; padding: 24px 30px; border-radius: 28px; display: flex; gap: 22px; margin-top: 14px">
+        <div class="ico green"><svg viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg></div>
+        <div><h3 style="font-size: 26px">Профиль из резюме за&nbsp;12-39&nbsp;с</h3><p class="t">PDF, DOCX или скан. Контакты вырезаются до&nbsp;анализа.</p></div>
+      </div>
+      <div class="glass" style="position: relative; padding: 24px 30px; border-radius: 28px; display: flex; gap: 22px; margin-top: 14px">
+        <div class="ico amber"><svg viewBox="0 0 24 24"><path d="M7 10v11M3 10h4M7 10l4-7a2 2 0 0 1 3 2l-1 5h6a2 2 0 0 1 2 2l-2 7a2 2 0 0 1-2 2H7"/></svg></div>
+        <div style="flex: 1"><h3 style="font-size: 26px">Лента учится на отметках</h3><p class="t">Точность ленты после 20&nbsp;оценок читателя, nDCG@20:</p>
+          <div style="display: flex; align-items: center; gap: 14px; margin-top: 14px"><span style="font: 600 20px/1 var(--sans); width: 70px" class="muted">до</span><div class="track" style="flex: 1; height: 22px"><div class="bar" style="width: 68.8%; background: #b9d9fb; border-radius: 11px"></div></div><b style="font: 800 24px/1 var(--display); width: 70px">0,375</b></div>
+          <div style="display: flex; align-items: center; gap: 14px; margin-top: 10px"><span style="font: 600 20px/1 var(--sans); width: 70px" class="muted">после</span><div class="track" style="flex: 1; height: 22px"><div class="bar" style="width: 100%; border-radius: 11px"></div></div><b style="font: 800 24px/1 var(--display); width: 70px; color: var(--accent)">0,545</b></div>
+        </div>
+      </div>
+      <div class="glass" style="position: relative; padding: 24px 30px; border-radius: 28px; display: flex; gap: 22px; margin-top: 14px">
+        <div class="ico dark"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18M8 14h3"/></svg></div>
+        <div><h3 style="font-size: 26px">Свои блоки, строки карточек и&nbsp;порядок меню</h3></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Лента: читатель «ИБ АСУ ТП», docs/eval/recsys.md; резюме: docs/QUALITY.md</span><span class="page">09 / 18</span></div>
+</section>
+
+<!-- 10. Phone -->
+<section class="slide" id="s-phone">
+  <div class="bg" style="--dx: 50%; --dy: 40%">
+    <div class="blob b-blue" style="left: 520px; top: 260px; width: 900px; height: 700px"></div>
+    <div class="blob b-mint" style="left: -160px; top: -140px; width: 560px; height: 460px"></div>
+    <div class="blob b-rose" style="left: 1600px; top: 700px; width: 520px; height: 420px"></div>
+  </div>
+  <div class="device iphone" style="left: 610px; top: 244px; width: 330px">
+    <div class="rim"><div class="bezel"><div class="screen"><div class="island"></div><div class="status"><span>9:41</span><svg viewBox="0 0 64 14"><rect x="0" y="9" width="3" height="5" rx="1"/><rect x="5" y="6" width="3" height="8" rx="1"/><rect x="10" y="3" width="3" height="11" rx="1"/><rect x="15" y="0" width="3" height="14" rx="1"/><path d="M29 4a11 11 0 0 1 14 0l-2 2a8 8 0 0 0-10 0zM32 8a6 6 0 0 1 8 0l-4 4z"/><rect x="47" y="1" width="15" height="12" rx="3.5" fill="none" stroke="#000" stroke-width="1.4"/><rect x="49" y="3" width="10" height="8" rx="2"/></svg></div><img src="img/shots/phone-feed.jpg" alt="Лента «Для вас» на телефоне"></div></div></div>
+  </div>
+  <div class="device iphone" style="left: 990px; top: 196px; width: 330px">
+    <div class="rim"><div class="bezel"><div class="screen"><div class="island"></div><div class="status"><span>9:41</span><svg viewBox="0 0 64 14"><rect x="0" y="9" width="3" height="5" rx="1"/><rect x="5" y="6" width="3" height="8" rx="1"/><rect x="10" y="3" width="3" height="11" rx="1"/><rect x="15" y="0" width="3" height="14" rx="1"/><path d="M29 4a11 11 0 0 1 14 0l-2 2a8 8 0 0 0-10 0zM32 8a6 6 0 0 1 8 0l-4 4z"/><rect x="47" y="1" width="15" height="12" rx="3.5" fill="none" stroke="#000" stroke-width="1.4"/><rect x="49" y="3" width="10" height="8" rx="2"/></svg></div><img src="img/shots/phone-digest.jpg" alt="Выпуск на телефоне"></div></div></div>
+  </div>
+  <div class="device iphone" style="left: 1370px; top: 244px; width: 330px">
+    <div class="rim"><div class="bezel"><div class="screen dark"><div class="island"></div><img src="img/shots/video-f9.jpg" alt="Кадр короткого ролика по выпуску"></div></div></div>
+  </div>
+  <div class="wrap">
+    <span class="tag">Везде</span>
+    <h2 style="font-size: 58px; max-width: 470px">На телефоне всё так&nbsp;же, как на&nbsp;ноутбуке</h2>
+    <div style="position: absolute; left: 96px; top: 430px; width: 480px">
+      <ul class="list tight">
+        <li>экраны от&nbsp;360&nbsp;px без прокрутки вбок, светлая и&nbsp;тёмная тема</li>
+        <li>лента в&nbsp;виде карточек или постов как в&nbsp;Telegram</li>
+        <li>ролик на&nbsp;30-60&nbsp;с с&nbsp;голосом SpeechKit собирается за&nbsp;3&nbsp;минуты</li>
+        <li>12 голосов, каждый можно послушать до&nbsp;выбора</li>
       </ul>
     </div>
-    <div class="col grow">
-      <div class="chart" id="chart-manual"></div>
-      <p class="caption">Ручная сборка в месяц при недельном выпуске каждому читателю: 102,5 минуты на выпуск по журналу аналитика, час аналитика SOC стоит 1&nbsp;179&nbsp;₽.</p>
-    </div>
   </div>
-  <p class="src">Медиана аналитика SOC 149&nbsp;000&nbsp;₽, Хабр Карьера, 10.08.2026; взносы 30%; 1&nbsp;972 рабочих часа в 2026 году. Журнал аналитика: docs/eval/vs-analyst.md. Расчёт: docs/BUSINESS.md, «Экономика».</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>2</span></div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Экраны iPhone 402 × 874; ролик собран на Yandex SpeechKit, голос «Филипп»</span><span class="page">10 / 18</span></div>
 </section>
 
-<section class="slide">
-  <div class="kicker">Решение</div>
-  <h2>Scrap&amp;Grep делает каждый шаг работы аналитика сам и показывает, почему</h2>
-  <div class="steps" style="grid-template-columns: repeat(4, 1fr); margin-top: 52px;">
-    <div class="step"><div class="n">1</div><h3>Сбор</h3><p>104 источника, из 62 позиций списков организаторов читаются 60. Защищённые сайты читаются лестницей способов, свой адрес добавляет любой читатель.</p></div>
-    <div class="step"><div class="n">2</div><h3>Отбор</h3><p>Профиль читателя: интересы, исключения, порог. Модель оценивает 60 кандидатов, у каждой записи и каждого отказа есть причина.</p></div>
-    <div class="step"><div class="n">3</div><h3>Приоритет</h3><p>Правило датасета: атака на энергетику и промышленность РФ выше остальных, уязвимость с эксплойтом выше. Эксплойт сверяется с CISA KEV и БДУ ФСТЭК.</p></div>
-    <div class="step"><div class="n">4</div><h3>Выпуск</h3><p>Специалисту за сутки с планом на смену, руководству за неделю с выводами и брифингом голосом. Markdown и DOCX, из браузера, консоли или на почту.</p></div>
+<!-- 11. Company space -->
+<section class="slide" id="s-company">
+  <div class="bg" style="--dx: 88%; --dy: 80%">
+    <div class="blob b-violet" style="left: -120px; top: 560px; width: 760px; height: 520px"></div>
+    <div class="blob b-sky" style="left: 1100px; top: -200px; width: 820px; height: 520px"></div>
   </div>
-  <div class="note">Аналитик ИБ собрал те же два выпуска за ту же неделю вручную: сравнение на следующем слайде.</div>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>3</span></div>
+  <div class="device mac" style="left: 96px; top: 336px; width: 900px">
+    <div class="lid"><div class="screen"><img src="img/shots/company-top.jpg" alt="Пространство компании: команды, роли, профиль команды"></div></div>
+    <div class="base"></div>
+  </div>
+  <div class="device iphone" style="left: 860px; top: 420px; width: 270px">
+    <div class="rim"><div class="bezel"><div class="screen"><div class="island"></div><div class="status"><span>9:41</span><svg viewBox="0 0 64 14"><rect x="0" y="9" width="3" height="5" rx="1"/><rect x="5" y="6" width="3" height="8" rx="1"/><rect x="10" y="3" width="3" height="11" rx="1"/><rect x="15" y="0" width="3" height="14" rx="1"/><path d="M29 4a11 11 0 0 1 14 0l-2 2a8 8 0 0 0-10 0zM32 8a6 6 0 0 1 8 0l-4 4z"/><rect x="47" y="1" width="15" height="12" rx="3.5" fill="none" stroke="#000" stroke-width="1.4"/><rect x="49" y="3" width="10" height="8" rx="2"/></svg></div><img src="img/shots/phone-company.jpg" alt="Пространство компании на телефоне"></div></div></div>
+  </div>
+  <div class="wrap">
+    <span class="tag">Для компании</span>
+    <h2 style="max-width: 1500px">Вся компания получает выпуски за&nbsp;один заход руководителя</h2>
+    <div style="position: absolute; left: 1200px; top: 320px; width: 624px">
+      <div class="glass" style="position: relative; padding: 22px 30px; border-radius: 28px"><div class="num xs">2,1 с</div><div class="cap">модель составляет профиль команды по&nbsp;её описанию</div></div>
+      <div class="glass" style="position: relative; padding: 20px 30px; border-radius: 28px; margin-top: 12px"><h3 style="font-size: 26px">Роли внутри команды</h3><p class="t">Аналитику и&nbsp;инженеру SOC разные темы, роль сама находит людей по&nbsp;должности.</p></div>
+      <div class="glass" style="position: relative; padding: 20px 30px; border-radius: 28px; margin-top: 12px"><h3 style="font-size: 26px">Личные ссылки-приглашения</h3><p class="t">Сотрудник задаёт пароль и&nbsp;сразу видит готовый выпуск.</p></div>
+      <div class="glass" style="position: relative; padding: 20px 30px; border-radius: 28px; margin-top: 12px"><h3 style="font-size: 26px">Одна правка на&nbsp;всех</h3><p class="t">Тема, исключение или формат сразу команде, роли или выбранным людям.</p></div>
+    </div>
+  </div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Экран: демо-компания «Энергосеть», 4 команды, 12 сотрудников; время модели из прогона CI на Yandex AI Studio</span><span class="page">11 / 18</span></div>
 </section>
 
-<section class="slide">
-  <div class="kicker">Гипотеза жюри · Ассистент и аналитик</div>
-  <h2>Аналитик собрал те же два выпуска вручную за 205 минут, ассистент за 85 секунд</h2>
-  <div class="row grow" style="margin-top: 40px; gap: 60px;">
-    <div class="col" style="flex: 0 0 760px; gap: 18px;">
-      <p class="muted" style="font-size: 23px;">Время на два выпуска</p>
-      <div class="chart" id="chart-analyst"></div>
-      <p class="caption">Время аналитика - его журнал: 75 минут на просмотр источников и по 65 минут на каждый выпуск. Ассистент собрал оба выпуска в 144 раза быстрее и просмотрел все публикации недели.</p>
-    </div>
-    <div class="col grow">
-      <table>
-        <tr><th></th><th class="r">Ассистент</th><th class="r">Аналитик</th></tr>
-        <tr><td>Выпуск специалисту</td><td class="r">70,5 с</td><td class="r">102,5 мин</td></tr>
-        <tr><td>Выпуск руководству</td><td class="r">14,7 с</td><td class="r">102,5 мин</td></tr>
-        <tr><td>Записей в выпусках</td><td class="r">19 и 15</td><td class="r">14 и 9</td></tr>
-        <tr><td>Просмотрено публикаций</td><td class="r">все: 1&nbsp;737 и 1&nbsp;757</td><td class="r">около 80</td></tr>
-      </table>
-      <p style="margin-top: 26px; font-size: 24px;">Оба выпуска специалисту ставят в «Главное» 0-day в Citrix NetScaler с высоким приоритетом. Аналитик добавил регуляторику и удары по энергосистеме, ассистент - бюллетени CISA ICS по оборудованию АСУ ТП, 17 уязвимостей SCADA «Каскад» и сверку номеров по CISA KEV и БДУ.</p>
-      <p style="margin-top: 18px; font-size: 24px;">4 октября в каталог вошли ещё 19 источников, среди них Help Net Security, на который ссылается аналитик.</p>
+<!-- 12. Delivery -->
+<section class="slide" id="s-delivery">
+  <div class="bg" style="--dx: 20%; --dy: 20%">
+    <div class="blob b-blue" style="left: 1100px; top: 360px; width: 820px; height: 680px"></div>
+    <div class="blob b-peach" style="left: 200px; top: 760px; width: 620px; height: 400px"></div>
+  </div>
+  <div class="device iphone" style="left: 1480px; top: 210px; width: 340px">
+    <div class="rim"><div class="bezel"><div class="screen dark"><div class="island"></div><img src="img/shots/video-f42.jpg" alt="Кадр ролика: источник и QR-код статьи"></div></div></div>
+  </div>
+  <div class="glass" style="left: 960px; top: 300px; width: 470px; padding: 14px; z-index: 2; border-radius: 30px">
+    <img src="img/shots/telegram-mock.png" alt="Пост выпуска в Telegram-канале" style="width: 100%; display: block; border-radius: 20px">
+  </div>
+  <div class="wrap">
+    <span class="tag">Доставка</span>
+    <h2 style="max-width: 1300px">Новости приходят туда, где команда уже&nbsp;работает</h2>
+    <div style="position: absolute; left: 96px; top: 330px; width: 820px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px; grid-auto-rows: 196px">
+      <div class="glass" style="position: relative; padding: 22px 24px; border-radius: 28px; display: flex; gap: 18px"><div class="ico"><svg viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg></div><div><h3 style="font-size: 24px">Telegram-каналы</h3><p class="t" style="font-size: 20px; margin-top: 6px">по расписанию, у&nbsp;каждого канала свой голос и&nbsp;аудитория</p></div></div>
+      <div class="glass" style="position: relative; padding: 22px 24px; border-radius: 28px; display: flex; gap: 18px"><div class="ico green"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 7l9 6 9-6"/></svg></div><div><h3 style="font-size: 24px">Почта</h3><p class="t" style="font-size: 20px; margin-top: 6px">письмо с&nbsp;выпуском и&nbsp;DOCX через почтовый сервер компании</p></div></div>
+      <div class="glass" style="position: relative; padding: 22px 24px; border-radius: 28px; display: flex; gap: 18px"><div class="ico red"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg></div><div><h3 style="font-size: 24px">Выгрузка для SOC</h3><p class="t" style="font-size: 20px; margin-top: 6px">индикаторы, CVE, БДУ и&nbsp;техники ATT&amp;CK в&nbsp;STIX&nbsp;2.1, MISP, CSV</p></div></div>
+      <div class="glass" style="position: relative; padding: 22px 24px; border-radius: 28px; display: flex; gap: 18px"><div class="ico dark"><svg viewBox="0 0 24 24"><rect x="5" y="7" width="14" height="12" rx="3"/><path d="M12 3v4M9 12h0M15 12h0M9 16h6"/></svg></div><div><h3 style="font-size: 24px">ИИ-ассистент компании</h3><p class="t" style="font-size: 20px; margin-top: 6px">видит новости сотрудника через MCP по&nbsp;личному ключу</p></div></div>
+      <div class="glass" style="position: relative; padding: 22px 24px; border-radius: 28px; display: flex; gap: 18px"><div class="ico amber"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3"/></svg></div><div><h3 style="font-size: 24px">Ролик и&nbsp;брифинг</h3><p class="t" style="font-size: 20px; margin-top: 6px">видео на&nbsp;минуту и&nbsp;брифинг голосом на&nbsp;две</p></div></div>
+      <div class="glass" style="position: relative; padding: 22px 24px; border-radius: 28px; display: flex; gap: 18px"><div class="ico"><svg viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg></div><div><h3 style="font-size: 24px">База знаний</h3><p class="t" style="font-size: 20px; margin-top: 6px">Markdown и&nbsp;DOCX выпуска одним нажатием</p></div></div>
     </div>
   </div>
-  <p class="src" style="margin-top: 14px;">Неделя 25 сентября - 2 октября 2026 года, 69 источников. docs/eval/vs-analyst.md; ответ аналитика целиком - examples/vs-analyst.</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>4</span></div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Пост в канале показан окном мока Bot API; кадр ролика с QR-кодом на источник</span><span class="page">12 / 18</span></div>
 </section>
 
-<section class="slide">
-  <div class="kicker">Критерий 1 · Репрезентативность материалов</div>
-  <h2>Каталог из 104 источников читает 60 из 62 позиций списков организаторов</h2>
-  <div class="row grow" style="margin-top: 40px; gap: 56px;">
-    <div class="col" style="flex: 0 0 700px; gap: 30px;">
-      <div><p class="muted" style="font-size: 23px; margin-bottom: 8px;">104 источника по виду</p><div class="chart" id="chart-kinds"></div></div>
-      <div><p class="muted" style="font-size: 23px; margin-bottom: 8px;">по теме</p><div class="chart" id="chart-themes"></div></div>
+<!-- 13. Checked by specialists -->
+<section class="slide" id="s-feedback">
+  <div class="bg" style="--dx: 85%; --dy: 25%">
+    <div class="blob b-mint" style="left: 1200px; top: 540px; width: 760px; height: 560px"></div>
+    <div class="blob b-sky" style="left: -100px; top: -200px; width: 700px; height: 480px"></div>
+  </div>
+  <img class="cat" src="img/brand/cat-read.png" alt="Кот проверяет выпуск с лупой" style="left: 1500px; top: 96px; width: 320px">
+  <div class="wrap">
+    <span class="tag">Проверено специалистами</span>
+    <h2 style="max-width: 1300px">Запустили в&nbsp;стартапе и&nbsp;доработали по&nbsp;отзывам ИБ-специалистов</h2>
+    <p class="lead" style="max-width: 1300px">Сервис работал внутри стартапа наших знакомых. ИБ-специалисты читали выпуски и&nbsp;присылали замечания, мы&nbsp;их&nbsp;учли. Теперь сервис гарантирует:</p>
+    <div style="position: absolute; left: 96px; top: 480px; width: 1728px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px">
+      <div class="glass" style="position: relative; padding: 34px 38px; display: flex; gap: 24px; align-items: center"><div class="ico green"><svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg></div><p style="font: 500 26px/1.35 var(--sans)">Одна уязвимость - одна запись: пересказы склеиваются по&nbsp;номерам CVE и&nbsp;БДУ</p></div>
+      <div class="glass" style="position: relative; padding: 34px 38px; display: flex; gap: 24px; align-items: center"><div class="ico green"><svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg></div><p style="font: 500 26px/1.35 var(--sans)">«Установите патч» только когда патч вышел, иначе временные меры</p></div>
+      <div class="glass" style="position: relative; padding: 34px 38px; display: flex; gap: 24px; align-items: center"><div class="ico green"><svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg></div><p style="font: 500 26px/1.35 var(--sans)">Каждая карточка сверена с&nbsp;CISA KEV, БДУ ФСТЭК, NVD, EPSS и&nbsp;Exploit-DB</p></div>
+      <div class="glass" style="position: relative; padding: 34px 38px; display: flex; gap: 24px; align-items: center"><div class="ico green"><svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg></div><p style="font: 500 26px/1.35 var(--sans)">В&nbsp;выпусках руководству ни одного номера CVE, оценки или версии</p></div>
     </div>
-    <div class="col grow" style="gap: 26px;">
-      <div class="browser"><div class="bar"><i></i><i></i><i></i><span>localhost:8080/sources</span></div><img src="img/sources-top.png" alt="Источники"></div>
-      <p style="font-size: 24px;"><span class="num">1&nbsp;737</span> публикаций за неделю сравнения с аналитиком. Стек приходит со снимком из <span class="num">2&nbsp;068</span> реальных публикаций 75 источников и собирает выпуск руководству сразу после старта.</p>
-      <p class="caption" style="margin-top: 0;">Каждый источник опрашивается раз в 15 минут, сайт без ленты читается как страница новостей. Любой читатель добавляет сайт или канал по адресу, ассистент сам понимает, что это.</p>
+    <div class="glass" style="left: 96px; top: 830px; width: 1728px; padding: 26px 38px; display: flex; align-items: center; gap: 30px">
+      <div class="num sm">28 из 28</div><p style="font: 500 26px/1.35 var(--sans); color: var(--ink-2)">выпусков-примеров проходят эти проверки автоматически на&nbsp;каждом коммите</p>
     </div>
   </div>
-  <p class="src">docs/DECISIONS.md, «Источники из датасета»; README, «Быстрый запуск».</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>5</span></div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Проверка выпусков: scripts/check_examples.py, задание CI backend:lint</span><span class="page">13 / 18</span></div>
 </section>
 
-<section class="slide">
-  <div class="kicker">Критерий 1 · Репрезентативность материалов</div>
-  <h2>На 21 примере организаторов прочитаны все страницы, тип записи совпал в 7 случаях из 7</h2>
-  <p class="lead">Каждый пример прошёл те же шаги, что запись выпуска, и лежит рядом с желаемым выводом.</p>
-  <table style="margin-top: 36px;">
-    <tr><th style="width: 34%;">Что сравнивали</th><th style="width: 22%;">Результат</th><th>Пояснение</th></tr>
-    <tr><td>Страницы примеров</td><td>21 из 21</td><td>каждая страница читается так же, как источник каталога</td></tr>
-    <tr><td>Специалисты: тип и приоритет</td><td>тип 7 из 7, приоритет 4 из 7</td><td>у specialist-4 в датасете стоит CVE другой уязвимости, WSUS из specialist-7</td></tr>
-    <tr><td>Специалисты: посты Telegram</td><td>тип по содержанию</td><td>датасет кладёт пост в «Инфо» по источнику, Scrap&amp;Grep даёт посту об уязвимости карточку и ссылки из поста, как в желаемом выводе</td></tr>
-    <tr><td>Руководство: двенадцать признаков датасета</td><td>23 из 36 у gpt-oss:120b</td><td>у Qwen3.6 35B в Yandex AI Studio 24 из 36, у Alice AI LLM 22</td></tr>
-  </table>
-  <p style="margin-top: 32px; font-size: 25px;">Ещё в репозитории восемь выпусков в Markdown и DOCX, собранные 15 октября на текущем коде, и три сценария смены интересов с причиной у каждой статьи, которая пришла или ушла.</p>
-  <p class="src" style="margin-top: auto;">Прогон 15 октября 2026 года: examples/models/README.md, «Датасет организаторов»; examples/dataset/README.md; examples/README.md.</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>6</span></div>
+<!-- 14. Scale and reliability -->
+<section class="slide" id="s-scale">
+  <div class="bg" style="--dx: 15%; --dy: 80%">
+    <div class="blob b-blue" style="left: 1000px; top: -180px; width: 860px; height: 560px"></div>
+    <div class="blob b-violet" style="left: 200px; top: 700px; width: 600px; height: 420px"></div>
+  </div>
+  <div class="wrap">
+    <span class="tag">Масштаб и надёжность</span>
+    <h2>Растёт вместе с&nbsp;компанией и&nbsp;не&nbsp;теряет запросы</h2>
+    <div class="glass" style="left: 96px; top: 320px; width: 900px; height: 610px; padding: 36px 44px">
+      <div class="label">Нагрузка на чтение: 50 пользователей, 30 секунд</div>
+      <div style="display: flex; align-items: flex-end; gap: 60px; height: 330px; margin-top: 30px; padding: 0 40px">
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%">
+          <div style="text-align: center; margin-bottom: 14px"><span class="num xs ink">406</span></div>
+          <div class="bar" style="height: 66%; background: #9cccfb"></div>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%">
+          <div style="text-align: center; margin-bottom: 14px"><span class="num xs">615</span></div>
+          <div class="bar" style="height: 100%"></div>
+        </div>
+      </div>
+      <div style="display: flex; gap: 60px; padding: 0 40px; margin-top: 16px">
+        <div style="flex: 1; text-align: center; font: 600 23px/1.3 var(--sans)">2 реплики API<br><span class="muted" style="font-weight: 500">p95 189 мс</span></div>
+        <div style="flex: 1; text-align: center; font: 600 23px/1.3 var(--sans)">4 реплики API<br><span class="muted" style="font-weight: 500">p95 128 мс</span></div>
+      </div>
+      <p style="font: 500 22px/1.35 var(--sans); color: var(--ink-2); margin-top: 22px; text-align: center">запросов в секунду, ошибок 0 из 18&nbsp;565</p>
+    </div>
+    <div style="position: absolute; left: 1030px; top: 320px; width: 794px">
+      <div class="glass" style="position: relative; padding: 26px 32px; border-radius: 28px; display: flex; gap: 24px; align-items: center"><div class="num xs" style="width: 120px">0</div><p class="t" style="margin: 0">потерянных запросов из&nbsp;15&nbsp;670, когда одну из&nbsp;четырёх реплик остановили под нагрузкой</p></div>
+      <div class="glass" style="position: relative; padding: 26px 32px; border-radius: 28px; display: flex; gap: 24px; align-items: center; margin-top: 14px"><div class="num xs" style="width: 120px">2 с</div><p class="t" style="margin: 0">и&nbsp;выпуск готов, даже если модель отказала: шаг делает алгоритм без модели</p></div>
+      <div class="glass" style="position: relative; padding: 26px 32px; border-radius: 28px; display: flex; gap: 24px; align-items: center; margin-top: 14px"><div class="ico green" style="margin: 0 31px"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></div><p class="t" style="margin: 0">упал воркер посреди сборки: второй продолжил с&nbsp;того&nbsp;же шага</p></div>
+      <div class="glass" style="position: relative; padding: 26px 32px; border-radius: 28px; margin-top: 14px"><p class="t" style="margin: 0">Реплики добавляются одной командой без остановки:</p><p style="margin-top: 12px; font: 500 24px/1.3 var(--mono)"><span class="code">docker compose up -d --scale api=4</span></p></div>
+    </div>
+  </div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">k6, сценарий scripts/load/read.js; отказы на запущенном стеке: docs/QUALITY.md</span><span class="page">14 / 18</span></div>
 </section>
 
-<section class="slide">
-  <div class="kicker">Критерий 2 · Техническая реализация</div>
-  <h2>Стек поднимается одной командой: один образ бэкенда в шести ролях и граф сборки с чекпоинтами</h2>
-  <div class="arch">
-    <div class="lane">
-      <div class="lane-h">Сбор</div>
-      <div class="node">worker-ingest<span>RSS, t.me/s, страницы, лестница чтения, эмбеддинги новых статей</span></div>
-      <div class="node soft">FlareSolverr<span>для сайтов, которые проверяют посетителя скриптом</span></div>
+<!-- 15. Architecture -->
+<section class="slide" id="s-arch">
+  <div class="bg" style="--dx: 50%; --dy: 50%">
+    <div class="blob b-sky" style="left: 600px; top: 300px; width: 900px; height: 600px"></div>
+  </div>
+  <div class="wrap">
+    <span class="tag">Архитектура</span>
+    <h2>Как устроено внутри</h2>
+    <div style="position: absolute; left: 96px; top: 300px; width: 1728px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 34px">
+      <div class="glass" style="position: relative; padding: 30px 28px; height: 360px; border-radius: 30px"><div class="ico" style="margin-bottom: 18px"><svg viewBox="0 0 24 24"><path d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1.5"/></svg></div><div class="label">1. Источники</div><div class="num xs" style="margin-top: 10px">104</div><p class="t" style="font-size: 22px">сайты, RSS, Telegram, CISA ICS, БДУ ФСТЭК, NVD, EPSS, Exploit-DB</p></div>
+      <div class="glass" style="position: relative; padding: 30px 28px; height: 360px; border-radius: 30px"><div class="ico amber" style="margin-bottom: 18px"><svg viewBox="0 0 24 24"><path d="M4 20h4v-4h4v-4h4V8h4"/></svg></div><div class="label">2. Сбор</div><p class="t" style="margin-top: 12px; font-size: 22px">лестница чтения: запрос → curl_cffi → браузер → FlareSolverr; прокси с&nbsp;журналом</p></div>
+      <div class="glass" style="position: relative; padding: 30px 28px; height: 360px; border-radius: 30px"><div class="ico dark" style="margin-bottom: 18px"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg></div><div class="label">3. Хранилище</div><p class="t" style="margin-top: 12px; font-size: 22px">PostgreSQL с&nbsp;pgvector, Valkey для очередей и&nbsp;кеша, ClickHouse для событий чтения</p></div>
+      <div class="glass" style="position: relative; padding: 30px 28px; height: 360px; border-radius: 30px"><div class="ico green" style="margin-bottom: 18px"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg></div><div class="label">4. Сборка выпуска</div><p class="t" style="margin-top: 12px; font-size: 22px">поиск по&nbsp;эмбеддингам, оценка моделью, карточки, проверка по&nbsp;тексту и&nbsp;базам</p></div>
+      <div class="glass" style="position: relative; padding: 30px 28px; height: 360px; border-radius: 30px"><div class="ico red" style="margin-bottom: 18px"><svg viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg></div><div class="label">5. Доставка</div><p class="t" style="margin-top: 12px; font-size: 22px">FastAPI, веб на React&nbsp;19, Telegram, почта, MCP, ролики в&nbsp;Remotion</p></div>
     </div>
-    <div class="lane">
-      <div class="lane-h">Хранение</div>
-      <div class="node">PostgreSQL 18<span>статьи, pgvector и полнотекстовый поиск, чекпоинты графа</span></div>
-      <div class="node">Valkey<span>очереди задач, кеш ответов модели, прогресс</span></div>
-      <div class="node">ClickHouse<span>события показов и отметок</span></div>
-    </div>
-    <div class="lane">
-      <div class="lane-h">Сборка и модель</div>
-      <div class="node">worker-digest<span>граф LangGraph, оценка и выжимки веером</span></div>
-      <div class="node">Языковая модель<span>Qwen3.6 35B-A3B в Ollama или vLLM либо Yandex AI Studio</span></div>
-      <div class="node soft">worker-profile, worker-media<span>резюме и вкус читателя; ролики и брифинг</span></div>
-    </div>
-    <div class="lane">
-      <div class="lane-h">Доступ</div>
-      <div class="node">web (Caddy) и api (FastAPI)<span>интерфейс, REST, прогресс по SSE, MCP</span></div>
-      <div class="node soft">cli<span>выпуск в Markdown и DOCX одной командой</span></div>
-      <div class="node soft">scheduler<span>опрос раз в 15 минут, выпуски по расписанию</span></div>
+    <div class="arrow" style="left: 400px; top: 457px"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+    <div class="arrow" style="left: 752px; top: 457px"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+    <div class="arrow" style="left: 1104px; top: 457px"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+    <div class="arrow" style="left: 1456px; top: 457px"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+    <div class="glass solid" style="left: 96px; top: 700px; width: 1728px; padding: 30px 40px; display: grid; grid-template-columns: 290px 1fr 1fr 1fr; gap: 30px; align-items: center">
+      <div><div class="label">Модели</div><p style="font: 600 22px/1.3 var(--sans); margin-top: 10px">меняются в&nbsp;.env, код не&nbsp;трогается</p></div>
+      <div><h3 style="font-size: 25px">Yandex AI Studio</h3><p class="t" style="font-size: 21px">Qwen3.6 35B, text-embeddings-v2, голос SpeechKit</p></div>
+      <div><h3 style="font-size: 25px">Свой сервер</h3><p class="t" style="font-size: 21px">Ollama или vLLM, эмбеддинги в&nbsp;образе, без интернета</p></div>
+      <div><h3 style="font-size: 25px">Без модели</h3><p class="t" style="font-size: 21px">автономный алгоритм собирает выпуск за&nbsp;0,5&nbsp;с</p></div>
     </div>
   </div>
-  <p class="muted" style="font-size: 23px; margin-top: 30px;">Граф сборки выпуска</p>
-  <div class="flow" style="margin-top: 12px;">
-    <div class="box"><b>prepare</b><span>профиль и период</span></div><div class="arrow">›</div>
-    <div class="box"><b>retrieve</b><span>поиск по смыслу и словам</span></div><div class="arrow">›</div>
-    <div class="box key"><b>grade</b><span>веер: задача на кандидата</span></div><div class="arrow">›</div>
-    <div class="box"><b>select</b><span>порог, лимит, исключения</span></div><div class="arrow">›</div>
-    <div class="box"><b>cluster</b><span>склейка повторов, темы</span></div><div class="arrow">›</div>
-    <div class="box key"><b>summarize</b><span>веер: задача на статью</span></div><div class="arrow">›</div>
-    <div class="box"><b>compose</b><span>разделы, «Главное»</span></div><div class="arrow">›</div>
-    <div class="box"><b>persist</b><span>запись выпуска</span></div>
-  </div>
-  <p class="src" style="margin-top: 18px;">Упавший воркер продолжает с прерванного шага: чекпоинты в PostgreSQL. docs/ARCHITECTURE.md, «Компоненты» и «Граф сборки».</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>7</span></div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Подробно: docs/ARCHITECTURE.md, решения и замеры: docs/DECISIONS.md</span><span class="page">15 / 18</span></div>
 </section>
 
-<section class="slide">
-  <div class="kicker">Критерий 2 · Техническая реализация</div>
-  <h2>Сайт, который не пускает бота, читается следующей ступенью лестницы</h2>
-  <div class="row grow" style="margin-top: 40px; gap: 48px; align-items: flex-end;">
-    <div class="stair grow">
-      <div class="tread" style="height: 46%;"><div class="n">1</div><b>Обычный запрос</b><span>SecurityLab, Habr: <em style="white-space: nowrap;">0,2-0,7 с</em></span></div>
-      <div class="tread" style="height: 62%;"><div class="n">2</div><b>Заголовки браузера</b><span>для сайтов, которым хватает User-Agent браузера</span></div>
-      <div class="tread" style="height: 80%;"><div class="n">3</div><b>Отпечаток Chrome</b><span>Cloudflare с 403 и заглушкой: Dark Reading <em>0,9 с</em>, Cybernews <em>1,0 с</em>, SecurityWeek <em>1,4 с</em>, Netskope <em>4,2 с</em></span></div>
-      <div class="tread" style="height: 100%;"><div class="n">4</div><b>FlareSolverr в стеке</b><span>проверка Cloudflare с JS: <em>15,9 с</em>; McAfee за Akamai</span></div>
+<!-- 16. Quality and security -->
+<section class="slide" id="s-quality">
+  <div class="bg" style="--dx: 90%; --dy: 85%">
+    <div class="blob b-mint" style="left: -140px; top: 300px; width: 700px; height: 600px"></div>
+    <div class="blob b-blue" style="left: 1400px; top: -160px; width: 560px; height: 440px"></div>
+  </div>
+  <div class="wrap">
+    <span class="tag">Качество и безопасность</span>
+    <h2 style="max-width: 1500px">Код покрыт тестами, каждый коммит проходит 17 проверок</h2>
+    <div style="position: absolute; left: 96px; top: 320px; width: 840px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px">
+      <div class="glass" style="position: relative; padding: 28px 32px"><div class="num sm">1&nbsp;005</div><div class="cap">тестов бэкенда на&nbsp;настоящих PostgreSQL, Valkey и&nbsp;ClickHouse</div><div class="chip blue" style="margin-top: 16px">покрытие 87%</div></div>
+      <div class="glass" style="position: relative; padding: 28px 32px"><div class="num sm">903</div><div class="cap">теста фронтенда: компоненты, страницы, модули</div><div class="chip blue" style="margin-top: 16px">покрытие 97%</div></div>
+      <div class="glass" style="position: relative; padding: 26px 32px; grid-column: span 2">
+        <div class="label">В CI на GitLab и GitHub</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px">
+          <span class="chip">mypy --strict</span><span class="chip">ruff</span><span class="chip">oxlint</span><span class="chip">tsc</span><span class="chip">gitleaks по истории</span><span class="chip">osv-scanner</span><span class="chip">hadolint</span><span class="chip">shellcheck</span><span class="chip">стенд на моделях Яндекса</span>
+        </div>
+      </div>
     </div>
-    <div class="col" style="flex: 0 0 520px; gap: 22px;">
-      <div class="card"><h3>Прокси</h3><p>Общий, свой у источника или пулом с ротацией при 403 и 429.</p></div>
-      <div class="card"><h3>Видно у источника</h3><p>Ступень и причина записываются: «403, заглушка Cloudflare на шаге «обычный запрос», прочитан через curl_cffi».</p></div>
-      <div class="card"><h3>Безопасно</h3><p>Защита от SSRF на каждой ступени: внутренние адреса не читаются.</p></div>
+    <div style="position: absolute; left: 970px; top: 320px; width: 854px">
+      <div class="glass" style="position: relative; padding: 22px 30px; border-radius: 28px; display: flex; gap: 22px; align-items: center"><div class="ico"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div><p class="t" style="margin: 0">Закрытый контур: сервисы без выхода в&nbsp;интернет, источники только через прокси с&nbsp;журналом</p></div>
+      <div class="glass" style="position: relative; padding: 22px 30px; border-radius: 28px; display: flex; gap: 22px; align-items: center; margin-top: 12px"><div class="ico green"><svg viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M9 14l2 2 4-4"/></svg></div><p class="t" style="margin: 0">152-ФЗ: контакты из резюме вырезаются до&nbsp;анализа, сам текст не&nbsp;хранится</p></div>
+      <div class="glass" style="position: relative; padding: 22px 30px; border-radius: 28px; display: flex; gap: 22px; align-items: center; margin-top: 12px"><div class="ico amber"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h0"/><path d="M10.3 3.9L2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></div><p class="t" style="margin: 0">Команды внутри статей вырезаются, ответ модели принимается только по&nbsp;JSON-схеме</p></div>
+      <div class="glass" style="position: relative; padding: 22px 30px; border-radius: 28px; display: flex; gap: 22px; align-items: center; margin-top: 12px"><div class="ico red"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></div><p class="t" style="margin: 0">Чужие профили и&nbsp;выпуски недоступны, вход с&nbsp;лимитом попыток, ключи MCP личные</p></div>
+      <div class="glass" style="position: relative; padding: 22px 30px; border-radius: 28px; display: flex; gap: 22px; align-items: center; margin-top: 12px"><div class="ico dark"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 9l3 3-3 3M13 15h4"/></svg></div><p class="t" style="margin: 0">Контейнеры без root, рендер видео без сети и&nbsp;с&nbsp;диском только на&nbsp;чтение</p></div>
     </div>
   </div>
-  <p class="src" style="margin-top: 24px;">Замеры 2 октября 2026 года, без прокси. docs/DECISIONS.md, «Сбор: лестница способов чтения».</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>8</span></div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Тесты: docs/QUALITY.md; задания CI: docs/CI.md; безопасность: docs/ARCHITECTURE.md</span><span class="page">16 / 18</span></div>
 </section>
 
-<section class="slide">
-  <div class="kicker">Критерий 2 · Техническая реализация</div>
-  <h2>Запись сверяется с текстом статьи, с базами уязвимостей и с тем, вышло ли исправление</h2>
-  <div class="flow">
-    <div class="box"><b>Сбор</b><span>полный текст со страницы, если в ленте анонс</span></div><div class="arrow">›</div>
-    <div class="box"><b>Поиск</b><span>по смыслу и по словам для каждого интереса</span></div><div class="arrow">›</div>
-    <div class="box"><b>Оценка</b><span>60 кандидатов по шкале 0-3 с причиной</span></div><div class="arrow">›</div>
-    <div class="box"><b>Склейка</b><span>одна уязвимость - одна запись</span></div><div class="arrow">›</div>
-    <div class="box"><b>Запись</b><span>тип, карточка, приоритет, «почему важно»</span></div><div class="arrow">›</div>
-    <div class="box key"><b>Проверка</b><span>чего нет в статье, нет в карточке; номера по CISA KEV и БДУ</span></div><div class="arrow">›</div>
-    <div class="box"><b>Выпуск</b><span>Markdown с оглавлением, DOCX, история</span></div>
+<!-- 17. Deployment -->
+<section class="slide" id="s-deploy">
+  <div class="bg" style="--dx: 80%; --dy: 20%">
+    <div class="blob b-blue" style="left: -100px; top: 640px; width: 900px; height: 480px"></div>
+    <div class="blob b-peach" style="left: 1400px; top: 500px; width: 560px; height: 520px"></div>
   </div>
-  <div class="row grow" style="margin-top: 36px; gap: 48px;">
-    <div class="col" style="flex: 0 0 780px; gap: 16px;">
-      <p>Модель сама вызывает <code>lookup_vulnerability</code>: CISA KEV, БДУ ФСТЭК, NVD, EPSS и Exploit-DB по локальным копиям. Номера, о которых она не спросила, граф проверяет сам.</p>
-      <p>Пока производитель только обещает обновление, карточка так и пишет, а «почему важно» и план на смену советуют временные меры. «Что изменилось» сообщает об исправлении, когда оно вышло.</p>
-      <p>Пересказы одной уязвимости склеиваются по номерам CVE и БДУ: в восьми выпусках примеров склеен 51 пересказ.</p>
+  <div class="wrap">
+    <span class="tag">Внедрение</span>
+    <h2>Три варианта запуска под&nbsp;требования компании</h2>
+    <div style="position: absolute; left: 96px; top: 300px; width: 1728px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px">
+      <div class="glass" style="position: relative; padding: 34px 38px; height: 410px">
+        <div class="ico dark"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
+        <h3 style="margin-top: 22px">Закрытый контур</h3><p class="t">Для объектов КИИ: модель на&nbsp;своём сервере, интернет не&nbsp;нужен.</p>
+        <div style="margin-top: 26px"><span class="num xs">3,5 мин</span><div class="cap sm">поднимается архив образов 4,7&nbsp;ГБ в&nbsp;пустом контуре</div></div>
+      </div>
+      <div class="glass" style="position: relative; padding: 34px 38px; height: 410px">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M7 18a5 5 0 1 1 .9-9.9A6 6 0 0 1 19 10a4 4 0 0 1-1 8z"/></svg></div>
+        <h3 style="margin-top: 22px">Облако Яндекса</h3><p class="t">Без видеокарты: Qwen3.6, эмбеддинги и&nbsp;голос в&nbsp;Yandex AI Studio.</p>
+        <div style="margin-top: 26px"><span class="num xs">24 с</span><div class="cap sm">на выпуск специалисту</div></div>
+      </div>
+      <div class="glass" style="position: relative; padding: 34px 38px; height: 410px">
+        <div class="ico green"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h0M7 16.5h0"/></svg></div>
+        <h3 style="margin-top: 22px">Без модели</h3><p class="t">На любом сервере: поиск, оценка и&nbsp;выжимки без языковой модели.</p>
+        <div style="margin-top: 26px"><span class="num xs">0,5 с</span><div class="cap sm">на выпуск, тысячи выпусков в&nbsp;час</div></div>
+      </div>
     </div>
-    <div class="col grow">
-      <div class="browser fit" style="height: 452px;"><div class="bar"><i></i><i></i><i></i><span>Карточка уязвимости</span></div><img src="../screenshots/digest-topics.png" alt="Карточка уязвимости"></div>
+    <div class="glass solid" style="left: 96px; top: 740px; width: 1728px; padding: 30px 40px; display: flex; gap: 40px; align-items: center">
+      <div style="flex: none"><div class="label">Пилот</div><div class="num xs ink" style="margin-top: 8px">4 недели</div></div>
+      <p style="font: 500 25px/1.4 var(--sans); color: var(--ink-2)">10-20 сотрудников из разных групп, у&nbsp;каждого свой профиль. Успех: полнота важных новостей не&nbsp;ниже 90% и&nbsp;проверка недельного выпуска не&nbsp;дольше 30&nbsp;минут.</p>
     </div>
   </div>
-  <p class="src" style="margin-top: 14px;">docs/DECISIONS.md, «Инструмент модели», «Совет согласован с тем, вышло ли исправление», «Склейка дублей по номерам уязвимостей».</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>9</span></div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Установка: docs/INSTALL.md; пилот и приёмка: docs/BUSINESS.md, «Пилот»</span><span class="page">17 / 18</span></div>
 </section>
 
-<section class="slide">
-  <div class="kicker">Критерий 2 · Техническая реализация</div>
-  <h2>Специалист получает выпуск за сутки с планом на смену, руководство выводы за неделю</h2>
-  <div class="row grow" style="margin-top: 40px; gap: 48px;">
-    <div class="col grow">
-      <div class="browser fit" style="height: 520px;"><div class="bar"><i></i><i></i><i></i><span>Выпуск специалисту по ИБ АСУ ТП</span></div><img src="img/specialist-main.png" alt="Выпуск специалисту"></div>
-      <p class="caption">«Главное», путь от публикаций периода до записей и строка «Вместо ручной работы». Дальше план на смену с галочками, которые хранятся на сервере, и пометка «касается нас» у продуктов из «Наших систем».</p>
+<!-- 18. Summary -->
+<section class="slide" id="s-final">
+  <div class="bg" style="--dx: 85%; --dy: 70%">
+    <div class="blob b-blue" style="left: 1100px; top: 420px; width: 860px; height: 640px"></div>
+    <div class="blob b-violet" style="left: -120px; top: -160px; width: 640px; height: 480px"></div>
+  </div>
+  <img class="cat" src="img/brand/cat-sleep.png" alt="Кот спит на газете" style="left: 1430px; top: 640px; width: 390px">
+  <div class="wrap">
+    <span class="tag accent">Итог</span>
+    <h2>Почему Scrap&amp;Grep</h2>
+    <div style="position: absolute; left: 96px; top: 280px; width: 1728px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px">
+      <div class="glass" style="position: relative; padding: 32px 36px; height: 330px">
+        <div class="label acc" style="color: var(--accent)">Соответствие задаче</div>
+        <ul class="list tight"><li>все типы записей и&nbsp;приоритеты датасета</li><li>выпуски специалисту и&nbsp;руководству</li><li>60 из 62 источников списков датасета и&nbsp;ещё 44</li></ul>
+      </div>
+      <div class="glass" style="position: relative; padding: 32px 36px; height: 330px">
+        <div class="label acc" style="color: var(--accent)">Качество реализации</div>
+        <ul class="list tight"><li>1&nbsp;900+ тестов и&nbsp;17 проверок CI</li><li>каждая запись сверена с&nbsp;базами</li><li>закрытый контур и&nbsp;стенд на&nbsp;моделях Яндекса</li></ul>
+      </div>
+      <div class="glass" style="position: relative; padding: 32px 36px; height: 330px">
+        <div class="label acc" style="color: var(--accent)">Материалы</div>
+        <ul class="list tight"><li>28 выпусков-примеров на&nbsp;своих данных</li><li>исследование с&nbsp;аналитиком ИБ</li><li>21 пример датасета прогнан через решение</li></ul>
+      </div>
     </div>
-    <div class="col grow">
-      <div class="browser fit" style="height: 520px;"><div class="bar"><i></i><i></i><i></i><span>Выпуск руководству</span></div><img src="../screenshots/digest-management.png" alt="Выпуск руководству"></div>
-      <p class="caption">Записи в одно-два предложения с признаками датасета, без номеров уязвимостей. Наверху «Что это значит для нас», рядом период в цифрах против прошлого выпуска и брифинг голосом на две минуты.</p>
+    <div style="position: absolute; left: 96px; top: 660px; width: 1250px">
+      <p style="font: 800 64px/1.05 var(--display); letter-spacing: -0.03em">Пока команда спит, выпуск на&nbsp;утро уже собирается</p>
+      <p class="lead" style="max-width: 1180px; margin-top: 22px">Выпуск по&nbsp;расписанию, ролик и&nbsp;пост в&nbsp;канал к&nbsp;началу смены. Спасибо!</p>
     </div>
   </div>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>10</span></div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Код, примеры и инструкции: репозиторий проекта, README.md</span><span class="page">18 / 18</span></div>
 </section>
 
-<section class="slide">
-  <div class="kicker">Критерий 2 · Техническая реализация</div>
-  <h2>Правка профиля сразу меняет подборку, и это видно ещё до сборки</h2>
-  <div class="row grow" style="margin-top: 40px; gap: 52px;">
-    <div class="col" style="flex: 0 0 960px;">
-      <div class="browser fit" style="height: 640px;"><div class="bar"><i></i><i></i><i></i><span>localhost:8080/profiles</span></div><img src="../screenshots/interests.png" alt="Интересы и предпросмотр"></div>
-    </div>
-    <div class="col grow" style="gap: 18px;">
-      <div class="card"><h3>Убран интерес «Уязвимости»</h3><p>19 записей → 20: пришло 7, ушло 6.</p></div>
-      <div class="card"><h3>Исключение «уязвимости Citrix»</h3><p>Пришло 5, ушло 4; запись о Citrix ушла с причиной.</p></div>
-      <div class="card"><h3>Порог 0,50 → 0,70, размер 20 → 10</h3><p>Ушли 9 записей, у каждой её оценка.</p></div>
-      <div class="card"><h3>Поля карточек и блоки выпуска</h3><p>Профиль прячет лишние строки карточек и любые из 14 блоков вокруг записей.</p></div>
-    </div>
-  </div>
-  <p class="src">Предпросмотр работает без языковой модели. examples/change; examples/README.md; docs/TASK-MAP.md, «Что нового в финале».</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>11</span></div>
-</section>
-
-<section class="slide">
-  <div class="kicker">Критерий 2 · Техническая реализация</div>
-  <h2>Весь стек переходит на Yandex AI Studio переменными в .env, код не меняется</h2>
-  <div class="row grow" style="margin-top: 40px; gap: 64px;">
-    <div class="col" style="flex: 0 0 820px; gap: 14px;">
-      <p class="muted" style="font-size: 23px;">Сборка на одном сценарии, секунды</p>
-      <p style="font-size: 24px; font-weight: 650; margin-top: 10px;">Выпуск специалисту</p>
-      <div class="chart" id="chart-yandex-spec"></div>
-      <p style="font-size: 24px; font-weight: 650; margin-top: 10px;">Выпуск руководству</p>
-      <div class="chart" id="chart-yandex-mgmt"></div>
-      <p class="caption">Сквозная проверка на полном стеке Yandex: выпуск за 21,6 с, ролик на 55 с с голосом SpeechKit за 175 с.</p>
-    </div>
-    <div class="col grow">
-      <table>
-        <tr><th>Замер</th><th class="r">Yandex</th><th class="r">Сравнение</th></tr>
-        <tr><td>Признаков руководства из 36</td><td class="r">24</td><td class="r" style="white-space: nowrap;">23 у gpt-oss-120b</td></tr>
-        <tr><td>Точность первых 20 кандидатов</td><td class="r">0,65</td><td class="r" style="white-space: nowrap;">0,40 у embeddinggemma</td></tr>
-        <tr><td>Полнота первых 60 кандидатов</td><td class="r">0,443</td><td class="r" style="white-space: nowrap;">0,426 у embeddinggemma</td></tr>
-      </table>
-      <p style="margin-top: 26px; font-size: 24px;">Тексты пишет Qwen3.6 35B или Alice AI LLM через OpenAI-совместимый API, эмбеддинги считает text-embeddings-v2, ролики и брифинги озвучивает SpeechKit. Видеокарта не нужна.</p>
-    </div>
-  </div>
-  <p class="src">Профиль «Специалист по ИБ АСУ ТП». README, «Модели Яндекса»; docs/INSTALL.md, «Модели Яндекса»; docs/eval/retrieval.md; docs/DECISIONS.md, «Yandex AI Studio».</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>12</span></div>
-</section>
-
-<section class="slide">
-  <div class="kicker">Критерий 2 · Техническая реализация</div>
-  <h2>Сценарий выпуска держится на любой модели и без модели</h2>
-  <div class="row grow" style="margin-top: 40px; gap: 56px;">
-    <div class="col" style="flex: 0 0 1080px;">
-      <p class="muted" style="font-size: 23px; margin-bottom: 10px;">Записей, совпавших с первым прогоном gpt-oss:120b, из 20, и время сборки</p>
-      <div class="chart" id="chart-models"></div>
-    </div>
-    <div class="col grow" style="gap: 20px;">
-      <p>Разделы, карточки, приоритеты и проверка работают на всех моделях: выпуск собирается целиком.</p>
-      <p>Отбор держится на поиске: даже без модели 16 записей из 20 те же. Два прогона одной gpt-oss:120b совпадают в 17.</p>
-      <p>Модель меняется в .env. Примеры собраны на gpt-oss:120b, в стеке по умолчанию пишет локальная Qwen3.6 35B-A3B.</p>
-    </div>
-  </div>
-  <p class="src">Выпуск специалисту по ИБ АСУ ТП за неделю примеров: 60 кандидатов, до 20 записей, пустой кеш, 15 октября 2026 года. examples/models/README.md</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>13</span></div>
-</section>
-
-<section class="slide">
-  <div class="kicker">Критерий 2 · Техническая реализация</div>
-  <h2>Стек работает в закрытом контуре, наружу ходит только загрузчик источников</h2>
-  <div class="row grow" style="margin-top: 44px; gap: 64px;">
-    <div class="col" style="flex: 0 0 760px; gap: 26px;">
-      <div class="chart" id="chart-airgap"></div>
-      <p><code>offline_bundle.sh save</code>: 7 образов ядра 4,7 ГБ и модели 1,6 ГБ за 4 мин 21 с. <code>load</code> в пустой каталог за 3 мин 29 с, копия поднялась без сети и прошла <code>scripts/smoke.py</code> целиком.</p>
-    </div>
-    <div class="col grow">
-      <p class="muted" style="font-size: 23px; margin-bottom: 12px;">Модель финала на своём сервере: аренда и окупаемость</p>
-      <table>
-        <tr><th>Модель и карта</th><th class="r" style="white-space: nowrap;">В месяц</th><th class="r" style="white-space: nowrap;">С предоплатой</th><th class="r">Окупается с читателей</th></tr>
-        <tr><td>Qwen3.6 35B-A3B, 22,6 ГБ; RTX 4090 24 ГБ</td><td class="r">69&nbsp;674&nbsp;₽</td><td class="r">52&nbsp;256&nbsp;₽</td><td class="r">9</td></tr>
-        <tr><td>gpt-oss-120b, 65 ГБ; H100 80 ГБ</td><td class="r">246&nbsp;074&nbsp;₽</td><td class="r">221&nbsp;467&nbsp;₽</td><td class="r">29</td></tr>
-      </table>
-      <p style="font-size: 22px; margin-top: 18px; color: var(--muted);">Стек ассистента ставится на тот же сервер. По опубликованным замерам скорости gpt-oss-120b собирает выпуск специалисту примерно за 45 с на H100 и за 70 с на A100, это около 80 и 50 выпусков в час. Цена с предоплатой указана за 30 дней вперёд, окупаемость посчитана по читателям с недельными выпусками.</p>
-    </div>
-  </div>
-  <p class="src">docs/INSTALL.md, «Закрытый контур» и «Требования к железу»; docs/eval/economics.md, immers.cloud, 14.10.2026; docs/QUALITY.md, «Что проверено».</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>14</span></div>
-</section>
-
-<section class="slide">
-  <div class="kicker">Критерий 2 · Техническая реализация</div>
-  <h2>966 тестов бэкенда и 841 тест фронтенда, одни и те же проверки в GitLab и GitHub Actions</h2>
-  <div class="row grow" style="margin-top: 44px; gap: 56px;">
-    <div class="cards" style="flex: 0 0 820px; grid-template-columns: 1fr 1fr; align-content: start;">
-      <div class="card"><div class="stat">966</div><p>тестов бэкенда на настоящих PostgreSQL, Valkey и ClickHouse, покрытие строк 86%</p></div>
-      <div class="card"><div class="stat">841</div><p>тест фронтенда в 115 файлах, Testing Library и MSW, покрытие строк 98%</p></div>
-      <div class="card"><div class="stat">17 и 15</div><p>заданий GitLab CI и GitHub Actions из одних скриптов <code>ci/</code>; прогон GitHub Actions 15 октября прошёл целиком</p></div>
-      <div class="card"><div class="stat">28</div><p>выпусков примеров проверяет <code>check_examples.py</code>: у каждой уязвимости одна запись</p></div>
-    </div>
-    <div class="col grow">
-      <p class="muted" style="font-size: 23px; margin-bottom: 12px;">На запущенном стеке</p>
-      <table>
-        <tr><th>Проверка</th><th>Результат</th></tr>
-        <tr><td>Нагрузка на чтение, k6, 50 пользователей</td><td>4 реплики api: 615 запр/с, p95 128 мс</td></tr>
-        <tr><td>Остановка одной из четырёх реплик api</td><td>0 неудачных из 15&nbsp;670 запросов</td></tr>
-        <tr><td>Остановка Ollama посреди сборки</td><td>выпуск готов через 2 с, недостающее дописал автономный алгоритм</td></tr>
-        <tr><td><code>scripts/smoke.py</code>, 15 октября</td><td>прошёл каждый шаг пути жюри</td></tr>
-      </table>
-    </div>
-  </div>
-  <p class="src">ruff и mypy --strict, oxlint и tsc без замечаний. docs/QUALITY.md, «Тесты» и «Что проверено»; docs/CI.md.</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>15</span></div>
-</section>
-
-<section class="slide">
-  <div class="kicker">Критерий 2 · Персонализация</div>
-  <h2>Резюме задаёт профиль с первой минуты, и лента сразу подбирается под специалиста</h2>
-  <div class="row grow" style="margin-top: 40px; gap: 48px;">
-    <div class="col grow">
-      <div class="browser fit" style="height: 520px;"><div class="bar"><i></i><i></i><i></i><span>Загрузка резюме</span></div><img src="img/resume-card.png" alt="Резюме"></div>
-      <p class="caption">Должность, навыки и предложенные темы. Имя и контакты вырезаются до анализа, файл удаляется сразу после разбора; сканы читает docling.</p>
-    </div>
-    <div class="col grow">
-      <div class="browser fit" style="height: 520px;"><div class="bar"><i></i><i></i><i></i><span>Для вас</span></div><img src="../screenshots/feed.png" alt="Лента"></div>
-      <p class="caption">У каждой статьи видно, почему она здесь: интерес, опыт из резюме, похожее на то, что читатель отметил; «Причины подбора» раскладывают оценку на части.</p>
-    </div>
-  </div>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>16</span></div>
-</section>
-
-<section class="slide">
-  <div class="kicker">Критерий 2 · Рекомендательная система</div>
-  <h2>Своя рекомендательная модель строит ленту по вкусу читателя и учится на его отметках</h2>
-  <div class="arch" style="margin-top: 30px; gap: 18px;">
-    <div class="node">1. Кандидаты<span>один SQL-запрос: близость статей за две недели к каждой грани вкуса по эмбеддингам pgvector и ключевым словам</span></div>
-    <div class="node">2. Оценка<span>грани с доверием: интерес 0,45, резюме 0,10, выученная по лайкам до 0,35, избегаемая вычитается; плюс свежесть, источник, «нравится коллегам»</span></div>
-    <div class="node">3. Перестановка<span>копии одной истории выбрасываются, серии одного источника разбиваются, каждое седьмое место - «Что-то новое»</span></div>
-    <div class="node">4. Обучение<span>ночью LightGBM LambdaRank на показах и отметках из ClickHouse с поправкой на место в списке</span></div>
-  </div>
-  <div class="row grow" style="margin-top: 30px; gap: 56px;">
-    <div class="col" style="flex: 0 0 860px; gap: 14px;">
-      <p style="font-size: 23px;">Каждая карточка объясняет оценку: какой интерес совпал, что из резюме, на что похоже из отмеченного. Отметки весят по-разному (сохранение 1,2, лайк 1,0, открытие 0,4, скрытие -0,7, дизлайк -1,0) и слабеют вдвое за три недели.</p>
-      <p style="font-size: 23px;">LightGBM заменяет ручные веса, только если на трёх последних днях поднимает nDCG@20 больше чем на 0,01; половина читателей остаётся контрольной группой. Так в выдачу попадает только модель, которая доказала прирост на отметках читателей.</p>
-    </div>
-    <div class="col grow">
-      <p class="muted" style="font-size: 23px; margin-bottom: 10px;">nDCG@20 ленты специалиста по ИБ АСУ ТП до первых отметок</p>
-      <div class="chart" id="chart-recsys"></div>
-      <p class="caption">Интересы дают главный прирост, резюме помогает, пока интересов нет. Неделя из 871 статьи.</p>
-    </div>
-  </div>
-  <p class="src">docs/ARCHITECTURE.md, «Персональная лента»; docs/DECISIONS.md, «Обучаемое ранжирование»; docs/eval/recsys.md, docs/eval/ranker.md.</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>17</span></div>
-</section>
-
-<section class="slide">
-  <div class="kicker">Критерий 2 · Персонализация</div>
-  <h2>Профиль учится на отметках читателя и передаётся коллеге по ссылке</h2>
-  <div class="row grow" style="margin-top: 40px; gap: 48px;">
-    <div class="col grow">
-      <div class="browser fit" style="height: 520px;"><div class="bar"><i></i><i></i><i></i><span>Интересы · Подстройка по отметкам</span></div><img src="../screenshots/adapt-panel.png" alt="Подстройка профиля"></div>
-      <p class="caption">Вес интереса растёт от «больше такого» и падает от «меньше такого», не больше чем на десятую часть; новая тема предлагается по статьям, которые профиль сам не нашёл. Сохранённый профиль при этом не меняется.</p>
-    </div>
-    <div class="col grow">
-      <div class="browser fit" style="height: 520px;"><div class="bar"><i></i><i></i><i></i><span>Профиль по ссылке</span></div><img src="../screenshots/share-accept.png" alt="Профиль по ссылке"></div>
-      <p class="caption">Коллега открывает ссылку и добавляет копию профиля себе. Выпуски, отметки и резюме владельца по ссылке не видны.</p>
-    </div>
-  </div>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>18</span></div>
-</section>
-
-<section class="slide">
-  <div class="kicker">Критерий 2 · Персонализация</div>
-  <h2>Читатель входит одной кнопкой, проходит тур по разделам и читает статьи по-русски</h2>
-  <div class="row grow" style="margin-top: 40px; gap: 52px;">
-    <div class="col" style="flex: 0 0 960px;">
-      <div class="browser fit" style="height: 600px;"><div class="bar"><i></i><i></i><i></i><span>localhost:8080</span></div><img src="../screenshots/login.png" alt="Вход"></div>
-    </div>
-    <div class="col grow" style="gap: 20px;">
-      <div class="card"><h3>Общие аккаунты</h3><p>«Войти как читатель» открывает четыре примера профилей без пароля, «Войти как администратор» добавляет «Аналитику» и инструменты каталога.</p></div>
-      <div class="card"><h3>Знакомство</h3><p>Десять шагов по всем разделам с мини-превью, затем первый профиль интересов по резюме, из шаблона или вручную и первый выпуск.</p></div>
-      <div class="card"><h3>Перевод в читалке</h3><p>Английские и китайские статьи модель переводит на русский. Код, номера CVE и БДУ и числа не меняются, оригинал открывается одной кнопкой.</p></div>
-    </div>
-  </div>
-  <p class="src">docs/TASK-MAP.md, «Что нового в финале»; docs/DECISIONS.md, «Перевод английских и китайских статей».</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>19</span></div>
-</section>
-
-<section class="slide">
-  <div class="kicker">Критерий 3 · Бизнес-ориентированность</div>
-  <h2>Выпуск приходит по расписанию, в Telegram-канал компании и ИИ-ассистенту сотрудника</h2>
-  <div class="row grow" style="margin-top: 40px; gap: 40px;">
-    <div class="col grow" style="flex-basis: 0;">
-      <div class="browser fit" style="height: 470px;"><div class="bar"><i></i><i></i><i></i><span>Расписание</span></div><img src="img/schedule-popup.png" alt="Расписание" style="object-fit: contain; object-position: top; background: #f5f5f5;"></div>
-      <p class="caption">Каждый день, по будням или раз в неделю, в местное время читателя. Кнопка «На почту» шлёт выпуск письмом с DOCX во вложении.</p>
-    </div>
-    <div class="col grow" style="flex-basis: 0;">
-      <div class="browser fit" style="height: 470px;"><div class="bar"><i></i><i></i><i></i><span>Пост в канале</span></div><img src="../screenshots/telegram-mock.png" alt="Пост в Telegram"></div>
-      <p class="caption">Боты публикуют новости по расписанию: у каждого канала своя аудитория, тон и подача ссылок, черновик уходит на проверку.</p>
-    </div>
-    <div class="col grow" style="flex-basis: 0;">
-      <div class="browser fit" style="height: 470px;"><div class="bar"><i></i><i></i><i></i><span>Доступ для ИИ-ассистентов</span></div><img src="img/mcp-keys.png" alt="Ключ MCP" style="object-fit: contain; object-position: top; background: #f5f5f5;"></div>
-      <p class="caption">MCP-сервер отдаёт Claude, Cursor и другим клиентам ленту, сохранённое, выпуски и интересы только этого читателя. Ключ показывается один раз.</p>
-    </div>
-  </div>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>20</span></div>
-</section>
-
-<section class="slide">
-  <div class="kicker">Критерий 3 · Бизнес-ориентированность</div>
-  <h2>Ролик по выпуску и брифинг для руководства озвучивает Yandex SpeechKit без видеокарты</h2>
-  <div class="row grow" style="margin-top: 40px; gap: 48px;">
-    <div class="col" style="flex: 0 0 720px;">
-      <div class="browser fit" style="height: 560px;"><div class="bar"><i></i><i></i><i></i><span>Короткое видео</span></div><img src="../screenshots/shorts-panel.png" alt="Короткое видео"></div>
-      <p class="caption">Двенадцать голосов SpeechKit или четыре голоса Qwen3-TTS в стеке, страница называет движок и голос.</p>
-    </div>
-    <div class="col grow" style="gap: 22px;">
-      <div class="browser"><img src="../screenshots/shorts-frames.png" alt="Кадры ролика"></div>
-      <p style="font-size: 24px;">Вертикальный ролик на полминуты-минуту: картинки статей, крупная цифра новости, QR-код статьи и субтитры по словам. Цифры сценария сверяются с текстом новости.</p>
-      <p style="font-size: 24px;">«Слушать брифинг» пересказывает выпуск руководству голосом за две минуты, без номеров уязвимостей и адресов.</p>
-    </div>
-  </div>
-  <p class="src">docs/ARCHITECTURE.md, «Короткие видео» и «Брифинг голосом»; docs/INSTALL.md, «Модели Яндекса».</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>21</span></div>
-</section>
-
-<section class="slide">
-  <div class="kicker">Критерий 3 · Бизнес-ориентированность</div>
-  <h2>Аналитика показывает, что сотрудники видят, открывают и отмечают</h2>
-  <div class="row grow" style="margin-top: 40px; gap: 48px;">
-    <div class="col grow">
-      <div class="browser fit" style="height: 520px;"><div class="bar"><i></i><i></i><i></i><span>Аналитика</span></div><img src="../screenshots/analytics.png" alt="Аналитика"></div>
-      <p class="caption">Читатели, доли открытий и отметок, путь от показа к отметке и дни. Только числа, без текстов и адресов; раздел видит администратор.</p>
-    </div>
-    <div class="col grow">
-      <div class="browser fit" style="height: 520px;"><div class="bar"><i></i><i></i><i></i><span>Аналитика · ранжирование</span></div><img src="../screenshots/analytics-ranker.png" alt="Ранжирование" style="object-fit: contain; object-position: center; background: #f5f5f5;"></div>
-      <p class="caption">Ручные веса и обученная модель по группам читателей, ночные обучения. Те же события - метрики пилота: открытия и отметки по неделям.</p>
-    </div>
-  </div>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>22</span></div>
-</section>
-
-<section class="slide">
-  <div class="kicker">Критерий 3 · Бизнес-ориентированность</div>
-  <h2>Четырём читателям с недельными выпусками ассистент экономит 27&nbsp;486&nbsp;₽ в месяц</h2>
-  <div class="row grow" style="margin-top: 40px; gap: 64px;">
-    <div class="col" style="flex: 0 0 980px;"><div class="chart" id="chart-cost"></div></div>
-    <div class="col grow" style="gap: 22px; justify-content: center;">
-      <div><div class="big">27&nbsp;486&nbsp;₽</div><p class="muted">экономии в месяц на трёх специалистов и руководство, <b>329&nbsp;832&nbsp;₽</b> в год</p></div>
-      <p>Ассистент окупается, пока ручной выпуск дольше 22 минут. У аналитика он занял 102,5 минуты, в 4,7 раза дольше.</p>
-      <p>Выпуск специалисту: 171&nbsp;753 токена на вход и 17&nbsp;338 на выход, 3,04&nbsp;₽. Руководству 1,96&nbsp;₽.</p>
-    </div>
-  </div>
-  <p class="src">Хабр Карьера, 10.08.2026; тарифы Ollama; курс ЦБ 83,9497 ₽ на 15.10.2026; Selectel. Проверено 14.10.2026. docs/BUSINESS.md, «Экономика».</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>23</span></div>
-</section>
-
-<section class="slide">
-  <div class="kicker">Внедрение</div>
-  <h2>Пилот на 4 недели проверит главное число: полноту выпуска против аналитика</h2>
-  <div class="row grow" style="margin-top: 44px; gap: 64px;">
-    <div class="col" style="flex: 0 0 900px; gap: 22px;">
-      <div class="card"><h3>Установка</h3><p>Закрытый контур: образы, веса модели, корпоративный прокси, проверочный сценарий. 10-20 сотрудников из разных групп, у каждого свой профиль.</p></div>
-      <div class="card"><h3>Что измеряем</h3><p>Время ручной сборки и проверки, полнота «обязательных» по разметке человека, nDCG@20, доля открытых записей и отметок. Шкала, файлы и скрипт разметки готовы.</p></div>
-      <div class="card" style="border-color: var(--accent); background: var(--accent-tint);"><h3>Успех</h3><p style="color: var(--text);">Полнота «обязательных» не ниже 90% и проверка недельного выпуска не дольше 30 минут.</p></div>
-    </div>
-    <div class="col grow">
-      <p class="muted" style="font-size: 23px;">Попробовать</p>
-      <div class="cmd">docker compose up -d --build</div>
-      <p style="font-size: 23px; margin-top: 12px;">Откройте localhost:8080 и нажмите «Войти как читатель».</p>
-      <div class="cmd">docker compose run --rm cli digest</div>
-      <p style="font-size: 23px; margin-top: 12px;">Оба выпуска в Markdown и DOCX в папке out/.</p>
-      <p style="font-size: 23px; margin-top: 30px;">Репозиторий: git.codenrock.com/codenrock/ii-assistenty/misis-mojarung/assistent-dlya-sozdaniya-it-ib-daydzhestov</p>
-    </div>
-  </div>
-  <p class="src">docs/BUSINESS.md, «Пилот»; docs/eval/human; README, «Быстрый запуск».</p>
-  <div class="foot"><span>Scrap&amp;Grep</span><span>24</span></div>
-</section>
-
-<script>
-// Charts are drawn from the numbers in the documents: each mark comes from a value and one scale.
-const C = { text: '#1d2a30', muted: '#55646a', faint: '#86939a', line: '#d6dbd8', primary: '#2f5f66', soft: '#8fb0b4', accent: '#a8743d', tint: '#e3ebe9' }
-const fmt = (n) => n.toLocaleString('ru-RU')
-const svg = (w, h, body) => `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">${body}</svg>`
-const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
-
-/** Horizontal bars from zero with direct labels; one row may be highlighted. */
-function hbars(id, rows, { width, label = 300, row = 54, max, unit = '', highlight = -1 } = {}) {
-  const top = Math.max(...rows.map((r) => r.value))
-  const scale = (width - label - 170) / (max ?? top)
-  let body = ''
-  rows.forEach((r, i) => {
-    const y = i * row
-    const w = Math.max(2, r.value * scale)
-    const fill = i === highlight ? C.accent : (r.soft ? C.soft : C.primary)
-    body += `<text x="0" y="${y + row / 2 + 8}" font-size="23" fill="${C.text}">${esc(r.label)}</text>`
-    body += `<rect x="${label}" y="${y + 9}" width="${w}" height="${row - 18}" rx="5" fill="${fill}"/>`
-    body += `<text x="${label + w + 14}" y="${y + row / 2 + 8}" font-size="23" font-weight="650" fill="${C.text}">${esc(r.text ?? fmt(r.value) + unit)}</text>`
-    if (r.extra) body += `<text x="${width}" y="${y + row / 2 + 8}" font-size="21" fill="${C.muted}" text-anchor="end">${esc(r.extra)}</text>`
-  })
-  document.getElementById(id).innerHTML = svg(width, rows.length * row + 4, body)
-}
-
-/** Columns from zero with values on top and labels below. */
-function columns(id, cols, { width, height, highlight = -1, unit = '' }) {
-  const top = Math.max(...cols.map((c) => c.value))
-  const base = height - 64
-  const slot = width / cols.length
-  const scale = (base - 60) / top
-  let body = `<line x1="0" y1="${base}" x2="${width}" y2="${base}" stroke="${C.line}" stroke-width="2"/>`
-  cols.forEach((c, i) => {
-    const h = c.value * scale
-    const x = i * slot + slot * 0.2
-    const w = slot * 0.6
-    const fill = i === highlight ? C.accent : C.soft
-    body += `<rect x="${x}" y="${base - h}" width="${w}" height="${h}" rx="6" fill="${fill}"/>`
-    body += `<text x="${x + w / 2}" y="${base - h - 16}" font-size="28" font-weight="700" fill="${i === highlight ? C.accent : C.text}" text-anchor="middle">${fmt(c.value)}${unit}</text>`
-    body += `<text x="${x + w / 2}" y="${base + 40}" font-size="24" fill="${C.muted}" text-anchor="middle">${esc(c.label)}</text>`
-  })
-  document.getElementById(id).innerHTML = svg(width, height, body)
-}
-
-// BUSINESS, «Экономика»: manual assembly per month by readers with a weekly issue.
-columns('chart-manual', [
-  { label: '2 читателя', value: 17499 },
-  { label: '4 читателя', value: 34999 },
-  { label: '10 читателей', value: 87496 },
-  { label: '20 читателей', value: 174993 },
-], { width: 820, height: 470, highlight: 1, unit: ' ₽' })
-
-// DECISIONS, «Источники из датасета».
-hbars('chart-kinds', [
-  { label: 'Ленты RSS и Atom', value: 68 },
-  { label: 'Telegram-каналы', value: 22 },
-  { label: 'Сайты без ленты', value: 12 },
-  { label: 'API сайта', value: 2 },
-], { width: 700, label: 270, row: 50 })
-
-hbars('chart-themes', [
-  { label: 'Безопасность', value: 76 },
-  { label: 'ИТ', value: 9 },
-  { label: 'Энергетика', value: 8 },
-  { label: 'Регуляторы', value: 6 },
-  { label: 'АСУ ТП', value: 5 },
-], { width: 700, label: 270, row: 44 })
-
-// eval/vs-analyst.md.
-hbars('chart-analyst', [
-  { label: 'Аналитик', value: 205, text: '205 мин', soft: true },
-  { label: 'Ассистент', value: 1.4, text: '85 с' },
-], { width: 760, label: 190, row: 96, highlight: 1 })
-
-// README and INSTALL, «Модели Яндекса»: the same scenario, seconds.
-hbars('chart-yandex-spec', [
-  { label: 'Qwen3.6 35B, Yandex', value: 24, text: '24 с' },
-  { label: 'gpt-oss-120b, Ollama', value: 193, text: '193 с', soft: true },
-], { width: 820, label: 290, row: 70, max: 193, highlight: 0 })
-
-hbars('chart-yandex-mgmt', [
-  { label: 'Qwen3.6 35B, Yandex', value: 17, text: '17 с' },
-  { label: 'gpt-oss-120b, Ollama', value: 113, text: '113 с', soft: true },
-], { width: 820, label: 290, row: 70, max: 193, highlight: 0 })
-
-// examples/models/README.md, runs of 15 October 2026.
-hbars('chart-models', [
-  { label: 'gpt-oss:120b, повтор', value: 17, text: '17 из 20', extra: '96 с' },
-  { label: 'gemma4:31b', value: 16, text: '16 из 20', extra: '98 с' },
-  { label: 'без модели', value: 16, text: '16 из 20', extra: '1 с', soft: true },
-  { label: 'gpt-oss:20b', value: 15, text: '15 из 20', extra: '222 с' },
-  { label: 'nemotron-3-nano:30b', value: 14, text: '14 из 20', extra: '201 с' },
-  { label: 'qwen3.5:9b, в стеке', value: 13, text: '13 из 20', extra: '188 с' },
-], { width: 1080, label: 320, row: 92, max: 20, highlight: 0 })
-
-// eval/recsys.md.
-hbars('chart-recsys', [
-  { label: 'Только свежесть', value: 0.120, text: '0,12', soft: true },
-  { label: 'Только резюме', value: 0.277, text: '0,28' },
-  { label: 'Только интересы', value: 0.547, text: '0,55' },
-  { label: 'Интересы и резюме', value: 0.546, text: '0,55' },
-], { width: 760, label: 260, row: 64, max: 0.6, highlight: 2 })
-
-// The closed perimeter as a picture: the stack inside, one proxy out.
-document.getElementById('chart-airgap').innerHTML = svg(760, 300, `
-  <rect x="2" y="2" width="470" height="296" rx="18" fill="${C.tint}" stroke="${C.soft}" stroke-width="2"/>
-  <text x="26" y="44" font-size="22" font-weight="650" fill="${C.primary}">Внутренние сети Docker</text>
-  ${['api и воркеры', 'PostgreSQL, Valkey', 'Ollama или vLLM', 'ClickHouse'].map((t, i) =>
-    `<rect x="${26 + (i % 2) * 220}" y="${70 + Math.floor(i / 2) * 104}" width="200" height="84" rx="12" fill="#fff" stroke="${C.line}"/>
-     <text x="${126 + (i % 2) * 220}" y="${119 + Math.floor(i / 2) * 104}" font-size="20" fill="${C.text}" text-anchor="middle">${t}</text>`).join('')}
-  <rect x="520" y="104" width="230" height="92" rx="12" fill="#fff" stroke="${C.accent}" stroke-width="2"/>
-  <text x="635" y="142" font-size="21" font-weight="650" fill="${C.text}" text-anchor="middle">прокси egress</text>
-  <text x="635" y="172" font-size="18" fill="${C.muted}" text-anchor="middle">порты 80 и 443, журнал</text>
-  <line x1="472" y1="150" x2="518" y2="150" stroke="${C.accent}" stroke-width="3"/>
-  <text x="635" y="236" font-size="18" fill="${C.muted}" text-anchor="middle">→ источники</text>`)
-
-// BUSINESS, «Экономика»: four readers with a weekly issue, manual work against the assistant's costs.
-;(function cost() {
-  const manual = 34999
-  const parts = [
-    { label: 'сервер под стек: 4 ядра, 8 ГБ', value: 3476, fill: C.soft },
-    { label: 'сопровождение, 2 часа администратора', value: 2357, fill: '#b9cdd0' },
-    { label: 'тариф облачной модели, $20', value: 1679, fill: C.accent },
-  ]
-  const W = 980, label = 230, scale = (W - label - 40) / manual
-  let body = `<text x="0" y="74" font-size="25" fill="${C.text}">Вручную</text>
-    <rect x="${label}" y="40" width="${manual * scale}" height="64" rx="6" fill="${C.soft}"/>
-    <text x="${label + manual * scale - 16}" y="82" font-size="27" font-weight="700" fill="#fff" text-anchor="end">34 999 ₽</text>
-    <text x="0" y="214" font-size="25" fill="${C.text}">С ассистентом</text>`
-  let x = label
-  parts.forEach((p) => { body += `<rect x="${x}" y="180" width="${p.value * scale}" height="64" fill="${p.fill}"/>`; x += p.value * scale })
-  body += `<text x="${x + 16}" y="222" font-size="27" font-weight="700" fill="${C.text}">7 513 ₽</text>`
-  parts.forEach((p, i) => {
-    const y = 320 + i * 52
-    body += `<rect x="${label}" y="${y - 20}" width="24" height="24" rx="4" fill="${p.fill}"/>
-      <text x="${label + 40}" y="${y}" font-size="22" fill="${C.muted}">${p.label}</text>
-      <text x="${W - 40}" y="${y}" font-size="22" fill="${C.text}" text-anchor="end">${fmt(p.value)} ₽</text>`
-  })
-  body += `<text x="${label}" y="${320 + parts.length * 52 + 14}" font-size="21" fill="${C.faint}">Ручная сборка: 102,5 минуты на выпуск, 8 750 ₽ в месяц на читателя</text>`
-  document.getElementById('chart-cost').innerHTML = svg(W, 520, body)
-})()
-</script>
 </body>
 </html>
