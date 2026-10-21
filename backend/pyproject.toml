@@ -8,7 +8,7 @@ authors = [
 requires-python = ">=3.14"
 dependencies = [
     "alembic>=1.20.0",
-    "certifi>=2026.7.22",
+    "certifi>=2026.10.19",
     "clickhouse-connect[async,orjson]>=1.9.0",
     "cryptography>=50.0.2",
     "curl-cffi>=0.13",
@@ -29,7 +29,7 @@ dependencies = [
     "numpy>=2.5.3",
     "orjson>=3.12.0",
     "pgvector>=0.5.0",
-    "pillow>=12.3.0",
+    "pillow>=13.0.0",
     "prometheus-client>=0.26.0",
     "psycopg[binary,pool]>=3.3.6",
     "pwdlib[argon2]>=0.3.1",
