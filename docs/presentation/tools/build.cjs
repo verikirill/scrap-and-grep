@@ -61,6 +61,7 @@ function collect(pictureSelector) {
       color: cs.color, weight: Number(cs.fontWeight), italic: cs.fontStyle === 'italic',
       size: parseFloat(cs.fontSize), family: cs.fontFamily, transform: cs.textTransform,
       ls: cs.letterSpacing, ws: cs.whiteSpace, mono: /mono|consolas/i.test(cs.fontFamily),
+      va: cs.verticalAlign,
     }
   }
   const isInline = (e) => getComputedStyle(e).display === 'inline'
