@@ -4,7 +4,7 @@ Scrap&Grep собирает новости ИТ и ИБ для энергоко�
 
 Руководитель заводит команды компании один раз, а сотрудники входят по ссылке с готовым профилем интересов.
 
-Решение хакатона «ИИ-ассистенты для энергетики» ([задание](docs/task/TASK.md)). [Видео](https://git.codenrock.com/codenrock/ii-assistenty/misis-mojarung/assistent-dlya-sozdaniya-it-ib-daydzhestov/uploads/c6aa3ba5fc3864d423e9ad042f40fb62/scrapgrep-demo.mp4), 1 мин 46 с, с субтитрами. [Презентация](docs/presentation/scrapgrep.pdf), 18 слайдов, и её [редактируемая версия в PPTX](docs/presentation/scrapgrep.pptx). Примеры: [выпуск специалисту за сутки](examples/specialist-daily.md), [выпуск руководству за неделю](examples/management-weekly.md).
+Решение хакатона «ИИ-ассистенты для энергетики» ([задание](docs/task/TASK.md)). [Видео](https://git.codenrock.com/codenrock/ii-assistenty/misis-mojarung/assistent-dlya-sozdaniya-it-ib-daydzhestov/uploads/b74d86585f09e62fd997d44dbcdfa74d/scrapgrep-demo.mp4), 1 мин 30 с, с субтитрами. [Презентация](docs/presentation/scrapgrep.pdf), 18 слайдов, и её [редактируемая версия в PPTX](docs/presentation/scrapgrep.pptx). Примеры: [выпуск специалисту за сутки](examples/specialist-daily.md), [выпуск руководству за неделю](examples/management-weekly.md).
 
 ![Выпуск специалисту по ИБ АСУ ТП: «Главное», путь от 498 публикаций периода к 20 записям, строка «Вместо ручной работы», начало плана на смену, история выпусков справа](docs/screenshots/digest.png)
 
