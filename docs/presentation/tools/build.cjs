@@ -127,7 +127,34 @@ function collect(pictureSelector) {
   const pictures = [...slide.querySelectorAll(pictureSelector)].map((e, k) => {
     const img = e.tagName === 'IMG' ? e : e.querySelector('img')
     const kind = ['device', 'cat', 'callout'].find((c) => e.classList.contains(c)) || 'image'
-    return { k, rect: rel(e.getBoundingClientRect()), alt: img ? img.alt : e.textContent.trim(), kind }
+    // A screen with data-gif plays that GIF in the PPTX: its visible part on the screen,
+    // with the crop of what the screen hides and the screen's corner radius.
+    const g = e.querySelector('img[data-gif]')
+    let gif = null
+    if (g) {
+      const box = g.getBoundingClientRect()
+      const scr = g.closest('.screen').getBoundingClientRect()
+      let c = { left: box.left, top: box.top, width: box.width, height: box.height }
+      if (getComputedStyle(g).objectFit === 'contain') {
+        const ar = g.naturalWidth / g.naturalHeight
+        if (box.width / box.height > ar) c = { left: box.left + (box.width - box.height * ar) / 2, top: box.top, width: box.height * ar, height: box.height }
+        else c = { left: box.left, top: box.top + (box.height - box.width / ar) / 2, width: box.width, height: box.width / ar }
+      }
+      const v = {
+        left: Math.max(c.left, scr.left), top: Math.max(c.top, scr.top),
+        right: Math.min(c.left + c.width, scr.right), bottom: Math.min(c.top + c.height, scr.bottom),
+      }
+      gif = {
+        src: g.getAttribute('data-gif'),
+        rect: rel({ left: v.left, top: v.top, width: v.right - v.left, height: v.bottom - v.top }),
+        crop: {
+          l: (v.left - c.left) / c.width, t: (v.top - c.top) / c.height,
+          r: (c.left + c.width - v.right) / c.width, b: (c.top + c.height - v.bottom) / c.height,
+        },
+        radius: parseFloat(getComputedStyle(g.closest('.screen')).borderTopLeftRadius) || 0,
+      }
+    }
+    return { k, rect: rel(e.getBoundingClientRect()), alt: img ? img.alt : e.textContent.trim(), kind, gif }
   })
   return { texts, pictures }
 }
@@ -180,6 +207,7 @@ async function main() {
         clip: { x: box.x + x0, y: box.y + y0, width: x1 - x0, height: y1 - y0 },
       })
     }
+    for (const p of data.pictures) if (p.gif) p.gif.file = path.resolve(path.dirname(HTML), p.gif.src)
     deck.push({ ...data, bg: `bg/s${num}.jpg` })
   }
   fs.writeFileSync(path.join(WORK, 'deck.json'), JSON.stringify(deck, null, 1))

@@ -164,6 +164,29 @@ def add_picture(slide, base: Path, picture: dict) -> None:
     shape.name = f"{names.get(picture['kind'], 'Картинка')}: {picture['alt']}"[:80]
     if picture["alt"]:
         shape._element.nvPicPr.cNvPr.set("descr", picture["alt"])
+    if picture.get("gif"):
+        add_gif(slide, picture["gif"], picture["alt"])
+
+
+def add_gif(slide, gif: dict, alt: str) -> None:
+    """The animated screen over the still one: PowerPoint plays a GIF in the slide show."""
+    r = gif["rect"]
+    shape = slide.shapes.add_picture(gif["file"], px(r["x"]), px(r["y"]), px(r["w"]), px(r["h"]))
+    crop = gif["crop"]
+    shape.crop_left, shape.crop_top = max(0.0, crop["l"]), max(0.0, crop["t"])
+    shape.crop_right, shape.crop_bottom = max(0.0, crop["r"]), max(0.0, crop["b"])
+    # The screen's rounded corners.
+    geom = shape._element.spPr.find(qn("a:prstGeom"))
+    geom.set("prst", "roundRect")
+    av = geom.find(qn("a:avLst"))
+    if av is None:
+        av = etree.SubElement(geom, qn("a:avLst"))
+    for old in list(av):
+        av.remove(old)
+    ratio = min(0.5, gif["radius"] / max(1.0, min(r["w"], r["h"])))
+    etree.SubElement(av, qn("a:gd"), name="adj", fmla=f"val {round(ratio * 100000)}")
+    shape.name = f"Анимация: {alt}"[:80]
+    shape._element.nvPicPr.cNvPr.set("descr", alt)
 
 
 def build(work: Path, out: Path) -> None:
