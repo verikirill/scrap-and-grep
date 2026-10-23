@@ -232,6 +232,13 @@ code, .code { font-family: var(--mono); font-size: 0.9em; background: rgba(24,24
 .step .t { margin: 0; }
 .fill-col > .step, .fill-col > .glass { margin-top: 0 !important; flex: 1; max-height: 150px; }
 .fill-col > * + * { margin-top: 0; }
+/* The table of alternatives: rows of equal height, the lines straight across. */
+.alt { display: grid; grid-template-columns: 1.05fr 1fr 1fr 1fr 1.15fr; gap: 0 28px; font: 400 23px/1.32 var(--sans); color: var(--ink-2); }
+.alt > div { display: flex; align-items: center; padding: 24px 0; border-top: 2px solid rgba(24, 24, 27, 0.08); }
+.alt > .label { padding: 22px 0; border-top: none; }
+.alt > .row { font: 600 25px/1.3 var(--sans); color: var(--ink); }
+.alt > .ours { color: var(--ink); font-weight: 600; }
+.alt > .price { color: var(--accent); font: 800 30px/1.2 var(--display); }
 </style>
 </head>
 <body>
@@ -257,7 +264,7 @@ code, .code { font-family: var(--mono); font-size: 0.9em; background: rgba(24,24
       <span class="chip blue">специалистам ИБ и&nbsp;ИТ</span><span class="chip blue">руководству</span><span class="chip blue">всей компании</span>
     </div>
   </div>
-  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Экран: выпуск специалисту по ИБ АСУ ТП на стенде с моделями Yandex AI Studio</span><span class="page">01 / 14</span></div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Экран: выпуск специалисту по ИБ АСУ ТП на стенде с моделями Yandex AI Studio</span><span class="page">01 / 15</span></div>
 </section>
 
 <!-- 2. s-problem -->
@@ -283,7 +290,7 @@ code, .code { font-family: var(--mono); font-size: 0.9em; background: rgba(24,24
       <p style="font: 500 30px/1.38 var(--sans); color: var(--ink-2)">За&nbsp;три месяца 78 уязвимостей получили срок устранения 3&nbsp;дня. Недельный обзор <b class="bad">опоздал&nbsp;бы с&nbsp;64</b> из&nbsp;них, выпуск каждое утро - <b class="ok">ни&nbsp;с&nbsp;одной</b>.</p>
     </div>
   </div>
-  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Списки датасета: docs/DECISIONS.md; неделя 25.09-02.10.2026: docs/eval/vs-analyst.md; сроки: docs/eval/kev-deadlines.md</span><span class="page">02 / 14</span></div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Списки датасета: docs/DECISIONS.md; неделя 25.09-02.10.2026: docs/eval/vs-analyst.md; сроки: docs/eval/kev-deadlines.md</span><span class="page">02 / 15</span></div>
 </section>
 
 <!-- 3. s-solution -->
@@ -312,7 +319,7 @@ code, .code { font-family: var(--mono); font-size: 0.9em; background: rgba(24,24
         <div><h3>Пишет выпуск</h3><p class="t" style="margin-top: 4px; font-size: 22px">Темы, выжимки со&nbsp;ссылкой на&nbsp;первоисточник, приоритет и&nbsp;что делать.</p></div></div>
     </div>
   </div>
-  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Экран: сборка выпуска специалисту по ИБ АСУ ТП 22 октября 2026 на моделях Yandex AI Studio</span><span class="page">03 / 14</span></div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Экран: сборка выпуска специалисту по ИБ АСУ ТП 22 октября 2026 на моделях Yandex AI Studio</span><span class="page">03 / 15</span></div>
 </section>
 
 <!-- 4. s-fix -->
@@ -338,7 +345,7 @@ code, .code { font-family: var(--mono); font-size: 0.9em; background: rgba(24,24
       <div class="glass step"><div class="ico dark"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M12 8v5M9.5 10.5L12 13l2.5-2.5"/></svg></div><p class="t">В&nbsp;SOC одной кнопкой: STIX&nbsp;2.1, событие MISP или&nbsp;CSV</p></div>
     </div>
   </div>
-  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Экран: выпуск 22 октября 2026 на стенде; совет по патчу: backend/tests/test_fix_status.py</span><span class="page">04 / 14</span></div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Экран: выпуск 22 октября 2026 на стенде; совет по патчу: backend/tests/test_fix_status.py</span><span class="page">04 / 15</span></div>
 </section>
 
 <!-- 5. s-study -->
@@ -371,7 +378,7 @@ code, .code { font-family: var(--mono); font-size: 0.9em; background: rgba(24,24
       <p style="font: 500 27px/1.4 var(--sans); color: var(--ink-2)"><b style="color: var(--ink)">Независимая проверка:</b> эксперт ИБ вслепую отметил важные новости недели. В&nbsp;выпуск специалисту попали 8 из&nbsp;9, руководству - 5 из&nbsp;6.</p>
     </div>
   </div>
-  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Ответ аналитика и его журнал: examples/vs-analyst; разбор: docs/eval/vs-analyst.md; эксперт: docs/eval/second-human</span><span class="page">05 / 14</span></div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Ответ аналитика и его журнал: examples/vs-analyst; разбор: docs/eval/vs-analyst.md; эксперт: docs/eval/second-human</span><span class="page">05 / 15</span></div>
 </section>
 
 <!-- 6. s-money -->
@@ -399,35 +406,57 @@ code, .code { font-family: var(--mono); font-size: 0.9em; background: rgba(24,24
       <div class="glass" style="position: relative; padding: 28px 34px 22px; height: 560px">
         <div class="label" style="color: var(--accent)">Scrap&amp;Grep</div>
         <div style="margin-top: 10px">
-          <div class="rowline"><span>Токены выпуска специалисту<span class="ref">4, 5</span></span><b>3,04 ₽</b></div>
-          <div class="rowline"><span>Токены выпуска руководству</span><b>1,96 ₽</b></div>
-          <div class="rowline"><span>Тариф модели, $20<span class="ref">4, 5</span></span><b>1 679 ₽</b></div>
-          <div class="rowline"><span>Сервер 4 ядра, 8 ГБ<span class="ref">6</span></span><b>3 476 ₽</b></div>
-          <div class="rowline"><span>Администратор, 2 часа</span><b>2 357 ₽</b></div>
-          <div class="rowline total"><span>Всем читателям в&nbsp;месяц</span><b>7 513 ₽</b></div>
+          <div class="rowline"><span>Модель Яндекса, выпуск специалисту<span class="ref">4</span></span><b>31 ₽</b></div>
+          <div class="rowline"><span>Проверка человеком, 30&nbsp;мин</span><b>589 ₽</b></div>
+          <div class="rowline"><span>Сервер 4 ядра, 8 ГБ<span class="ref">5</span></span><b>3 476 ₽</b></div>
+          <div class="rowline"><span>Администратор, 4 часа</span><b>4 715 ₽</b></div>
+          <div class="rowline"><span>Поиск по смыслу, все статьи<span class="ref">4</span></span><b>≈ 30 ₽</b></div>
+          <div class="rowline total"><span>Четырём читателям в&nbsp;месяц</span><b>19 008 ₽</b></div>
         </div>
       </div>
       <div class="glass" style="position: relative; padding: 28px 34px 22px; height: 560px">
         <div class="label">Экономия в год, ₽</div>
         <div style="position: absolute; left: 34px; right: 34px; top: 84px; bottom: 96px; display: flex; align-items: flex-end; gap: 22px">
-          <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%"><div style="font: 800 22px/1 var(--display); text-align: center; margin-bottom: 10px">119 840</div><div class="bar" style="height: 6%; background: #9cccfb"></div><div style="font: 600 19px/1.2 var(--sans); text-align: center; margin-top: 10px; color: var(--ink-2)">2 чит.</div></div>
-          <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%"><div style="font: 800 22px/1 var(--display); text-align: center; margin-bottom: 10px">329 832</div><div class="bar" style="height: 16.4%; background: #5eabf8"></div><div style="font: 600 19px/1.2 var(--sans); text-align: center; margin-top: 10px; color: var(--ink-2)">4 чит.</div></div>
-          <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%"><div style="font: 800 22px/1 var(--display); text-align: center; margin-bottom: 10px">959 806</div><div class="bar" style="height: 36.6%; background: #2f98f8"></div><div style="font: 600 19px/1.2 var(--sans); text-align: center; margin-top: 10px; color: var(--ink-2)">10 чит.</div></div>
-          <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%"><div style="font: 800 22px/1 var(--display); text-align: center; margin-bottom: 10px; color: var(--accent)">2 009 762</div><div class="bar" style="height: 76.6%"></div><div style="font: 600 19px/1.2 var(--sans); text-align: center; margin-top: 10px; color: var(--ink-2)">20 чит.</div></div>
+          <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%"><div style="font: 800 22px/1 var(--display); text-align: center; margin-bottom: 10px">46 620</div><div class="bar" style="height: 2.6%; background: #9cccfb"></div><div style="font: 600 19px/1.2 var(--sans); text-align: center; margin-top: 10px; color: var(--ink-2)">2 чит.</div></div>
+          <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%"><div style="font: 800 22px/1 var(--display); text-align: center; margin-bottom: 10px">191 890</div><div class="bar" style="height: 10.9%; background: #5eabf8"></div><div style="font: 600 19px/1.2 var(--sans); text-align: center; margin-top: 10px; color: var(--ink-2)">4 чит.</div></div>
+          <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%"><div style="font: 800 22px/1 var(--display); text-align: center; margin-bottom: 10px">627 699</div><div class="bar" style="height: 35.5%; background: #2f98f8"></div><div style="font: 600 19px/1.2 var(--sans); text-align: center; margin-top: 10px; color: var(--ink-2)">10 чит.</div></div>
+          <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%"><div style="font: 800 22px/1 var(--display); text-align: center; margin-bottom: 10px; color: var(--accent)">1 354 047</div><div class="bar" style="height: 76.6%"></div><div style="font: 600 19px/1.2 var(--sans); text-align: center; margin-top: 10px; color: var(--ink-2)">20 чит.</div></div>
         </div>
-        <p style="position: absolute; left: 34px; right: 34px; bottom: 22px; font: 500 20px/1.35 var(--sans); color: var(--ink-2)">Окупается уже на&nbsp;4 читателях, если ручной выпуск дольше 22&nbsp;минут</p>
+        <p style="position: absolute; left: 34px; right: 34px; bottom: 22px; font: 500 20px/1.35 var(--sans); color: var(--ink-2)">Окупается с&nbsp;2 читателей, даже если каждый выпуск полчаса проверяет человек</p>
       </div>
     </div>
     <div class="srcs" style="position: absolute; left: 96px; right: 96px; top: 836px">
       <p><b>1</b> Хабр Карьера, «Топ-5 высокооплачиваемых направлений в IT в 2026 году», 10.08.2026</p>
       <p><b>2</b> ФНС: единый тариф страховых взносов 30%, предельная база 2026 года 2 979 000 ₽</p>
       <p><b>3</b> КонсультантПлюс: производственный календарь 2026, 1 972 рабочих часа</p>
-      <p><b>4</b> ollama.com/pricing: gpt-oss:120b $0,15 / $0,60 за 1 млн токенов, Pro $20, проверено 14.10.2026</p>
-      <p><b>5</b> ЦБ РФ: 83,9497 ₽ за доллар на 15.10.2026</p>
-      <p><b>6</b> Selectel, тариф VDS «monster»: 4,76 ₽ в час, 730 часов в месяц, проверено 14.10.2026</p>
+      <p><b>4</b> Yandex AI Studio: Qwen3.6 35B 0,2 / 0,3 ₽ за 1 000 токенов, эмбеддинги 0,0101 ₽, с НДС, проверено 23.10.2026</p>
+      <p><b>5</b> Selectel, тариф VDS «monster»: 4,76 ₽ в час, 730 часов в месяц, проверено 14.10.2026</p>
     </div>
   </div>
-  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Расчёт целиком: docs/BUSINESS.md, «Экономика»; токены выпуска: docs/eval/economics.md</span><span class="page">06 / 14</span></div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Расчёт целиком: docs/BUSINESS.md, «Экономика»; токены выпуска: docs/eval/economics.md</span><span class="page">06 / 15</span></div>
+</section>
+
+<!-- s-alternatives -->
+<section class="slide" id="s-alternatives">
+  <div class="bg" style="--dx: 85%; --dy: 20%">
+    <div class="blob b-sky" style="left: 1240px; top: -180px; width: 700px; height: 520px"></div>
+    <div class="blob b-mint" style="left: -160px; top: 620px; width: 720px; height: 480px"></div>
+  </div>
+  <div class="wrap">
+    <span class="tag">Альтернативы</span>
+    <h2>Почему не&nbsp;вручную и&nbsp;не&nbsp;готовая подписка</h2>
+    <div class="glass" style="left: 96px; top: 290px; width: 1728px; height: 670px; padding: 8px 48px">
+      <div class="alt">
+        <div class="label">&nbsp;</div><div class="label">Вручную</div><div class="label">Подписка вендора</div><div class="label">Новостной агрегатор</div><div class="label" style="color: var(--accent)">Scrap&amp;Grep</div>
+        <div class="row">Что читает за&nbsp;неделю</div><div>≈&nbsp;80 публикаций</div><div>бюллетени своего вендора</div><div>всё подряд по&nbsp;ключевым словам</div><div class="ours">все 1&nbsp;737 из&nbsp;104 источников</div>
+        <div class="row">Под&nbsp;роль читателя</div><div>да, но&nbsp;это часы работы</div><div>один формат для SOC</div><div>одна лента на&nbsp;всех</div><div class="ours">свой выпуск специалисту и&nbsp;руководителю</div>
+        <div class="row">Срочное</div><div>раз в&nbsp;неделю</div><div>когда вышел бюллетень</div><div>сразу, но&nbsp;без приоритета</div><div class="ours">каждое утро, срочное первым</div>
+        <div class="row">Где данные</div><div>в&nbsp;компании</div><div>у&nbsp;вендора</div><div>в&nbsp;облаке сервиса</div><div class="ours">можно целиком внутри контура</div>
+        <div class="row">Цена в&nbsp;месяц</div><div>8&nbsp;750&nbsp;₽ на&nbsp;читателя</div><div>лицензия по&nbsp;запросу</div><div>подписка на&nbsp;каждого</div><div class="ours price">19&nbsp;008&nbsp;₽ на&nbsp;четверых</div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Типичные варианты, без названий продуктов; ручная работа: docs/eval/vs-analyst.md; цены: docs/BUSINESS.md</span><span class="page">07 / 15</span></div>
 </section>
 
 <!-- 7. s-audiences -->
@@ -456,7 +485,7 @@ code, .code { font-family: var(--mono); font-size: 0.9em; background: rgba(24,24
       <div class="num xs">−30%</div><div class="cap sm">стоимости, когда оба выпуска собираются одним запуском</div>
     </div>
   </div>
-  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Экраны: выпуски специалисту за сутки и руководству за неделю; docs/QUALITY.md</span><span class="page">07 / 14</span></div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Экраны: выпуски специалисту за сутки и руководству за неделю; docs/QUALITY.md</span><span class="page">08 / 15</span></div>
 </section>
 
 <!-- 8. s-custom -->
@@ -486,7 +515,7 @@ code, .code { font-family: var(--mono); font-size: 0.9em; background: rgba(24,24
         <div><h3 style="font-size: 26px">На&nbsp;телефоне всё так&nbsp;же</h3><p class="t" style="margin-top: 4px; font-size: 22px">Экраны от&nbsp;360&nbsp;px, светлая и&nbsp;тёмная тема, лента постами как в&nbsp;Telegram.</p></div></div>
     </div>
   </div>
-  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Лента: читатель «ИБ АСУ ТП», docs/eval/recsys.md; резюме: docs/QUALITY.md</span><span class="page">08 / 14</span></div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Лента: читатель «ИБ АСУ ТП», docs/eval/recsys.md; резюме: docs/QUALITY.md</span><span class="page">09 / 15</span></div>
 </section>
 
 <!-- analytics -->
@@ -519,7 +548,7 @@ code, .code { font-family: var(--mono); font-size: 0.9em; background: rgba(24,24
         <div><p class="t" style="font-size: 22px">Включается сама, только если обгоняет ручные веса на&nbsp;новых днях. Контрольная группа остаётся на&nbsp;ручных весах.</p></div></div>
     </div>
   </div>
-  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Лента: docs/eval/recsys.md; модель на симуляции 40 читателей за 2 недели: docs/eval/ranker.md</span><span class="page">09 / 14</span></div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Лента: docs/eval/recsys.md; модель на симуляции 40 читателей за 2 недели: docs/eval/ranker.md</span><span class="page">10 / 15</span></div>
 </section>
 
 <!-- 9. s-company -->
@@ -546,7 +575,7 @@ code, .code { font-family: var(--mono); font-size: 0.9em; background: rgba(24,24
       <div class="glass step"><div class="ico amber"><svg viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg></div><p class="t">Одна правка сразу всей команде, роли или выбранным людям</p></div>
     </div>
   </div>
-  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Экран: демо-компания «Энергосеть», 4 команды, 12 сотрудников; время модели из прогона на Yandex AI Studio</span><span class="page">10 / 14</span></div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Экран: демо-компания «Энергосеть», 4 команды, 12 сотрудников; время модели из прогона на Yandex AI Studio</span><span class="page">11 / 15</span></div>
 </section>
 
 <!-- 10. s-delivery -->
@@ -571,7 +600,7 @@ code, .code { font-family: var(--mono); font-size: 0.9em; background: rgba(24,24
       <div class="glass" style="position: relative; padding: 36px 36px"><div class="ico amber" style="width: 72px; height: 72px; border-radius: 22px"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3"/></svg></div><h3 style="margin-top: 26px">Ролик и&nbsp;брифинг</h3><p class="t">Видео на&nbsp;минуту с&nbsp;голосом SpeechKit за&nbsp;3&nbsp;минуты, брифинг голосом на&nbsp;две.</p></div>
     </div>
   </div>
-  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Пост в канале показан окном мока Bot API; ролик собран на Yandex SpeechKit</span><span class="page">11 / 14</span></div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Пост в канале показан окном мока Bot API; ролик собран на Yandex SpeechKit</span><span class="page">12 / 15</span></div>
 </section>
 
 <!-- 11. s-arch -->
@@ -606,7 +635,7 @@ code, .code { font-family: var(--mono); font-size: 0.9em; background: rgba(24,24
       <div class="glass step"><div class="ico green" style="margin-right: 52px"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></div><p class="t">Реплики добавляются без остановки: <span class="code">--scale api=4</span></p></div>
     </div>
   </div>
-  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Подробно: docs/ARCHITECTURE.md; нагрузка и отказы: docs/QUALITY.md, сценарий scripts/load/read.js</span><span class="page">12 / 14</span></div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Подробно: docs/ARCHITECTURE.md; нагрузка и отказы: docs/QUALITY.md, сценарий scripts/load/read.js</span><span class="page">13 / 15</span></div>
 </section>
 
 <!-- 12. s-quality -->
@@ -625,7 +654,7 @@ code, .code { font-family: var(--mono); font-size: 0.9em; background: rgba(24,24
       <div class="glass" style="position: relative; padding: 30px 34px; grid-column: span 2">
         <div class="label">В CI на GitLab и GitHub</div>
         <div style="display: flex; flex-wrap: wrap; gap: 14px; margin-top: 22px" class="big-chips">
-          <span class="chip">mypy --strict</span><span class="chip">ruff</span><span class="chip">oxlint</span><span class="chip">tsc</span><span class="chip">gitleaks по истории</span><span class="chip">osv-scanner</span><span class="chip">hadolint</span><span class="chip">shellcheck</span><span class="chip">стенд на моделях Яндекса</span><span class="chip">28 выпусков-примеров</span>
+          <span class="chip">ошибки в&nbsp;коде</span><span class="chip">утечка паролей и&nbsp;ключей</span><span class="chip">уязвимые библиотеки</span><span class="chip">сборка контейнеров</span><span class="chip">стенд на&nbsp;моделях Яндекса</span><span class="chip">28 выпусков-примеров</span>
         </div>
       </div>
     </div>
@@ -637,7 +666,7 @@ code, .code { font-family: var(--mono); font-size: 0.9em; background: rgba(24,24
       <div class="glass step"><div class="ico dark"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 9l3 3-3 3M13 15h4"/></svg></div><p class="t">Контейнеры без root, рендер видео без сети и&nbsp;с&nbsp;диском только на&nbsp;чтение</p></div>
     </div>
   </div>
-  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Тесты: docs/QUALITY.md; задания CI: docs/CI.md; безопасность: docs/ARCHITECTURE.md</span><span class="page">13 / 14</span></div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Тесты: docs/QUALITY.md; задания CI: docs/CI.md; безопасность: docs/ARCHITECTURE.md</span><span class="page">14 / 15</span></div>
 </section>
 
 <!-- 13. s-deploy -->
@@ -676,7 +705,7 @@ code, .code { font-family: var(--mono); font-size: 0.9em; background: rgba(24,24
     </div>
     <p style="position: absolute; left: 96px; top: 892px; font: 800 50px/1.05 var(--display); letter-spacing: -0.03em">Пока команда спит, выпуск на&nbsp;утро уже собирается</p>
   </div>
-  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Установка: docs/INSTALL.md; пилот и приёмка: docs/BUSINESS.md, «Пилот»</span><span class="page">14 / 14</span></div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Установка: docs/INSTALL.md; пилот и приёмка: docs/BUSINESS.md, «Пилот»</span><span class="page">15 / 15</span></div>
 </section>
 
 </body>

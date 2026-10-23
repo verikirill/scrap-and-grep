@@ -4,7 +4,7 @@ Scrap&Grep собирает новости ИТ и ИБ для энергоко�
 
 Руководитель заводит команды компании один раз, а сотрудники входят по ссылке с готовым профилем интересов.
 
-Решение хакатона «ИИ-ассистенты для энергетики» ([задание](docs/task/TASK.md)). [Видео](https://git.codenrock.com/codenrock/ii-assistenty/misis-mojarung/assistent-dlya-sozdaniya-it-ib-daydzhestov/uploads/b74d86585f09e62fd997d44dbcdfa74d/scrapgrep-demo.mp4), 1 мин 30 с, с субтитрами. [Презентация](docs/presentation/scrapgrep.pdf), 14 слайдов, и её [редактируемая версия в PPTX](docs/presentation/scrapgrep.pptx). Примеры: [выпуск специалисту за сутки](examples/specialist-daily.md), [выпуск руководству за неделю](examples/management-weekly.md).
+Решение хакатона «ИИ-ассистенты для энергетики» ([задание](docs/task/TASK.md)). [Видео](https://git.codenrock.com/codenrock/ii-assistenty/misis-mojarung/assistent-dlya-sozdaniya-it-ib-daydzhestov/uploads/b74d86585f09e62fd997d44dbcdfa74d/scrapgrep-demo.mp4), 1 мин 30 с, с субтитрами. [Презентация](docs/presentation/scrapgrep.pdf), 15 слайдов, и её [редактируемая версия в PPTX](docs/presentation/scrapgrep.pptx). Примеры: [выпуск специалисту за сутки](examples/specialist-daily.md), [выпуск руководству за неделю](examples/management-weekly.md).
 
 ![Выпуск специалисту по ИБ АСУ ТП: «Главное», путь от 498 публикаций периода к 20 записям, строка «Вместо ручной работы», начало плана на смену, история выпусков справа](docs/screenshots/digest.png)
 
@@ -371,11 +371,11 @@ docker compose down
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | что реализовано по требованиям, два режима, компоненты, путь данных, отказы, безопасность, стек и структура репозитория |
 | [docs/DECISIONS.md](docs/DECISIONS.md) | почему решения такие и что показали замеры |
 | [docs/QUALITY.md](docs/QUALITY.md) | тесты по частям, что проверено на запущенном стеке, примеры и входные данные |
-| [docs/BUSINESS.md](docs/BUSINESS.md) | читатели, внедрение, стоимость и пилот; экономика: четырём читателям с недельными выпусками ассистент экономит 27 486 ₽ в месяц и окупается, пока ручной выпуск дольше 22 минут |
+| [docs/BUSINESS.md](docs/BUSINESS.md) | читатели, внедрение, стоимость и пилот; экономика на тарифах Yandex AI Studio: четырём читателям с недельными выпусками ассистент экономит 15 991 ₽ в месяц, даже когда каждый выпуск полчаса проверяет человек |
 | [docs/CI.md](docs/CI.md) | задания GitLab CI/CD и GitHub Actions, запуск проверок у себя, выкатка стенда |
 | [docs/eval/](docs/eval/) | сравнение с аналитиком, поиск, лента, подстройка профиля, ранжирование, склейка дублей, стоимость контура |
 | [examples/](examples/README.md) | готовые выпуски в Markdown и DOCX, резюме, смена интересов, датасет организаторов, тот же выпуск на пяти моделях |
-| [docs/presentation/](docs/presentation/README.md) | презентация на 14 слайдов в PDF и PPTX с анимированными экранами |
+| [docs/presentation/](docs/presentation/README.md) | презентация на 15 слайдов в PDF и PPTX с анимированными экранами |
 
 ## Нагрузка
 
