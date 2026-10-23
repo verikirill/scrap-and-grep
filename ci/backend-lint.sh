@@ -20,3 +20,5 @@ uv run --no-sync mypy
 # The saved issues under examples/: one vulnerability per entry, advice that
 # agrees with the fix, no ids or versions for management.
 uv run --no-sync python "$root/scripts/check_examples.py" "$root/examples"
+# Every number of the deck stands in the documents its slide cites.
+uv run --no-sync python "$root/scripts/check_deck.py" "$root/docs/presentation/slides.html"

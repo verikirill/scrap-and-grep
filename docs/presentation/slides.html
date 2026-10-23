@@ -280,10 +280,10 @@ code, .code { font-family: var(--mono); font-size: 0.9em; background: rgba(24,24
     </div>
     <div class="glass" style="left: 96px; top: 740px; width: 1728px; height: 220px; padding: 0 52px; display: flex; align-items: center; gap: 30px">
       <div class="ico red" style="width: 72px; height: 72px; border-radius: 22px"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
-      <p style="font: 500 30px/1.38 var(--sans); color: var(--ink-2)">Ivanti ICS попала в&nbsp;каталог CISA KEV 13&nbsp;октября со&nbsp;сроком устранения <b class="bad">16&nbsp;октября</b>. Недельный обзор, собранный вручную, вышел&nbsp;бы, когда срок уже прошёл.</p>
+      <p style="font: 500 30px/1.38 var(--sans); color: var(--ink-2)">За&nbsp;три месяца 78 уязвимостей получили срок устранения 3&nbsp;дня. Недельный обзор <b class="bad">опоздал&nbsp;бы с&nbsp;64</b> из&nbsp;них, выпуск каждое утро - <b class="ok">ни&nbsp;с&nbsp;одной</b>.</p>
     </div>
   </div>
-  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Списки источников из датасета организаторов; неделя 25 сентября - 2 октября 2026; запись выпуска от 15 октября</span><span class="page">02 / 14</span></div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Списки датасета: docs/DECISIONS.md; неделя 25.09-02.10.2026: docs/eval/vs-analyst.md; сроки: docs/eval/kev-deadlines.md</span><span class="page">02 / 14</span></div>
 </section>
 
 <!-- 3. s-solution -->
@@ -368,10 +368,10 @@ code, .code { font-family: var(--mono); font-size: 0.9em; background: rgba(24,24
     </div>
     <div class="glass solid" style="left: 96px; top: 806px; width: 1728px; height: 154px; padding: 0 40px; display: flex; align-items: center; gap: 28px">
       <img src="img/brand/cat-read.png" alt="" style="width: 118px; flex: none">
-      <p style="font: 500 27px/1.4 var(--sans); color: var(--ink-2)"><b style="color: var(--ink)">Пилот в&nbsp;стартапе знакомых:</b> ИБ-специалисты читали выпуски и&nbsp;присылали замечания. Всё учли: склейка пересказов, совет по&nbsp;патчу только после выхода, сверка каждой карточки с&nbsp;базами.</p>
+      <p style="font: 500 27px/1.4 var(--sans); color: var(--ink-2)"><b style="color: var(--ink)">Независимая проверка:</b> эксперт ИБ вслепую отметил важные новости недели. В&nbsp;выпуск специалисту попали 8 из&nbsp;9, руководству - 5 из&nbsp;6.</p>
     </div>
   </div>
-  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Ответ аналитика, его журнал и оба выпуска: examples/vs-analyst; разбор: docs/eval/vs-analyst.md</span><span class="page">05 / 14</span></div>
+  <div class="foot"><img class="mark" src="img/brand/mark.png" alt=""><span class="brand">Scrap<i>&amp;</i>Grep</span><span class="src">Ответ аналитика и его журнал: examples/vs-analyst; разбор: docs/eval/vs-analyst.md; эксперт: docs/eval/second-human</span><span class="page">05 / 14</span></div>
 </section>
 
 <!-- 6. s-money -->
@@ -510,8 +510,8 @@ code, .code { font-family: var(--mono); font-size: 0.9em; background: rgba(24,24
         <div><h3 style="font-size: 26px">Своя модель: LightGBM LambdaRank</h3><p class="t" style="margin-top: 4px; font-size: 22px">Учится в&nbsp;03:30 на событиях наших читателей, с&nbsp;поправкой на&nbsp;место статьи в&nbsp;ленте.</p></div></div>
       <div class="glass step" style="display: block; padding: 22px 28px">
         <div class="label">Точность ленты, nDCG@20</div>
-        <div class="hrow" style="margin-top: 14px"><div class="name" style="width: 330px; font-size: 21px">Лента до&nbsp;оценок читателя<small style="font-size: 17px">«ИБ АСУ ТП», своя неделя</small></div><div class="track" style="height: 22px"><div class="bar" style="width: 68.8%; background: #b9d9fb; border-radius: 11px"></div></div><div class="val" style="width: 110px; font-size: 30px; color: var(--ink)">0,375</div></div>
-        <div class="hrow" style="margin-top: 10px"><div class="name" style="width: 330px; font-size: 21px">После 20&nbsp;оценок</div><div class="track" style="height: 22px"><div class="bar" style="width: 100%; border-radius: 11px"></div></div><div class="val" style="width: 110px; font-size: 30px">0,545</div></div>
+        <div class="hrow" style="margin-top: 14px"><div class="name" style="width: 330px; font-size: 21px">Лента по&nbsp;свежести<small style="font-size: 17px">«ИБ АСУ ТП», 871 статья недели</small></div><div class="track" style="height: 22px"><div class="bar" style="width: 22%; background: #b9d9fb; border-radius: 11px"></div></div><div class="val" style="width: 110px; font-size: 30px; color: var(--ink)">0,120</div></div>
+        <div class="hrow" style="margin-top: 10px"><div class="name" style="width: 330px; font-size: 21px">По&nbsp;интересам и&nbsp;резюме</div><div class="track" style="height: 22px"><div class="bar" style="width: 100%; border-radius: 11px"></div></div><div class="val" style="width: 110px; font-size: 30px">0,546</div></div>
         <div class="hrow" style="margin-top: 16px"><div class="name" style="width: 330px; font-size: 21px">Ручные веса<small style="font-size: 17px">«ИТ-инфраструктура», новые статьи</small></div><div class="track" style="height: 22px"><div class="bar" style="width: 80.2%; background: #b9d9fb; border-radius: 11px"></div></div><div class="val" style="width: 110px; font-size: 30px; color: var(--ink)">0,473</div></div>
         <div class="hrow" style="margin-top: 10px"><div class="name" style="width: 330px; font-size: 21px">Обученная модель</div><div class="track" style="height: 22px"><div class="bar" style="width: 100%; border-radius: 11px"></div></div><div class="val" style="width: 110px; font-size: 30px">0,590</div></div>
       </div>
@@ -588,7 +588,7 @@ code, .code { font-family: var(--mono); font-size: 0.9em; background: rgba(24,24
       <div class="glass" style="position: relative; padding: 44px 28px 0; height: 300px; border-radius: 30px; display: flex; flex-direction: column; justify-content: flex-start"><div class="ico amber" style="margin-bottom: 16px"><svg viewBox="0 0 24 24"><path d="M4 20h4v-4h4v-4h4V8h4"/></svg></div><div class="label">2. Сбор</div><p class="t" style="margin-top: 10px; font-size: 22px">запрос → curl_cffi → браузер → FlareSolverr, прокси с&nbsp;журналом</p></div>
       <div class="glass" style="position: relative; padding: 44px 28px 0; height: 300px; border-radius: 30px; display: flex; flex-direction: column; justify-content: flex-start"><div class="ico dark" style="margin-bottom: 16px"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg></div><div class="label">3. Хранилище</div><p class="t" style="margin-top: 10px; font-size: 22px">PostgreSQL с&nbsp;pgvector, Valkey, ClickHouse</p></div>
       <div class="glass" style="position: relative; padding: 44px 28px 0; height: 300px; border-radius: 30px; display: flex; flex-direction: column; justify-content: flex-start"><div class="ico green" style="margin-bottom: 16px"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg></div><div class="label">4. Сборка</div><p class="t" style="margin-top: 10px; font-size: 22px">эмбеддинги, оценка моделью, карточки, сверка с&nbsp;базами</p></div>
-      <div class="glass" style="position: relative; padding: 44px 28px 0; height: 300px; border-radius: 30px; display: flex; flex-direction: column; justify-content: flex-start"><div class="ico red" style="margin-bottom: 16px"><svg viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg></div><div class="label">5. Доставка</div><p class="t" style="margin-top: 10px; font-size: 22px">FastAPI, React&nbsp;19, Telegram, почта, MCP, Remotion</p></div>
+      <div class="glass" style="position: relative; padding: 44px 28px 0; height: 300px; border-radius: 30px; display: flex; flex-direction: column; justify-content: flex-start"><div class="ico red" style="margin-bottom: 16px"><svg viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg></div><div class="label">5. Доставка</div><p class="t" style="margin-top: 10px; font-size: 22px">FastAPI, React&nbsp;19, почта. Модули по&nbsp;желанию: Telegram, MCP, ролики</p></div>
     </div>
     <div class="arrow" style="left: 400px; top: 417px"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
     <div class="arrow" style="left: 752px; top: 417px"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
