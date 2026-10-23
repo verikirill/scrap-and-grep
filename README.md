@@ -4,7 +4,7 @@ Scrap&Grep собирает новости ИТ и ИБ для энергоко�
 
 Руководитель заводит команды компании один раз, а сотрудники входят по ссылке с готовым профилем интересов.
 
-Решение хакатона «ИИ-ассистенты для энергетики» ([задание финала](docs/task/FINAL.md) и где закрыт каждый пункт, [задание полуфинала](docs/task/TASK.md)). [Видео](https://git.codenrock.com/codenrock/ii-assistenty/misis-mojarung/assistent-dlya-sozdaniya-it-ib-daydzhestov/uploads/b74d86585f09e62fd997d44dbcdfa74d/scrapgrep-demo.mp4), 1 мин 30 с, с субтитрами, снято на `gpt-oss:120b` в облаке Ollama. [Презентация](docs/presentation/scrapgrep.pdf), 14 слайдов, и её [редактируемая версия в PPTX](docs/presentation/scrapgrep.pptx). Примеры: [выпуск специалисту за сутки](examples/specialist-daily.md), [выпуск руководству за неделю](examples/management-weekly.md).
+Решение хакатона «ИИ-ассистенты для энергетики» ([задание финала](docs/task/FINAL.md) и где закрыт каждый пункт, [задание полуфинала](docs/task/TASK.md)). [Видео](https://git.codenrock.com/codenrock/ii-assistenty/misis-mojarung/assistent-dlya-sozdaniya-it-ib-daydzhestov/uploads/b74d86585f09e62fd997d44dbcdfa74d/scrapgrep-demo.mp4), 1 мин 30 с, с субтитрами, снято на `gpt-oss:120b` в облаке Ollama. [Презентация](docs/presentation/scrapgrep.pdf), 15 слайдов, и её [редактируемая версия в PPTX](docs/presentation/scrapgrep.pptx). Примеры: [выпуск специалисту за сутки](examples/specialist-daily.md), [выпуск руководству за неделю](examples/management-weekly.md).
 
 **Жюри за пять минут.**
 1. Входные публикации и что из них отобрано: [снимок недели](data/samples/articles.jsonl) → [выпуск специалисту](examples/ics-security-engineer.md), кандидаты, которые не вошли, - внизу выпуска с оценкой и причиной.
