@@ -6,6 +6,7 @@ import pytest
 from pydantic import BaseModel
 
 from radar.ai.llm import ModelIntelligence
+from radar.ai.prompts import VulnerabilityOut
 from radar.cards import (
     check_attack,
     check_entry,
@@ -353,3 +354,21 @@ def test_industry_in_the_sectors_counts_as_the_datasets_energy_sector() -> None:
     checked, _ = check_attack(card, "PhantomCore атаковала промышленные предприятия РФ.")
 
     assert priority("attack", ItemSummary(summary="", attack=checked)) == "high"
+
+
+def test_a_null_word_in_a_text_field_is_an_empty_field() -> None:
+    card = VulnerabilityOut.model_validate(
+        {
+            "headline": "Citrix NetScaler",
+            "summary": "Две 0-day.",
+            "why": "Обновите шлюзы.",
+            "workaround": "null",
+            "fix": " None ",
+            "exploit": "none",
+        }
+    )
+
+    assert card.workaround == ""
+    assert card.fix == ""
+    # Not text: "none" says there is no exploit.
+    assert card.exploit == "none"

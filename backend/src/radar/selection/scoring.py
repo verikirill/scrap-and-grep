@@ -182,6 +182,14 @@ class Mentions:
 
     ids: frozenset[str]
     names: frozenset[str]
+    # How many vulnerabilities the ids stand for, when some are aliases of
+    # others: a card's CVE and the BDU id the bases tie to it are one. None
+    # counts every id.
+    count: int | None = None
+
+    @property
+    def size(self) -> int:
+        return len(self.ids) if self.count is None else self.count
 
 
 def _latin_words(text: str) -> frozenset[str]:
@@ -210,13 +218,13 @@ def same_vulnerability(left: Mentions, right: Mentions) -> bool:
     """
     if not left.ids & right.ids:
         return False
-    if len(left.ids) <= FOCUSED_IDS and len(right.ids) <= FOCUSED_IDS:
+    if left.size <= FOCUSED_IDS and right.size <= FOCUSED_IDS:
         return True
-    small, large = sorted((left.ids, right.ids), key=len)
+    small, large = sorted((left, right), key=lambda mentions: mentions.size)
     return (
-        len(small) <= FOCUSED_IDS
-        and len(large) <= ROUNDUP_IDS
-        and small <= large
+        small.size <= FOCUSED_IDS
+        and large.size <= ROUNDUP_IDS
+        and small.ids <= large.ids
         and bool(left.names & right.names)
     )
 
@@ -230,9 +238,13 @@ def written_mentions(item: SelectedItem) -> Mentions:
         return Mentions(ids=frozenset(), names=frozenset())
     named = list(text.vulnerability.ids)
     aliases = [ref.bdu_id for ref in text.references if ref.bdu_id and ref.id in named]
+    own = frozenset(identifiers(" ".join(named)))
+    # An alias joins the ids to meet another entry by, not the count: a card
+    # of three CVEs is not a roundup because the bases gave each a BDU id.
     return Mentions(
-        ids=frozenset(identifiers(" ".join([*named, *aliases]))),
+        ids=own | frozenset(identifiers(" ".join(aliases))),
         names=_latin_words(item.article.title) or _latin_words(text.headline),
+        count=len(own),
     )
 
 

@@ -354,6 +354,37 @@ def test_entries_the_bases_tie_to_one_vulnerability_become_one_after_the_cards(
     assert absorbed == [russian]
 
 
+def test_the_bdu_ids_of_a_card_do_not_make_it_a_roundup(
+    make_article: ArticleFactory,
+) -> None:
+    """Rapid7 on three Citrix CVEs, each with its BDU id from the bases, and a
+    SecAtor post on one of them whose title names other products: the card is
+    about three vulnerabilities, not six, and the post is its retelling."""
+    citrix = ("CVE-2026-88771", "CVE-2026-88772", "CVE-2026-88779")
+    rapid7 = _written(
+        make_article,
+        "Zero-Day Exploitation of Citrix NetScaler ADC and Gateway",
+        0.72,
+        citrix,
+        tuple(
+            VulnerabilityReference(id=cve, bdu_id=f"BDU:2026-1549{index}")
+            for index, cve in enumerate(citrix)
+        ),
+    )
+    secator = _written(
+        make_article,
+        "В продолжение к предыдущему: Mandiant приводит подробности",
+        0.70,
+        ("CVE-2026-88772",),
+        (VulnerabilityReference(id="CVE-2026-88772", bdu_id="BDU:2026-15491"),),
+    )
+
+    merged, absorbed = merge_written([rapid7, secator])
+
+    assert [item.article.id for item in merged] == [rapid7.article.id]
+    assert absorbed == [secator]
+
+
 def test_entries_without_ids_are_never_merged_after_the_cards(
     make_article: ArticleFactory,
 ) -> None:

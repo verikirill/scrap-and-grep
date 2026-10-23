@@ -10,7 +10,7 @@ import re
 from collections.abc import Sequence
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from radar.domain import (
     Audience,
@@ -33,7 +33,7 @@ PROMPT_VERSION = "v8"
 # s10 is the JSON-quoted publication, s11 adds the style rule (_STYLE), s12
 # tells a released fix from an announced one (_FIX_NOT_OUT, LOOKUP_NOTE), s13
 # keeps the attack date, the tools and "why" to what they mean (_WHY_SCOPE).
-SUMMARY_PROMPT_VERSION = "s13"
+SUMMARY_PROMPT_VERSION = "s14"
 # The reader's translation of an article (radar.reader.translate): a change
 # re-translates what readers open next, stored translations are kept till then.
 TRANSLATION_PROMPT_VERSION = "t1"
@@ -244,10 +244,30 @@ class GradeOut(BaseModel):
     kind: RecordKind = "news"
 
 
+# Qwen3.6 writes the word "null" into a field it has nothing for, and the
+# card then showed «Временные меры | null».
+_EMPTY_WORDS = frozenset({"null", "none", "nil", "n/a"})
+
+
 class SummaryOut(BaseModel):
     headline: str = Field(max_length=300)
     summary: str = Field(max_length=700)
     why: str = Field(max_length=300)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _empty_for_null_words(cls, data: Any) -> Any:
+        """A text field that says "null" is an empty one. Only text: the
+        exploit's "none" is a value of its own."""
+        if not isinstance(data, dict):
+            return data
+        texts = {name for name, field in cls.model_fields.items() if field.annotation is str}
+        return {
+            key: ""
+            if key in texts and isinstance(value, str) and value.strip().lower() in _EMPTY_WORDS
+            else value
+            for key, value in data.items()
+        }
 
 
 class TechniqueOut(BaseModel):
