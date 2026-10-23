@@ -28,7 +28,17 @@ from pathlib import Path
 SAMPLES = Path("data/samples/articles.jsonl")
 KEYWORD = 50
 RANDOM = 30
-FIELDS = ["article_id", "title", "source", "published_at", "url", "stratum", "grade", "must", "note"]
+FIELDS = [
+    "article_id",
+    "title",
+    "source",
+    "published_at",
+    "url",
+    "stratum",
+    "grade",
+    "must",
+    "note",
+]
 
 
 def when(value: str) -> datetime:
@@ -77,9 +87,10 @@ def main() -> None:
                     "stratum": stratum,
                 }
             )
+    keyword, chance = min(KEYWORD, len(named)), min(RANDOM, len(rest))
     print(
         f"{len(sample)} of {len(week)} left-out publications written to {out}: "
-        f"keyword {min(KEYWORD, len(named))} of {len(named)}, random {min(RANDOM, len(rest))} of {len(rest)}"
+        f"keyword {keyword} of {len(named)}, random {chance} of {len(rest)}"
     )
 
 
