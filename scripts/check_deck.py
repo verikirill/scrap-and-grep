@@ -29,6 +29,7 @@ _PATH_RE = re.compile(r"(?:docs|examples|backend|scripts)/[\w./-]+")
 _NUMBER_RE = re.compile(r"(?<![\w.,])\d{1,3}(?:[   ]\d{3})+(?:,\d+)?|(?<![\w.,])\d+(?:,\d+)?")
 _GROUP_RE = re.compile(r"(?<=\d)[   ](?=\d{3}\b)")
 _PAGE_RE = re.compile(r"\b\d{2} / \d{2}\b")
+_DECIMAL_DOT_RE = re.compile(r"(?<=\d)\.(?=\d)")
 _SKIP_RE = re.compile(r"\b\d{1,2}:\d{2}\b|\b\d+-ФЗ\b")
 _VOID = {"img", "br", "hr", "input", "meta", "link", "source", "wbr"}
 
@@ -95,7 +96,8 @@ def corpus(source: str) -> str:
         for file in files:
             if file.is_file() and file.suffix in {".md", ".json", ".py", ".js", ".csv"}:
                 texts.append(file.read_text(encoding="utf-8", errors="replace"))
-    return normalize("\n".join(texts))
+    # The documents write a decimal either way: "0.95" in a table, "0,95" in text.
+    return _DECIMAL_DOT_RE.sub(",", normalize("\n".join(texts)))
 
 
 def numbers(text: str) -> list[tuple[str, str]]:
