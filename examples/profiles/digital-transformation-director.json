@@ -92,5 +92,7 @@
     "en"
   ],
   "categories": [],
-  "audience": "management"
+  "audience": "management",
+  "hidden_card_fields": [],
+  "hidden_digest_blocks": []
 }

@@ -202,8 +202,16 @@ def pending_advice(workaround: str) -> str:
     """What to do while there is no fix: the card's own workaround, checked
     against the article like every card field, or waiting for the vendor."""
     if workaround and not _NO_WORKAROUND_RE.match(workaround.strip()):
-        steps = _lower_first(workaround.strip().rstrip("."))
-        return f"Исправление ещё не выпущено, до его выхода: {steps}."
+        # A step that says to update is not a workaround while there is no
+        # update: "Ограничить доступ к веб-консолям; обновить компоненты Windows".
+        kept = [
+            step.strip().rstrip(".")
+            for step in re.split(r";|(?<=[.!?])\s+", workaround)
+            if step.strip() and not advises_patch(step)
+        ]
+        if kept:
+            steps = _lower_first("; ".join(kept))
+            return f"Исправление ещё не выпущено, до его выхода: {steps}."
     return "Исправление ещё не выпущено: следите за выходом обновления у производителя."
 
 

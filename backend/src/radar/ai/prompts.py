@@ -10,7 +10,7 @@ import re
 from collections.abc import Sequence
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from radar.domain import (
     Audience,
@@ -28,12 +28,12 @@ from radar.domain import (
 # The grades in docs/eval were made with PROMPT_VERSION v3; v4 adds the kind
 # of record and holds press releases down; v5 is the same at temperature 0;
 # v6 gives the publication as JSON strings (docs/eval/injection.md).
-PROMPT_VERSION = "v6"
+PROMPT_VERSION = "v8"
 # The writing prompts on their own: changing them must not throw away the grades.
 # s10 is the JSON-quoted publication, s11 adds the style rule (_STYLE), s12
 # tells a released fix from an announced one (_FIX_NOT_OUT, LOOKUP_NOTE), s13
 # keeps the attack date, the tools and "why" to what they mean (_WHY_SCOPE).
-SUMMARY_PROMPT_VERSION = "s13"
+SUMMARY_PROMPT_VERSION = "s14"
 # The reader's translation of an article (radar.reader.translate): a change
 # re-translates what readers open next, stored translations are kept till then.
 TRANSLATION_PROMPT_VERSION = "t1"
@@ -89,11 +89,25 @@ GRADE_SYSTEM = f"""Ты редактор отраслевого дайджест
 2 - по теме интереса, стоит включить в дайджест;
 3 - прямо по интересу и требует внимания или действий.
 
+Сверяй публикацию с каждым интересом из списка. Роль читателя объясняет, где он \
+работает, но не сужает интересы: публикация, которая прямо попадает в любой из них, \
+получает 2 или 3, даже если она про другую отрасль или не про основную работу читателя. \
+Уязвимость, которую уже используют в атаках (0-day, эксплойт в открытом доступе, \
+каталог CISA KEV), в продукте под интерес читателя - это 3.
+Роль задаёт уровень читателя. Читателю без подготовки в ИБ разбор уязвимостей \
+конкретного оборудования без атак и последствий для людей и компаний оценивай не выше 1. \
+Утечка или атака за рубежом, которая не затронула российские компании и граждан и не \
+касается отрасли читателя, - не выше 1.
+
 В interest_id укажи идентификатор самого подходящего интереса из списка или null, если \
 ни один не подходит. В reason объясни оценку по-русски, не длиннее двенадцати слов.
 Рекламу, вакансии, анонсы мероприятий без содержания и пересказы без фактов оценивай в 0.
 Пресс-релизы о партнёрствах, наградах и выходе продуктов оценивай не выше 1: читателю \
-нужны атаки, уязвимости, требования регуляторов и технические решения.
+нужны атаки, уязвимости, требования регуляторов и технические решения. Сообщение об \
+уязвимостях в конкретном продукте и их исправлении - это новость об уязвимостях, а не \
+пресс-релиз, даже если его выпустила компания, которая их нашла.
+Обзоры, руководства, мнения и рассказы о практике без нового события - атаки, \
+уязвимости, инцидента, нового требования или новых данных - оценивай не выше 1.
 
 В kind укажи, о чём публикация:
 attack - о конкретной атаке, кампании или группировке злоумышленников: кого атаковали, \
@@ -230,10 +244,30 @@ class GradeOut(BaseModel):
     kind: RecordKind = "news"
 
 
+# Qwen3.6 writes the word "null" into a field it has nothing for, and the
+# card then showed «Временные меры | null».
+_EMPTY_WORDS = frozenset({"null", "none", "nil", "n/a"})
+
+
 class SummaryOut(BaseModel):
     headline: str = Field(max_length=300)
     summary: str = Field(max_length=700)
     why: str = Field(max_length=300)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _empty_for_null_words(cls, data: Any) -> Any:
+        """A text field that says "null" is an empty one. Only text: the
+        exploit's "none" is a value of its own."""
+        if not isinstance(data, dict):
+            return data
+        texts = {name for name, field in cls.model_fields.items() if field.annotation is str}
+        return {
+            key: ""
+            if key in texts and isinstance(value, str) and value.strip().lower() in _EMPTY_WORDS
+            else value
+            for key, value in data.items()
+        }
 
 
 class TechniqueOut(BaseModel):

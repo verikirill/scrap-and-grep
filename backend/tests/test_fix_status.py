@@ -9,6 +9,7 @@ from radar.fix_status import (
     PARTIAL_NOTE,
     advises_patch,
     fix_status,
+    pending_advice,
     reconcile_fix,
     row_says_pending,
 )
@@ -355,3 +356,18 @@ def test_an_entry_without_a_vulnerability_card_is_left_alone() -> None:
     brief = ItemSummary(summary="Fortinet предупредила о бреши.", why="Обновите FortiMail.")
 
     assert reconcile_fix(brief, FORTIMAIL_POST) == brief
+
+
+def test_a_workaround_step_that_says_to_update_is_left_out_while_there_is_no_fix() -> None:
+    advice = pending_advice(
+        "Ограничить доступ к веб-консолям из интернета; обновить компоненты Windows."
+    )
+
+    assert advice == (
+        "Исправление ещё не выпущено, до его выхода: ограничить доступ к веб-консолям из интернета."
+    )
+    assert not advises_patch(advice)
+    # Nothing left but the update: wait for the vendor.
+    assert pending_advice("Обновить до версии 7.4.9.") == (
+        "Исправление ещё не выпущено: следите за выходом обновления у производителя."
+    )

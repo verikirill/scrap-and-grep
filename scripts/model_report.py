@@ -18,6 +18,10 @@ from typing import Any
 
 # In the order of the tables: the main model first, the offline mode last.
 MODELS = {
+    # The models of the finals in Yandex AI Studio: the stack's default first.
+    "qwen3.6-35b-a3b-yandex": ("Qwen3.6 35B", "Yandex AI Studio"),
+    "aliceai-llm-yandex": ("Alice AI LLM", "Yandex AI Studio"),
+    "gpt-oss-120b-yandex": ("`gpt-oss-120b`", "Yandex AI Studio"),
     # A model of the finals, locally; the card is in <name>.hardware.json.
     "qwen3.6-35b-a3b": ("`qwen3.6:35b-a3b`", "в стеке, Ollama"),
     "gpt-oss-120b": ("`gpt-oss:120b`", "облако Ollama"),
